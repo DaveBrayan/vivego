@@ -218,46 +218,46 @@
             border: 1.5px solid rgba(255, 255, 255, 0.15);
         }
 
-        /* TOAST FLOTANTE SUPERIOR TIPO SWEETALERT ARRIBA (NO DESPLAZA CONTENIDO) */
+        /* TOAST FLOTANTE SUPERIOR COMPACTO (TIPO SWEETALERT SLIM) */
         .result-top-toast {
             position: fixed;
-            top: 12px;
-            left: 12px;
-            right: 12px;
-            max-width: 480px;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            max-width: 440px;
             margin: 0 auto;
             z-index: 99999;
-            border-radius: 18px;
-            padding: 0.95rem 1.15rem;
+            border-radius: 14px;
+            padding: 0.65rem 0.9rem;
             display: none;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            animation: toastPopIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            animation: toastPopIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: opacity 0.25s ease;
         }
 
         @keyframes toastPopIn {
-            from { transform: translateY(-30px) scale(0.96); opacity: 0; }
+            from { transform: translateY(-20px) scale(0.96); opacity: 0; }
             to { transform: translateY(0) scale(1); opacity: 1; }
         }
 
         .result-granted {
-            background: linear-gradient(135deg, rgba(6, 78, 59, 0.95), rgba(4, 120, 87, 0.95));
-            border: 2px solid #10B981;
-            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.5);
+            background: linear-gradient(135deg, rgba(6, 78, 59, 0.97), rgba(4, 120, 87, 0.97));
+            border: 1.5px solid #10B981;
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.45);
         }
 
         .result-already-used {
-            background: linear-gradient(135deg, rgba(120, 53, 15, 0.95), rgba(180, 83, 9, 0.95));
-            border: 2px solid #F59E0B;
-            box-shadow: 0 10px 30px rgba(245, 158, 11, 0.5);
+            background: linear-gradient(135deg, rgba(120, 53, 15, 0.97), rgba(180, 83, 9, 0.97));
+            border: 1.5px solid #F59E0B;
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.45);
         }
 
         .result-invalid {
-            background: linear-gradient(135deg, rgba(127, 29, 29, 0.95), rgba(185, 28, 28, 0.95));
-            border: 2px solid #EF4444;
-            box-shadow: 0 10px 30px rgba(239, 68, 68, 0.5);
+            background: linear-gradient(135deg, rgba(127, 29, 29, 0.97), rgba(185, 28, 28, 0.97));
+            border: 1.5px solid #EF4444;
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.45);
         }
 
         /* ENTRADA MANUAL */
@@ -315,20 +315,19 @@
     </header>
 
     <div class="scanner-container">
-        <!-- TOAST DE RESULTADO EN FORMA DE NOTIFICACIÓN SUPERIOR (ENCIMA DEL EVENTO) -->
+        <!-- TOAST FLOTANTE SUPERIOR COMPACTO (TIPO SWEETALERT SLIM) -->
         <div class="result-top-toast" id="mobileResultToast">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <span id="mResultIcon" style="font-size: 2.2rem; flex-shrink: 0;">✅</span>
-                <div style="flex: 1; overflow: hidden;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.2rem;">
-                        <h3 id="mResultTitle" style="font-size: 1.05rem; font-weight: 900; color: #FFFFFF; margin: 0; text-transform: uppercase;">¡Acceso Permitido!</h3>
-                        <span id="mResultZone" style="font-weight: 800; font-size: 0.75rem; text-transform: uppercase; background: rgba(0,0,0,0.35); padding: 0.2rem 0.55rem; border-radius: 6px; white-space: nowrap;">VIP</span>
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+                <span id="mResultIcon" style="font-size: 1.6rem; line-height: 1; flex-shrink: 0;">✅</span>
+                <div style="flex: 1; min-width: 0;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; margin-bottom: 0.15rem;">
+                        <strong id="mResultTitle" style="font-size: 0.92rem; font-weight: 900; color: #FFFFFF; text-transform: uppercase; letter-spacing: 0.3px; line-height: 1.1;">¡ACCESO PERMITIDO!</strong>
+                        <span id="mResultZone" style="font-weight: 900; font-size: 0.7rem; text-transform: uppercase; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.25); color: #FFFFFF; padding: 0.15rem 0.45rem; border-radius: 6px; white-space: nowrap;">VIP</span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #E2E8F0;">
-                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Titular: <strong style="color: #FFFFFF;" id="mResultBuyer">-</strong></span>
-                        <span style="color: #00F0FF; font-weight: 700; margin-left: 0.5rem;" id="mResultTime">-</span>
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; font-size: 0.76rem; color: #F1F5F9; line-height: 1.2;">
+                        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">👤 <strong style="color: #FFFFFF;" id="mResultBuyer">-</strong></span>
+                        <span style="color: #00F0FF; font-weight: 800; font-size: 0.72rem; flex-shrink: 0;" id="mResultTime">-</span>
                     </div>
-                    <p id="mResultMessage" style="color: #CBD5E1; font-size: 0.72rem; margin: 0.25rem 0 0 0; line-height: 1.2;"></p>
                 </div>
             </div>
         </div>
@@ -549,11 +548,9 @@
                 playMobileTone('granted');
                 toast.className = 'result-top-toast result-granted';
                 icon.innerHTML = '✅';
-                title.textContent = '✓ ¡ACCESO PERMITIDO!';
-                zone.textContent = data.ticket?.zone_name || 'SECTOR VÁLIDO';
-                zone.style.color = '#10B981';
-                msg.textContent = data.message || 'Boleto verificado correctamente.';
-                buyer.textContent = data.ticket?.buyer_name || 'Público General';
+                title.textContent = '¡ACCESO PERMITIDO!';
+                zone.textContent = data.ticket?.zone_name || 'VÁLIDO';
+                buyer.textContent = data.ticket?.buyer_name || (data.ticket?.ticket_code ? `Boleto #${data.ticket.ticket_code}` : 'Público General');
                 time.textContent = data.ticket?.checked_in_at || 'Ahora';
 
                 appendMobileFeed(data.ticket);
@@ -567,21 +564,17 @@
                 playMobileTone('already_used');
                 toast.className = 'result-top-toast result-already-used';
                 icon.innerHTML = '🚫';
-                title.textContent = '🚫 BOLETO YA UTILIZADO';
-                zone.textContent = data.ticket?.zone_name || 'ALERTA';
-                zone.style.color = '#F59E0B';
-                msg.textContent = data.message || 'Este boleto ya ingresó previamente.';
-                buyer.textContent = data.ticket?.buyer_name || '-';
+                title.textContent = 'BOLETO YA REGISTRADO';
+                zone.textContent = 'YA INGRESÓ';
+                buyer.textContent = data.ticket?.buyer_name || 'Boleto ya usado previamente';
                 time.textContent = data.ticket?.checked_in_at || 'Previamente';
             } else {
                 playMobileTone('invalid');
                 toast.className = 'result-top-toast result-invalid';
                 icon.innerHTML = '❌';
-                title.textContent = '❌ BOLETO INVÁLIDO';
-                zone.textContent = 'NO REGISTRADO';
-                zone.style.color = '#EF4444';
-                msg.textContent = data.message || 'El código no corresponde a este evento.';
-                buyer.textContent = '-';
+                title.textContent = 'BOLETO INVÁLIDO';
+                zone.textContent = 'NO VÁLIDO';
+                buyer.textContent = 'Código no encontrado en el sistema';
                 time.textContent = '-';
             }
 
