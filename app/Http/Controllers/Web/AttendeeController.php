@@ -316,8 +316,20 @@ class AttendeeController extends Controller
                 ];
             });
 
-        $ticketsIssued = EventTicket::where('event_id', $event->id)->count();
-        $checkedInCount = EventTicket::where('event_id', $event->id)->where('is_used', true)->count();
+        // Consulta agregada única de 1 solo paso para máximo rendimiento en tiempo real
+        $statsByZone = EventTicket::where('event_id', $event->id)
+            ->selectRaw('zone_name, count(*) as total, sum(case when is_used = 1 then 1 else 0 end) as checked_in')
+            ->groupBy('zone_name')
+            ->get()
+            ->keyBy('zone_name');
+
+        $ticketsIssued = 0;
+        $checkedInCount = 0;
+        foreach ($statsByZone as $st) {
+            $ticketsIssued += (int) $st->total;
+            $checkedInCount += (int) $st->checked_in;
+        }
+
         $pendingCount = max(0, $ticketsIssued - $checkedInCount);
         $attendanceRate = $ticketsIssued > 0 ? min(100, round(($checkedInCount / $ticketsIssued) * 100, 1)) : 0;
 
@@ -325,8 +337,9 @@ class AttendeeController extends Controller
         $zonesAttendance = [];
         foreach ($zones as $z) {
             $zName = $z['name'] ?? 'General';
-            $zIssued = EventTicket::where('event_id', $event->id)->where('zone_name', $zName)->count();
-            $zChecked = EventTicket::where('event_id', $event->id)->where('zone_name', $zName)->where('is_used', true)->count();
+            $st = $statsByZone->get($zName);
+            $zIssued = $st ? (int) $st->total : 0;
+            $zChecked = $st ? (int) $st->checked_in : 0;
             $zRate = $zIssued > 0 ? round(($zChecked / $zIssued) * 100, 1) : 0;
 
             $zonesAttendance[] = [

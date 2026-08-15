@@ -653,25 +653,41 @@
             if (rateEl) rateEl.textContent = `${m.attendance_rate}%`;
         }
 
-        // Sincronización a demanda de asistencias
+        // Sincronización automática y a demanda en tiempo real
         let latestCheckinId = {{ $recentCheckins->first() ? $recentCheckins->first()->id : 0 }};
+        let isSyncing = false;
 
-        function manualRefreshFeed() {
+        function syncFeedData(isManual = false) {
+            if (isSyncing) return;
+            isSyncing = true;
+
             const icon = document.getElementById('refreshIcon');
-            if (icon) icon.style.display = 'inline-block';
-            if (icon) icon.style.animation = 'spin 0.8s linear infinite';
+            if (isManual && icon) {
+                icon.style.display = 'inline-block';
+                icon.style.animation = 'spin 0.8s linear infinite';
+            }
 
-            fetch(`/admin/asistentes/${eventId}/checkins-feed?since_id=0`, {
+            const sinceParam = isManual ? 0 : latestCheckinId;
+
+            fetch(`/admin/asistentes/${eventId}/checkins-feed?since_id=${sinceParam}`, {
                 headers: { 'Accept': 'application/json' }
             })
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
                     if (data.new_checkins && data.new_checkins.length > 0) {
-                        const tbody = document.getElementById('checkinsTableBody');
-                        if (tbody) tbody.innerHTML = '';
+                        if (isManual) {
+                            const tbody = document.getElementById('checkinsTableBody');
+                            if (tbody) tbody.innerHTML = '';
+                        }
+
                         data.new_checkins.forEach(t => {
-                            appendCheckinRow(t);
+                            if (t.id > latestCheckinId) {
+                                latestCheckinId = t.id;
+                                appendCheckinRow(t);
+                            } else if (isManual) {
+                                appendCheckinRow(t);
+                            }
                         });
                     }
 
@@ -696,25 +712,47 @@
                         });
                     }
 
-                    Swal.fire({
-                        toast: true,
-                        position: 'top-end',
-                        icon: 'success',
-                        title: '✓ Asistencias actualizadas',
-                        showConfirmButton: false,
-                        timer: 1500,
-                        background: '#14141E',
-                        color: '#FFFFFF'
-                    });
+                    if (isManual) {
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'success',
+                            title: '✓ Asistencias actualizadas',
+                            showConfirmButton: false,
+                            timer: 1500,
+                            background: '#14141E',
+                            color: '#FFFFFF'
+                        });
+                    }
                 }
             })
             .catch(err => {})
             .finally(() => {
-                setTimeout(() => {
-                    if (icon) icon.style.animation = 'none';
-                }, 500);
+                isSyncing = false;
+                if (isManual && icon) {
+                    setTimeout(() => { icon.style.animation = 'none'; }, 400);
+                }
+                // Programar la siguiente sincronización automática en 3 segundos solo si la pestaña está activa
+                if (!isManual) {
+                    setTimeout(scheduleAutoSync, 3000);
+                }
             });
         }
+
+        function manualRefreshFeed() {
+            syncFeedData(true);
+        }
+
+        function scheduleAutoSync() {
+            if (!document.hidden) {
+                syncFeedData(false);
+            } else {
+                setTimeout(scheduleAutoSync, 3000);
+            }
+        }
+
+        // Iniciar sincronización automática en vivo
+        setTimeout(scheduleAutoSync, 3000);
 
         document.addEventListener('DOMContentLoaded', function () {
             // Sidebar Toggle
