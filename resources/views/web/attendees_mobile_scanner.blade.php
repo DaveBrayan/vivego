@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Scanner Móvil | {{ $event->title }}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- SweetAlert2 & HTML5-QRCode -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+    <style>
+        :root {
+            --color-primary: #FF5500;
+            --color-success: #10B981;
+            --color-danger: #EF4444;
+            --color-warning: #F59E0B;
+            --color-dark-bg: #0A0A10;
+            --color-card-bg: #14141E;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--color-dark-bg);
+            color: #FFFFFF;
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* HEADER MÓVIL FIJO */
+        .mobile-header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(20, 20, 30, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.85rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .brand-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--color-success);
+            box-shadow: 0 0 10px var(--color-success);
+            animation: pulseDot 2s infinite ease-in-out;
+        }
+
+        @keyframes pulseDot {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.6; }
+        }
+
+        /* CONTENEDOR PRINCIPAL */
+        .scanner-container {
+            flex: 1;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            max-width: 600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* TARJETA DE RESUMEN DEL EVENTO */
+        .event-info-card {
+            background: var(--color-card-bg);
+            border: 1px solid rgba(255, 85, 0, 0.25);
+            border-radius: 18px;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+        }
+
+        .event-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 1.5px solid rgba(255, 255, 255, 0.15);
+            flex-shrink: 0;
+        }
+
+        /* CONTADORES KPI MÓVILES */
+        .mobile-kpi-bar {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .kpi-mini-box {
+            background: var(--color-card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 0.65rem 0.5rem;
+            text-align: center;
+        }
+
+        .kpi-mini-box .val {
+            font-size: 1.25rem;
+            font-weight: 900;
+            display: block;
+        }
+
+        .kpi-mini-box .lbl {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #94A3B8;
+            text-transform: uppercase;
+        }
+
+        /* VISOR DE CÁMARA MÓVIL */
+        .camera-viewport-card {
+            background: #000000;
+            border: 2px solid rgba(255, 85, 0, 0.4);
+            border-radius: 22px;
+            min-height: 280px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
+        }
+
+        #qrReaderVideoMobile {
+            width: 100%;
+            height: 100%;
+        }
+
+        #qrReaderVideoMobile video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+            border-radius: 20px !important;
+        }
+
+        .laser-scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #FF5500, #00F0FF, #FF5500, transparent);
+            box-shadow: 0 0 15px #FF5500;
+            animation: scanLaser 2s infinite ease-in-out;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        @keyframes scanLaser {
+            0% { top: 8%; opacity: 0.3; }
+            50% { top: 92%; opacity: 1; }
+            100% { top: 8%; opacity: 0.3; }
+        }
+
+        /* BOTONES DE CONTROL DE CÁMARA */
+        .camera-action-buttons {
+            display: flex;
+            gap: 0.6rem;
+        }
+
+        .btn-m-action {
+            flex: 1;
+            padding: 0.85rem 1rem;
+            border-radius: 14px;
+            font-weight: 800;
+            font-size: 0.9rem;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-m-primary {
+            background: linear-gradient(135deg, #FF5500, #FF7733);
+            color: #FFFFFF;
+            box-shadow: 0 4px 15px rgba(255, 85, 0, 0.4);
+        }
+
+        .btn-m-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: #FFFFFF;
+            border: 1.5px solid rgba(255, 255, 255, 0.15);
+        }
+
+        /* BANNER DE RESULTADO EN PANTALLA COMPLETA / MODAL */
+        .result-banner-card {
+            border-radius: 18px;
+            padding: 1.25rem;
+            display: none;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .result-granted {
+            background: rgba(16, 185, 129, 0.18);
+            border: 2px solid #10B981;
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.35);
+        }
+
+        .result-already-used {
+            background: rgba(245, 158, 11, 0.18);
+            border: 2px solid #F59E0B;
+            box-shadow: 0 0 30px rgba(245, 158, 11, 0.35);
+        }
+
+        .result-invalid {
+            background: rgba(239, 68, 68, 0.18);
+            border: 2px solid #EF4444;
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.35);
+        }
+
+        /* ENTRADA MANUAL */
+        .manual-input-box {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .manual-input-box input {
+            flex: 1;
+            padding: 0.85rem 1rem;
+            background: #14141E;
+            border: 1.5px solid rgba(255, 255, 255, 0.15);
+            border-radius: 14px;
+            color: #FFFFFF;
+            font-weight: 700;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .manual-input-box input:focus {
+            border-color: #FF5500;
+        }
+
+        /* MINI FEED */
+        .feed-mini-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 0.65rem 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            margin-bottom: 0.4rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER MÓVIL -->
+    <header class="mobile-header">
+        <div class="brand-pill">
+            <span class="brand-dot"></span>
+            <div>
+                <strong style="font-size: 0.95rem; display: block; line-height: 1.1;">Vive Go Scanner</strong>
+                <small style="color: #94A3B8; font-size: 0.7rem;">Control de Puerta</small>
+            </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <input type="text" id="mobileDeviceName" value="Móvil 1" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #FFFFFF; font-size: 0.75rem; padding: 0.3rem 0.6rem; width: 80px; font-weight: 700; text-align: center;">
+            <a href="{{ route('web.attendees') }}" style="color: #94A3B8; text-decoration: none; font-size: 1.2rem; padding: 0.3rem;" title="Salir">✕</a>
+        </div>
+    </header>
+
+    <div class="scanner-container">
+        <!-- TARJETA DEL EVENTO -->
+        <div class="event-info-card">
+            <img src="{{ $event->banner_image ?: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=600&q=80' }}" alt="{{ $event->title }}" class="event-avatar">
+            <div style="overflow: hidden;">
+                <h2 style="font-size: 0.95rem; font-weight: 900; color: #FFFFFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0.15rem;">{{ $event->title }}</h2>
+                <small style="color: #94A3B8; font-size: 0.75rem; display: block;">📍 {{ $event->venue_name ?? 'Local Principal' }}</small>
+            </div>
+        </div>
+
+        <!-- KPIS EN VIVO -->
+        <div class="mobile-kpi-bar">
+            <div class="kpi-mini-box">
+                <span class="val" id="mKpiIssued" style="color: #FFFFFF;">{{ $metrics['tickets_issued'] }}</span>
+                <span class="lbl">Emitidos</span>
+            </div>
+            <div class="kpi-mini-box" style="border-color: rgba(16, 185, 129, 0.3);">
+                <span class="val" id="mKpiChecked" style="color: #10B981;">{{ $metrics['checked_in_count'] }}</span>
+                <span class="lbl">Ingresados</span>
+            </div>
+            <div class="kpi-mini-box" style="border-color: rgba(255, 85, 0, 0.3);">
+                <span class="val" id="mKpiRate" style="color: var(--color-primary);">{{ $metrics['attendance_rate'] }}%</span>
+                <span class="lbl">Asistencia</span>
+            </div>
+        </div>
+
+        <!-- VISOR DE CÁMARA MÓVIL -->
+        <div class="camera-viewport-card" id="mobileCameraViewport">
+            <div class="laser-scan-line" id="mobileLaser" style="display: none;"></div>
+            <div id="qrReaderVideoMobile" style="width: 100%; height: 100%;"></div>
+            
+            <div id="mobilePlaceholder" style="text-align: center; padding: 2rem 1rem;">
+                <div style="font-size: 3.5rem; margin-bottom: 0.5rem;">📷</div>
+                <h3 style="font-size: 1.1rem; font-weight: 900; margin-bottom: 0.35rem;">Cámara Lista</h3>
+                <p style="color: #94A3B8; font-size: 0.8rem; margin-bottom: 1rem;">Presiona "Activar Cámara" para comenzar el escaneo continuo.</p>
+            </div>
+        </div>
+
+        <!-- BOTONES DE CONTROL DE CÁMARA -->
+        <div class="camera-action-buttons" style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn-m-action btn-m-primary" id="btnMobileStartCamera" onclick="toggleMobileCamera()" style="flex: 1;">
+                <span>📹</span>
+                <span id="txtMobileCamBtn">Cámara en Vivo</span>
+            </button>
+
+            <!-- Botón de respaldo por Foto (Funciona 100% en HTTP y en cualquier celular) -->
+            <button type="button" class="btn-m-action btn-m-secondary" onclick="document.getElementById('qrFileInput').click()" style="flex: 0.85; background: rgba(0, 240, 255, 0.12); border-color: rgba(0, 240, 255, 0.35); color: #00F0FF;" title="Tomar foto directa del QR">
+                <span>📸</span>
+                <span>Tomar Foto</span>
+            </button>
+
+            <button type="button" class="btn-m-action btn-m-secondary" id="btnMobileSwitchCam" onclick="switchMobileCamera()" style="display: none; flex: 0.35;">
+                <span>🔄</span>
+            </button>
+
+            <!-- Input invisible de captura nativa -->
+            <input type="file" id="qrFileInput" accept="image/*" capture="environment" style="display: none;" onchange="handleQrFileSelected(this)">
+        </div>
+
+        <!-- TARJETA REACTIVA DE RESULTADO -->
+        <div class="result-banner-card" id="mobileResultCard">
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                <span id="mResultIcon" style="font-size: 2rem;">✅</span>
+                <div>
+                    <h3 id="mResultTitle" style="font-size: 1.15rem; font-weight: 900; color: #FFFFFF; margin: 0;">¡Acceso Permitido!</h3>
+                    <small id="mResultZone" style="color: #10B981; font-weight: 800; font-size: 0.85rem;">ZONA VIP</small>
+                </div>
+            </div>
+            <p id="mResultMessage" style="color: #E2E8F0; font-size: 0.8rem; margin: 0 0 0.5rem 0;"></p>
+            <div style="background: rgba(0,0,0,0.3); border-radius: 10px; padding: 0.5rem 0.75rem; font-size: 0.78rem; display: flex; justify-content: space-between;">
+                <span style="color: #94A3B8;">Titular: <strong style="color: #FFFFFF;" id="mResultBuyer">-</strong></span>
+                <span style="color: #00F0FF;" id="mResultTime">-</span>
+            </div>
+        </div>
+
+        <!-- INGRESO MANUAL -->
+        <div>
+            <small style="color: #94A3B8; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; display: block; margin-bottom: 0.35rem;">
+                ⌨️ O Ingresa Código / Hash
+            </small>
+            <form onsubmit="handleMobileManualSubmit(event)" class="manual-input-box">
+                <input type="text" id="mobileManualInput" placeholder="Escribe N° o código de boleto...">
+                <button type="submit" class="btn-m-action btn-m-primary" style="flex: 0.4; border-radius: 14px;">
+                    Validar
+                </button>
+            </form>
+        </div>
+
+        <!-- FEED DE ÚLTIMOS ESCANEOS -->
+        <div style="margin-top: 0.5rem;">
+            <small style="color: #94A3B8; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; display: block; margin-bottom: 0.4rem;">
+                📜 Últimos Ingresos Validados
+            </small>
+            <div id="mobileRecentFeed">
+                @forelse($recentCheckins as $chk)
+                    <div class="feed-mini-item">
+                        <div>
+                            <strong style="color: #FFFFFF;">{{ $chk->ticket_code }}</strong>
+                            <small style="color: #10B981; display: block;">{{ $chk->zone_name }}</small>
+                        </div>
+                        <span style="color: #00F0FF; font-size: 0.75rem;">{{ $chk->checked_in_at ? $chk->checked_in_at->format('h:i:s A') : '-' }}</span>
+                    </div>
+                @empty
+                    <div id="emptyMobileFeed" style="text-align: center; padding: 1.5rem; color: #64748B; font-size: 0.8rem;">
+                        Sin ingresos recientes todavía.
+                    </div>
+                @endforelse
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const eventId = {{ $event->id }};
+        const verifyUrl = "{{ route('web.attendees.verify_qr', $event->id) }}";
+        const csrfToken = "{{ csrf_token() }}";
+
+        let html5QrScannerMobile = null;
+        let isMobileScanning = false;
+        let isProcessingMobileScan = false;
+        let currentFacingMode = "environment";
+        let audioCtx = null;
+
+        function playMobileTone(type) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'granted') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(1760, audioCtx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.3);
+                    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                } else {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(160, audioCtx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.45);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.45);
+                    if (navigator.vibrate) navigator.vibrate([400]);
+                }
+            } catch (e) {
+                console.log(e);
+            }
+        }
+
+        function handleMobileManualSubmit(e) {
+            e.preventDefault();
+            const input = document.getElementById('mobileManualInput');
+            if (!input) return;
+            const val = input.value.trim();
+            if (!val) return;
+            processMobileScan(val);
+            input.value = '';
+        }
+
+        // Decodificar QR a partir de foto tomada con la cámara nativa del celular
+        function handleQrFileSelected(input) {
+            if (!input.files || input.files.length === 0) return;
+            const file = input.files[0];
+
+            Swal.fire({
+                title: 'Escaneando Foto...',
+                text: 'Procesando código QR del boleto',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); },
+                background: '#14141E',
+                color: '#FFFFFF'
+            });
+
+            const scanner = new Html5Qrcode("qrReaderVideoMobile");
+            scanner.scanFile(file, false)
+                .then(decodedText => {
+                    Swal.close();
+                    processMobileScan(decodedText);
+                })
+                .catch(err => {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'QR No Detectado',
+                        text: 'Asegúrate de tomar la foto de cerca, nítida y bien iluminada.',
+                        confirmButtonText: 'Intentar de Nuevo',
+                        confirmButtonColor: '#FF5500',
+                        background: '#14141E',
+                        color: '#FFFFFF'
+                    });
+                })
+                .finally(() => {
+                    input.value = '';
+                });
+        }
+
+        function processMobileScan(payload) {
+            if (isProcessingMobileScan) return;
+            isProcessingMobileScan = true;
+
+            const dev = document.getElementById('mobileDeviceName')?.value || 'Móvil';
+
+            fetch(verifyUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({
+                    qr_payload: payload,
+                    device_name: dev
+                })
+            })
+            .then(res => res.json().then(data => ({ status: res.status, body: data })))
+            .then(({ status, body }) => {
+                renderMobileScanResult(body);
+            })
+            .catch(err => {
+                console.error(err);
+                renderMobileScanResult({
+                    success: false,
+                    status: 'invalid',
+                    title: '❌ ERROR DE CONEXIÓN',
+                    message: 'Revisa tu conexión a internet.'
+                });
+            })
+            .finally(() => {
+                setTimeout(() => {
+                    isProcessingMobileScan = false;
+                }, 1500);
+            });
+        }
+
+        function renderMobileScanResult(data) {
+            const card = document.getElementById('mobileResultCard');
+            const icon = document.getElementById('mResultIcon');
+            const title = document.getElementById('mResultTitle');
+            const zone = document.getElementById('mResultZone');
+            const msg = document.getElementById('mResultMessage');
+            const buyer = document.getElementById('mResultBuyer');
+            const time = document.getElementById('mResultTime');
+
+            if (!card) return;
+            card.style.display = 'block';
+
+            if (data.status === 'granted') {
+                playMobileTone('granted');
+                card.className = 'result-banner-card result-granted';
+                icon.innerHTML = '✅';
+                title.textContent = '✓ ¡ACCESO PERMITIDO!';
+                zone.textContent = data.ticket?.zone_name || 'SECTOR VÁLIDO';
+                zone.style.color = '#10B981';
+                msg.textContent = data.message || 'Boleto verificado correctamente.';
+                buyer.textContent = data.ticket?.buyer_name || 'Público General';
+                time.textContent = data.ticket?.checked_in_at || 'Ahora';
+
+                appendMobileFeed(data.ticket);
+
+                if (data.metrics) {
+                    document.getElementById('mKpiIssued').textContent = data.metrics.tickets_issued;
+                    document.getElementById('mKpiChecked').textContent = data.metrics.checked_in_count;
+                    document.getElementById('mKpiRate').textContent = `${data.metrics.attendance_rate}%`;
+                }
+            } else if (data.status === 'already_used') {
+                playMobileTone('already_used');
+                card.className = 'result-banner-card result-already-used';
+                icon.innerHTML = '🚫';
+                title.textContent = '🚫 BOLETO YA UTILIZADO';
+                zone.textContent = data.ticket?.zone_name || 'ALERTA';
+                zone.style.color = '#F59E0B';
+                msg.textContent = data.message || 'Este boleto ya ingresó previamente.';
+                buyer.textContent = data.ticket?.buyer_name || '-';
+                time.textContent = data.ticket?.checked_in_at || 'Previamente';
+            } else {
+                playMobileTone('invalid');
+                card.className = 'result-banner-card result-invalid';
+                icon.innerHTML = '❌';
+                title.textContent = '❌ BOLETO INVÁLIDO O FALSO';
+                zone.textContent = 'NO REGISTRADO';
+                zone.style.color = '#EF4444';
+                msg.textContent = data.message || 'El código no corresponde a este evento.';
+                buyer.textContent = '-';
+                time.textContent = '-';
+            }
+        }
+
+        function appendMobileFeed(t) {
+            const container = document.getElementById('mobileRecentFeed');
+            const empty = document.getElementById('emptyMobileFeed');
+            if (empty) empty.remove();
+
+            const item = document.createElement('div');
+            item.className = 'feed-mini-item';
+            item.innerHTML = `
+                <div>
+                    <strong style="color: #FFFFFF;">${t.ticket_code}</strong>
+                    <small style="color: #10B981; display: block;">${t.zone_name}</small>
+                </div>
+                <span style="color: #00F0FF; font-size: 0.75rem;">${t.checked_in_at}</span>
+            `;
+            if (container.firstChild) {
+                container.insertBefore(item, container.firstChild);
+            } else {
+                container.appendChild(item);
+            }
+        }
+
+        function toggleMobileCamera() {
+            if (isMobileScanning) {
+                stopMobileCamera();
+            } else {
+                startMobileCamera();
+            }
+        }
+
+        function startMobileCamera() {
+            if (typeof Html5Qrcode === 'undefined') {
+                alert('Librería de escaneo no disponible.');
+                return;
+            }
+
+            // Verificar si el navegador bloquea la cámara por protocolo no seguro (HTTP con IP)
+            if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    showHttpCameraHelper();
+                    return;
+                }
+            }
+
+            html5QrScannerMobile = new Html5Qrcode("qrReaderVideoMobile");
+            const config = { fps: 10, qrbox: { width: 240, height: 240 } };
+
+            html5QrScannerMobile.start(
+                { facingMode: currentFacingMode },
+                config,
+                (decodedText) => {
+                    processMobileScan(decodedText);
+                },
+                () => {}
+            ).then(() => {
+                isMobileScanning = true;
+                document.getElementById('txtMobileCamBtn').textContent = '⏹️ Apagar';
+                document.getElementById('btnMobileStartCamera').className = 'btn-m-action btn-m-secondary';
+                document.getElementById('mobileLaser').style.display = 'block';
+                document.getElementById('mobilePlaceholder').style.display = 'none';
+                document.getElementById('btnMobileSwitchCam').style.display = 'inline-flex';
+            }).catch(err => {
+                console.error('Camera error:', err);
+                showHttpCameraHelper();
+            });
+        }
+
+        function showHttpCameraHelper() {
+            Swal.fire({
+                title: '🔒 Permiso de Cámara en Celular',
+                html: `
+                    <div style="text-align: left; font-size: 0.85rem; color: #E2E8F0; line-height: 1.5;">
+                        <p style="margin-bottom: 0.75rem;">
+                            Los navegadores móviles bloquean la <strong>cámara continua</strong> por defecto en direcciones locales <code>http://IP</code>.
+                        </p>
+                        <div style="background: rgba(255,85,0,0.1); border-left: 3px solid #FF5500; padding: 0.6rem; border-radius: 6px; margin-bottom: 0.75rem;">
+                            <strong>Solución Rápida:</strong> Usa el botón <strong>"📸 Tomar Foto"</strong> para escanear directamente con la cámara del celular sin configurar nada.
+                        </div>
+                        <p style="margin-bottom: 0.25rem; font-size: 0.8rem; color: #94A3B8;">
+                            O para activar la cámara en vivo en Google Chrome:
+                        </p>
+                        <ol style="margin-left: 1.25rem; font-size: 0.78rem; color: #94A3B8; margin-bottom: 0.5rem;">
+                            <li>Abre una pestaña en Chrome y ve a: <code>chrome://flags/#unsafely-treat-insecure-origin-as-secure</code></li>
+                            <li>Escribe: <code>${location.origin}</code></li>
+                            <li>Cambia a <strong>Enabled</strong> y dale a <strong>Relaunch</strong>.</li>
+                        </ol>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: '📸 Usar Tomar Foto',
+                cancelButtonText: 'Cerrar',
+                confirmButtonColor: '#FF5500',
+                background: '#14141E',
+                color: '#FFFFFF'
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    document.getElementById('qrFileInput').click();
+                }
+            });
+        }
+
+        function stopMobileCamera() {
+            if (html5QrScannerMobile && isMobileScanning) {
+                html5QrScannerMobile.stop().then(() => {
+                    html5QrScannerMobile.clear();
+                    isMobileScanning = false;
+                    document.getElementById('txtMobileCamBtn').textContent = '📹 Cámara en Vivo';
+                    document.getElementById('btnMobileStartCamera').className = 'btn-m-action btn-m-primary';
+                    document.getElementById('mobileLaser').style.display = 'none';
+                    document.getElementById('mobilePlaceholder').style.display = 'block';
+                    document.getElementById('btnMobileSwitchCam').style.display = 'none';
+                }).catch(e => console.error(e));
+            }
+        }
+
+        function switchMobileCamera() {
+            if (!isMobileScanning) return;
+            currentFacingMode = (currentFacingMode === "environment") ? "user" : "environment";
+            stopMobileCamera();
+            setTimeout(() => {
+                startMobileCamera();
+            }, 300);
+        }
+    </script>
+</body>
+</html>
