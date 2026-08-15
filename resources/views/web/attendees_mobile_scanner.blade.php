@@ -218,35 +218,37 @@
             border: 1.5px solid rgba(255, 255, 255, 0.15);
         }
 
-        /* BANNER DE RESULTADO EN PANTALLA COMPLETA / MODAL */
-        .result-banner-card {
-            border-radius: 18px;
-            padding: 1.25rem;
+        /* TOAST SUPERIOR DE RESULTADO (ENCIMA DEL TÍTULO) */
+        .result-top-toast {
+            border-radius: 16px;
+            padding: 0.85rem 1rem;
+            margin-bottom: 0.75rem;
             display: none;
-            animation: slideUp 0.3s ease;
+            animation: toastDropIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: opacity 0.3s ease;
         }
 
-        @keyframes slideUp {
-            from { transform: translateY(20px); opacity: 0; }
+        @keyframes toastDropIn {
+            from { transform: translateY(-12px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
 
         .result-granted {
-            background: rgba(16, 185, 129, 0.18);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(6, 78, 59, 0.45));
             border: 2px solid #10B981;
-            box-shadow: 0 0 30px rgba(16, 185, 129, 0.35);
+            box-shadow: 0 4px 25px rgba(16, 185, 129, 0.45);
         }
 
         .result-already-used {
-            background: rgba(245, 158, 11, 0.18);
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(120, 53, 15, 0.45));
             border: 2px solid #F59E0B;
-            box-shadow: 0 0 30px rgba(245, 158, 11, 0.35);
+            box-shadow: 0 4px 25px rgba(245, 158, 11, 0.45);
         }
 
         .result-invalid {
-            background: rgba(239, 68, 68, 0.18);
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(127, 29, 29, 0.45));
             border: 2px solid #EF4444;
-            box-shadow: 0 0 30px rgba(239, 68, 68, 0.35);
+            box-shadow: 0 4px 25px rgba(239, 68, 68, 0.45);
         }
 
         /* ENTRADA MANUAL */
@@ -304,6 +306,24 @@
     </header>
 
     <div class="scanner-container">
+        <!-- TOAST DE RESULTADO EN FORMA DE NOTIFICACIÓN SUPERIOR (ENCIMA DEL EVENTO) -->
+        <div class="result-top-toast" id="mobileResultToast">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span id="mResultIcon" style="font-size: 2.2rem; flex-shrink: 0;">✅</span>
+                <div style="flex: 1; overflow: hidden;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.2rem;">
+                        <h3 id="mResultTitle" style="font-size: 1.05rem; font-weight: 900; color: #FFFFFF; margin: 0; text-transform: uppercase;">¡Acceso Permitido!</h3>
+                        <span id="mResultZone" style="font-weight: 800; font-size: 0.75rem; text-transform: uppercase; background: rgba(0,0,0,0.35); padding: 0.2rem 0.55rem; border-radius: 6px; white-space: nowrap;">VIP</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #E2E8F0;">
+                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Titular: <strong style="color: #FFFFFF;" id="mResultBuyer">-</strong></span>
+                        <span style="color: #00F0FF; font-weight: 700; margin-left: 0.5rem;" id="mResultTime">-</span>
+                    </div>
+                    <p id="mResultMessage" style="color: #CBD5E1; font-size: 0.72rem; margin: 0.25rem 0 0 0; line-height: 1.2;"></p>
+                </div>
+            </div>
+        </div>
+
         <!-- TARJETA DEL EVENTO -->
         <div class="event-info-card">
             <img src="{{ $event->banner_image ?: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=600&q=80' }}" alt="{{ $event->title }}" class="event-avatar">
@@ -344,22 +364,6 @@
             <button type="button" id="btnMobileSwitchCam" onclick="switchMobileCamera()" style="position: absolute; top: 12px; right: 12px; z-index: 20; background: rgba(0,0,0,0.6); border: 1.5px solid rgba(255,255,255,0.3); border-radius: 50%; width: 38px; height: 38px; color: #FFFFFF; font-size: 1rem; display: none; align-items: center; justify-content: center; cursor: pointer;">
                 🔄
             </button>
-        </div>
-
-        <!-- TARJETA REACTIVA DE RESULTADO -->
-        <div class="result-banner-card" id="mobileResultCard">
-            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
-                <span id="mResultIcon" style="font-size: 2rem;">✅</span>
-                <div>
-                    <h3 id="mResultTitle" style="font-size: 1.15rem; font-weight: 900; color: #FFFFFF; margin: 0;">¡Acceso Permitido!</h3>
-                    <small id="mResultZone" style="color: #10B981; font-weight: 800; font-size: 0.85rem;">ZONA VIP</small>
-                </div>
-            </div>
-            <p id="mResultMessage" style="color: #E2E8F0; font-size: 0.8rem; margin: 0 0 0.5rem 0;"></p>
-            <div style="background: rgba(0,0,0,0.3); border-radius: 10px; padding: 0.5rem 0.75rem; font-size: 0.78rem; display: flex; justify-content: space-between;">
-                <span style="color: #94A3B8;">Titular: <strong style="color: #FFFFFF;" id="mResultBuyer">-</strong></span>
-                <span style="color: #00F0FF;" id="mResultTime">-</span>
-            </div>
         </div>
 
         <!-- FEED DE ÚLTIMOS ESCANEOS -->
@@ -512,8 +516,10 @@
             });
         }
 
+        let toastHideTimer = null;
+
         function renderMobileScanResult(data) {
-            const card = document.getElementById('mobileResultCard');
+            const toast = document.getElementById('mobileResultToast');
             const icon = document.getElementById('mResultIcon');
             const title = document.getElementById('mResultTitle');
             const zone = document.getElementById('mResultZone');
@@ -521,12 +527,18 @@
             const buyer = document.getElementById('mResultBuyer');
             const time = document.getElementById('mResultTime');
 
-            if (!card) return;
-            card.style.display = 'block';
+            if (!toast) return;
+
+            if (toastHideTimer) {
+                clearTimeout(toastHideTimer);
+            }
+
+            toast.style.display = 'block';
+            toast.style.opacity = '1';
 
             if (data.status === 'granted') {
                 playMobileTone('granted');
-                card.className = 'result-banner-card result-granted';
+                toast.className = 'result-top-toast result-granted';
                 icon.innerHTML = '✅';
                 title.textContent = '✓ ¡ACCESO PERMITIDO!';
                 zone.textContent = data.ticket?.zone_name || 'SECTOR VÁLIDO';
@@ -544,7 +556,7 @@
                 }
             } else if (data.status === 'already_used') {
                 playMobileTone('already_used');
-                card.className = 'result-banner-card result-already-used';
+                toast.className = 'result-top-toast result-already-used';
                 icon.innerHTML = '🚫';
                 title.textContent = '🚫 BOLETO YA UTILIZADO';
                 zone.textContent = data.ticket?.zone_name || 'ALERTA';
@@ -554,15 +566,25 @@
                 time.textContent = data.ticket?.checked_in_at || 'Previamente';
             } else {
                 playMobileTone('invalid');
-                card.className = 'result-banner-card result-invalid';
+                toast.className = 'result-top-toast result-invalid';
                 icon.innerHTML = '❌';
-                title.textContent = '❌ BOLETO INVÁLIDO O FALSO';
+                title.textContent = '❌ BOLETO INVÁLIDO';
                 zone.textContent = 'NO REGISTRADO';
                 zone.style.color = '#EF4444';
                 msg.textContent = data.message || 'El código no corresponde a este evento.';
                 buyer.textContent = '-';
                 time.textContent = '-';
             }
+
+            // Auto-ocultar suavemente después de 4.5 segundos
+            toastHideTimer = setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => {
+                    if (toast.style.opacity === '0') {
+                        toast.style.display = 'none';
+                    }
+                }, 300);
+            }, 4500);
         }
 
         function appendMobileFeed(t) {
