@@ -241,150 +241,16 @@
                             📍 {{ $event->venue_name ?? 'Local Principal' }} &nbsp;|&nbsp; 🗓️ {{ $event->event_date }} {{ $event->event_time }}
                         </p>
                     </div>
-                    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-                        <button type="button" class="btn btn-primary" onclick="openMobileScannerModal()" style="font-weight: 900; font-size: 0.95rem; padding: 0.85rem 1.4rem; border-radius: 14px; display: inline-flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #00F0FF, #0070F3); border-color: #00F0FF; color: #0A0A10; box-shadow: 0 4px 18px rgba(0, 240, 255, 0.45); cursor: pointer;">
-                            <span>📱</span>
-                            <span>Dispositivo Scanner (Link Móvil)</span>
-                        </button>
-                        <button type="button" class="btn btn-secondary" onclick="copyMobileScannerLink()" style="font-weight: 800; font-size: 0.9rem; padding: 0.85rem 1.25rem; border-radius: 14px; display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer;">
-                            <span>📋</span>
-                            <span>Copiar Link</span>
-                        </button>
-                        <a href="{{ route('web.attendees') }}" class="btn btn-secondary" style="padding: 0.85rem 1.3rem; font-size: 0.9rem; text-decoration: none; border-radius: 14px;">
-                            ⬅️ Volver a Asistentes
+                    <div style="display: flex; gap: 0.75rem; align-items: center;">
+                        <a href="{{ route('web.attendees') }}" class="btn" style="background: rgba(255, 85, 0, 0.18); border: 1.5px solid #FF5500; color: #FFFFFF; font-weight: 800; padding: 0.75rem 1.4rem; font-size: 0.9rem; text-decoration: none; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(255, 85, 0, 0.25); transition: all 0.2s ease;">
+                            <span>⬅️</span>
+                            <span>Volver a Asistentes</span>
                         </a>
                     </div>
                 </div>
 
-                <!-- HERO CARD DEL EVENTO & SELECTOR DE PUERTA -->
-                <div class="settings-card-box" style="margin-bottom: 2rem; background: linear-gradient(135deg, rgba(20,20,30,0.95), rgba(10,10,16,0.95)); border: 1px solid rgba(255,85,0,0.25);">
-                    <div style="display: flex; gap: 1.5rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
-                        <div style="display: flex; gap: 1.25rem; align-items: center;">
-                            <div style="width: 70px; height: 70px; border-radius: 16px; overflow: hidden; border: 2px solid rgba(255,85,0,0.4); flex-shrink: 0; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
-                                <img src="{{ $event->banner_image ?: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=600&q=80' }}" alt="{{ $event->title }}" style="width: 100%; height: 100%; object-fit: cover;">
-                            </div>
-                            <div>
-                                <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.25rem; flex-wrap: wrap;">
-                                    <span class="dash-badge-custom badge-green" style="font-size: 0.75rem;">🟢 Control de Acceso Activo</span>
-                                    <span class="dash-badge-custom {{ ($event->sales_type ?? 'fisica') === 'fisica' ? 'badge-orange' : 'badge-cyan' }}" style="font-size: 0.75rem;">
-                                        {{ ($event->sales_type ?? 'fisica') === 'fisica' ? '🎫 Venta Física' : '🌐 Venta Virtual' }}
-                                    </span>
-                                </div>
-                                <h3 style="font-size: 1.25rem; font-weight: 900; color: #FFFFFF; margin: 0 0 0.15rem 0;">{{ $event->title }}</h3>
-                                <p style="color: #94A3B8; font-size: 0.8rem; margin: 0;">
-                                    📍 <strong>{{ $event->venue_name ?? 'Local Principal' }}</strong> ({{ $event->address ?? 'Ayacucho' }})
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- Selector de Puerta / Dispositivo -->
-                        <div style="display: flex; align-items: center; gap: 0.75rem; background: rgba(255,255,255,0.04); padding: 0.6rem 1rem; border-radius: 14px; border: 1px solid rgba(255,255,255,0.1);">
-                            <span style="font-size: 1.2rem;">🚪</span>
-                            <div>
-                                <small style="display: block; color: #94A3B8; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;">Punto de Control</small>
-                                <input type="text" id="deviceControlName" value="Puerta Principal" style="background: transparent; border: none; color: #FFFFFF; font-weight: 800; font-size: 0.85rem; outline: none; width: 140px;" title="Editar nombre de la puerta o terminal">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- KPI CARDS DE CONTROL DE ACCESO EN VIVO -->
-                <div class="dash-stats-grid" style="margin-bottom: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem;">
-                    <div class="dash-stat-card" style="border: 1px solid rgba(0, 240, 255, 0.3); background: rgba(0, 240, 255, 0.05); padding: 1.25rem; border-radius: 16px;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-                            <span style="font-size: 0.8rem; font-weight: 800; color: #94A3B8; text-transform: uppercase;">Boletos en Sistema</span>
-                            <span style="font-size: 1.3rem;">🎟️</span>
-                        </div>
-                        <div style="font-size: 1.8rem; font-weight: 900; color: #FFFFFF;" id="kpiTicketsIssued">{{ number_format($metrics['tickets_issued']) }}</div>
-                        <span style="font-size: 0.75rem; color: #00F0FF;">Emitidos (PDF + Taquilla)</span>
-                    </div>
-
-                    <div class="dash-stat-card" style="border: 1px solid rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.06); padding: 1.25rem; border-radius: 16px;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-                            <span style="font-size: 0.8rem; font-weight: 800; color: #94A3B8; text-transform: uppercase;">Ingresados / Validados</span>
-                            <span style="font-size: 1.3rem;">✅</span>
-                        </div>
-                        <div style="font-size: 1.8rem; font-weight: 900; color: #10B981;" id="kpiCheckedIn">{{ number_format($metrics['checked_in_count']) }}</div>
-                        <span style="font-size: 0.75rem; color: #10B981;">Asistentes verificados</span>
-                    </div>
-
-                    <div class="dash-stat-card" style="border: 1px solid rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.05); padding: 1.25rem; border-radius: 16px;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-                            <span style="font-size: 0.8rem; font-weight: 800; color: #94A3B8; text-transform: uppercase;">Pendientes de Ingreso</span>
-                            <span style="font-size: 1.3rem;">⏳</span>
-                        </div>
-                        <div style="font-size: 1.8rem; font-weight: 900; color: #F59E0B;" id="kpiPending">{{ number_format($metrics['pending_count']) }}</div>
-                        <span style="font-size: 0.75rem; color: #F59E0B;">Por ingresar al local</span>
-                    </div>
-
-                    <div class="dash-stat-card" style="border: 1px solid rgba(255, 85, 0, 0.3); background: rgba(255, 85, 0, 0.05); padding: 1.25rem; border-radius: 16px;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-                            <span style="font-size: 0.8rem; font-weight: 800; color: #94A3B8; text-transform: uppercase;">% Asistencia en Vivo</span>
-                            <span style="font-size: 1.3rem;">📊</span>
-                        </div>
-                        <div style="font-size: 1.8rem; font-weight: 900; color: var(--color-primary-orange);" id="kpiAttendanceRate">{{ $metrics['attendance_rate'] }}%</div>
-                        <span style="font-size: 0.75rem; color: #94A3B8;">Ocupación del aforo</span>
-                    </div>
-                </div>
-
-                <!-- CARD DE CONTROL SCANNER MÓVIL & ENLACE DE ACCESO -->
-                <div class="settings-card-box" style="margin-bottom: 2rem; background: linear-gradient(135deg, rgba(20,20,35,0.95), rgba(12,12,20,0.98)); border: 1.5px solid rgba(0, 240, 255, 0.25); position: relative; overflow: hidden;">
-                    <div style="position: absolute; right: -20px; top: -20px; font-size: 10rem; opacity: 0.03; pointer-events: none;">📱</div>
-                    
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
-                        <div style="max-width: 620px;">
-                            <div style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.8rem; background: rgba(0, 240, 255, 0.12); border: 1px solid rgba(0, 240, 255, 0.3); border-radius: 20px; color: #00F0FF; font-size: 0.75rem; font-weight: 900; margin-bottom: 0.75rem;">
-                                <span>📱</span>
-                                <span>ESCANEO DIRECTO DESDE SMARTPHONES</span>
-                            </div>
-                            <h3 style="font-size: 1.35rem; font-weight: 900; color: #FFFFFF; margin-bottom: 0.45rem;">
-                                Terminal Móvil para Porteros y Control de Acceso
-                            </h3>
-                            <p style="color: #94A3B8; font-size: 0.88rem; line-height: 1.5; margin-bottom: 1.25rem;">
-                                El personal de seguridad y puerta escanea los códigos QR directamente con la cámara de sus teléfonos celulares. Todo se sincroniza automáticamente con esta pantalla en vivo.
-                            </p>
-
-                            <!-- Acciones Rápidas -->
-                            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
-                                <button type="button" class="btn btn-primary" onclick="openMobileScannerModal()" style="font-weight: 900; font-size: 0.9rem; padding: 0.75rem 1.35rem; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #00F0FF, #0070F3); border-color: #00F0FF; color: #0A0A10; box-shadow: 0 4px 16px rgba(0, 240, 255, 0.4); cursor: pointer;">
-                                    <span>📲</span>
-                                    <span>Ver Código QR para Celular</span>
-                                </button>
-                                <button type="button" class="btn btn-secondary" onclick="copyMobileScannerLink()" style="font-weight: 800; font-size: 0.88rem; padding: 0.75rem 1.2rem; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer;">
-                                    <span>📋</span>
-                                    <span>Copiar Link de Scanner</span>
-                                </button>
-                                <button type="button" class="btn btn-secondary" onclick="shareViaWhatsapp()" style="font-weight: 800; font-size: 0.88rem; padding: 0.75rem 1.2rem; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.45rem; background: rgba(37, 211, 102, 0.12); border-color: rgba(37, 211, 102, 0.3); color: #25D366; cursor: pointer;">
-                                    <span>💬</span>
-                                    <span>Enviar por WhatsApp</span>
-                                </button>
-                                <a href="{{ route('web.scanner.direct', $event->id) }}" target="_blank" class="btn btn-secondary" style="font-weight: 800; font-size: 0.88rem; padding: 0.75rem 1.2rem; border-radius: 12px; text-decoration: none; display: inline-flex; align-items: center; gap: 0.45rem;">
-                                    <span>🚀</span>
-                                    <span>Abrir en Nueva Pestaña</span>
-                                </a>
-                            </div>
-                        </div>
-
-                        <!-- Mini buscador manual rápido de emergencia -->
-                        <div style="background: rgba(0, 0, 0, 0.35); padding: 1.25rem; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.08); min-width: 280px; flex: 1; max-width: 360px;">
-                            <label style="display: block; font-size: 0.75rem; font-weight: 800; color: #94A3B8; text-transform: uppercase; margin-bottom: 0.5rem;">
-                                ⌨️ Búsqueda / Validación Manual
-                            </label>
-                            <form id="manualScanForm" onsubmit="handleManualScan(event)" style="display: flex; gap: 0.5rem;">
-                                <input type="text" id="manualQrInput" placeholder="N° Boleto, DNI o Hash..." style="flex: 1; padding: 0.7rem 0.9rem; background: #0A0A10; border: 1.5px solid rgba(255,255,255,0.15); border-radius: 10px; color: #FFFFFF; font-weight: 700; font-size: 0.85rem; outline: none;">
-                                <button type="submit" class="btn btn-primary" style="padding: 0 1rem; font-weight: 800; font-size: 0.85rem; border-radius: 10px; white-space: nowrap;">
-                                    Validar
-                                </button>
-                            </form>
-                            <small style="color: #64748B; font-size: 0.72rem; margin-top: 0.4rem; display: block;">
-                                Útil si un asistente no tiene su QR legible.
-                            </small>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- STOCK Y ASISTENCIA POR ZONA / SECTOR -->
-                <div class="settings-card-box" style="margin-bottom: 2rem;">
+                <div class="settings-card-box" style="margin-bottom: 1.5rem;">
                     <div class="settings-card-header">
                         <div class="card-header-icon" style="background: rgba(255, 85, 0, 0.15); border-color: rgba(255, 85, 0, 0.3); color: var(--color-primary-orange);">📊</div>
                         <div>
@@ -417,6 +283,45 @@
                                 </div>
                             </div>
                         @endforeach
+                    </div>
+                </div>
+
+                <!-- KPI CARDS COMPACTOS DE CONTROL DE ACCESO EN VIVO -->
+                <div class="dash-stats-grid" style="margin-bottom: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.9rem;">
+                    <div class="dash-stat-card" style="border: 1px solid rgba(0, 240, 255, 0.25); background: rgba(0, 240, 255, 0.04); padding: 0.85rem 1.15rem; border-radius: 14px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+                            <span style="font-size: 0.72rem; font-weight: 800; color: #94A3B8; text-transform: uppercase;">Boletos en Sistema</span>
+                            <span style="font-size: 1.1rem;">🎟️</span>
+                        </div>
+                        <div style="font-size: 1.35rem; font-weight: 900; color: #FFFFFF;" id="kpiTicketsIssued">{{ number_format($metrics['tickets_issued']) }}</div>
+                        <span style="font-size: 0.7rem; color: #00F0FF;">Emitidos (PDF + Taquilla)</span>
+                    </div>
+
+                    <div class="dash-stat-card" style="border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05); padding: 0.85rem 1.15rem; border-radius: 14px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+                            <span style="font-size: 0.72rem; font-weight: 800; color: #94A3B8; text-transform: uppercase;">Ingresados / Validados</span>
+                            <span style="font-size: 1.1rem;">✅</span>
+                        </div>
+                        <div style="font-size: 1.35rem; font-weight: 900; color: #10B981;" id="kpiCheckedIn">{{ number_format($metrics['checked_in_count']) }}</div>
+                        <span style="font-size: 0.7rem; color: #10B981;">Asistentes verificados</span>
+                    </div>
+
+                    <div class="dash-stat-card" style="border: 1px solid rgba(245, 158, 11, 0.25); background: rgba(245, 158, 11, 0.04); padding: 0.85rem 1.15rem; border-radius: 14px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+                            <span style="font-size: 0.72rem; font-weight: 800; color: #94A3B8; text-transform: uppercase;">Pendientes de Ingreso</span>
+                            <span style="font-size: 1.1rem;">⏳</span>
+                        </div>
+                        <div style="font-size: 1.35rem; font-weight: 900; color: #F59E0B;" id="kpiPending">{{ number_format($metrics['pending_count']) }}</div>
+                        <span style="font-size: 0.7rem; color: #F59E0B;">Por ingresar al local</span>
+                    </div>
+
+                    <div class="dash-stat-card" style="border: 1px solid rgba(255, 85, 0, 0.25); background: rgba(255, 85, 0, 0.04); padding: 0.85rem 1.15rem; border-radius: 14px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+                            <span style="font-size: 0.72rem; font-weight: 800; color: #94A3B8; text-transform: uppercase;">% Asistencia en Vivo</span>
+                            <span style="font-size: 1.1rem;">📊</span>
+                        </div>
+                        <div style="font-size: 1.35rem; font-weight: 900; color: var(--color-primary-orange);" id="kpiAttendanceRate">{{ $metrics['attendance_rate'] }}%</div>
+                        <span style="font-size: 0.7rem; color: #94A3B8;">Ocupación del aforo</span>
                     </div>
                 </div>
 

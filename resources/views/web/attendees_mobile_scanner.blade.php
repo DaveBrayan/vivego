@@ -329,37 +329,21 @@
             </div>
         </div>
 
-        <!-- VISOR DE CÁMARA MÓVIL -->
-        <div class="camera-viewport-card" id="mobileCameraViewport">
+        <!-- VISOR DE CÁMARA MÓVIL AUTOMÁTICO -->
+        <div class="camera-viewport-card" id="mobileCameraViewport" style="position: relative;">
             <div class="laser-scan-line" id="mobileLaser" style="display: none;"></div>
             <div id="qrReaderVideoMobile" style="width: 100%; height: 100%;"></div>
             
-            <div id="mobilePlaceholder" style="text-align: center; padding: 2rem 1rem;">
-                <div style="font-size: 3.5rem; margin-bottom: 0.5rem;">📷</div>
-                <h3 style="font-size: 1.1rem; font-weight: 900; margin-bottom: 0.35rem;">Cámara Lista</h3>
-                <p style="color: #94A3B8; font-size: 0.8rem; margin-bottom: 1rem;">Presiona "Activar Cámara" para comenzar el escaneo continuo.</p>
+            <div id="mobilePlaceholder" style="text-align: center; padding: 2.5rem 1rem;">
+                <div style="font-size: 3.5rem; margin-bottom: 0.5rem; animation: pulse 1.5s infinite;">📷</div>
+                <h3 style="font-size: 1.1rem; font-weight: 900; margin-bottom: 0.35rem; color: #FFFFFF;">Iniciando Cámara...</h3>
+                <p style="color: #94A3B8; font-size: 0.8rem; margin: 0;">Apunta el código QR del boleto dentro de este cuadro.</p>
             </div>
-        </div>
 
-        <!-- BOTONES DE CONTROL DE CÁMARA -->
-        <div class="camera-action-buttons" style="display: flex; gap: 0.5rem;">
-            <button type="button" class="btn-m-action btn-m-primary" id="btnMobileStartCamera" onclick="toggleMobileCamera()" style="flex: 1;">
-                <span>📹</span>
-                <span id="txtMobileCamBtn">Cámara en Vivo</span>
+            <!-- Botón flotante para cambiar lente (trasera / delantera) si hay más de una -->
+            <button type="button" id="btnMobileSwitchCam" onclick="switchMobileCamera()" style="position: absolute; top: 12px; right: 12px; z-index: 20; background: rgba(0,0,0,0.6); border: 1.5px solid rgba(255,255,255,0.3); border-radius: 50%; width: 38px; height: 38px; color: #FFFFFF; font-size: 1rem; display: none; align-items: center; justify-content: center; cursor: pointer;">
+                🔄
             </button>
-
-            <!-- Botón de respaldo por Foto (Funciona 100% en HTTP y en cualquier celular) -->
-            <button type="button" class="btn-m-action btn-m-secondary" onclick="document.getElementById('qrFileInput').click()" style="flex: 0.85; background: rgba(0, 240, 255, 0.12); border-color: rgba(0, 240, 255, 0.35); color: #00F0FF;" title="Tomar foto directa del QR">
-                <span>📸</span>
-                <span>Tomar Foto</span>
-            </button>
-
-            <button type="button" class="btn-m-action btn-m-secondary" id="btnMobileSwitchCam" onclick="switchMobileCamera()" style="display: none; flex: 0.35;">
-                <span>🔄</span>
-            </button>
-
-            <!-- Input invisible de captura nativa -->
-            <input type="file" id="qrFileInput" accept="image/*" capture="environment" style="display: none;" onchange="handleQrFileSelected(this)">
         </div>
 
         <!-- TARJETA REACTIVA DE RESULTADO -->
@@ -376,19 +360,6 @@
                 <span style="color: #94A3B8;">Titular: <strong style="color: #FFFFFF;" id="mResultBuyer">-</strong></span>
                 <span style="color: #00F0FF;" id="mResultTime">-</span>
             </div>
-        </div>
-
-        <!-- INGRESO MANUAL -->
-        <div>
-            <small style="color: #94A3B8; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; display: block; margin-bottom: 0.35rem;">
-                ⌨️ O Ingresa Código / Hash
-            </small>
-            <form onsubmit="handleMobileManualSubmit(event)" class="manual-input-box">
-                <input type="text" id="mobileManualInput" placeholder="Escribe N° o código de boleto...">
-                <button type="submit" class="btn-m-action btn-m-primary" style="flex: 0.4; border-radius: 14px;">
-                    Validar
-                </button>
-            </form>
         </div>
 
         <!-- FEED DE ÚLTIMOS ESCANEOS -->
@@ -638,7 +609,13 @@
             }
 
             html5QrScannerMobile = new Html5Qrcode("qrReaderVideoMobile");
-            const config = { fps: 10, qrbox: { width: 240, height: 240 } };
+            const config = { 
+                fps: 15, 
+                qrbox: function(viewfinderWidth, viewfinderHeight) {
+                    const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                    return { width: Math.floor(minEdge * 0.82), height: Math.floor(minEdge * 0.82) };
+                }
+            };
 
             html5QrScannerMobile.start(
                 { facingMode: currentFacingMode },
@@ -649,11 +626,13 @@
                 () => {}
             ).then(() => {
                 isMobileScanning = true;
-                document.getElementById('txtMobileCamBtn').textContent = '⏹️ Apagar';
-                document.getElementById('btnMobileStartCamera').className = 'btn-m-action btn-m-secondary';
-                document.getElementById('mobileLaser').style.display = 'block';
-                document.getElementById('mobilePlaceholder').style.display = 'none';
-                document.getElementById('btnMobileSwitchCam').style.display = 'inline-flex';
+                const laser = document.getElementById('mobileLaser');
+                const placeholder = document.getElementById('mobilePlaceholder');
+                const switchBtn = document.getElementById('btnMobileSwitchCam');
+
+                if (laser) laser.style.display = 'block';
+                if (placeholder) placeholder.style.display = 'none';
+                if (switchBtn) switchBtn.style.display = 'flex';
             }).catch(err => {
                 console.error('Camera error:', err);
                 showHttpCameraHelper();
@@ -666,31 +645,21 @@
                 html: `
                     <div style="text-align: left; font-size: 0.85rem; color: #E2E8F0; line-height: 1.5;">
                         <p style="margin-bottom: 0.75rem;">
-                            Los navegadores móviles bloquean la <strong>cámara continua</strong> por defecto en direcciones locales <code>http://IP</code>.
+                            Chrome en el celular requiere habilitar la cámara para direcciones IP locales:
                         </p>
-                        <div style="background: rgba(255,85,0,0.1); border-left: 3px solid #FF5500; padding: 0.6rem; border-radius: 6px; margin-bottom: 0.75rem;">
-                            <strong>Solución Rápida:</strong> Usa el botón <strong>"📸 Tomar Foto"</strong> para escanear directamente con la cámara del celular sin configurar nada.
-                        </div>
-                        <p style="margin-bottom: 0.25rem; font-size: 0.8rem; color: #94A3B8;">
-                            O para activar la cámara en vivo en Google Chrome:
-                        </p>
-                        <ol style="margin-left: 1.25rem; font-size: 0.78rem; color: #94A3B8; margin-bottom: 0.5rem;">
-                            <li>Abre una pestaña en Chrome y ve a: <code>chrome://flags/#unsafely-treat-insecure-origin-as-secure</code></li>
-                            <li>Escribe: <code>${location.origin}</code></li>
-                            <li>Cambia a <strong>Enabled</strong> y dale a <strong>Relaunch</strong>.</li>
+                        <ol style="margin-left: 1.25rem; font-size: 0.8rem; color: #94A3B8; margin-bottom: 0.75rem;">
+                            <li>Abre una pestaña en Chrome y ve a: <br><strong style="color: #00F0FF;">chrome://flags/#unsafely-treat-insecure-origin-as-secure</strong></li>
+                            <li>Escribe: <strong style="color: #FF5500;">${location.origin}</strong></li>
+                            <li>Cambia a <strong>Enabled</strong> y pulsa <strong>Relaunch</strong>.</li>
                         </ol>
                     </div>
                 `,
-                showCancelButton: true,
-                confirmButtonText: '📸 Usar Tomar Foto',
-                cancelButtonText: 'Cerrar',
+                confirmButtonText: '🔄 Reintentar Activar Cámara',
                 confirmButtonColor: '#FF5500',
                 background: '#14141E',
                 color: '#FFFFFF'
-            }).then((res) => {
-                if (res.isConfirmed) {
-                    document.getElementById('qrFileInput').click();
-                }
+            }).then(() => {
+                startMobileCamera();
             });
         }
 
@@ -699,11 +668,13 @@
                 html5QrScannerMobile.stop().then(() => {
                     html5QrScannerMobile.clear();
                     isMobileScanning = false;
-                    document.getElementById('txtMobileCamBtn').textContent = '📹 Cámara en Vivo';
-                    document.getElementById('btnMobileStartCamera').className = 'btn-m-action btn-m-primary';
-                    document.getElementById('mobileLaser').style.display = 'none';
-                    document.getElementById('mobilePlaceholder').style.display = 'block';
-                    document.getElementById('btnMobileSwitchCam').style.display = 'none';
+                    const laser = document.getElementById('mobileLaser');
+                    const placeholder = document.getElementById('mobilePlaceholder');
+                    const switchBtn = document.getElementById('btnMobileSwitchCam');
+
+                    if (laser) laser.style.display = 'none';
+                    if (placeholder) placeholder.style.display = 'block';
+                    if (switchBtn) switchBtn.style.display = 'none';
                 }).catch(e => console.error(e));
             }
         }
@@ -716,6 +687,11 @@
                 startMobileCamera();
             }, 300);
         }
+
+        // Auto-activación inmediata de la cámara al ingresar a la pantalla
+        document.addEventListener('DOMContentLoaded', function() {
+            startMobileCamera();
+        });
     </script>
 </body>
 </html>
