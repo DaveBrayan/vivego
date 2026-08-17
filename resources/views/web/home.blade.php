@@ -40,7 +40,7 @@
                                 </div>
                             </div>
                             <div class="hero-slide-actions">
-                                <a href="#eventos-grid" class="btn btn-primary btn-hero-glow">
+                                <a href="{{ route('web.event.detail', ['slug' => $hero['slug']]) }}" class="btn btn-primary btn-hero-glow">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                         <rect x="2" y="6" width="20" height="12" rx="2"></rect>
                                         <circle cx="12" cy="12" r="2"></circle>
@@ -75,47 +75,28 @@
 
         <!-- Columna Derecha: Tarjetas Destacadas al Costado -->
         <div class="hero-side-cards">
-            <div class="hero-side-card">
-                <img src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=800&q=80" alt="Rock en la Playa 2026">
-                <div class="side-card-overlay">
-                    <span class="badge badge-red side-card-badge">🔥 MÁS VENDIDO</span>
-                    <h3 class="side-card-title">Rock en la Playa 2026</h3>
-                    <div class="side-card-meta">
-                        <span>📍 Arena 1 San Miguel</span>
-                        <span class="side-card-price">S/ 95.00</span>
-                    </div>
-                    <div class="side-card-progress">
-                        <span>88% Vendido</span>
-                        <div class="progress-track">
-                            <div class="progress-fill" style="width: 88%;"></div>
+            @foreach($sideEvents as $side)
+                <div class="hero-side-card">
+                    <img src="{{ $side['image'] }}" alt="{{ $side['title'] }}">
+                    <div class="side-card-overlay">
+                        <span class="badge {{ $side['badge_color'] ?? 'badge-red' }} side-card-badge">🔥 {{ $side['badge'] }}</span>
+                        <h3 class="side-card-title">{{ $side['title'] }}</h3>
+                        <div class="side-card-meta">
+                            <span>📍 {{ $side['venue'] }}</span>
+                            <span class="side-card-price">S/ {{ $side['price'] }}</span>
                         </div>
-                    </div>
-                    <a href="#eventos-grid" class="btn btn-primary btn-sm" style="width: 100%;">
-                        Comprar Entradas
-                    </a>
-                </div>
-            </div>
-
-            <div class="hero-side-card">
-                <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80" alt="Perú Sabor 2026">
-                <div class="side-card-overlay">
-                    <span class="badge badge-orange side-card-badge">🎁 GOURMET</span>
-                    <h3 class="side-card-title">Perú Sabor Gastronómico</h3>
-                    <div class="side-card-meta">
-                        <span>📍 Parque de la Exposición</span>
-                        <span class="side-card-price">S/ 45.00</span>
-                    </div>
-                    <div class="side-card-progress">
-                        <span>92% Vendido</span>
-                        <div class="progress-track">
-                            <div class="progress-fill" style="width: 92%;"></div>
+                        <div class="side-card-progress">
+                            <span>{{ $side['sold_percent'] ?? '88%' }} Vendido</span>
+                            <div class="progress-track">
+                                <div class="progress-fill" style="width: {{ $side['sold_percent'] ?? '88%' }};"></div>
+                            </div>
                         </div>
+                        <a href="{{ route('web.event.detail', ['slug' => $side['slug']]) }}" class="btn btn-primary btn-sm" style="width: 100%;">
+                            Comprar Entradas
+                        </a>
                     </div>
-                    <a href="#eventos-grid" class="btn btn-primary btn-sm" style="width: 100%;">
-                        Comprar Entradas
-                    </a>
                 </div>
-            </div>
+            @endforeach
         </div>
     </div>
 </section>
@@ -123,13 +104,13 @@
 <div class="container">
     <!-- Barra de Filtros Rápidos (Cápsulas Centradas) -->
     <section class="filters-section">
-        <div class="filters-bar">
-            <button class="filter-capsule active">✨ Todos los Eventos</button>
-            <button class="filter-capsule">🎤 Conciertos</button>
-            <button class="filter-capsule">💎 Hoy & Mañana</button>
-            <button class="filter-capsule">🚀 Este Fin de Semana</button>
-            <button class="filter-capsule">🎉 Fiestas & Clubes</button>
-            <button class="filter-capsule">📍 Cerca de mí</button>
+        <div class="filters-bar" id="filtersBar">
+            <button class="filter-capsule active" data-filter="all">✨ Todos los Eventos</button>
+            <button class="filter-capsule" data-filter="CONCIERTO">🎤 Conciertos</button>
+            <button class="filter-capsule" data-filter="FESTIVAL">🎪 Festivales</button>
+            <button class="filter-capsule" data-filter="TEATRO">🎭 Teatro & Cultura</button>
+            <button class="filter-capsule" data-filter="FIESTA">🎉 Fiestas & Clubes</button>
+            <button class="filter-capsule" data-filter="DEPORTE">⚽ Deportes</button>
         </div>
     </section>
 
@@ -140,9 +121,9 @@
             <p style="color: var(--text-secondary); font-size: 1.1rem; font-weight: 500;">Descubre los mejores conciertos, festivales y experiencias únicas en tu ciudad.</p>
         </div>
 
-        <div class="events-grid-4col">
+        <div class="events-grid-4col" id="eventsContainer">
             @foreach($events as $event)
-                <article class="event-card-v6">
+                <article class="event-card-v6" data-category="{{ $event['category'] }}">
                     <div class="event-card-v6-media">
                         <!-- Holographic Badge Top Right -->
                         <div class="badge-v6-holographic">
@@ -151,10 +132,10 @@
 
                         <!-- Date Stage 3D Glassmorphic Bottom Left -->
                         <div class="date-stage-v6">
-                            <span class="date-stage-day">{{ explode(' ', $event['date'])[0] }}</span>
+                            <span class="date-stage-day">{{ $event['day'] ?? '15' }}</span>
                             <div class="date-stage-details">
-                                <span class="date-stage-month">{{ explode(' ', $event['date'])[1] ?? 'AGO' }}</span>
-                                <span class="date-stage-time">20:00 HRS</span>
+                                <span class="date-stage-month">{{ $event['month'] ?? 'AGO' }}</span>
+                                <span class="date-stage-time">{{ $event['time'] ?? '20:00 HRS' }}</span>
                             </div>
                         </div>
 
@@ -321,15 +302,15 @@
                     </div>
 
                     <div class="organizers-actions-v2">
-                        <a href="#" class="btn btn-primary">
+                        <a href="{{ route('web.events.create') }}" class="btn btn-primary">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="12" y1="5" x2="12" y2="19"></line>
                                 <line x1="5" y1="12" x2="19" y2="12"></line>
                             </svg>
                             ¡Publica tu Evento Gratis!
                         </a>
-                        <a href="#" class="btn btn-glass-white">
-                            Hablar con Asesor
+                        <a href="{{ route('web.events') }}" class="btn btn-glass-white">
+                            Gestionar Mis Eventos
                         </a>
                     </div>
                 </div>
@@ -357,7 +338,7 @@
                             <span>Integración con Yape, Plin y Tarjetas</span>
                         </li>
                     </ul>
-                    <a href="#" class="btn btn-primary btn-sm" style="width: 100%;">
+                    <a href="{{ route('web.dashboard') }}" class="btn btn-primary btn-sm" style="width: 100%;">
                         Probar Demo del Panel ➔
                     </a>
                 </div>
@@ -376,47 +357,53 @@ document.addEventListener('DOMContentLoaded', function () {
     const prevBtn = document.getElementById('carouselPrev');
     const nextBtn = document.getElementById('carouselNext');
     let currentSlide = 0;
-    let slideInterval = setInterval(nextSlide, 5000);
+    let slideInterval = null;
 
     function showSlide(index) {
         slides.forEach(s => s.classList.remove('active'));
         dots.forEach(d => d.classList.remove('active'));
-        slides[index].classList.add('active');
+        if (slides[index]) slides[index].classList.add('active');
         if (dots[index]) dots[index].classList.add('active');
         currentSlide = index;
     }
 
     function nextSlide() {
+        if (slides.length <= 1) return;
         let index = (currentSlide + 1) % slides.length;
         showSlide(index);
     }
 
     function prevSlide() {
+        if (slides.length <= 1) return;
         let index = (currentSlide - 1 + slides.length) % slides.length;
         showSlide(index);
     }
 
+    if (slides.length > 1) {
+        slideInterval = setInterval(nextSlide, 6000);
+    }
+
     if (nextBtn) {
         nextBtn.addEventListener('click', function() {
-            clearInterval(slideInterval);
+            if (slideInterval) clearInterval(slideInterval);
             nextSlide();
-            slideInterval = setInterval(nextSlide, 5000);
+            if (slides.length > 1) slideInterval = setInterval(nextSlide, 6000);
         });
     }
 
     if (prevBtn) {
         prevBtn.addEventListener('click', function() {
-            clearInterval(slideInterval);
+            if (slideInterval) clearInterval(slideInterval);
             prevSlide();
-            slideInterval = setInterval(nextSlide, 5000);
+            if (slides.length > 1) slideInterval = setInterval(nextSlide, 6000);
         });
     }
 
     dots.forEach((dot, idx) => {
         dot.addEventListener('click', function() {
-            clearInterval(slideInterval);
+            if (slideInterval) clearInterval(slideInterval);
             showSlide(idx);
-            slideInterval = setInterval(nextSlide, 5000);
+            if (slides.length > 1) slideInterval = setInterval(nextSlide, 6000);
         });
     });
 
@@ -438,12 +425,25 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Filter capsules interactive toggle
+    // Filter capsules interactive filtering
     const capsules = document.querySelectorAll('.filter-capsule');
+    const eventCards = document.querySelectorAll('.event-card-v6');
+
     capsules.forEach(c => {
         c.addEventListener('click', function() {
             capsules.forEach(cap => cap.classList.remove('active'));
             this.classList.add('active');
+
+            const filterVal = (this.getAttribute('data-filter') || 'all').toUpperCase();
+
+            eventCards.forEach(card => {
+                const cardCat = (card.getAttribute('data-category') || '').toUpperCase();
+                if (filterVal === 'ALL' || cardCat.includes(filterVal)) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
         });
     });
 });
