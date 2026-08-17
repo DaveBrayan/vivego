@@ -479,21 +479,26 @@ class EventController extends Controller
     }
 
     /**
-     * Obtiene los boletos ya registrados en la base de datos para este evento.
+     * Obtiene los boletos ya registrados en la base de datos para impresión PDF de este evento.
      */
     public function getRegisteredTickets(Event $event): JsonResponse
     {
         $tickets = \App\Models\EventTicket::where('event_id', $event->id)
+            ->where('source', 'pdf_batch')
             ->orderBy('ticket_number', 'asc')
             ->orderBy('id', 'asc')
             ->get()
-            ->map(function ($t) {
+            ->values()
+            ->map(function ($t, $index) {
+                $num = (int) $t->ticket_number > 0 ? (int) $t->ticket_number : ($index + 1);
+                $formattedCode = 'N° ' . str_pad($num, 5, '0', STR_PAD_LEFT);
+
                 return [
-                    'ticketNumberVal' => (int) $t->ticket_number,
-                    'ticketCode' => $t->ticket_code,
+                    'ticketNumberVal' => $num,
+                    'ticketCode' => $formattedCode,
                     'zoneName' => $t->zone_name,
                     'zonePrice' => number_format((float) $t->unit_price, 2, '.', ''),
-                    'validationHash' => $t->validation_hash ?: 'VG' . strtoupper(substr(md5($t->ticket_code), 0, 8)),
+                    'validationHash' => $t->validation_hash ?: 'VG' . strtoupper(substr(md5($formattedCode . $t->id), 0, 8)),
                     'qrPayload' => $t->qr_payload,
                     'buyerName' => $t->buyer_name ?: 'Público General',
                     'buyerDni' => $t->buyer_dni ?: '00000000',

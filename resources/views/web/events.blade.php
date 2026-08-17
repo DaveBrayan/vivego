@@ -1055,10 +1055,12 @@
 
                     for (let k = 0; k < perPage && (ticketIdx + k) < totalQty; k++) {
                         const ticketItem = ticketsQueue[ticketIdx + k];
-                        const ticketNumberVal = ticketItem.ticketNumberVal;
+                        const ticketNumberVal = ticketItem.ticketNumberVal || (ticketIdx + k + 1);
                         const zoneName = ticketItem.zoneName;
                         const priceFormatted = ticketItem.zonePrice;
-                        const ticketNum = ticketItem.ticketCode || ('N° ' + String(ticketNumberVal).padStart(5, '0'));
+                        const ticketNum = (ticketItem.ticketCode && ticketItem.ticketCode.startsWith('N°'))
+                            ? ticketItem.ticketCode
+                            : ('N° ' + String(ticketNumberVal).padStart(5, '0'));
                         const hash = ticketItem.validationHash || ('VG' + Math.random().toString(36).substring(2, 10).toUpperCase());
                         const qrPayload = ticketItem.qrPayload || `VG-${hash}`;
                         const qrDataUrl = ticketItem.qrDataUrl || getQrCodeDataUrl(qrPayload);
@@ -1410,18 +1412,22 @@
                         .then(res => res.json())
                         .then(resData => {
                             if (resData.success && resData.count > 0) {
-                                generatedTicketsQueue = resData.tickets.map(t => ({
-                                    ticketNumberVal: t.ticketNumberVal,
-                                    ticketCode: t.ticketCode,
-                                    zoneName: t.zoneName,
-                                    zonePrice: t.zonePrice,
-                                    validationHash: t.validationHash,
-                                    qrPayload: t.qrPayload,
-                                    qrDataUrl: getQrCodeDataUrl(t.qrPayload),
-                                    buyerName: t.buyerName,
-                                    buyerDni: t.buyerDni,
-                                    source: t.source
-                                }));
+                                generatedTicketsQueue = resData.tickets.map((t, idx) => {
+                                    const num = t.ticketNumberVal || (idx + 1);
+                                    const code = (t.ticketCode && t.ticketCode.startsWith('N°')) ? t.ticketCode : `N° ${String(num).padStart(5, '0')}`;
+                                    return {
+                                        ticketNumberVal: num,
+                                        ticketCode: code,
+                                        zoneName: t.zoneName,
+                                        zonePrice: t.zonePrice,
+                                        validationHash: t.validationHash,
+                                        qrPayload: t.qrPayload,
+                                        qrDataUrl: getQrCodeDataUrl(t.qrPayload),
+                                        buyerName: t.buyerName,
+                                        buyerDni: t.buyerDni,
+                                        source: t.source
+                                    };
+                                });
 
                                 setModalLockedState(resData.count);
                                 updateEstimatedPages();
