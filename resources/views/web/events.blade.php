@@ -381,6 +381,8 @@
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
         let selectedEventForPdf = null;
@@ -399,6 +401,100 @@
             const validationHash = 'VG' + randomHex.substring(0, 8);
             const qrPayload = 'VG-' + randomHex;
             return { validationHash, qrPayload };
+        }
+
+        function getFallbackLogoSvgDataUrl() {
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" width="320" height="80">
+                <defs>
+                    <linearGradient id="vvg" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#FF5500" />
+                        <stop offset="100%" stop-color="#FF1E3C" />
+                    </linearGradient>
+                </defs>
+                <text x="10" y="56" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="900" font-size="44" fill="#FFFFFF" letter-spacing="1">VIVE</text>
+                <text x="140" y="56" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="900" font-size="44" fill="url(#vvg)" letter-spacing="1">GO</text>
+            </svg>`;
+            return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        }
+
+        function getFallbackBannerSvgDataUrl(titleText) {
+            const safeTitle = (titleText || 'VIVE GO EVENT').replace(/[<>&"]/g, '');
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 240" width="800" height="240">
+                <defs>
+                    <linearGradient id="bgG" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#0F0F1A" />
+                        <stop offset="50%" stop-color="#1F132B" />
+                        <stop offset="100%" stop-color="#FF5500" />
+                    </linearGradient>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#bgG)" rx="14"/>
+                <circle cx="700" cy="40" r="120" fill="rgba(255,85,0,0.25)"/>
+                <text x="40" y="95" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="900" font-size="30" fill="#FFFFFF">${safeTitle.substring(0, 38)}</text>
+                <text x="40" y="145" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="800" font-size="16" fill="#FF5500">BOLETO OFICIAL DE ACCESO • VIVE GO</text>
+            </svg>`;
+            return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        }
+
+        async function preloadImageAsDataUrl(url, type = 'banner', fallbackText = '') {
+            if (!url || typeof url !== 'string' || url.trim() === '') {
+                return type === 'logo' ? getFallbackLogoSvgDataUrl() : getFallbackBannerSvgDataUrl(fallbackText);
+            }
+            if (url.startsWith('data:')) {
+                return url;
+            }
+
+            // 1. Intentar Fetch con CORS
+            try {
+                const response = await fetch(url, { mode: 'cors', cache: 'force-cache' });
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const dataUrl = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                    });
+                    if (dataUrl && dataUrl.startsWith('data:image')) {
+                        return dataUrl;
+                    }
+                }
+            } catch (e) {
+                // Fetch omitido o bloqueado, continuar a método Image/Canvas
+            }
+
+            // 2. Intentar Image() con Canvas export
+            try {
+                const dataUrl = await new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.crossOrigin = 'Anonymous';
+                    const timeout = setTimeout(() => {
+                        reject(new Error('Timeout loading image'));
+                    }, 3500);
+
+                    img.onload = () => {
+                        clearTimeout(timeout);
+                        try {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = img.naturalWidth || 600;
+                            canvas.height = img.naturalHeight || 300;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0);
+                            const res = canvas.toDataURL('image/jpeg', 0.92);
+                            resolve(res);
+                        } catch (err) {
+                            reject(err);
+                        }
+                    };
+                    img.onerror = () => {
+                        clearTimeout(timeout);
+                        reject(new Error('Image error'));
+                    };
+                    img.src = url;
+                });
+                return dataUrl;
+            } catch (e) {
+                return type === 'logo' ? getFallbackLogoSvgDataUrl() : getFallbackBannerSvgDataUrl(fallbackText);
+            }
         }
 
         function setModalLockedState(count) {
@@ -730,8 +826,8 @@
             if (modal) modal.classList.remove('active');
 
             Swal.fire({
-                title: 'Compilando Documento PDF...',
-                html: `Preparando <b>${generatedTicketsQueue.length} entradas</b> con sus códigos QR oficiales...`,
+                title: '⚡ Iniciando Compilador PDF...',
+                html: `Preparando <b>${generatedTicketsQueue.length} entradas</b> en alta resolución...`,
                 allowOutsideClick: false,
                 didOpen: () => { Swal.showLoading(); },
                 background: '#14141E',
@@ -741,347 +837,31 @@
             generatePdfPrintWindow(selectedEventForPdf, generatedTicketsQueue, perPage, paperSize, orientation);
         }
 
-        function generatePdfPrintWindow(evt, ticketsQueue, perPage, paperSize, orientation) {
-            // Usar iframe invisible en la página actual para evitar abrir nuevas pestañas
-            let hiddenFrame = document.getElementById('hiddenPdfFrame');
-            if (hiddenFrame) {
-                hiddenFrame.remove();
-            }
-            hiddenFrame = document.createElement('iframe');
-            hiddenFrame.id = 'hiddenPdfFrame';
-            hiddenFrame.style.position = 'fixed';
-            hiddenFrame.style.right = '0';
-            hiddenFrame.style.bottom = '0';
-            hiddenFrame.style.width = '0';
-            hiddenFrame.style.height = '0';
-            hiddenFrame.style.border = '0';
-            hiddenFrame.style.opacity = '0';
-            hiddenFrame.style.pointerEvents = 'none';
-            document.body.appendChild(hiddenFrame);
-
-            const tpl = evt.template || { id: 1, name: 'Plantilla 1', bg_color: '#FFFFFF', strip_color: '#000000', positions: {} };
-            const bgColor = tpl.bg_color || '#FFFFFF';
-            const stripColor = tpl.strip_color || '#000000';
-            
-            const isPlantilla2 = (tpl.id == 2 || (tpl.name && tpl.name.includes('Plantilla 2')) || (tpl.category && tpl.category.includes('Logo Derecho')));
-            const isPlantilla3 = (tpl.id == 3 || (tpl.name && tpl.name.includes('Plantilla 3')) || (tpl.category && tpl.category.includes('Panorámico')));
-            const isPlantilla1 = (!isPlantilla2 && !isPlantilla3);
-
-            function isColorDark(hexColor) {
-                if (!hexColor || hexColor.charAt(0) !== '#') return false;
-                const hex = hexColor.substring(1);
-                if (hex.length < 6) return false;
-                const r = parseInt(hex.substr(0, 2), 16) || 0;
-                const g = parseInt(hex.substr(2, 2), 16) || 0;
-                const b = parseInt(hex.substr(4, 2), 16) || 0;
-                const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-                return lum < 0.55;
-            }
-
-            const isDarkBg = isColorDark(bgColor);
-            const primaryTextColor = isDarkBg ? '#FFFFFF' : '#000000';
-            const secondaryTextColor = isDarkBg ? '#E2E8F0' : '#1E293B';
-            const mutedTextColor = isDarkBg ? '#94A3B8' : '#475569';
-
-            function formatTime12h(timeStr) {
-                if (!timeStr) return '06:00PM';
-                if (timeStr.includes('AM') || timeStr.includes('PM') || timeStr.includes('am') || timeStr.includes('pm')) {
-                    return timeStr.toUpperCase();
+        function showPdfSuccessModal(fileName, count, docContent) {
+            Swal.fire({
+                title: '🎉 ¡Boletos PDF Descargados!',
+                html: `Se descargó el archivo <b>"${fileName}"</b> con <b>${count} boletos oficiales</b> listos para imprimir y escanear.<br><br>¿Deseas también abrir el cuadro de impresión directa del navegador?`,
+                icon: 'success',
+                showCancelButton: true,
+                confirmButtonColor: '#FF5500',
+                cancelButtonColor: '#475569',
+                confirmButtonText: '🖨️ Imprimir Directamente',
+                cancelButtonText: 'Cerrar',
+                background: '#14141E',
+                color: '#FFFFFF'
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    openDirectNativePrintWindow(docContent);
                 }
-                const parts = timeStr.split(':');
-                if (parts.length >= 2) {
-                    let hours = parseInt(parts[0], 10);
-                    const minutes = parts[1];
-                    const ampm = hours >= 12 ? 'PM' : 'AM';
-                    hours = hours % 12;
-                    hours = hours ? hours : 12;
-                    const strHours = hours < 10 ? '0' + hours : hours;
-                    return `${strHours}:${minutes}${ampm}`;
-                }
-                return timeStr;
-            }
+            });
+        }
 
-            const rawDate = evt.date_formatted || '10.04.2025';
-            const cleanDate = rawDate.replace(/\//g, '.');
-            const cleanTime = formatTime12h(evt.time_formatted || '06:00PM');
-            const venue = evt.venue || 'Complejo San Luis';
-            const address = evt.city || 'Av. Cusco 528 - AYACUCHO';
-            const title = evt.title || 'Chúpate la Plata con Son del Duke en Ayacucho';
-            const banner = evt.image || 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=1000&q=80';
-            
-            const logoImgUrl = window.location.origin + '/images/logo-white.png';
-
-            // Detección de tamaño de papel (A4 o Carta)
-            const isCarta = (paperSize.toUpperCase() === 'CARTA' || paperSize.toUpperCase() === 'LETTER');
-            const isA5 = (paperSize.toUpperCase() === 'A5');
-            const pageWidthMm = isCarta ? 215.9 : (isA5 ? 148 : 210);
-            const pageHeightMm = isCarta ? 279.4 : (isA5 ? 210 : 297);
-            const jsPdfFormat = isCarta ? 'letter' : (isA5 ? 'a5' : 'a4');
-
-            // Parámetros de escalado y proporción panorámica exacta (3.0:1)
-            let printCardWidth, printCardHeight, scaleRatio, cardMarginBottom, sheetPaddingTopBottom;
-
-            if (perPage === 5) {
-                if (isCarta) {
-                    // Carta: 279.4mm alto -> 5 x 49.33mm (246.65mm) + 4 x 2mm (8mm) + 2 x 5mm (10mm) = 264.65mm (< 279.4mm)
-                    printCardWidth = '148mm';
-                    printCardHeight = '49.33mm';
-                    scaleRatio = ((148 * 3.77953) / 900).toFixed(6);
-                    cardMarginBottom = '2mm';
-                    sheetPaddingTopBottom = '5mm';
-                } else {
-                    // A4: 297mm alto -> 5 x 51.33mm (256.65mm) + 4 x 2.5mm (10mm) + 2 x 6mm (12mm) = 278.65mm (< 297mm)
-                    printCardWidth = '154mm';
-                    printCardHeight = '51.33mm';
-                    scaleRatio = ((154 * 3.77953) / 900).toFixed(6);
-                    cardMarginBottom = '2.5mm';
-                    sheetPaddingTopBottom = '6mm';
-                }
-            } else if (perPage === 4) {
-                if (isCarta) {
-                    printCardWidth = '168mm';
-                    printCardHeight = '56mm';
-                    scaleRatio = ((168 * 3.77953) / 900).toFixed(6);
-                    cardMarginBottom = '4mm';
-                    sheetPaddingTopBottom = '8mm';
-                } else {
-                    printCardWidth = '177mm';
-                    printCardHeight = '59mm';
-                    scaleRatio = ((177 * 3.77953) / 900).toFixed(6);
-                    cardMarginBottom = '4.5mm';
-                    sheetPaddingTopBottom = '10mm';
-                }
-            } else if (perPage === 3) {
-                printCardWidth = '190mm';
-                printCardHeight = '63.33mm';
-                scaleRatio = ((190 * 3.77953) / 900).toFixed(6);
-                cardMarginBottom = '10mm';
-                sheetPaddingTopBottom = '12mm';
-            } else if (perPage === 2) {
-                printCardWidth = '192mm';
-                printCardHeight = '64mm';
-                scaleRatio = ((192 * 3.77953) / 900).toFixed(6);
-                cardMarginBottom = '30mm';
-                sheetPaddingTopBottom = '20mm';
-            } else { // 1
-                printCardWidth = '196mm';
-                printCardHeight = '65.33mm';
-                scaleRatio = ((196 * 3.77953) / 900).toFixed(6);
-                cardMarginBottom = '0mm';
-                sheetPaddingTopBottom = '30mm';
-            }
-
-            const tplPositions = tpl.positions || {};
-
-            const pTitle = tplPositions.canvaElTitle || {};
-            const pZone = tplPositions.canvaElZone || {};
-            const pPrice = tplPositions.canvaElPrice || {};
-            const pBanner = tplPositions.canvaElBanner || {};
-            const pBuyer = tplPositions.canvaElBuyer || {};
-            const pVenue = tplPositions.canvaElVenue || {};
-            const pNum = tplPositions.canvaElTicketNumber || {};
-            const pQR = tplPositions.canvaElQR || {};
-            const pHash = tplPositions.canvaElHash || {};
-            const pDisc = tplPositions.canvaElDisclaimer || {};
-            const pLogo = tplPositions.canvaElLogo || {};
-
-            const isTitleHidden = pTitle.hidden === true || pTitle.display === 'none';
-            const isZoneHidden = pZone.hidden === true || pZone.display === 'none';
-            const isPriceHidden = pPrice.hidden === true || pPrice.display === 'none';
-            const isBannerHidden = pBanner.hidden === true || pBanner.display === 'none';
-            const isBuyerHidden = pBuyer.hidden === true || pBuyer.display === 'none';
-            const isVenueHidden = pVenue.hidden === true || pVenue.display === 'none';
-            const isNumHidden = pNum.hidden === true || pNum.display === 'none';
-            const isQRHidden = pQR.hidden === true || pQR.display === 'none';
-            const isHashHidden = pHash.hidden === true || pHash.display === 'none';
-            const isDiscHidden = pDisc.hidden === true || pDisc.display === 'none';
-            const isLogoHidden = pLogo.hidden === true || pLogo.display === 'none';
-
-            function getCustomStyleString(posObj, defaultAlign = 'left', defaultColor = null) {
-                if (!posObj) return `text-align: ${defaultAlign}; color: ${defaultColor || primaryTextColor};`;
-                let res = '';
-                const align = posObj.textAlign || defaultAlign;
-                if (align) res += `text-align: ${align};`;
-                if (posObj.fontSize) res += `font-size: ${posObj.fontSize};`;
-                const color = posObj.color || defaultColor || primaryTextColor;
-                if (color) res += `color: ${color};`;
-                if (posObj.fontWeight) res += `font-weight: ${posObj.fontWeight};`;
-                if (posObj.fontStyle) res += `font-style: ${posObj.fontStyle};`;
-                return res;
-            }
-
-            let pagesHtml = '';
-            const totalQty = ticketsQueue.length;
-            const allTicketsToRegister = [];
-
-            for (let ticketIdx = 0; ticketIdx < totalQty; ticketIdx += perPage) {
-                let pageTicketsHtml = '';
-
-                for (let k = 0; k < perPage && (ticketIdx + k) < totalQty; k++) {
-                    const ticketItem = ticketsQueue[ticketIdx + k];
-                    const ticketNumberVal = ticketItem.ticketNumberVal;
-                    const zoneName = ticketItem.zoneName;
-                    const priceFormatted = ticketItem.zonePrice;
-                    const ticketNum = ticketItem.ticketCode || ('N° ' + String(ticketNumberVal).padStart(5, '0'));
-                    const hash = ticketItem.validationHash || ('VG' + Math.random().toString(36).substring(2, 10).toUpperCase());
-                    const qrPayload = ticketItem.qrPayload || `VG-${hash}`;
-                    const qrDataUrl = ticketItem.qrDataUrl || getQrCodeDataUrl(qrPayload);
-
-                    let customTagsHtml = '';
-                    Object.keys(tplPositions).forEach(key => {
-                        if (key.startsWith('canvaCustomTag_') && !tplPositions[key].hidden && tplPositions[key].display !== 'none') {
-                            const p = tplPositions[key];
-                            const tagText = p.text || 'Etiqueta';
-                            customTagsHtml += `
-                                <div class="canva-drag-element" style="position: absolute; top: ${p.top || '40px'}; left: ${p.left || '120px'}; z-index: 10;">
-                                    <div style="background: rgba(255, 85, 0, 0.15); border: 1.5px solid #FF5500; padding: 0.35rem 0.75rem; border-radius: 8px; font-weight: 800; font-size: ${p.fontSize || '0.85rem'}; color: ${p.color || primaryTextColor}; ${getCustomStyleString(p)}">
-                                        🏷️ ${tagText}
-                                    </div>
-                                </div>
-                            `;
-                        }
-                    });
-
-                    const ticketNumberHtml = isNumHidden ? '' : `
-                        <div class="canva-drag-element" id="canvaElTicketNumber" style="position: absolute; top: ${pNum.top || '16px'}; ${isPlantilla3 ? 'left: 650px; width: 250px;' : 'left: 0; width: 100%;'} text-align: center; display: flex; justify-content: center; align-items: center; z-index: 5;">
-                            <span style="font-size: ${pNum.fontSize || '1.3rem'}; font-weight: 900; color: ${pNum.color || primaryTextColor}; letter-spacing: 0.5px; display: inline-block;">${ticketNum}</span>
-                        </div>
-                    `;
-
-                    const qrBoxHtml = isQRHidden ? '' : `
-                        <div class="canva-drag-element" id="canvaElQR" style="position: absolute; top: ${pQR.top || '48px'}; left: ${isPlantilla3 ? '705px' : '55px'}; width: 140px; height: 140px; display: flex; align-items: center; justify-content: center; z-index: 5;">
-                            <div class="stub-qr-box" style="padding: 0.4rem; background: #FFFFFF; border-radius: 16px; border: 1.5px solid #E2E8F0; width: 140px; height: 140px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-                                <img src="${qrDataUrl}" style="width: 100%; height: 100%; object-fit: contain; display: block; border-radius: 4px;" alt="QR Code" />
-                            </div>
-                        </div>
-                    `;
-
-                    const hashHtml = isHashHidden ? '' : `
-                        <div class="canva-drag-element" id="canvaElHash" style="position: absolute; top: ${pHash.top || '200px'}; ${isPlantilla3 ? 'left: 650px; width: 250px;' : 'left: 0; width: 100%;'} text-align: center; display: flex; justify-content: center; align-items: center; z-index: 5;">
-                            <span style="font-family: monospace; font-size: ${pHash.fontSize || '0.95rem'}; font-weight: 800; color: ${pHash.color || secondaryTextColor}; letter-spacing: 3px; display: inline-block;">${hash}</span>
-                        </div>
-                    `;
-
-                    const disclaimerHtml = isDiscHidden ? '' : `
-                        <div class="canva-drag-element" id="canvaElDisclaimer" style="position: absolute; top: ${pDisc.top || '226px'}; left: ${isPlantilla3 ? '665px' : '15px'}; width: 220px; text-align: center; z-index: 5;">
-                            <div style="border-top: 1px solid #E2E8F0; padding-top: 0.25rem;">
-                                <p style="font-size: ${pDisc.fontSize || '0.58rem'}; font-weight: 600; color: ${pDisc.color || mutedTextColor}; line-height: 1.25; margin: 0; text-align: center;">
-                                    La responsabilidad de este boleto es exclusiva del cliente, no compartir ni publicar. Se recomienda llevar impreso.
-                                </p>
-                            </div>
-                        </div>
-                    `;
-
-                    pageTicketsHtml += `
-                        <div class="ticket-wrapper-card" style="width: ${printCardWidth}; height: ${printCardHeight}; position: relative; overflow: hidden; border-radius: 20px; border: 1.5px solid #000000; margin-bottom: ${cardMarginBottom}; flex-shrink: 0; box-sizing: border-box; background: ${bgColor};">
-                            <div class="ticket-canvas-inner" style="width: 900px; height: 300px; transform: scale(${scaleRatio}); transform-origin: top left; position: absolute; top: 0; left: 0; background: ${bgColor}; font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                                
-                                <div class="ticket-side-strip" style="width: 78px; background: ${stripColor}; height: 100%; position: absolute; ${isPlantilla2 ? 'right: 0;' : 'left: 0;'} top: 0; display: ${isPlantilla3 ? 'none' : 'flex'}; align-items: center; justify-content: center; z-index: 2;">
-                                    <img src="${logoImgUrl}" style="max-width: 240px; height: 48px; width: auto; object-fit: contain; transform: rotate(-90deg); filter: drop-shadow(0 0 10px rgba(255,85,0,0.6));">
-                                </div>
-
-                                <div style="position: absolute; left: ${isPlantilla2 ? '250px' : (isPlantilla3 ? '0' : '78px')}; width: ${isPlantilla3 ? '900px' : '572px'}; top: 0; bottom: 0; background: ${bgColor}; border-right: ${isPlantilla1 ? '2px dashed #CBD5E1' : 'none'}; border-left: ${isPlantilla2 ? '2px dashed #CBD5E1' : 'none'};" class="canva-main-area">
-                                    ${customTagsHtml}
-
-                                    ${(isPlantilla3 && !isLogoHidden) ? `
-                                    <div class="canva-drag-element" id="canvaElLogo" style="position: absolute; top: ${pLogo.top || '18px'}; left: ${pLogo.left || '25px'}; z-index: 5;">
-                                        <img src="${logoImgUrl}" style="height: ${pLogo.height || '38px'}; width: auto; object-fit: contain; filter: drop-shadow(0 0 10px rgba(255,85,0,0.6));">
-                                    </div>` : ''}
-
-                                    ${isBannerHidden ? '' : `
-                                    <div class="canva-drag-element" id="canvaElBanner" style="position: absolute; top: ${pBanner.top || '54px'}; left: ${pBanner.left || '20px'}; width: ${pBanner.width || (isPlantilla3 ? '520px' : '532px')}; height: ${pBanner.height || '130px'};">
-                                        <img src="${banner}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 14px;">
-                                    </div>`}
-
-                                    ${isTitleHidden ? '' : `
-                                    <div class="canva-drag-element" id="canvaElTitle" style="position: absolute; top: ${pTitle.top || (isPlantilla3 ? '60px' : '18px')}; left: 20px; width: 532px; text-align: center; ${getCustomStyleString(pTitle, 'center', primaryTextColor)}">
-                                        <h2 style="font-size: ${pTitle.fontSize || '1.18rem'}; font-weight: 900; color: ${pTitle.color || primaryTextColor}; margin: 0; line-height: 1.15; text-align: center;">${title}</h2>
-                                    </div>`}
-
-                                    ${isZoneHidden ? '' : `
-                                    <div class="canva-drag-element" id="canvaElZone" style="position: absolute; top: ${pZone.top || (isPlantilla3 ? '105px' : '194px')}; left: 20px; ${getCustomStyleString(pZone, 'left', secondaryTextColor)}">
-                                        <span style="font-size: ${pZone.fontSize || '0.98rem'}; font-weight: 900; color: ${pZone.color || '#DC2626'}; text-transform: uppercase; letter-spacing: 0.5px; display: block;">${zoneName}</span>
-                                    </div>`}
-
-                                    ${isPriceHidden ? '' : `
-                                    <div class="canva-drag-element" id="canvaElPrice" style="position: absolute; top: ${pPrice.top || (isPlantilla3 ? '105px' : '216px')}; left: ${isPlantilla3 ? '150px' : (isPlantilla2 ? '20px' : '430px')}; ${getCustomStyleString(pPrice, isPlantilla2 ? 'left' : (isPlantilla3 ? 'left' : 'right'), primaryTextColor)}">
-                                        <div style="text-align: inherit; line-height: 1.15;">
-                                            <span style="font-size: 0.825rem; font-weight: 900; color: ${pPrice.color || primaryTextColor}; display: block; letter-spacing: 0.5px;">PRECIO:</span>
-                                            <span style="font-size: ${pPrice.fontSize || '1.35rem'}; font-weight: 900; color: ${pPrice.color || primaryTextColor}; display: block; margin-top: 2px;">S/ ${priceFormatted}</span>
-                                        </div>
-                                    </div>`}
-
-                                    ${isVenueHidden ? '' : `
-                                    <div class="canva-drag-element" id="canvaElVenue" style="position: absolute; top: ${pVenue.top || (isPlantilla3 ? '225px' : '194px')}; right: 20px; ${getCustomStyleString(pVenue, 'right', primaryTextColor)}">
-                                        <div style="display: flex; flex-direction: column; font-size: 0.8rem; text-align: right; line-height: 1.25;">
-                                            <span style="font-weight: 900; font-size: 1.05rem; color: ${pVenue.color || primaryTextColor}; display: block; line-height: 1.2;">${venue}</span>
-                                            <span style="font-size: 0.85rem; font-weight: 800; color: #2C3E50; display: block; line-height: 1.2; margin-top: 2px;">${address}</span>
-                                            <span style="font-weight: 900; font-size: 1.1rem; color: #FF5500; display: block; line-height: 1.2; margin-top: 2px;">${cleanDate} / ${cleanTime}</span>
-                                        </div>
-                                    </div>`}
-
-                                    ${isPlantilla3 ? `
-                                        ${ticketNumberHtml}
-                                        ${qrBoxHtml}
-                                        ${hashHtml}
-                                        ${disclaimerHtml}
-                                    ` : ''}
-                                </div>
-
-                                ${isPlantilla3 ? '' : `
-                                <div style="position: absolute; ${isPlantilla2 ? 'left: 0;' : 'right: 0;'} top: 0; width: 250px; height: 100%; background: ${isDarkBg ? 'rgba(255,255,255,0.05)' : '#FAFAFA'}; ${isPlantilla2 ? 'border-right: 2px dashed #CBD5E1;' : 'border-left: 2px dashed #CBD5E1;'}; box-sizing: border-box;" class="canva-stub-area">
-                                    ${ticketNumberHtml}
-                                    ${qrBoxHtml}
-                                    ${hashHtml}
-                                    ${disclaimerHtml}
-                                </div>`}
-                            </div>
-                        </div>
-                    `;
-                }
-
-                pagesHtml += `
-                    <div class="print-page-sheet" style="width: ${pageWidthMm}mm; min-height: ${pageHeightMm}mm; max-height: ${pageHeightMm}mm; page-break-after: always; break-after: page; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: ${sheetPaddingTopBottom}; padding-bottom: ${sheetPaddingTopBottom}; overflow: hidden; background: #FFFFFF;">
-                        ${pageTicketsHtml}
-                    </div>
-                `;
-            }
-
-            const docContent = `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="utf-8">
-                    <base href="${window.location.origin}/">
-                    <title>Boletos Oficiales - ${title}</title>
-                    <link rel="preconnect" href="https://fonts.googleapis.com">
-                    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-                    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-                    <style>
-                        @page { size: ${pageWidthMm}mm ${pageHeightMm}mm; margin: 0; }
-                        * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                        body { margin: 0; padding: 0; background: #FFFFFF; color: #000000; font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-                        .print-page-sheet { width: ${pageWidthMm}mm; min-height: ${pageHeightMm}mm; max-height: ${pageHeightMm}mm; page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: ${sheetPaddingTopBottom}; padding-bottom: ${sheetPaddingTopBottom}; overflow: hidden; }
-                        .print-page-sheet:last-child { page-break-after: auto; break-after: auto; }
-                        .ticket-wrapper-card { border: 1.5px solid #000000; border-radius: 20px; overflow: hidden; position: relative; box-sizing: border-box; box-shadow: none; flex-shrink: 0; page-break-inside: avoid; break-inside: avoid; }
-                        .ticket-wrapper-card:last-child { margin-bottom: 0 !important; }
-                        .ticket-canvas-inner { border-radius: 20px; overflow: hidden; font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-                        .ticket-side-strip { display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
-                        .stub-qr-box { padding: 0.4rem; background: #FFFFFF; border: 1.5px solid #E2E8F0; border-radius: 16px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-                        .stub-qr-box img { width: 100% !important; height: 100% !important; display: block !important; border-radius: 4px; }
-                    </style>
-                </head>
-                <body>
-                    ${pagesHtml}
-                </body>
-                </html>
-            `;
-
-            let printContainer = document.getElementById('vivegoPdfPrintContainer');
+        function openDirectNativePrintWindow(docContent) {
+            let printContainer = document.getElementById('vivegoNativePrintFrame');
             if (printContainer) printContainer.remove();
 
             printContainer = document.createElement('iframe');
-            printContainer.id = 'vivegoPdfPrintContainer';
+            printContainer.id = 'vivegoNativePrintFrame';
             printContainer.style.position = 'fixed';
             printContainer.style.left = '-9999px';
             printContainer.style.top = '0';
@@ -1098,49 +878,462 @@
             frameDoc.close();
 
             setTimeout(function() {
+                try {
+                    printContainer.contentWindow.focus();
+                    printContainer.contentWindow.print();
+                } catch(e) {
+                    console.error('Error abriendo cuadro de impresión:', e);
+                }
+            }, 600);
+        }
+
+        async function generatePdfPrintWindow(evt, ticketsQueue, perPage, paperSize, orientation) {
+            try {
+                // 1. PRECARGA DE ASSETS A BASE64 DATA URLS (Garantiza 0 errores de CORS y 0 hojas en blanco en Hosting)
+                Swal.update({
+                    title: '⚡ 1/3 - Procesando Gráficos & QR Codes...',
+                    html: 'Convirtiendo logotipos, imágenes de fondo y códigos QR a alta definición sin dependencias de red...'
+                });
+
+                const logoRawUrl = window.location.origin + '/images/logo-white.png';
+                const [logoDataUrl, bannerDataUrl] = await Promise.all([
+                    preloadImageAsDataUrl(logoRawUrl, 'logo'),
+                    preloadImageAsDataUrl(evt.image, 'banner', evt.title)
+                ]);
+
+                const tpl = evt.template || { id: 1, name: 'Plantilla 1', bg_color: '#FFFFFF', strip_color: '#000000', positions: {} };
+                const bgColor = tpl.bg_color || '#FFFFFF';
+                const stripColor = tpl.strip_color || '#000000';
+                
+                const isPlantilla2 = (tpl.id == 2 || (tpl.name && tpl.name.includes('Plantilla 2')) || (tpl.category && tpl.category.includes('Logo Derecho')));
+                const isPlantilla3 = (tpl.id == 3 || (tpl.name && tpl.name.includes('Plantilla 3')) || (tpl.category && tpl.category.includes('Panorámico')));
+                const isPlantilla1 = (!isPlantilla2 && !isPlantilla3);
+
+                function isColorDark(hexColor) {
+                    if (!hexColor || hexColor.charAt(0) !== '#') return false;
+                    const hex = hexColor.substring(1);
+                    if (hex.length < 6) return false;
+                    const r = parseInt(hex.substr(0, 2), 16) || 0;
+                    const g = parseInt(hex.substr(2, 2), 16) || 0;
+                    const b = parseInt(hex.substr(4, 2), 16) || 0;
+                    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                    return lum < 0.55;
+                }
+
+                const isDarkBg = isColorDark(bgColor);
+                const primaryTextColor = isDarkBg ? '#FFFFFF' : '#000000';
+                const secondaryTextColor = isDarkBg ? '#E2E8F0' : '#1E293B';
+                const mutedTextColor = isDarkBg ? '#94A3B8' : '#475569';
+
+                function formatTime12h(timeStr) {
+                    if (!timeStr) return '06:00PM';
+                    if (timeStr.includes('AM') || timeStr.includes('PM') || timeStr.includes('am') || timeStr.includes('pm')) {
+                        return timeStr.toUpperCase();
+                    }
+                    const parts = timeStr.split(':');
+                    if (parts.length >= 2) {
+                        let hours = parseInt(parts[0], 10);
+                        const minutes = parts[1];
+                        const ampm = hours >= 12 ? 'PM' : 'AM';
+                        hours = hours % 12;
+                        hours = hours ? hours : 12;
+                        const strHours = hours < 10 ? '0' + hours : hours;
+                        return `${strHours}:${minutes}${ampm}`;
+                    }
+                    return timeStr;
+                }
+
+                const rawDate = evt.date_formatted || '10.04.2025';
+                const cleanDate = rawDate.replace(/\//g, '.');
+                const cleanTime = formatTime12h(evt.time_formatted || '06:00PM');
+                const venue = evt.venue || 'Complejo San Luis';
+                const address = evt.city || 'Av. Cusco 528 - AYACUCHO';
+                const title = evt.title || 'Chúpate la Plata con Son del Duke en Ayacucho';
+
+                // Detección de tamaño de papel (A4 o Carta)
+                const isCarta = (paperSize.toUpperCase() === 'CARTA' || paperSize.toUpperCase() === 'LETTER');
+                const isA5 = (paperSize.toUpperCase() === 'A5');
+                const pageWidthMm = isCarta ? 215.9 : (isA5 ? 148 : 210);
+                const pageHeightMm = isCarta ? 279.4 : (isA5 ? 210 : 297);
+                const jsPdfFormat = isCarta ? 'letter' : (isA5 ? 'a5' : 'a4');
+
+                // Parámetros de escalado y proporción panorámica exacta (3.0:1)
+                let printCardWidth, printCardHeight, scaleRatio, cardMarginBottom, sheetPaddingTopBottom;
+
+                if (perPage === 5) {
+                    if (isCarta) {
+                        printCardWidth = '148mm';
+                        printCardHeight = '49.33mm';
+                        scaleRatio = ((148 * 3.77953) / 900).toFixed(6);
+                        cardMarginBottom = '2mm';
+                        sheetPaddingTopBottom = '5mm';
+                    } else {
+                        printCardWidth = '154mm';
+                        printCardHeight = '51.33mm';
+                        scaleRatio = ((154 * 3.77953) / 900).toFixed(6);
+                        cardMarginBottom = '2.5mm';
+                        sheetPaddingTopBottom = '6mm';
+                    }
+                } else if (perPage === 4) {
+                    if (isCarta) {
+                        printCardWidth = '168mm';
+                        printCardHeight = '56mm';
+                        scaleRatio = ((168 * 3.77953) / 900).toFixed(6);
+                        cardMarginBottom = '4mm';
+                        sheetPaddingTopBottom = '8mm';
+                    } else {
+                        printCardWidth = '177mm';
+                        printCardHeight = '59mm';
+                        scaleRatio = ((177 * 3.77953) / 900).toFixed(6);
+                        cardMarginBottom = '4.5mm';
+                        sheetPaddingTopBottom = '10mm';
+                    }
+                } else if (perPage === 3) {
+                    printCardWidth = '190mm';
+                    printCardHeight = '63.33mm';
+                    scaleRatio = ((190 * 3.77953) / 900).toFixed(6);
+                    cardMarginBottom = '10mm';
+                    sheetPaddingTopBottom = '12mm';
+                } else if (perPage === 2) {
+                    printCardWidth = '192mm';
+                    printCardHeight = '64mm';
+                    scaleRatio = ((192 * 3.77953) / 900).toFixed(6);
+                    cardMarginBottom = '30mm';
+                    sheetPaddingTopBottom = '20mm';
+                } else { // 1
+                    printCardWidth = '196mm';
+                    printCardHeight = '65.33mm';
+                    scaleRatio = ((196 * 3.77953) / 900).toFixed(6);
+                    cardMarginBottom = '0mm';
+                    sheetPaddingTopBottom = '30mm';
+                }
+
+                const tplPositions = tpl.positions || {};
+
+                const pTitle = tplPositions.canvaElTitle || {};
+                const pZone = tplPositions.canvaElZone || {};
+                const pPrice = tplPositions.canvaElPrice || {};
+                const pBanner = tplPositions.canvaElBanner || {};
+                const pBuyer = tplPositions.canvaElBuyer || {};
+                const pVenue = tplPositions.canvaElVenue || {};
+                const pNum = tplPositions.canvaElTicketNumber || {};
+                const pQR = tplPositions.canvaElQR || {};
+                const pHash = tplPositions.canvaElHash || {};
+                const pDisc = tplPositions.canvaElDisclaimer || {};
+                const pLogo = tplPositions.canvaElLogo || {};
+
+                const isTitleHidden = pTitle.hidden === true || pTitle.display === 'none';
+                const isZoneHidden = pZone.hidden === true || pZone.display === 'none';
+                const isPriceHidden = pPrice.hidden === true || pPrice.display === 'none';
+                const isBannerHidden = pBanner.hidden === true || pBanner.display === 'none';
+                const isBuyerHidden = pBuyer.hidden === true || pBuyer.display === 'none';
+                const isVenueHidden = pVenue.hidden === true || pVenue.display === 'none';
+                const isNumHidden = pNum.hidden === true || pNum.display === 'none';
+                const isQRHidden = pQR.hidden === true || pQR.display === 'none';
+                const isHashHidden = pHash.hidden === true || pHash.display === 'none';
+                const isDiscHidden = pDisc.hidden === true || pDisc.display === 'none';
+                const isLogoHidden = pLogo.hidden === true || pLogo.display === 'none';
+
+                function getCustomStyleString(posObj, defaultAlign = 'left', defaultColor = null) {
+                    if (!posObj) return `text-align: ${defaultAlign}; color: ${defaultColor || primaryTextColor};`;
+                    let res = '';
+                    const align = posObj.textAlign || defaultAlign;
+                    if (align) res += `text-align: ${align};`;
+                    if (posObj.fontSize) res += `font-size: ${posObj.fontSize};`;
+                    const color = posObj.color || defaultColor || primaryTextColor;
+                    if (color) res += `color: ${color};`;
+                    if (posObj.fontWeight) res += `font-weight: ${posObj.fontWeight};`;
+                    if (posObj.fontStyle) res += `font-style: ${posObj.fontStyle};`;
+                    return res;
+                }
+
+                let pagesHtml = '';
+                const totalQty = ticketsQueue.length;
+
+                for (let ticketIdx = 0; ticketIdx < totalQty; ticketIdx += perPage) {
+                    let pageTicketsHtml = '';
+
+                    for (let k = 0; k < perPage && (ticketIdx + k) < totalQty; k++) {
+                        const ticketItem = ticketsQueue[ticketIdx + k];
+                        const ticketNumberVal = ticketItem.ticketNumberVal;
+                        const zoneName = ticketItem.zoneName;
+                        const priceFormatted = ticketItem.zonePrice;
+                        const ticketNum = ticketItem.ticketCode || ('N° ' + String(ticketNumberVal).padStart(5, '0'));
+                        const hash = ticketItem.validationHash || ('VG' + Math.random().toString(36).substring(2, 10).toUpperCase());
+                        const qrPayload = ticketItem.qrPayload || `VG-${hash}`;
+                        const qrDataUrl = ticketItem.qrDataUrl || getQrCodeDataUrl(qrPayload);
+
+                        let customTagsHtml = '';
+                        Object.keys(tplPositions).forEach(key => {
+                            if (key.startsWith('canvaCustomTag_') && !tplPositions[key].hidden && tplPositions[key].display !== 'none') {
+                                const p = tplPositions[key];
+                                const tagText = p.text || 'Etiqueta';
+                                customTagsHtml += `
+                                    <div class="canva-drag-element" style="position: absolute; top: ${p.top || '40px'}; left: ${p.left || '120px'}; z-index: 10;">
+                                        <div style="background: rgba(255, 85, 0, 0.15); border: 1.5px solid #FF5500; padding: 0.35rem 0.75rem; border-radius: 8px; font-weight: 800; font-size: ${p.fontSize || '0.85rem'}; color: ${p.color || primaryTextColor}; ${getCustomStyleString(p)}">
+                                            🏷️ ${tagText}
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                        });
+
+                        const ticketNumberHtml = isNumHidden ? '' : `
+                            <div class="canva-drag-element" id="canvaElTicketNumber" style="position: absolute; top: ${pNum.top || '16px'}; ${isPlantilla3 ? 'left: 650px; width: 250px;' : 'left: 0; width: 100%;'} text-align: center; display: flex; justify-content: center; align-items: center; z-index: 5;">
+                                <span style="font-size: ${pNum.fontSize || '1.3rem'}; font-weight: 900; color: ${pNum.color || primaryTextColor}; letter-spacing: 0.5px; display: inline-block;">${ticketNum}</span>
+                            </div>
+                        `;
+
+                        const qrBoxHtml = isQRHidden ? '' : `
+                            <div class="canva-drag-element" id="canvaElQR" style="position: absolute; top: ${pQR.top || '48px'}; left: ${isPlantilla3 ? '705px' : '55px'}; width: 140px; height: 140px; display: flex; align-items: center; justify-content: center; z-index: 5;">
+                                <div class="stub-qr-box" style="padding: 0.4rem; background: #FFFFFF; border-radius: 16px; border: 1.5px solid #E2E8F0; width: 140px; height: 140px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                                    <img src="${qrDataUrl}" style="width: 100%; height: 100%; object-fit: contain; display: block; border-radius: 4px;" alt="QR Code" />
+                                </div>
+                            </div>
+                        `;
+
+                        const hashHtml = isHashHidden ? '' : `
+                            <div class="canva-drag-element" id="canvaElHash" style="position: absolute; top: ${pHash.top || '200px'}; ${isPlantilla3 ? 'left: 650px; width: 250px;' : 'left: 0; width: 100%;'} text-align: center; display: flex; justify-content: center; align-items: center; z-index: 5;">
+                                <span style="font-family: monospace; font-size: ${pHash.fontSize || '0.95rem'}; font-weight: 800; color: ${pHash.color || secondaryTextColor}; letter-spacing: 3px; display: inline-block;">${hash}</span>
+                            </div>
+                        `;
+
+                        const disclaimerHtml = isDiscHidden ? '' : `
+                            <div class="canva-drag-element" id="canvaElDisclaimer" style="position: absolute; top: ${pDisc.top || '226px'}; left: ${isPlantilla3 ? '665px' : '15px'}; width: 220px; text-align: center; z-index: 5;">
+                                <div style="border-top: 1px solid #E2E8F0; padding-top: 0.25rem;">
+                                    <p style="font-size: ${pDisc.fontSize || '0.58rem'}; font-weight: 600; color: ${pDisc.color || mutedTextColor}; line-height: 1.25; margin: 0; text-align: center;">
+                                        La responsabilidad de este boleto es exclusiva del cliente, no compartir ni publicar. Se recomienda llevar impreso.
+                                    </p>
+                                </div>
+                            </div>
+                        `;
+
+                        pageTicketsHtml += `
+                            <div class="ticket-wrapper-card" style="width: ${printCardWidth}; height: ${printCardHeight}; position: relative; overflow: hidden; border-radius: 20px; border: 1.5px solid #000000; margin-bottom: ${cardMarginBottom}; flex-shrink: 0; box-sizing: border-box; background: ${bgColor};">
+                                <div class="ticket-canvas-inner" style="width: 900px; height: 300px; transform: scale(${scaleRatio}); transform-origin: top left; position: absolute; top: 0; left: 0; background: ${bgColor}; font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                                    
+                                    <div class="ticket-side-strip" style="width: 78px; background: ${stripColor}; height: 100%; position: absolute; ${isPlantilla2 ? 'right: 0;' : 'left: 0;'} top: 0; display: ${isPlantilla3 ? 'none' : 'flex'}; align-items: center; justify-content: center; z-index: 2;">
+                                        <img src="${logoDataUrl}" style="max-width: 240px; height: 48px; width: auto; object-fit: contain; transform: rotate(-90deg); filter: drop-shadow(0 0 10px rgba(255,85,0,0.6));">
+                                    </div>
+
+                                    <div style="position: absolute; left: ${isPlantilla2 ? '250px' : (isPlantilla3 ? '0' : '78px')}; width: ${isPlantilla3 ? '900px' : '572px'}; top: 0; bottom: 0; background: ${bgColor}; border-right: ${isPlantilla1 ? '2px dashed #CBD5E1' : 'none'}; border-left: ${isPlantilla2 ? '2px dashed #CBD5E1' : 'none'};" class="canva-main-area">
+                                        ${customTagsHtml}
+
+                                        ${(isPlantilla3 && !isLogoHidden) ? `
+                                        <div class="canva-drag-element" id="canvaElLogo" style="position: absolute; top: ${pLogo.top || '18px'}; left: ${pLogo.left || '25px'}; z-index: 5;">
+                                            <img src="${logoDataUrl}" style="height: ${pLogo.height || '38px'}; width: auto; object-fit: contain; filter: drop-shadow(0 0 10px rgba(255,85,0,0.6));">
+                                        </div>` : ''}
+
+                                        ${isBannerHidden ? '' : `
+                                        <div class="canva-drag-element" id="canvaElBanner" style="position: absolute; top: ${pBanner.top || '54px'}; left: ${pBanner.left || '20px'}; width: ${pBanner.width || (isPlantilla3 ? '520px' : '532px')}; height: ${pBanner.height || '130px'};">
+                                            <img src="${bannerDataUrl}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 14px;">
+                                        </div>`}
+
+                                        ${isTitleHidden ? '' : `
+                                        <div class="canva-drag-element" id="canvaElTitle" style="position: absolute; top: ${pTitle.top || (isPlantilla3 ? '60px' : '18px')}; left: 20px; width: 532px; text-align: center; ${getCustomStyleString(pTitle, 'center', primaryTextColor)}">
+                                            <h2 style="font-size: ${pTitle.fontSize || '1.18rem'}; font-weight: 900; color: ${pTitle.color || primaryTextColor}; margin: 0; line-height: 1.15; text-align: center;">${title}</h2>
+                                        </div>`}
+
+                                        ${isZoneHidden ? '' : `
+                                        <div class="canva-drag-element" id="canvaElZone" style="position: absolute; top: ${pZone.top || (isPlantilla3 ? '105px' : '194px')}; left: 20px; ${getCustomStyleString(pZone, 'left', secondaryTextColor)}">
+                                            <span style="font-size: ${pZone.fontSize || '0.98rem'}; font-weight: 900; color: ${pZone.color || '#DC2626'}; text-transform: uppercase; letter-spacing: 0.5px; display: block;">${zoneName}</span>
+                                        </div>`}
+
+                                        ${isPriceHidden ? '' : `
+                                        <div class="canva-drag-element" id="canvaElPrice" style="position: absolute; top: ${pPrice.top || (isPlantilla3 ? '105px' : '216px')}; left: ${isPlantilla3 ? '150px' : (isPlantilla2 ? '20px' : '430px')}; ${getCustomStyleString(pPrice, isPlantilla2 ? 'left' : (isPlantilla3 ? 'left' : 'right'), primaryTextColor)}">
+                                            <div style="text-align: inherit; line-height: 1.15;">
+                                                <span style="font-size: 0.825rem; font-weight: 900; color: ${pPrice.color || primaryTextColor}; display: block; letter-spacing: 0.5px;">PRECIO:</span>
+                                                <span style="font-size: ${pPrice.fontSize || '1.35rem'}; font-weight: 900; color: ${pPrice.color || primaryTextColor}; display: block; margin-top: 2px;">S/ ${priceFormatted}</span>
+                                            </div>
+                                        </div>`}
+
+                                        ${isVenueHidden ? '' : `
+                                        <div class="canva-drag-element" id="canvaElVenue" style="position: absolute; top: ${pVenue.top || (isPlantilla3 ? '225px' : '194px')}; right: 20px; ${getCustomStyleString(pVenue, 'right', primaryTextColor)}">
+                                            <div style="display: flex; flex-direction: column; font-size: 0.8rem; text-align: right; line-height: 1.25;">
+                                                <span style="font-weight: 900; font-size: 1.05rem; color: ${pVenue.color || primaryTextColor}; display: block; line-height: 1.2;">${venue}</span>
+                                                <span style="font-size: 0.85rem; font-weight: 800; color: #2C3E50; display: block; line-height: 1.2; margin-top: 2px;">${address}</span>
+                                                <span style="font-weight: 900; font-size: 1.1rem; color: #FF5500; display: block; line-height: 1.2; margin-top: 2px;">${cleanDate} / ${cleanTime}</span>
+                                            </div>
+                                        </div>`}
+
+                                        ${isPlantilla3 ? `
+                                            ${ticketNumberHtml}
+                                            ${qrBoxHtml}
+                                            ${hashHtml}
+                                            ${disclaimerHtml}
+                                        ` : ''}
+                                    </div>
+
+                                    ${isPlantilla3 ? '' : `
+                                    <div style="position: absolute; ${isPlantilla2 ? 'left: 0;' : 'right: 0;'} top: 0; width: 250px; height: 100%; background: ${isDarkBg ? 'rgba(255,255,255,0.05)' : '#FAFAFA'}; ${isPlantilla2 ? 'border-right: 2px dashed #CBD5E1;' : 'border-left: 2px dashed #CBD5E1;'}; box-sizing: border-box;" class="canva-stub-area">
+                                        ${ticketNumberHtml}
+                                        ${qrBoxHtml}
+                                        ${hashHtml}
+                                        ${disclaimerHtml}
+                                    </div>`}
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    pagesHtml += `
+                        <div class="print-page-sheet" style="width: ${pageWidthMm}mm; min-height: ${pageHeightMm}mm; max-height: ${pageHeightMm}mm; page-break-after: always; break-after: page; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: ${sheetPaddingTopBottom}; padding-bottom: ${sheetPaddingTopBottom}; overflow: hidden; background: #FFFFFF;">
+                            ${pageTicketsHtml}
+                        </div>
+                    `;
+                }
+
+                const docContent = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="utf-8">
+                        <title>Boletos Oficiales - ${title}</title>
+                        <link rel="preconnect" href="https://fonts.googleapis.com">
+                        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+                        <style>
+                            @page { size: ${pageWidthMm}mm ${pageHeightMm}mm; margin: 0; }
+                            * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                            body { margin: 0; padding: 0; background: #FFFFFF; color: #000000; font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+                            .print-page-sheet { width: ${pageWidthMm}mm; min-height: ${pageHeightMm}mm; max-height: ${pageHeightMm}mm; page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: ${sheetPaddingTopBottom}; padding-bottom: ${sheetPaddingTopBottom}; overflow: hidden; }
+                            .print-page-sheet:last-child { page-break-after: auto; break-after: auto; }
+                            .ticket-wrapper-card { border: 1.5px solid #000000; border-radius: 20px; overflow: hidden; position: relative; box-sizing: border-box; box-shadow: none; flex-shrink: 0; page-break-inside: avoid; break-inside: avoid; }
+                            .ticket-wrapper-card:last-child { margin-bottom: 0 !important; }
+                            .ticket-canvas-inner { border-radius: 20px; overflow: hidden; font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+                            .ticket-side-strip { display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
+                            .stub-qr-box { padding: 0.4rem; background: #FFFFFF; border: 1.5px solid #E2E8F0; border-radius: 16px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+                            .stub-qr-box img { width: 100% !important; height: 100% !important; display: block !important; border-radius: 4px; }
+                        </style>
+                    </head>
+                    <body>
+                        ${pagesHtml}
+                    </body>
+                    </html>
+                `;
+
+                // 2. MONTAR EN CONTENEDOR IN-DOM CON CÁLCULO DE LAYOUT REAL (Evita el error de canvas en blanco por iframe desconectado)
+                let renderContainer = document.getElementById('vivegoPdfRenderContainer');
+                if (renderContainer) renderContainer.remove();
+
+                renderContainer = document.createElement('div');
+                renderContainer.id = 'vivegoPdfRenderContainer';
+                renderContainer.style.position = 'fixed';
+                renderContainer.style.left = '0';
+                renderContainer.style.top = '0';
+                renderContainer.style.width = `${pageWidthMm}mm`;
+                renderContainer.style.zIndex = '999999';
+                renderContainer.style.opacity = '0.005'; // Mantiene activos los cálculos de dimensiones en el motor de renderizado
+                renderContainer.style.pointerEvents = 'none';
+                renderContainer.style.background = '#FFFFFF';
+                renderContainer.style.overflow = 'visible';
+                renderContainer.innerHTML = pagesHtml;
+                document.body.appendChild(renderContainer);
+
+                // Esperar a que las fuentes web y estilos terminen de pintarse en el DOM
+                if (document.fonts && document.fonts.ready) {
+                    await document.fonts.ready;
+                }
+                await new Promise(r => setTimeout(r, 250));
+
                 const cleanTitle = (evt.title || 'Boletos').replace(/[^a-zA-Z0-9_-]/g, '_');
                 const fileName = `Boletos_${cleanTitle}.pdf`;
 
-                if (typeof html2pdf !== 'undefined') {
+                const sheets = renderContainer.querySelectorAll('.print-page-sheet');
+                const totalSheets = sheets.length;
+
+                // 3. MOTOR PRINCIPAL: jsPDF + html2canvas MULTIPÁGINA DE ALTA DEFINICIÓN
+                const jsPdfObj = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF || null);
+
+                if (jsPdfObj && typeof html2canvas !== 'undefined') {
+                    const pdf = new jsPdfObj({
+                        orientation: orientation,
+                        unit: 'mm',
+                        format: jsPdfFormat,
+                        compress: true
+                    });
+
+                    for (let i = 0; i < totalSheets; i++) {
+                        const sheetEl = sheets[i];
+                        Swal.update({
+                            title: '🎨 2/3 - Renderizando Boletos en Alta Calidad...',
+                            html: `Compilando hoja <b>${i + 1} de ${totalSheets}</b> con máxima nitidez...`
+                        });
+
+                        const canvas = await html2canvas(sheetEl, {
+                            scale: 2.2,
+                            useCORS: true,
+                            allowTaint: true,
+                            backgroundColor: '#FFFFFF',
+                            logging: false,
+                            windowWidth: sheetEl.scrollWidth,
+                            windowHeight: sheetEl.scrollHeight
+                        });
+
+                        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                        if (i > 0) {
+                            pdf.addPage(jsPdfFormat, orientation);
+                        }
+                        pdf.addImage(imgData, 'JPEG', 0, 0, pageWidthMm, pageHeightMm, undefined, 'FAST');
+                    }
+
+                    Swal.update({
+                        title: '📥 3/3 - Guardando Archivo PDF...',
+                        html: `Empaquetando <b>"${fileName}"</b> para descarga directa...`
+                    });
+
+                    pdf.save(fileName);
+                    renderContainer.remove();
+
+                    showPdfSuccessModal(fileName, ticketsQueue.length, docContent);
+                } else if (typeof html2pdf !== 'undefined') {
+                    // Fallback 1: html2pdf
+                    Swal.update({
+                        title: '📥 Generando PDF...',
+                        html: `Compilando boletos con motor alternativo...`
+                    });
+
                     const opt = {
                         margin: 0,
                         filename: fileName,
                         image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0 },
+                        html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false },
                         jsPDF: { unit: 'mm', format: jsPdfFormat, orientation: orientation },
                         pagebreak: { mode: ['css', 'legacy'] }
                     };
 
-                    html2pdf().set(opt).from(frameDoc.body).save().then(function() {
-                        Swal.fire({
-                            title: '🎉 ¡Boletos PDF Descargados!',
-                            html: `Se descargó el archivo <b>"${fileName}"</b> con <b>${ticketsQueue.length} boletos</b> listos con sus códigos QR.<br><br>¿Deseas también abrir el cuadro de impresión directa?`,
-                            icon: 'success',
-                            showCancelButton: true,
-                            confirmButtonColor: '#FF5500',
-                            cancelButtonColor: '#475569',
-                            confirmButtonText: '🖨️ Imprimir Directamente',
-                            cancelButtonText: 'Cerrar',
-                            background: '#14141E',
-                            color: '#FFFFFF'
-                        }).then((res) => {
-                            if (res.isConfirmed) {
-                                printContainer.contentWindow.focus();
-                                printContainer.contentWindow.print();
-                            }
-                        });
-                    }).catch(function(err) {
-                        console.error('Error con html2pdf, usando fallback de impresión:', err);
-                        printContainer.contentWindow.focus();
-                        printContainer.contentWindow.print();
-                        Swal.close();
-                    });
+                    await html2pdf().set(opt).from(renderContainer).save();
+                    renderContainer.remove();
+
+                    showPdfSuccessModal(fileName, ticketsQueue.length, docContent);
                 } else {
-                    printContainer.contentWindow.focus();
-                    printContainer.contentWindow.print();
+                    // Fallback 2: Cuadro de Impresión Directa
+                    renderContainer.remove();
+                    openDirectNativePrintWindow(docContent);
                     Swal.close();
                 }
-            }, 600);
+            } catch (err) {
+                console.error('Error generando PDF:', err);
+                const renderContainer = document.getElementById('vivegoPdfRenderContainer');
+                if (renderContainer) renderContainer.remove();
+
+                Swal.fire({
+                    title: 'Inconveniente al compilar PDF',
+                    html: `Ocurrió un detalle técnico (${err.message || 'error desconocido'}).<br><br>¿Deseas abrir el <b>cuadro de impresión directa</b> para imprimir o guardar en PDF?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#FF5500',
+                    cancelButtonColor: '#475569',
+                    confirmButtonText: '🖨️ Abrir Impresión Directa',
+                    cancelButtonText: 'Cerrar',
+                    background: '#14141E',
+                    color: '#FFFFFF'
+                }).then((res) => {
+                    if (res.isConfirmed) {
+                        openDirectNativePrintWindow(docContent);
+                    }
+                });
+            }
         }
 
         document.addEventListener('DOMContentLoaded', function () {
