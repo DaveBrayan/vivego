@@ -919,7 +919,6 @@
                 const pPrice = tplPositions.canvaElPrice || {};
                 const pBanner = tplPositions.canvaElBanner || {};
                 const pBuyer = tplPositions.canvaElBuyer || tplPositions.canvaElBuyerName || {};
-                const pBuyerDni = tplPositions.canvaElBuyerDni || (tplPositions.canvaElBuyer ? { hidden: true } : {});
                 const pVenue = tplPositions.canvaElVenue || {};
                 const pNum = tplPositions.canvaElTicketNumber || {};
                 const pQR = tplPositions.canvaElQR || {};
@@ -945,28 +944,10 @@
                         return html.replace(divRegex, `$1${newValue}$2`);
                     }
 
-                    // Patrón 3: <span ...>LABEL:</span><span ...>VALOR</span>
-                    const inlineSpanRegex = new RegExp(`(${labelPattern}:?\\s*<\\/span>\\s*<span[^>]*>)[^<]+(<\\/span>)`, 'i');
-                    if (inlineSpanRegex.test(html)) {
-                        return html.replace(inlineSpanRegex, `$1${newValue}$2`);
-                    }
-
-                    // Patrón 4: <span ...>LABEL:</span> VALOR
+                    // Patrón 3: <span ...>LABEL:</span> VALOR
                     const inlineRegex = new RegExp(`(${labelPattern}:?\\s*<\\/span>\\s*)([^<\\s]+[^<]*)`, 'i');
                     if (inlineRegex.test(html)) {
                         return html.replace(inlineRegex, `$1${newValue}`);
-                    }
-
-                    // Patrón 5: Texto directo con etiqueta dentro de cualquier elemento HTML: <div ...>COMPRADOR: CHRISTIAN GOMEZ</div>
-                    const tagTextRegex = new RegExp(`((?:${labelPattern}):?\\s*)([^<]+)`, 'i');
-                    if (tagTextRegex.test(html)) {
-                        return html.replace(tagTextRegex, `$1${newValue}`);
-                    }
-
-                    // Patrón 6: Fallback si no hay etiqueta explícita pero hay texto dentro de un elemento HTML: <div ...>TEXTO</div>
-                    const simpleTagRegex = /(>[^<]+<)/;
-                    if (simpleTagRegex.test(html)) {
-                        return html.replace(/(>)([^<]+)(<)/, `$1${newValue}$3`);
                     }
 
                     return html;
@@ -1029,22 +1010,17 @@
                         finalHtml = posObj.html;
                         if (dynamicData) {
                             if (id === 'canvaElZone' && dynamicData.zoneName) {
-                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'ZONA|Zona', dynamicData.zoneName);
+                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'ZONA', dynamicData.zoneName);
                             } else if (id === 'canvaElPrice' && dynamicData.price) {
-                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'PRECIO|Precio', 'S/ ' + dynamicData.price);
-                            } else if (id === 'canvaElBuyerName' || id === 'canvaElBuyer') {
-                                if (dynamicData.buyerName) {
-                                    finalHtml = replaceDynamicHtmlValue(finalHtml, 'Comprador|COMPRADOR|Titular|TITULAR|Cliente|CLIENTE', dynamicData.buyerName);
-                                }
-                                if (dynamicData.buyerDni && (finalHtml.includes('DNI') || finalHtml.includes('dni') || finalHtml.includes('Dni') || finalHtml.includes('DOC') || finalHtml.includes('Doc') || finalHtml.includes('DOCUMENTO') || finalHtml.includes('Documento'))) {
-                                    finalHtml = replaceDynamicHtmlValue(finalHtml, 'DNI|Dni|DOC|Doc|DOCUMENTO|Documento', dynamicData.buyerDni);
-                                }
+                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'PRECIO', 'S/ ' + dynamicData.price);
+                            } else if ((id === 'canvaElBuyerName' || id === 'canvaElBuyer') && dynamicData.buyerName) {
+                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'Comprador', dynamicData.buyerName);
                             } else if (id === 'canvaElBuyerDni' && dynamicData.buyerDni) {
-                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'DNI|Dni|DOC|Doc|DOCUMENTO|Documento', dynamicData.buyerDni);
+                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'DNI', dynamicData.buyerDni);
                             } else if (id === 'canvaElDate' && dynamicData.date) {
-                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'FECHA|Fecha', dynamicData.date);
+                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'FECHA', dynamicData.date);
                             } else if (id === 'canvaElTime' && dynamicData.time) {
-                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'HORA|Hora', dynamicData.time);
+                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'HORA', dynamicData.time);
                             } else if (id === 'canvaElTicketNumber' && dynamicData.ticketNum) {
                                 finalHtml = finalHtml.replace(/N[°º]\s*\d+/gi, dynamicData.ticketNum);
                             } else if (id === 'canvaElHash' && dynamicData.hash) {
@@ -1090,9 +1066,6 @@
                         const qrPayload = ticketItem.qrPayload || `VGENC:${hash}`;
                         const qrDataUrl = ticketItem.qrDataUrl || getQrCodeDataUrl(qrPayload);
 
-                        const itemBuyerName = ticketItem.buyerName || 'CLIENTE PROSPECTO';
-                        const itemBuyerDni = ticketItem.buyerDni || '00000000';
-
                         let customTagsHtml = '';
                         Object.keys(tplPositions).forEach(key => {
                             if ((key.startsWith('canvaCustomTag_') || tplPositions[key].isCustomTag) && !tplPositions[key].hidden && tplPositions[key].display !== 'none' && tplPositions[key].visible !== false) {
@@ -1109,12 +1082,11 @@
                         const zoneHtml = renderCanvaStudioElement('canvaElZone', pZone, '95px', '25px', '', '', `<span style="font-size: ${pZone.fontSize || '0.925rem'}; font-weight: ${pZone.fontWeight || '800'}; color: ${pZone.color || '#1E293B'}; text-transform: uppercase;">ZONA: ${zoneName}</span>`, { zoneName: zoneName });
                         const priceHtml = renderCanvaStudioElement('canvaElPrice', pPrice, '95px', '240px', '', '', `<div style="text-align: ${pPrice.textAlign || 'left'}; line-height: 1.15;"><span style="font-size: 0.75rem; font-weight: 900; color: ${pPrice.color || primaryTextColor}; display: block;">PRECIO:</span><span style="font-size: ${pPrice.fontSize || '1.3rem'}; font-weight: 900; color: ${pPrice.color || primaryTextColor}; display: block; margin-top: 2px;">S/ ${priceFormatted}</span></div>`, { price: priceFormatted });
                         const venueHtml = renderCanvaStudioElement('canvaElVenue', pVenue, '200px', '25px', '', '', `<div style="display: flex; flex-direction: column; font-size: 0.8rem; color: ${pVenue.color || primaryTextColor}; text-align: ${pVenue.textAlign || 'left'};"><span style="font-weight: 900; font-size: 0.95rem; display: block;">${venue}</span>${address ? `<span style="font-size: 0.8rem; font-weight: 700; color: ${mutedTextColor}; display: block; margin-top: 2px;">${address}</span>` : ''}<span style="font-weight: 900; font-size: 1rem; color: #FF5500; display: block; margin-top: 2px;">${cleanDate} / ${cleanTime}</span></div>`);
-                        const buyerNameHtml = renderCanvaStudioElement('canvaElBuyerName', pBuyer, '140px', '25px', '', '', `<div style="display: flex; flex-direction: column; font-size: ${pBuyer.fontSize || '0.8rem'}; color: ${pBuyer.color || primaryTextColor};"><span style="font-size: 0.725rem; color: ${mutedTextColor};">Comprador:</span><span style="font-weight: 900; font-size: 0.95rem; text-transform: uppercase;">${itemBuyerName}</span></div>`, { buyerName: itemBuyerName, buyerDni: itemBuyerDni });
-                        const buyerDniHtml = renderCanvaStudioElement('canvaElBuyerDni', pBuyerDni, '165px', '25px', '', '', `<span style="font-weight: 800; font-size: 0.825rem; color: ${primaryTextColor};">DNI: ${itemBuyerDni}</span>`, { buyerDni: itemBuyerDni });
+                        const buyerNameHtml = renderCanvaStudioElement('canvaElBuyerName', pBuyer, '140px', '25px', '', '', `<div style="display: flex; flex-direction: column; font-size: ${pBuyer.fontSize || '0.8rem'}; color: ${pBuyer.color || primaryTextColor};"><span style="font-size: 0.725rem; color: ${mutedTextColor};">Comprador:</span><span style="font-weight: 900; font-size: 0.95rem; text-transform: uppercase;">CLIENTE PROSPECTO</span></div>`, { buyerName: 'CLIENTE PROSPECTO' });
+                        const buyerDniHtml = renderCanvaStudioElement('canvaElBuyerDni', tplPositions.canvaElBuyerDni || {}, '165px', '25px', '', '', `<span style="font-weight: 800; font-size: 0.825rem; color: ${primaryTextColor};">DNI: 00000000</span>`, { buyerDni: '00000000' });
                         const dateHtml = renderCanvaStudioElement('canvaElDate', pDate, '260px', '25px', '', '', `<span style="font-weight: 900; font-size: 0.9rem; color: ${pDate.color || primaryTextColor};">FECHA: ${cleanDate}</span>`, { date: cleanDate });
                         const timeHtml = renderCanvaStudioElement('canvaElTime', pTime, '260px', '220px', '', '', `<span style="font-weight: 900; font-size: 0.9rem; color: ${pTime.color || primaryTextColor};">HORA: ${cleanTime}</span>`, { time: cleanTime });
                         const cityHtml = renderCanvaStudioElement('canvaElCity', pCity, '225px', '25px', '', '', address ? `<span style="font-size: 0.8rem; font-weight: 700; color: ${mutedTextColor};">${address}</span>` : '');
-
 
                         const ticketNumberHtml = renderCanvaStudioElement('canvaElTicketNumber', pNum, '15px', '660px', '', '', `<span style="font-size: ${pNum.fontSize || '1.2rem'}; font-weight: 900; color: ${pNum.color || primaryTextColor}; font-family: var(--font-heading, sans-serif); letter-spacing: 0.5px; display: inline-block;">${ticketNum}</span>`, { ticketNum: ticketNum });
                         const qrBoxHtml = renderCanvaStudioElement('canvaElQR', pQR, '55px', '635px', '95px', '95px', `<div style="padding: 0.35rem; background: #FFFFFF; border-radius: 12px; border: 1.5px solid #E2E8F0; width: 100%; height: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.08);"><img src="${qrDataUrl}" style="width: 100%; height: 100%; object-fit: contain; display: block; border-radius: 4px;" alt="QR Code" /></div>`);
