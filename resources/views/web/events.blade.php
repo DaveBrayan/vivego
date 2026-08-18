@@ -950,12 +950,6 @@
                         return html.replace(inlineRegex, `$1${newValue}`);
                     }
 
-                    // Patrón 4: <tag ...>LABEL: VALOR</tag> (ej. <div ...>COMPRADOR: CHRISTIAN GOMEZ</div> o DNI: 70436491)
-                    const singleTagRegex = new RegExp(`(${labelPattern}:?\\s*)([^<]+)`, 'i');
-                    if (singleTagRegex.test(html)) {
-                        return html.replace(singleTagRegex, `$1${newValue}`);
-                    }
-
                     return html;
                 }
 
