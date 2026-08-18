@@ -103,7 +103,7 @@
                 <!-- Botones de Acción + Hamburguesa Móvil -->
                 <div class="nav-actions">
                     <a href="{{ route('web.dashboard') }}" class="btn btn-secondary btn-sm desktop-only">📊 Mi Panel</a>
-                    <a href="{{ route('web.dashboard') }}" class="btn btn-primary btn-sm desktop-only">Iniciar Sesión</a>
+                    <a href="{{ route('web.login') }}" class="btn btn-primary btn-sm desktop-only">Iniciar Sesión</a>
 
                     <!-- Botón Hamburguesa Móvil -->
                     <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Abrir Menú">
@@ -171,7 +171,7 @@
 
             <!-- Botones de Acción Móvil -->
             <div class="drawer-actions">
-                <a href="{{ route('web.dashboard') }}" class="btn btn-primary btn-sm" style="width: 100%; text-align: center;">
+                <a href="{{ route('web.login') }}" class="btn btn-primary btn-sm" style="width: 100%; text-align: center;">
                     Iniciar Sesión / Mi Cuenta
                 </a>
                 <a href="{{ route('web.dashboard') }}" class="btn btn-secondary btn-sm" style="width: 100%; text-align: center; margin-top: 0.65rem;">

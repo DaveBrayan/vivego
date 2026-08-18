@@ -14,6 +14,7 @@ use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\TemplateController;
 use App\Http\Controllers\Web\BoxOfficeController;
 use App\Http\Controllers\Web\AttendeeController;
+use App\Http\Controllers\Web\AuthController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -26,6 +27,9 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', [HomeController::class, 'index'])->name('web.home');
+Route::get('/login', [AuthController::class, 'showLoginForm'])->name('web.login');
+Route::post('/login', [AuthController::class, 'login'])->name('web.login.submit');
+Route::post('/logout', [AuthController::class, 'logout'])->name('web.logout');
 Route::get('/evento/{slug}', [EventDetailController::class, 'show'])->name('web.event.detail');
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('web.dashboard');
 
@@ -91,3 +95,4 @@ Route::get('/admin/administradores', [AdminController::class, 'index'])->name('w
 Route::post('/admin/administradores', [AdminController::class, 'store'])->name('web.admins.store');
 Route::put('/admin/administradores/{administrator}', [AdminController::class, 'update'])->name('web.admins.update');
 Route::delete('/admin/administradores/{administrator}', [AdminController::class, 'destroy'])->name('web.admins.destroy');
+Route::post('/admin/administradores/{administrator}/reset-password', [AdminController::class, 'resetPassword'])->name('web.admins.reset-password');
