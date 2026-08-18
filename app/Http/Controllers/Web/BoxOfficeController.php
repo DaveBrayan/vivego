@@ -310,11 +310,15 @@ class BoxOfficeController extends Controller
         $nextNum = $lastSale ? ($lastSale->id + 1) : 1;
         $receiptNumber = 'REC-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
 
+        // Obtener la secuencia inicial de boletos para el evento
+        $lastTicket = \App\Models\EventTicket::where('event_id', $event->id)->orderBy('id', 'desc')->first();
+        $startSeq = $lastTicket ? ((int) preg_replace('/[^0-9]/', '', $lastTicket->ticket_number) + 1) : 1;
+
         // Generar códigos únicos e información para cada boleto individual
         $ticketsData = [];
         for ($i = 1; $i <= $validated['quantity']; $i++) {
-            $ticketNumFormatted = 'N° ' . str_pad($nextNum, 5, '0', STR_PAD_LEFT);
-            $ticketCode = 'TK-' . strtoupper(substr(Str::slug($event->title), 0, 3)) . '-' . str_pad($nextNum, 5, '0', STR_PAD_LEFT) . '-' . str_pad($i, 2, '0', STR_PAD_LEFT);
+            $currentSeq = $startSeq + ($i - 1);
+            $ticketCode = 'TK-' . strtoupper(substr(Str::slug($event->title), 0, 3)) . '-' . str_pad($currentSeq, 5, '0', STR_PAD_LEFT);
             $validationHash = strtoupper(Str::random(10));
 
             // Hash encriptado de alta seguridad exclusivo para el scanner móvil del evento
@@ -323,7 +327,7 @@ class BoxOfficeController extends Controller
 
             $ticketsData[] = [
                 'ticket_code' => $ticketCode,
-                'ticket_number' => $ticketNumFormatted,
+                'ticket_number' => $currentSeq,
                 'ticket_index' => $i,
                 'validation_hash' => $validationHash,
                 'qr_payload' => $qrPayload,
@@ -353,12 +357,12 @@ class BoxOfficeController extends Controller
         ]);
 
         // Registrar cada boleto emitido individualmente en la tabla event_tickets
-        foreach ($ticketsData as $idx => $tData) {
+        foreach ($ticketsData as $tData) {
             \App\Models\EventTicket::create([
                 'event_id' => $event->id,
                 'ticket_sale_id' => $sale->id,
                 'ticket_code' => $tData['ticket_code'],
-                'ticket_number' => $idx + 1,
+                'ticket_number' => $tData['ticket_number'],
                 'zone_name' => $tData['zone'],
                 'unit_price' => $tData['price'],
                 'qr_payload' => $tData['qr_payload'],

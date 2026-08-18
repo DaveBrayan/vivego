@@ -1474,7 +1474,10 @@ const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 
                 for (let i = 0; i < ticketsList.length; i++) {
                     const tItem = ticketsList[i];
-                    const numSeq = tItem.ticket_number || (i + 1);
+                    let numSeq = tItem.ticket_number || (sale.id ? (sale.id + i) : (i + 1));
+                    if (typeof numSeq === 'string') {
+                        numSeq = parseInt(numSeq.replace(/[^0-9]/g, ''), 10) || (i + 1);
+                    }
                     const ticketNumStr = 'N° ' + String(numSeq).padStart(5, '0');
 
                     let hashVal = tItem.validation_hash || sale.validation_hash;

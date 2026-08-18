@@ -1049,7 +1049,10 @@
 
                     for (let k = 0; k < perPage && (ticketIdx + k) < totalQty; k++) {
                         const ticketItem = ticketsQueue[ticketIdx + k];
-                        const ticketNumberVal = ticketItem.ticketNumberVal || (ticketIdx + k + 1);
+                        let ticketNumberVal = ticketItem.ticketNumberVal || (ticketIdx + k + 1);
+                        if (typeof ticketNumberVal === 'string') {
+                            ticketNumberVal = parseInt(ticketNumberVal.replace(/[^0-9]/g, ''), 10) || (ticketIdx + k + 1);
+                        }
                         const zoneName = ticketItem.zoneName;
                         const priceFormatted = ticketItem.zonePrice;
                         const ticketNum = 'N° ' + String(ticketNumberVal).padStart(5, '0');
