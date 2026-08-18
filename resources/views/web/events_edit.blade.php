@@ -2219,11 +2219,19 @@
             return positions;
         }
 
+        function cleanImageField(str) {
+            if (!str || typeof str !== 'string') return str;
+            if (str.startsWith('data:')) return str;
+            if (str.includes('/storage/')) return '/storage/' + str.split('/storage/')[1];
+            if (str.includes('/images/')) return '/images/' + str.split('/images/')[1];
+            return str;
+        }
+
         function saveEditedEvent() {
             const title = document.getElementById('event_title')?.value || '';
             const categoryName = document.getElementById('event_category')?.value || 'Conciertos';
             const companyName = document.getElementById('event_company')?.value || 'Vive Go';
-            const bannerImage = document.getElementById('event_banner')?.value || '';
+            const bannerImage = cleanImageField(document.getElementById('event_banner')?.value || '');
             const eventDate = document.getElementById('event_date')?.value || '';
             const eventTime = document.getElementById('event_time')?.value || '';
             const venueName = document.getElementById('event_venue')?.value || '';
@@ -2249,11 +2257,20 @@
                 });
             });
 
+            const positionsPayload = getCanvaPositionsPayload();
+            if (positionsPayload) {
+                Object.keys(positionsPayload).forEach(k => {
+                    if (positionsPayload[k] && positionsPayload[k].src) {
+                        positionsPayload[k].src = cleanImageField(positionsPayload[k].src);
+                    }
+                });
+            }
+
             const customTicketPayload = {
-                positions: getCanvaPositionsPayload(),
+                positions: positionsPayload,
                 bg_color: document.getElementById('canvaBgColor').value || '#FFFFFF',
-                bg_image: document.getElementById('canvaBgImageInput').value || null,
-                ticket_banner: document.getElementById('canvaTicketBannerInput')?.value || null,
+                bg_image: cleanImageField(document.getElementById('canvaBgImageInput').value || null),
+                ticket_banner: cleanImageField(document.getElementById('canvaTicketBannerInput')?.value || null),
                 strip_color: document.getElementById('canvaStripColor').value || '#FF5500',
                 type: salesType
             };

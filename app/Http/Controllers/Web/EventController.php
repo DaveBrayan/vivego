@@ -443,7 +443,29 @@ class EventController extends Controller
 
         $event = Event::find($id);
 
-        if ($event) {
+        if (!$event) {
+            $bannerImage = $this->saveBase64Image($validated['banner_image'] ?? null, 'events', 'event_banner');
+            $slug = Str::slug($validated['title']) . '-' . rand(100, 999);
+            $event = Event::create([
+                'title' => $validated['title'],
+                'slug' => $slug,
+                'category_name' => $validated['category_name'] ?? 'Conciertos',
+                'company_name' => $validated['company_name'] ?? 'Vive Go',
+                'banner_image' => $bannerImage,
+                'event_date' => $validated['event_date'] ?? null,
+                'event_time' => $validated['event_time'] ?? '18:00',
+                'venue_name' => $validated['venue_name'] ?? 'Complejo San Luis',
+                'address' => $validated['address'] ?? 'Ayacucho',
+                'latitude' => $validated['latitude'] ?? -13.1631,
+                'longitude' => $validated['longitude'] ?? -74.2236,
+                'description' => $validated['description'] ?? null,
+                'tags' => $validated['tags'] ?? [],
+                'template_id' => $validated['template_id'] ?? null,
+                'zones' => $validated['zones'] ?? [],
+                'status' => $validated['status'] ?? 'Publicado',
+                'sales_type' => $validated['sales_type'] ?? 'fisica',
+            ]);
+        } else {
             $bannerImage = $this->saveBase64Image($validated['banner_image'] ?? $event->banner_image, 'events', 'event_banner');
 
             $event->update([
@@ -465,53 +487,57 @@ class EventController extends Controller
                 'status' => $validated['status'] ?? $event->status ?? 'Publicado',
                 'sales_type' => $validated['sales_type'] ?? $event->sales_type ?? 'fisica',
             ]);
+        }
 
-            $customTicket = $request->input('custom_ticket');
-            if (!empty($customTicket) && is_array($customTicket)) {
-                $bgImage = array_key_exists('bg_image', $customTicket) ? $this->saveBase64Image($customTicket['bg_image'], 'templates', 'bg') : null;
-                $ticketBanner = array_key_exists('ticket_banner', $customTicket) ? $this->saveBase64Image($customTicket['ticket_banner'], 'templates', 'ticket_banner') : null;
+        $customTicket = $request->input('custom_ticket');
+        if (!empty($customTicket) && is_array($customTicket)) {
+            $bgImage = array_key_exists('bg_image', $customTicket) ? $this->saveBase64Image($customTicket['bg_image'], 'templates', 'bg') : null;
+            $ticketBanner = array_key_exists('ticket_banner', $customTicket) ? $this->saveBase64Image($customTicket['ticket_banner'], 'templates', 'ticket_banner') : null;
 
-                $positions = $customTicket['positions'] ?? [];
-                if (is_array($positions)) {
-                    foreach ($positions as $k => &$pos) {
-                        if (is_array($pos) && !empty($pos['src']) && str_starts_with($pos['src'], 'data:image')) {
+            $positions = $customTicket['positions'] ?? [];
+            if (is_array($positions)) {
+                foreach ($positions as $k => &$pos) {
+                    if (is_array($pos) && !empty($pos['src'])) {
+                        if (str_starts_with($pos['src'], 'data:image')) {
                             $pos['src'] = $this->saveBase64Image($pos['src'], 'templates', 'tpl_elem_' . $k);
+                        } else {
+                            $pos['src'] = $this->sanitizeAssetUrl($pos['src']);
                         }
                     }
                 }
+            }
 
-                if ($ticketBanner && isset($positions['canvaElBanner'])) {
-                    $positions['canvaElBanner']['src'] = $ticketBanner;
-                }
+            if ($ticketBanner && isset($positions['canvaElBanner'])) {
+                $positions['canvaElBanner']['src'] = $ticketBanner;
+            }
 
-                $existingTemplate = $event->template_id ? TicketTemplate::find($event->template_id) : null;
-                if ($existingTemplate && str_starts_with($existingTemplate->name, 'Boleto:')) {
-                    $existingTemplate->update([
-                        'name' => 'Boleto: ' . $validated['title'],
-                        'category' => (($validated['sales_type'] ?? 'virtual') === 'virtual' ? 'Virtual: E-Ticket Evento' : 'Física: Taquilla Evento'),
-                        'type' => $validated['sales_type'] ?? $event->sales_type ?? 'virtual',
-                        'bg_color' => $customTicket['bg_color'] ?? $existingTemplate->bg_color,
-                        'bg_image' => array_key_exists('bg_image', $customTicket) ? $bgImage : $existingTemplate->bg_image,
-                        'strip_color' => $customTicket['strip_color'] ?? $existingTemplate->strip_color,
-                        'positions' => $positions,
-                        'elements' => $customTicket['elements'] ?? $existingTemplate->elements,
-                    ]);
-                } else {
-                    $tpl = TicketTemplate::create([
-                        'name' => 'Boleto: ' . $validated['title'],
-                        'category' => (($validated['sales_type'] ?? 'virtual') === 'virtual' ? 'Virtual: E-Ticket Evento' : 'Física: Taquilla Evento'),
-                        'type' => $validated['sales_type'] ?? $event->sales_type ?? 'virtual',
-                        'bg_color' => $customTicket['bg_color'] ?? '#FFFFFF',
-                        'bg_image' => $bgImage,
-                        'strip_color' => $customTicket['strip_color'] ?? '#FF5500',
-                        'positions' => $positions,
-                        'elements' => $customTicket['elements'] ?? [],
-                        'is_default' => false,
-                        'status' => 'active',
-                    ]);
-                    $event->template_id = $tpl->id;
-                    $event->save();
-                }
+            $existingTemplate = $event->template_id ? TicketTemplate::find($event->template_id) : null;
+            if ($existingTemplate && str_starts_with($existingTemplate->name, 'Boleto:')) {
+                $existingTemplate->update([
+                    'name' => 'Boleto: ' . $validated['title'],
+                    'category' => (($validated['sales_type'] ?? 'virtual') === 'virtual' ? 'Virtual: E-Ticket Evento' : 'Física: Taquilla Evento'),
+                    'type' => $validated['sales_type'] ?? $event->sales_type ?? 'virtual',
+                    'bg_color' => $customTicket['bg_color'] ?? $existingTemplate->bg_color,
+                    'bg_image' => array_key_exists('bg_image', $customTicket) ? $bgImage : $existingTemplate->bg_image,
+                    'strip_color' => $customTicket['strip_color'] ?? $existingTemplate->strip_color,
+                    'positions' => $positions,
+                    'elements' => $customTicket['elements'] ?? $existingTemplate->elements,
+                ]);
+            } else {
+                $tpl = TicketTemplate::create([
+                    'name' => 'Boleto: ' . $validated['title'],
+                    'category' => (($validated['sales_type'] ?? 'virtual') === 'virtual' ? 'Virtual: E-Ticket Evento' : 'Física: Taquilla Evento'),
+                    'type' => $validated['sales_type'] ?? $event->sales_type ?? 'virtual',
+                    'bg_color' => $customTicket['bg_color'] ?? '#FFFFFF',
+                    'bg_image' => $bgImage,
+                    'strip_color' => $customTicket['strip_color'] ?? '#FF5500',
+                    'positions' => $positions,
+                    'elements' => $customTicket['elements'] ?? [],
+                    'is_default' => false,
+                    'status' => 'active',
+                ]);
+                $event->template_id = $tpl->id;
+                $event->save();
             }
         }
 
@@ -626,6 +652,34 @@ class EventController extends Controller
     }
 
     /**
+     * Limpia y normaliza URLs de imágenes eliminando dominios o IPs locales previas.
+     */
+    protected function sanitizeAssetUrl(?string $imageString): ?string
+    {
+        if (empty($imageString)) {
+            return null;
+        }
+
+        if (str_starts_with($imageString, 'data:image')) {
+            return $imageString;
+        }
+
+        if (preg_match('/(storage\/[^\s"\']+)/i', $imageString, $matches)) {
+            return '/' . $matches[1];
+        }
+
+        if (preg_match('/(images\/[^\s"\']+)/i', $imageString, $matches)) {
+            return '/' . $matches[1];
+        }
+
+        if (str_starts_with($imageString, 'storage/')) {
+            return '/' . $imageString;
+        }
+
+        return $imageString;
+    }
+
+    /**
      * Decodifica una imagen base64 y la guarda en el disco público de Laravel.
      */
     protected function saveBase64Image(?string $imageString, string $folder = 'events', string $prefix = 'img'): ?string
@@ -634,9 +688,7 @@ class EventController extends Controller
             return null;
         }
 
-        if (str_starts_with($imageString, 'storage/')) {
-            return '/' . $imageString;
-        }
+        $imageString = $this->sanitizeAssetUrl($imageString);
 
         if (!str_starts_with($imageString, 'data:image')) {
             return $imageString;

@@ -1237,7 +1237,15 @@ const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 
                 function getFullAssetUrl(urlStr) {
                     if (!urlStr) return null;
-                    if (urlStr.startsWith('http://') || urlStr.startsWith('https://') || urlStr.startsWith('data:')) return urlStr;
+                    if (urlStr.startsWith('data:')) return urlStr;
+
+                    if (urlStr.includes('/storage/')) {
+                        urlStr = '/storage/' + urlStr.split('/storage/')[1];
+                    } else if (urlStr.includes('/images/')) {
+                        urlStr = '/images/' + urlStr.split('/images/')[1];
+                    }
+
+                    if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) return urlStr;
                     return window.location.origin + '/' + urlStr.replace(/^\//, '');
                 }
 

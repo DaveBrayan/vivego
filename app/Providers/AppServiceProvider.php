@@ -20,12 +20,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $host = request()->getHost();
-        $isLocalHost = in_array($host, ['127.0.0.1', 'localhost']) || str_starts_with($host, '192.168.') || str_starts_with($host, '10.') || str_starts_with($host, '172.');
+        $isHttps = request()->secure() 
+            || request()->header('x-forwarded-proto') === 'https' 
+            || request()->server('HTTP_X_FORWARDED_PROTO') === 'https'
+            || (config('app.url') && str_starts_with(config('app.url'), 'https://'));
 
-        if ($isLocalHost || $this->app->isLocal()) {
-            URL::forceScheme('http');
-        } elseif ($this->app->environment('production') || (config('app.url') && str_contains(config('app.url'), 'https://'))) {
+        if ($isHttps) {
             URL::forceScheme('https');
         }
     }
