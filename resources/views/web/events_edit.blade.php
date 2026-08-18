@@ -2222,9 +2222,18 @@
         function cleanImageField(str) {
             if (!str || typeof str !== 'string') return str;
             if (str.startsWith('data:')) return str;
-            if (str.includes('/storage/')) return '/storage/' + str.split('/storage/')[1];
-            if (str.includes('/images/')) return '/images/' + str.split('/images/')[1];
-            return str;
+            if (str.startsWith('http://') || str.startsWith('https://')) return str;
+
+            let clean = str.replace(/^\//, '');
+            if (clean.includes('storage/')) {
+                clean = 'storage/' + clean.split('storage/').pop();
+            } else if (clean.includes('images/')) {
+                clean = 'images/' + clean.split('images/').pop();
+            } else if (clean.startsWith('events/') || clean.startsWith('templates/')) {
+                clean = 'storage/' + clean;
+            }
+
+            return window.location.origin + '/' + clean;
         }
 
         function saveEditedEvent() {

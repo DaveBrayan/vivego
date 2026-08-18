@@ -48,18 +48,14 @@ class Event extends Model
 
         $clean = ltrim($value, '/');
         if (preg_match('/(?:storage\/)+(.+)/i', $clean, $matches)) {
-            return 'storage/' . ltrim($matches[1], '/');
+            $clean = 'storage/' . ltrim($matches[1], '/');
+        } elseif (preg_match('/(?:images\/)+(.+)/i', $clean, $matches)) {
+            $clean = 'images/' . ltrim($matches[1], '/');
+        } elseif (str_starts_with($clean, 'events/') || str_starts_with($clean, 'templates/') || str_starts_with($clean, 'uploads/')) {
+            $clean = 'storage/' . $clean;
         }
 
-        if (preg_match('/(?:images\/)+(.+)/i', $clean, $matches)) {
-            return 'images/' . ltrim($matches[1], '/');
-        }
-
-        if (str_starts_with($clean, 'events/') || str_starts_with($clean, 'templates/') || str_starts_with($clean, 'uploads/')) {
-            return 'storage/' . $clean;
-        }
-
-        return $clean;
+        return asset($clean);
     }
 
     public function template()
