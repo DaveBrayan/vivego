@@ -199,6 +199,7 @@ class AttendeeController extends Controller
         if ($ticket->is_used) {
             $usedTime = $ticket->checked_in_at ? $ticket->checked_in_at->format('d/m/Y h:i:s A') : 'Hora desconocida';
             $usedDoor = $ticket->scanned_by ?: 'Puerta Principal';
+            $usedHash = $ticket->validation_hash ?: ('VG' . strtoupper(substr(md5($ticket->id), 0, 8)));
 
             return response()->json([
                 'success' => false,
@@ -208,6 +209,7 @@ class AttendeeController extends Controller
                 'ticket' => [
                     'id' => $ticket->id,
                     'ticket_code' => $ticket->ticket_code,
+                    'validation_hash' => $usedHash,
                     'zone_name' => $ticket->zone_name,
                     'unit_price' => 'S/ ' . number_format($ticket->unit_price, 2),
                     'buyer_name' => $ticket->buyer_name,
@@ -223,6 +225,8 @@ class AttendeeController extends Controller
         $ticket->checked_in_at = now();
         $ticket->scanned_by = $deviceName;
         $ticket->save();
+
+        $hashVal = $ticket->validation_hash ?: ('VG' . strtoupper(substr(md5($ticket->id), 0, 8)));
 
         // Recalcular métricas en vivo
         $ticketsIssued = EventTicket::where('event_id', $event->id)->count();
