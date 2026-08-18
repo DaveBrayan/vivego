@@ -665,18 +665,14 @@ class EventController extends Controller
         }
 
         if (preg_match('/(storage\/[^\s"\']+)/i', $imageString, $matches)) {
-            return '/' . $matches[1];
+            return 'storage/' . $matches[1];
         }
 
         if (preg_match('/(images\/[^\s"\']+)/i', $imageString, $matches)) {
-            return '/' . $matches[1];
+            return 'images/' . $matches[1];
         }
 
-        if (str_starts_with($imageString, 'storage/')) {
-            return '/' . $imageString;
-        }
-
-        return $imageString;
+        return ltrim($imageString, '/');
     }
 
     /**
@@ -696,7 +692,7 @@ class EventController extends Controller
         }
         @file_put_contents($publicDir . '/' . $fileName, $binaryData);
 
-        return '/storage/' . $folder . '/' . $fileName;
+        return 'storage/' . $folder . '/' . $fileName;
     }
 
     /**

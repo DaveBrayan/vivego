@@ -1253,11 +1253,13 @@ const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
                 const logoSrc = (tplPositions.canvaElLogo && tplPositions.canvaElLogo.src) ? getFullAssetUrl(tplPositions.canvaElLogo.src) : logoWhite;
                 const bannerSrc = (tplPositions.canvaElBanner && tplPositions.canvaElBanner.src) ? getFullAssetUrl(tplPositions.canvaElBanner.src) : null;
                 const bgImgSrc = template.bg_image ? getFullAssetUrl(template.bg_image) : (tplPositions.canvaBgImage ? getFullAssetUrl(tplPositions.canvaBgImage) : null);
+                const boletoSrc = getFullAssetUrl('/images/Boleto.jpg');
 
-                const [logoDataUrl, bannerDataUrl, bgDataUrl] = await Promise.all([
+                const [logoDataUrl, bannerDataUrl, bgDataUrl, boletoDataUrl] = await Promise.all([
                     preloadPosImageAsDataUrl(logoSrc, 'logo'),
                     preloadPosImageAsDataUrl(bannerSrc, 'banner'),
-                    bgImgSrc ? preloadPosImageAsDataUrl(bgImgSrc, 'bg') : Promise.resolve('')
+                    bgImgSrc ? preloadPosImageAsDataUrl(bgImgSrc, 'bg') : Promise.resolve(''),
+                    preloadPosImageAsDataUrl(boletoSrc, 'boleto')
                 ]);
 
                 const pTitle = tplPositions.canvaElTitle || {};
@@ -1451,18 +1453,18 @@ const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
                 pdfContainer.style.position = 'fixed';
                 pdfContainer.style.left = '-9999px';
                 pdfContainer.style.top = '0';
-                pdfContainer.style.width = '771px';
-                pdfContainer.style.height = '370px';
+                pdfContainer.style.width = '794px';
+                pdfContainer.style.height = '1123px';
                 pdfContainer.style.zIndex = '999999';
-                pdfContainer.style.background = bgColor;
-                pdfContainer.style.overflow = 'hidden';
-                pdfContainer.style.borderRadius = '18px';
-                pdfContainer.style.border = '1.5px solid #000000';
+                pdfContainer.style.backgroundImage = `url('${boletoDataUrl || boletoSrc}')`;
+                pdfContainer.style.backgroundSize = '100% 100%';
+                pdfContainer.style.backgroundPosition = 'center';
                 pdfContainer.style.fontFamily = "'Plus Jakarta Sans', sans-serif";
                 pdfContainer.style.boxSizing = 'border-box';
+                pdfContainer.style.overflow = 'hidden';
 
                 pdfContainer.innerHTML = `
-                    <div class="ticket-canvas-inner" style="width: 771px; height: 370px; position: absolute; top: 0; left: 0; background: ${bgColor}; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; border-radius: 18px; box-sizing: border-box;">
+                    <div class="ticket-canvas-inner" style="width: 771px; height: 370px; position: absolute; top: 12px; left: 11.5px; background: ${bgColor}; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; border-radius: 18px; border: 1.5px solid #000000; box-sizing: border-box;">
                         ${bgImgHtml}
                         
                         <div style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;" class="canva-main-area">
@@ -1493,45 +1495,39 @@ const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
                 }
                 await new Promise(r => setTimeout(r, 250));
 
-                console.log('[CanvaStudio POS PDF] Rendering html2canvas...');
+                console.log('[CanvaStudio POS PDF] Rendering html2canvas A4...');
                 const canvas = await html2canvas(pdfContainer, {
                     scale: 2.5,
                     useCORS: true,
                     allowTaint: true,
-                    backgroundColor: bgColor,
+                    backgroundColor: '#FFFFFF',
                     logging: true
                 });
 
-                console.log('[CanvaStudio POS PDF] Canvas rendered successfully:', canvas.width, 'x', canvas.height);
-
-                const widthMm = 204.0;
-                const heightMm = 98.0;
+                console.log('[CanvaStudio POS PDF] Canvas A4 rendered successfully:', canvas.width, 'x', canvas.height);
 
                 const imgData = canvas.toDataURL('image/jpeg', 0.95);
                 pdfContainer.remove();
 
-                console.log(`[CanvaStudio POS PDF] PDF Page size exact: ${widthMm}cm x ${heightMm}cm (20.40cm x 9.80cm)`);
-
                 const jsPdfObj = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF || null);
                 if (jsPdfObj) {
                     const pdf = new jsPdfObj({
-                        orientation: 'landscape',
+                        orientation: 'portrait',
                         unit: 'mm',
-                        format: [widthMm, heightMm]
+                        format: 'a4'
                     });
-                    pdf.addImage(imgData, 'JPEG', 0, 0, widthMm, heightMm);
+                    pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
                     pdf.save(`Entrada_VIRTUAL_${sale.receipt_number}.pdf`);
-                    console.log('[CanvaStudio POS PDF] Saved PDF via jsPDF:', `Entrada_VIRTUAL_${sale.receipt_number}.pdf`);
+                    console.log('[CanvaStudio POS PDF] Saved A4 PDF via jsPDF:', `Entrada_VIRTUAL_${sale.receipt_number}.pdf`);
                 } else if (typeof html2pdf !== 'undefined') {
                     const opt = {
                         margin: 0,
                         filename: `Entrada_VIRTUAL_${sale.receipt_number}.pdf`,
                         image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: { scale: 2.5, useCORS: true, backgroundColor: bgColor },
-                        jsPDF: { unit: 'mm', format: [widthMm, heightMm], orientation: 'landscape' }
+                        html2canvas: { scale: 2.5, useCORS: true, backgroundColor: '#FFFFFF' },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
                     };
                     await html2pdf().set(opt).from(pdfContainer).save();
-                    console.log('[CanvaStudio POS PDF] Saved PDF via html2pdf');
                 }
 
                 Swal.fire({

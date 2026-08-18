@@ -231,7 +231,7 @@ class TemplateController extends Controller
         }
         @file_put_contents($publicDir . '/' . $fileName, $binaryData);
 
-        return '/storage/' . $folder . '/' . $fileName;
+        return 'storage/' . $folder . '/' . $fileName;
     }
 
     /**

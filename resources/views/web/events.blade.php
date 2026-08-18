@@ -797,11 +797,13 @@
                     ? getFullAssetUrl(tpl.positions.canvaElBanner.src) 
                     : (evt.image ? getFullAssetUrl(evt.image) : 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=600&q=80');
                 const bgImgSrc = tpl.bg_image ? getFullAssetUrl(tpl.bg_image) : (tpl.positions && tpl.positions.canvaBgImage ? getFullAssetUrl(tpl.positions.canvaBgImage) : null);
+                const boletoSrc = getFullAssetUrl('/images/Boleto.jpg');
 
-                const [logoDataUrl, bannerDataUrl, bgDataUrl] = await Promise.all([
+                const [logoDataUrl, bannerDataUrl, bgDataUrl, boletoDataUrl] = await Promise.all([
                     preloadImageAsDataUrl(logoRawUrl, 'logo'),
                     preloadImageAsDataUrl(ticketBannerSrc, 'banner', evt.title),
-                    bgImgSrc ? preloadImageAsDataUrl(bgImgSrc, 'bg') : Promise.resolve('')
+                    bgImgSrc ? preloadImageAsDataUrl(bgImgSrc, 'bg') : Promise.resolve(''),
+                    preloadImageAsDataUrl(boletoSrc, 'boleto')
                 ]);
                 
                 const isPlantilla2 = (tpl.id == 2 || (tpl.name && tpl.name.includes('Plantilla 2')) || (tpl.category && tpl.category.includes('Logo Derecho')));
@@ -1113,8 +1115,10 @@
                         `;
                     }
 
+                    const sheetBgStyle = (perPage === 1) ? `background-image: url('${boletoDataUrl || boletoSrc}'); background-size: 100% 100%; background-position: center;` : 'background: #FFFFFF;';
+
                     pagesHtml += `
-                        <div class="print-page-sheet" style="width: ${pageWidthMm}mm; min-height: ${pageHeightMm}mm; max-height: ${pageHeightMm}mm; page-break-after: always; break-after: page; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: ${sheetPaddingTopBottom}; padding-bottom: ${sheetPaddingTopBottom}; overflow: hidden; background: #FFFFFF;">
+                        <div class="print-page-sheet" style="width: ${pageWidthMm}mm; min-height: ${pageHeightMm}mm; max-height: ${pageHeightMm}mm; page-break-after: always; break-after: page; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: ${perPage === 1 ? '3.5mm' : sheetPaddingTopBottom}; padding-bottom: ${sheetPaddingTopBottom}; overflow: hidden; ${sheetBgStyle}">
                             ${pageTicketsHtml}
                         </div>
                     `;
