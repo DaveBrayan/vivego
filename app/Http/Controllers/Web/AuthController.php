@@ -15,8 +15,12 @@ class AuthController extends Controller
     /**
      * Muestra el formulario de inicio de sesión.
      */
-    public function showLoginForm(): View
+    public function showLoginForm()
     {
+        if (session()->has('admin_logged_in') && session('admin_logged_in')) {
+            return redirect()->route('web.dashboard');
+        }
+
         $settings = Setting::current();
         return view('web.login', compact('settings'));
     }
@@ -39,6 +43,8 @@ class AuthController extends Controller
             ->orWhere('username', $loginInput)
             ->first();
 
+        $targetUrl = session()->pull('url.intended', route('web.dashboard'));
+
         // Si existe en BD y la contraseña es válida (o fallback de desarrollo)
         if ($admin && (Hash::check($password, $admin->password) || $password === 'admin123' || $password === '12345678')) {
             session([
@@ -50,7 +56,7 @@ class AuthController extends Controller
                 'admin_avatar' => $admin->avatar,
             ]);
 
-            return redirect()->route('web.dashboard')
+            return redirect()->to($targetUrl)
                 ->with('success', "¡Bienvenido de nuevo, {$admin->full_name}! Has iniciado sesión correctamente.");
         }
 
@@ -64,7 +70,7 @@ class AuthController extends Controller
                 'admin_role' => 'Administrador Principal',
             ]);
 
-            return redirect()->route('web.dashboard')
+            return redirect()->to($targetUrl)
                 ->with('success', '¡Bienvenido de nuevo al Panel de Administración Vive Go!');
         }
 

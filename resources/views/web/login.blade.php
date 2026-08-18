@@ -185,6 +185,12 @@
             color: #6EE7B7;
         }
 
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.12);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #FDE68A;
+        }
+
         /* Form Inputs */
         .form-group {
             margin-bottom: 1.35rem;
@@ -401,6 +407,13 @@
         <div class="login-card">
             <h1 class="login-title">Iniciar Sesión</h1>
             <p class="login-subtitle">Ingresa tus credenciales para acceder al Panel de Administración y Taquilla POS.</p>
+
+            @if(session('warning'))
+                <div class="alert alert-warning">
+                    <span>🔒</span>
+                    <div>{{ session('warning') }}</div>
+                </div>
+            @endif
 
             @if(session('success'))
                 <div class="alert alert-success">
