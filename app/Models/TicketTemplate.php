@@ -12,7 +12,9 @@ class TicketTemplate extends Model
     protected $fillable = [
         'name',
         'category',
+        'type',
         'bg_color',
+        'bg_image',
         'strip_color',
         'positions',
         'elements',

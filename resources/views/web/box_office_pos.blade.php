@@ -236,109 +236,8 @@
 
 @section('content')
     <div class="dashboard-root-wrapper">
-        <!-- SIDEBAR DE NAVEGACIÓN PRO MAX -->
-        <aside class="dash-sidebar" id="dashSidebar">
-            <div class="dash-sidebar-header">
-                <a href="{{ route('web.home') }}" class="dash-brand-logo">
-                    <img src="{{ asset($settings->logo_white ?? 'images/logo-white.png') }}" alt="Vive Go" class="dash-logo-img logo-white-img">
-                    <img src="{{ asset($settings->logo_dark ?? 'images/logo.png') }}" alt="Vive Go" class="dash-logo-img logo-dark-img">
-                </a>
-                <button class="dash-sidebar-toggle-btn" id="dashSidebarToggle" aria-label="Colapsar Menú" title="Plegar / Expandir Menú">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="15 18 9 12 15 6"></polyline>
-                    </svg>
-                </button>
-            </div>
-
-            <!-- Perfil rápido de organizador -->
-            <div class="dash-organizer-pill-card">
-                <div class="dash-avatar-wrapper">
-                    <img src="{{ $organizer['avatar'] }}" alt="{{ $organizer['name'] }}" class="dash-avatar-img">
-                    <span class="dash-online-status-dot"></span>
-                </div>
-                <div class="dash-organizer-info">
-                    <h4 class="dash-organizer-name" title="{{ $organizer['name'] }}">{{ $organizer['name'] }}</h4>
-                    <span class="dash-verified-badge">✓ {{ $organizer['status'] }}</span>
-                </div>
-            </div>
-
-            <!-- Menú de Navegación Principal -->
-            <nav class="dash-nav-menu">
-                <div class="dash-nav-section-title">MENÚ PRINCIPAL</div>
-                <ul class="dash-nav-list">
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.dashboard') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">📊</span>
-                            <span class="dash-nav-text">Dashboard</span>
-                        </a>
-                    </li>
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.events') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">🎟️</span>
-                            <span class="dash-nav-text">Mis Eventos</span>
-                        </a>
-                    </li>
-                    <li class="dash-nav-item active">
-                        <a href="{{ route('web.box_office') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">💰</span>
-                            <span class="dash-nav-text">Taquilla & Ventas</span>
-                        </a>
-                    </li>
-                    <li class="dash-nav-item">
-                        <a href="#" class="dash-nav-link">
-                            <span class="dash-nav-icon">📈</span>
-                            <span class="dash-nav-text">Analíticas Pro</span>
-                        </a>
-                    </li>
-                </ul>
-
-                <div class="dash-nav-section-title" style="margin-top: 1.5rem;">GESTIÓN & HERRAMIENTAS</div>
-                <ul class="dash-nav-list">
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.categories') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">📂</span>
-                            <span class="dash-nav-text">Categorías</span>
-                        </a>
-                    </li>
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.templates') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">🎨</span>
-                            <span class="dash-nav-text">Plantillas de Boletos</span>
-                        </a>
-                    </li>
-                </ul>
-
-                <div class="dash-nav-section-title" style="margin-top: 1.5rem;">INFORMACIÓN EMPRESARIAL</div>
-                <ul class="dash-nav-list">
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.companies') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">🏢</span>
-                            <span class="dash-nav-text">Compañía</span>
-                        </a>
-                    </li>
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.managers') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">👤</span>
-                            <span class="dash-nav-text">Responsable</span>
-                        </a>
-                    </li>
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.capacity_types') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">🏟️</span>
-                            <span class="dash-nav-text">Tipos de Aforo</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-
-            <!-- Footer Sidebar: Botón Salir -->
-            <div class="dash-sidebar-footer">
-                <a href="{{ route('web.home') }}" class="dash-btn-logout" title="Cerrar Sesión">
-                    <span class="dash-btn-logout-icon">🚪</span>
-                    <span class="dash-btn-logout-text">Cerrar Sesión</span>
-                </a>
-            </div>
-        </aside>
+        <!-- SIDEBAR DE NAVEGACIÓN PRO MAX HEREDADO -->
+        @include('layouts.sidebar')
 
         <!-- ÁREA PRINCIPAL DE CONTENIDO -->
         <main class="dash-main-content">
@@ -560,10 +459,20 @@
                                             </div>
                                         </td>
                                         <td style="text-align: right;">
-                                            <button type="button" class="btn btn-primary btn-sm" onclick="reprintReceipt({{ json_encode($sale) }})" title="Reimprimir Recibo Térmico" style="background: linear-gradient(135deg, #FF5500, #FF7733); border: 1px solid rgba(255,85,0,0.6); color: #FFFFFF; padding: 0.45rem 0.95rem; font-size: 0.825rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(255, 85, 0, 0.4); cursor: pointer;">
-                                                <span>🧾</span>
-                                                <span>Recibo</span>
-                                            </button>
+                                            <div style="display: inline-flex; align-items: center; gap: 0.4rem; justify-content: flex-end;">
+                                                <button type="button" class="btn btn-primary btn-sm" onclick="reprintReceipt({{ json_encode($sale) }})" title="Reimprimir Recibo Térmico" style="background: linear-gradient(135deg, #FF5500, #FF7733); border: 1px solid rgba(255,85,0,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(255, 85, 0, 0.3); cursor: pointer;">
+                                                    <span>🧾</span>
+                                                    <span>Recibo</span>
+                                                </button>
+                                                <button type="button" class="btn btn-secondary btn-sm" onclick="downloadPosSalePdf({{ json_encode($sale) }})" title="Descargar Entrada PDF" style="background: linear-gradient(135deg, #06B6D4, #0284C7); border: 1px solid rgba(6,182,212,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3); cursor: pointer;">
+                                                    <span>🎟️</span>
+                                                    <span>Entrada PDF</span>
+                                                </button>
+                                                <button type="button" class="btn btn-danger btn-sm" onclick="deletePosSale({{ $sale->id }})" title="Borrar Entrada" style="background: linear-gradient(135deg, #EF4444, #DC2626); border: 1px solid rgba(239,68,68,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); cursor: pointer;">
+                                                    <span>🗑️</span>
+                                                    <span>Borrar Entrada</span>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 @empty
@@ -779,13 +688,90 @@
 @endsection
 
 @push('scripts')
-    <!-- SweetAlert2 y QRCode Generator Oficial -->
+    <!-- SweetAlert2, html2canvas, jsPDF, html2pdf y QRCode Generator Oficial -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 
     <script>
         const eventId = {{ $event->id }};
         const csrfToken = "{{ csrf_token() }}";
+
+        // Función para anular / borrar una venta de entrada y restaurar aforo
+        async function deletePosSale(saleId) {
+            if (!saleId) return;
+
+            const result = await Swal.fire({
+                title: '🗑️ ¿Borrar Entrada / Venta?',
+                text: 'Esta acción anulará el boleto emitido y devolverá el aforo correspondiente a la zona.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#EF4444',
+                cancelButtonColor: '#475569',
+                confirmButtonText: 'Sí, borrar entrada',
+                cancelButtonText: 'Cancelar',
+                background: '#14141E',
+                color: '#FFFFFF'
+            });
+
+            if (!result.isConfirmed) return;
+
+            Swal.fire({
+                title: 'Eliminando entrada...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); },
+                background: '#14141E',
+                color: '#FFFFFF'
+            });
+
+            try {
+                const response = await fetch(`/admin/taquilla/venta/${saleId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    const row = document.querySelector(`tr[data-sale-id="${saleId}"]`);
+                    if (row) {
+                        row.style.transition = 'all 0.3s ease';
+                        row.style.opacity = '0';
+                        row.style.transform = 'scale(0.95)';
+                        setTimeout(() => row.remove(), 300);
+                    }
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Entrada Borrada!',
+                        text: data.message || 'El boleto fue eliminado y el aforo fue restaurado.',
+                        background: '#14141E',
+                        color: '#FFFFFF',
+                        timer: 1800,
+                        showConfirmButton: false
+                    });
+
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    throw new Error(data.message || 'No se pudo eliminar la entrada.');
+                }
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error al borrar',
+                    text: err.message || 'Ocurrió un problema al intentar eliminar la entrada.',
+                    background: '#14141E',
+                    color: '#FFFFFF'
+                });
+            }
+        }
         let currentTotalToPay = 0;
         let selectedZoneName = "{{ $zonesWithStats[0]['name'] ?? '' }}";
         let selectedZonePrice = {{ $zonesWithStats[0]['price'] ?? 0 }};
@@ -1148,6 +1134,422 @@
             }, 300);
         }
 
+        async function preloadPosImageAsDataUrl(url, type = 'banner') {
+            if (!url || typeof url !== 'string' || url.trim() === '') return '';
+            if (url.startsWith('data:')) return url;
+            try {
+                const response = await fetch(url, { mode: 'cors', cache: 'force-cache' });
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const dataUrl = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                    });
+                    if (dataUrl && dataUrl.startsWith('data:image')) return dataUrl;
+                }
+            } catch (e) {}
+            try {
+                const dataUrl = await new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.crossOrigin = 'Anonymous';
+                    const timeout = setTimeout(() => reject(new Error('Timeout')), 3000);
+                    img.onload = () => {
+                        clearTimeout(timeout);
+                        try {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = img.naturalWidth || 600;
+                            canvas.height = img.naturalHeight || 300;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0);
+                            resolve(canvas.toDataURL('image/jpeg', 0.92));
+                        } catch (err) { reject(err); }
+                    };
+                    img.onerror = () => { clearTimeout(timeout); reject(new Error('Image load error')); };
+                    img.src = url;
+                });
+                return dataUrl;
+            } catch (e) {
+                return '';
+            }
+        }
+
+        // Descargar Entrada PDF individual manteniendo el diseño de Canva Studio
+        async function downloadPosSalePdf(sale) {
+            if (!sale) return;
+
+            console.log('[CanvaStudio POS PDF] Starting PDF generation for sale:', sale);
+
+            Swal.fire({
+                title: '🎨 Generando Entrada PDF...',
+                html: 'Compilando diseño oficial del boleto con Canva Studio...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); },
+                background: '#14141E',
+                color: '#FFFFFF'
+            });
+
+            try {
+                const eventTitle = "{{ addslashes($event->title) }}";
+                const eventVenue = "{{ addslashes($event->venue_name ?? '') }}";
+                const eventAddress = "{{ addslashes($event->address ?? '') }}";
+                const eventDate = "{{ !empty($event->event_date) ? (is_string($event->event_date) ? substr($event->event_date, 0, 10) : $event->event_date->format('d/m/Y')) : '' }}";
+                const eventTime = "{{ addslashes($event->event_time ?? '') }}";
+                const logoWhite = "{{ asset($settings->logo_white ?? 'images/logo-white.png') }}";
+
+                const template = @json($event->template ?? null) || { id: 1, name: 'Plantilla 1: Taquilla Clásica Oficial', bg_color: '#FFFFFF', strip_color: '#000000', positions: {} };
+                
+                let tplPositions = {};
+                if (template.positions) {
+                    let raw = typeof template.positions === 'string' ? JSON.parse(template.positions) : template.positions;
+                    if (Array.isArray(raw)) {
+                        raw.forEach(p => { if (p && p.id) tplPositions[p.id] = p; });
+                    } else if (typeof raw === 'object') {
+                        tplPositions = raw;
+                    }
+                }
+
+                console.log('[CanvaStudio POS PDF] Positions map:', tplPositions);
+
+                const bgColor = template.bg_color || '#FFFFFF';
+                const stripColor = template.strip_color || '#000000';
+
+                const isPlantilla2 = (template.id == 2 || (template.name && template.name.includes('Plantilla 2')) || (template.category && template.category.includes('Logo Derecho')));
+                const isPlantilla3 = (template.id == 3 || (template.name && template.name.includes('Plantilla 3')) || (template.category && template.category.includes('Panorámico')));
+                const isPlantilla1 = (!isPlantilla2 && !isPlantilla3);
+
+                function isColorDark(hexColor) {
+                    if (!hexColor || hexColor.charAt(0) !== '#') return false;
+                    const hex = hexColor.substring(1);
+                    if (hex.length < 6) return false;
+                    const r = parseInt(hex.substr(0, 2), 16) || 0;
+                    const g = parseInt(hex.substr(2, 2), 16) || 0;
+                    const b = parseInt(hex.substr(4, 2), 16) || 0;
+const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                    return lum < 0.55;
+                }
+
+                const isDarkBg = isColorDark(bgColor);
+                const primaryTextColor = isDarkBg ? '#FFFFFF' : '#000000';
+                const secondaryTextColor = isDarkBg ? '#E2E8F0' : '#1E293B';
+                const mutedTextColor = isDarkBg ? '#94A3B8' : '#475569';
+
+                function getFullAssetUrl(urlStr) {
+                    if (!urlStr) return null;
+                    if (urlStr.startsWith('http://') || urlStr.startsWith('https://') || urlStr.startsWith('data:')) return urlStr;
+                    return window.location.origin + '/' + urlStr.replace(/^\//, '');
+                }
+
+                // Precargar imágenes a Data URLs
+                const logoSrc = (tplPositions.canvaElLogo && tplPositions.canvaElLogo.src) ? getFullAssetUrl(tplPositions.canvaElLogo.src) : logoWhite;
+                const bannerSrc = (tplPositions.canvaElBanner && tplPositions.canvaElBanner.src) ? getFullAssetUrl(tplPositions.canvaElBanner.src) : null;
+                const bgImgSrc = template.bg_image ? getFullAssetUrl(template.bg_image) : (tplPositions.canvaBgImage ? getFullAssetUrl(tplPositions.canvaBgImage) : null);
+
+                const [logoDataUrl, bannerDataUrl, bgDataUrl] = await Promise.all([
+                    preloadPosImageAsDataUrl(logoSrc, 'logo'),
+                    preloadPosImageAsDataUrl(bannerSrc, 'banner'),
+                    bgImgSrc ? preloadPosImageAsDataUrl(bgImgSrc, 'bg') : Promise.resolve('')
+                ]);
+
+                const pTitle = tplPositions.canvaElTitle || {};
+                const pZone = tplPositions.canvaElZone || {};
+                const pPrice = tplPositions.canvaElPrice || {};
+                const pBanner = tplPositions.canvaElBanner || {};
+                const pBuyerName = tplPositions.canvaElBuyerName || tplPositions.canvaElBuyer || {};
+                const pBuyerDni = tplPositions.canvaElBuyerDni || {};
+                const pVenue = tplPositions.canvaElVenue || {};
+                const pCity = tplPositions.canvaElCity || {};
+                const pDate = tplPositions.canvaElDate || {};
+                const pTime = tplPositions.canvaElTime || {};
+                const pNum = tplPositions.canvaElTicketNumber || {};
+                const pQR = tplPositions.canvaElQR || {};
+                const pHash = tplPositions.canvaElHash || {};
+                const pDisc = tplPositions.canvaElDisclaimer || {};
+                const pLogo = tplPositions.canvaElLogo || {};
+
+                function replaceDynamicHtmlValue(html, labelPattern, newValue) {
+                    if (!html || typeof html !== 'string') return html;
+
+                    // Patrón 1: <span ...>LABEL:</span><div><span ...>VALOR</span></div>
+                    const divSpanRegex = new RegExp(`(${labelPattern}:?\\s*<\\/span>\\s*<div>\\s*<span[^>]*>)[^<]+(<\\/span>\\s*<\\/div>)`, 'i');
+                    if (divSpanRegex.test(html)) {
+                        return html.replace(divSpanRegex, `$1${newValue}$2`);
+                    }
+
+                    // Patrón 2: <span ...>LABEL:</span><div>VALOR</div>
+                    const divRegex = new RegExp(`(${labelPattern}:?\\s*<\\/span>\\s*<div>)[^<]+(<\\/div>)`, 'i');
+                    if (divRegex.test(html)) {
+                        return html.replace(divRegex, `$1${newValue}$2`);
+                    }
+
+                    // Patrón 3: <span ...>LABEL:</span> VALOR
+                    const inlineRegex = new RegExp(`(${labelPattern}:?\\s*<\\/span>\\s*)([^<\\s]+[^<]*)`, 'i');
+                    if (inlineRegex.test(html)) {
+                        return html.replace(inlineRegex, `$1${newValue}`);
+                    }
+
+                    return html;
+                }
+
+                function renderCanvaStudioElement(id, posObj, defaultTop, defaultLeft, defaultWidth, defaultHeight, fallbackHtml, dynamicData = null) {
+                    posObj = posObj || {};
+                    if (posObj.hidden === true || posObj.display === 'none' || posObj.visible === false) {
+                        return '';
+                    }
+
+                    const top = posObj.top !== undefined ? (typeof posObj.top === 'number' ? posObj.top + 'px' : posObj.top) : defaultTop;
+                    const left = posObj.left !== undefined ? (typeof posObj.left === 'number' ? posObj.left + 'px' : posObj.left) : defaultLeft;
+                    const width = posObj.width !== undefined ? (typeof posObj.width === 'number' ? posObj.width + 'px' : posObj.width) : (defaultWidth || '');
+                    const height = posObj.height !== undefined ? (typeof posObj.height === 'number' ? posObj.height + 'px' : posObj.height) : (defaultHeight || '');
+                    const rotate = (posObj.rotate && posObj.rotate !== '0') ? `transform: rotate(${posObj.rotate}deg);` : '';
+
+                    const widthStyle = width ? `width: ${width};` : '';
+                    const heightStyle = height ? `height: ${height};` : '';
+
+                    const textAlignVal = posObj.textAlign || 'left';
+                    let flexAlign = 'flex-start';
+                    if (textAlignVal === 'center') flexAlign = 'center';
+                    else if (textAlignVal === 'right') flexAlign = 'flex-end';
+
+                    const font = posObj.fontFamily && posObj.fontFamily !== 'inherit' ? `font-family: ${posObj.fontFamily};` : '';
+                    const fontSize = posObj.fontSize ? `font-size: ${posObj.fontSize};` : '';
+                    const color = posObj.color ? `color: ${posObj.color};` : '';
+                    const weight = posObj.fontWeight ? `font-weight: ${posObj.fontWeight};` : '';
+                    const style = posObj.fontStyle ? `font-style: ${posObj.fontStyle};` : '';
+                    const transform = posObj.textTransform && posObj.textTransform !== 'none' ? `text-transform: ${posObj.textTransform};` : '';
+
+                    const containerStyle = `
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: ${flexAlign};
+                        text-align: ${textAlignVal};
+                        width: 100%;
+                        height: 100%;
+                        box-sizing: border-box;
+                        padding: 3px 6px;
+                        border-radius: 4px;
+                        ${font}
+                        ${fontSize}
+                        ${color}
+                        ${weight}
+                        ${style}
+                        ${transform}
+                    `.replace(/\s+/g, ' ').trim();
+
+                    const hasBadge = posObj.hasBadgeBg || false;
+                    let badgeStyle = hasBadge ? 'background: rgba(255, 85, 0, 0.25); border: 1.5px solid #FF5500; border-radius: 8px;' : '';
+                    if (posObj.backgroundColor && posObj.backgroundColor !== 'transparent') {
+                        badgeStyle += ` background-color: ${posObj.backgroundColor}; border-radius: 8px;`;
+                    }
+
+                    let finalHtml = fallbackHtml;
+                    if (posObj.html && typeof posObj.html === 'string' && posObj.html.trim().length > 0) {
+                        finalHtml = posObj.html;
+                        if (dynamicData) {
+                            if (id === 'canvaElZone' && dynamicData.zoneName) {
+                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'ZONA', dynamicData.zoneName);
+                            } else if (id === 'canvaElPrice' && dynamicData.price) {
+                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'PRECIO', 'S/ ' + dynamicData.price);
+                            } else if ((id === 'canvaElBuyerName' || id === 'canvaElBuyer') && dynamicData.buyerName) {
+                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'Comprador', dynamicData.buyerName);
+                            } else if (id === 'canvaElBuyerDni' && dynamicData.buyerDni) {
+                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'DNI', dynamicData.buyerDni);
+                            } else if (id === 'canvaElDate' && dynamicData.date) {
+                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'FECHA', dynamicData.date);
+                            } else if (id === 'canvaElTime' && dynamicData.time) {
+                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'HORA', dynamicData.time);
+                            } else if (id === 'canvaElTicketNumber' && dynamicData.ticketNum) {
+                                finalHtml = finalHtml.replace(/N[°º]\s*\d+/gi, dynamicData.ticketNum);
+                            } else if (id === 'canvaElHash' && dynamicData.hash) {
+                                finalHtml = finalHtml.replace(/[A-Z0-9]{8,12}/gi, dynamicData.hash);
+                            }
+                        }
+                        if (posObj.textAlign) {
+                            finalHtml = finalHtml.replace(/text-align:\s*(center|right|left|justify);?/gi, `text-align: ${textAlignVal};`);
+                        }
+                    }
+
+                    return `
+                        <div class="canva-drag-element" id="${id}" style="position: absolute; top: ${top}; left: ${left}; ${widthStyle} ${heightStyle} z-index: 5; ${rotate} box-sizing: border-box;">
+                            <div class="canva-drag-box-container ${hasBadge ? 'has-badge-bg' : ''}" style="${badgeStyle} ${containerStyle}">
+                                ${finalHtml}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Renderizar etiquetas personalizadas adicionales (canvaCustomTag_...)
+                let customTagsHtml = '';
+                Object.keys(tplPositions).forEach(key => {
+                    if ((key.startsWith('canvaCustomTag_') || tplPositions[key].isCustomTag) && !tplPositions[key].hidden && tplPositions[key].display !== 'none' && tplPositions[key].visible !== false) {
+                        const p = tplPositions[key];
+                        const tagText = p.text || (p.html ? p.html.replace(/<[^>]*>/g, '').trim() : 'Etiqueta');
+                        const tagContent = p.html || tagText;
+                        customTagsHtml += renderCanvaStudioElement(key, p, '40px', '120px', p.width, p.height, tagContent);
+                    }
+                });
+
+                const logoHtml = renderCanvaStudioElement('canvaElLogo', pLogo, '15px', '25px', '', '36px', (logoDataUrl || logoSrc) ? `<img src="${logoDataUrl || logoSrc}" style="height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0 0 8px rgba(255,85,0,0.6)); display: block;">` : '');
+                const bannerHtml = renderCanvaStudioElement('canvaElBanner', pBanner, '15px', '340px', '250px', '110px', (bannerDataUrl || bannerSrc) ? `<img src="${bannerDataUrl || bannerSrc}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 10px; display: block;">` : '');
+                const titleHtml = renderCanvaStudioElement('canvaElTitle', pTitle, '55px', '25px', '380px', '', `<h2 style="font-size: ${pTitle.fontSize || '1.15rem'}; font-weight: ${pTitle.fontWeight || '900'}; color: ${pTitle.color || primaryTextColor}; margin: 0; line-height: 1.15; text-align: ${pTitle.textAlign || 'left'};">${eventTitle}</h2>`);
+                const zoneHtml = renderCanvaStudioElement('canvaElZone', pZone, '95px', '25px', '', '', `<span style="font-size: ${pZone.fontSize || '0.925rem'}; font-weight: ${pZone.fontWeight || '800'}; color: ${pZone.color || '#1E293B'}; text-transform: uppercase;">ZONA: ${sale.zone_name}</span>`, { zoneName: sale.zone_name });
+                
+                const unitPriceVal = parseFloat(sale.unit_price || sale.total_amount).toFixed(2);
+                const priceHtml = renderCanvaStudioElement('canvaElPrice', pPrice, '95px', '240px', '', '', `<div style="text-align: ${pPrice.textAlign || 'left'}; line-height: 1.15;"><span style="font-size: 0.75rem; font-weight: 900; color: ${pPrice.color || primaryTextColor}; display: block;">PRECIO:</span><span style="font-size: ${pPrice.fontSize || '1.3rem'}; font-weight: 900; color: ${pPrice.color || primaryTextColor}; display: block; margin-top: 2px;">S/ ${unitPriceVal}</span></div>`, { price: unitPriceVal });
+                
+                const venueHtml = renderCanvaStudioElement('canvaElVenue', pVenue, '200px', '25px', '', '', `<div style="display: flex; flex-direction: column; font-size: 0.8rem; color: ${pVenue.color || primaryTextColor}; text-align: ${pVenue.textAlign || 'left'};"><span style="font-weight: 900; font-size: 0.95rem; display: block;">${eventVenue}</span>${eventAddress ? `<span style="font-size: 0.8rem; font-weight: 700; color: ${mutedTextColor}; display: block; margin-top: 2px;">${eventAddress}</span>` : ''}<span style="font-weight: 900; font-size: 1rem; color: #FF5500; display: block; margin-top: 2px;">${eventDate} / ${eventTime}</span></div>`);
+                const cityHtml = renderCanvaStudioElement('canvaElCity', pCity, '225px', '25px', '', '', eventAddress ? `<span style="font-size: 0.8rem; font-weight: 700; color: ${mutedTextColor};">${eventAddress}</span>` : '');
+                const dateHtml = renderCanvaStudioElement('canvaElDate', pDate, '260px', '25px', '', '', `<span style="font-weight: 900; font-size: 0.9rem; color: ${pDate.color || primaryTextColor};">FECHA: ${eventDate}</span>`, { date: eventDate });
+                const timeHtml = renderCanvaStudioElement('canvaElTime', pTime, '260px', '220px', '', '', `<span style="font-weight: 900; font-size: 0.9rem; color: ${pTime.color || primaryTextColor};">HORA: ${eventTime}</span>`, { time: eventTime });
+                
+                const buyerNameHtml = renderCanvaStudioElement('canvaElBuyerName', pBuyerName, '140px', '25px', '', '', `<div style="display: flex; flex-direction: column; font-size: ${pBuyerName.fontSize || '0.8rem'}; color: ${pBuyerName.color || primaryTextColor};"><span style="font-size: 0.725rem; color: ${mutedTextColor};">Comprador:</span><span style="font-weight: 900; font-size: 0.95rem; text-transform: uppercase;">${sale.buyer_name ? sale.buyer_name : 'CLIENTE VARIOS'}</span></div>`, { buyerName: sale.buyer_name || 'CLIENTE VARIOS' });
+                const buyerDniHtml = renderCanvaStudioElement('canvaElBuyerDni', pBuyerDni, '165px', '25px', '', '', `<span style="font-weight: 800; font-size: ${pBuyerDni.fontSize || '0.825rem'}; color: ${pBuyerDni.color || primaryTextColor};">DNI: ${sale.buyer_dni ? sale.buyer_dni : '00000000'}</span>`, { buyerDni: sale.buyer_dni || '00000000' });
+
+                const ticketNumStr = 'N° ' + String(sale.id || 1).padStart(5, '0');
+
+                // Hash único aleatorio de 10 dígitos / caracteres guardado
+                let hashVal = sale.validation_hash 
+                    || (sale.tickets_data && sale.tickets_data[0] ? sale.tickets_data[0].validation_hash : null);
+
+                if (!hashVal || hashVal.length !== 10) {
+                    hashVal = 'VG' + Math.random().toString(36).substring(2, 10).toUpperCase();
+                    if (hashVal.length > 10) hashVal = hashVal.substring(0, 10);
+                    while (hashVal.length < 10) hashVal += 'X';
+                }
+
+                // QR como token encriptado exclusivo para el scanner móvil del evento (no legible por apps externas)
+                const qrPayload = (sale.tickets_data && sale.tickets_data[0] && sale.tickets_data[0].qr_payload)
+                    ? sale.tickets_data[0].qr_payload
+                    : (sale.qr_payload || `VGENC:${hashVal}`);
+                const qrDataUrl = generateQrBase64(qrPayload);
+
+                const ticketNumberHtml = renderCanvaStudioElement('canvaElTicketNumber', pNum, '15px', '660px', '', '', `<span style="font-size: ${pNum.fontSize || '1.2rem'}; font-weight: 900; color: ${pNum.color || primaryTextColor}; font-family: var(--font-heading, sans-serif); letter-spacing: 0.5px; display: inline-block;">${ticketNumStr}</span>`, { ticketNum: ticketNumStr });
+
+                const qrBoxHtml = renderCanvaStudioElement('canvaElQR', pQR, '55px', '635px', '95px', '95px', `<div style="padding: 0.35rem; background: #FFFFFF; border-radius: 12px; border: 1.5px solid #E2E8F0; width: 100%; height: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.08);"><img src="${qrDataUrl}" style="width: 100%; height: 100%; object-fit: contain; display: block; border-radius: 4px;" alt="QR Code" /></div>`);
+
+                const hashHtml = renderCanvaStudioElement('canvaElHash', pHash, '175px', '645px', '', '', `<span style="font-family: monospace; font-size: ${pHash.fontSize || '0.85rem'}; font-weight: 800; color: ${pHash.color || secondaryTextColor}; letter-spacing: 1.5px; display: inline-block;">${hashVal}</span>`, { hash: hashVal });
+
+                const disclaimerHtml = renderCanvaStudioElement('canvaElDisclaimer', pDisc, '245px', '570px', '190px', '', `<div style="border-top: 1.5px solid #CBD5E1; padding-top: 0.25rem;"><p style="font-size: ${pDisc.fontSize || '0.625rem'}; font-weight: 700; color: ${pDisc.color || mutedTextColor}; line-height: 1.2; margin: 0; text-align: center;">La responsabilidad de este boleto es exclusiva del cliente, no compartir ni publicar. Se recomienda llevar impreso.</p></div>`);
+
+                let bgImgHtml = '';
+                if (bgDataUrl || bgImgSrc) {
+                    bgImgHtml = `<div style="position: absolute; inset: 0; background-image: url('${bgDataUrl || bgImgSrc}'); background-size: cover; background-position: center; z-index: 0; pointer-events: none;"></div>`;
+                }
+
+                const pdfContainer = document.createElement('div');
+                pdfContainer.id = 'posPdfSingleCanvas';
+                pdfContainer.style.position = 'fixed';
+                pdfContainer.style.left = '-9999px';
+                pdfContainer.style.top = '0';
+                pdfContainer.style.width = '771px';
+                pdfContainer.style.height = '370px';
+                pdfContainer.style.zIndex = '999999';
+                pdfContainer.style.background = bgColor;
+                pdfContainer.style.overflow = 'hidden';
+                pdfContainer.style.borderRadius = '18px';
+                pdfContainer.style.border = '1.5px solid #000000';
+                pdfContainer.style.fontFamily = "'Plus Jakarta Sans', sans-serif";
+                pdfContainer.style.boxSizing = 'border-box';
+
+                pdfContainer.innerHTML = `
+                    <div class="ticket-canvas-inner" style="width: 771px; height: 370px; position: absolute; top: 0; left: 0; background: ${bgColor}; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; border-radius: 18px; box-sizing: border-box;">
+                        ${bgImgHtml}
+                        
+                        <div style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;" class="canva-main-area">
+                            ${logoHtml}
+                            ${bannerHtml}
+                            ${titleHtml}
+                            ${zoneHtml}
+                            ${priceHtml}
+                            ${venueHtml}
+                            ${cityHtml}
+                            ${dateHtml}
+                            ${timeHtml}
+                            ${buyerNameHtml}
+                            ${buyerDniHtml}
+                            ${ticketNumberHtml}
+                            ${qrBoxHtml}
+                            ${hashHtml}
+                            ${disclaimerHtml}
+                            ${customTagsHtml}
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(pdfContainer);
+
+                if (document.fonts && document.fonts.ready) {
+                    await document.fonts.ready;
+                }
+                await new Promise(r => setTimeout(r, 250));
+
+                console.log('[CanvaStudio POS PDF] Rendering html2canvas...');
+                const canvas = await html2canvas(pdfContainer, {
+                    scale: 2.5,
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: bgColor,
+                    logging: true
+                });
+
+                console.log('[CanvaStudio POS PDF] Canvas rendered successfully:', canvas.width, 'x', canvas.height);
+
+                const widthMm = 204.0;
+                const heightMm = 98.0;
+
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                pdfContainer.remove();
+
+                console.log(`[CanvaStudio POS PDF] PDF Page size exact: ${widthMm}cm x ${heightMm}cm (20.40cm x 9.80cm)`);
+
+                const jsPdfObj = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF || null);
+                if (jsPdfObj) {
+                    const pdf = new jsPdfObj({
+                        orientation: 'landscape',
+                        unit: 'mm',
+                        format: [widthMm, heightMm]
+                    });
+                    pdf.addImage(imgData, 'JPEG', 0, 0, widthMm, heightMm);
+                    pdf.save(`Entrada_VIRTUAL_${sale.receipt_number}.pdf`);
+                    console.log('[CanvaStudio POS PDF] Saved PDF via jsPDF:', `Entrada_VIRTUAL_${sale.receipt_number}.pdf`);
+                } else if (typeof html2pdf !== 'undefined') {
+                    const opt = {
+                        margin: 0,
+                        filename: `Entrada_VIRTUAL_${sale.receipt_number}.pdf`,
+                        image: { type: 'jpeg', quality: 0.98 },
+                        html2canvas: { scale: 2.5, useCORS: true, backgroundColor: bgColor },
+                        jsPDF: { unit: 'mm', format: [widthMm, heightMm], orientation: 'landscape' }
+                    };
+                    await html2pdf().set(opt).from(pdfContainer).save();
+                    console.log('[CanvaStudio POS PDF] Saved PDF via html2pdf');
+                }
+
+                Swal.fire({
+                    title: '📥 Entrada PDF Generada Exitosamente',
+                    text: `La entrada en PDF del recibo N° ${sale.receipt_number} se ha generado manteniendo el diseño oficial.`,
+                    icon: 'success',
+                    confirmButtonColor: '#06B6D4',
+                    background: '#14141E',
+                    color: '#FFFFFF'
+                });
+            } catch (err) {
+                console.error('Error generando PDF de entrada:', err);
+                const el = document.getElementById('posPdfSingleCanvas');
+                if (el) el.remove();
+
+                Swal.fire({
+                    title: 'Inconveniente con el PDF',
+                    text: 'No se pudo procesar la entrada: ' + (err.message || 'error de renderizado'),
+                    icon: 'error',
+                    confirmButtonColor: '#FF5500',
+                    background: '#14141E',
+                    color: '#FFFFFF'
+                });
+            }
+        }
+
         // Reimprimir recibo desde la tabla
         function reprintReceipt(sale) {
             const eventData = {
@@ -1308,10 +1710,16 @@
                                 </div>
                             </td>
                             <td style="text-align: right;">
-                                <button type="button" class="btn btn-primary btn-sm" onclick='reprintReceipt(${saleDataEscaped})' title="Reimprimir Recibo Térmico" style="background: linear-gradient(135deg, #FF5500, #FF7733); border: 1px solid rgba(255,85,0,0.6); color: #FFFFFF; padding: 0.45rem 0.95rem; font-size: 0.825rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(255, 85, 0, 0.4); cursor: pointer;">
-                                    <span>🧾</span>
-                                    <span>Recibo</span>
-                                </button>
+                                <div style="display: inline-flex; align-items: center; gap: 0.4rem; justify-content: flex-end;">
+                                    <button type="button" class="btn btn-primary btn-sm" onclick='reprintReceipt(${saleDataEscaped})' title="Reimprimir Recibo Térmico" style="background: linear-gradient(135deg, #FF5500, #FF7733); border: 1px solid rgba(255,85,0,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(255, 85, 0, 0.3); cursor: pointer;">
+                                        <span>🧾</span>
+                                        <span>Recibo</span>
+                                    </button>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick='downloadPosSalePdf(${saleDataEscaped})' title="Descargar Entrada PDF" style="background: linear-gradient(135deg, #06B6D4, #0284C7); border: 1px solid rgba(6,182,212,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3); cursor: pointer;">
+                                        <span>🎟️</span>
+                                        <span>Entrada PDF</span>
+                                    </button>
+                                </div>
                             </td>
                         `;
                         tableBody.prepend(newRow);
@@ -1343,11 +1751,11 @@
                                     if (badge) {
                                         if (z.available > 0) {
                                             badge.className = 'dash-badge-custom badge-green';
-                                            badge.textContent = 'Disponible';
+                                            badge.textContent = `📦 Stock: ${z.available} libres`;
                                             pageCard.style.borderColor = '';
                                         } else {
                                             badge.className = 'dash-badge-custom badge-red';
-                                            badge.textContent = 'Agotado';
+                                            badge.textContent = '🚫 AGOTADO';
                                             pageCard.style.borderColor = 'rgba(239, 68, 68, 0.4)';
                                         }
                                     }
@@ -1394,18 +1802,37 @@
                         }
                     }
 
-                    // 5. Notificación Toast no invasiva (Sin recargar la página)
+                    // 5. Modal Interactivo de Confirmación (Recibo + Entrada PDF)
                     Swal.fire({
-                        toast: true,
-                        position: 'top-end',
-                        icon: 'success',
-                        title: `🎉 ¡Venta Registrada! ${data.receipt.receipt_number}`,
-                        html: `Monto: <b>${data.receipt.total_amount_formatted}</b> | Vuelto: <b>${data.receipt.change_amount_formatted}</b>`,
+                        title: `🎉 ¡Venta Registrada Exitosamente!`,
+                        html: `
+                            <div style="font-size: 0.95rem; color: #CBD5E1; margin-bottom: 1.25rem;">
+                                N° Recibo: <b style="color: #FF5500; font-family: monospace;">${data.receipt.receipt_number}</b> | Monto: <b style="color: #10B981;">${data.receipt.total_amount_formatted}</b>
+                            </div>
+                            <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+                                <button type="button" id="btnAlertPrintReceipt" class="btn btn-primary btn-sm" style="background: linear-gradient(135deg, #FF5500, #FF7733); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(255,85,0,0.3);">
+                                    <span>🧾</span> Imprimir Recibo
+                                </button>
+                                <button type="button" id="btnAlertDownloadPdf" class="btn btn-secondary btn-sm" style="background: linear-gradient(135deg, #06B6D4, #0284C7); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(6,182,212,0.3);">
+                                    <span>🎟️</span> Descargar Entrada PDF
+                                </button>
+                            </div>
+                        `,
                         showConfirmButton: false,
-                        timer: 4500,
-                        timerProgressBar: true,
+                        showCancelButton: true,
+                        cancelButtonText: 'Cerrar',
                         background: '#14141E',
-                        color: '#FFFFFF'
+                        color: '#FFFFFF',
+                        didOpen: () => {
+                            const btnR = document.getElementById('btnAlertPrintReceipt');
+                            if (btnR) btnR.addEventListener('click', () => {
+                                printThermalReceipt(data.receipt, data.event);
+                            });
+                            const btnP = document.getElementById('btnAlertDownloadPdf');
+                            if (btnP) btnP.addEventListener('click', () => {
+                                downloadPosSalePdf(data.sale);
+                            });
+                        }
                     });
                 } else {
                     Swal.fire({
@@ -1461,17 +1888,6 @@
                         const text = row.innerText.toLowerCase();
                         row.style.display = text.includes(q) ? '' : 'none';
                     });
-                });
-            }
-
-            // Sidebar Toggle
-            const sidebar = document.getElementById('dashSidebar');
-            const toggleBtn = document.getElementById('dashSidebarToggle');
-            if (toggleBtn && sidebar) {
-                toggleBtn.addEventListener('click', function () {
-                    sidebar.classList.add('dash-animating');
-                    sidebar.classList.toggle('collapsed');
-                    setTimeout(function () { sidebar.classList.remove('dash-animating'); }, 450);
                 });
             }
 

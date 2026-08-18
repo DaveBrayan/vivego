@@ -3,6 +3,9 @@
 @section('title', 'Editar Evento: ' . $eventData['title'] . ' | Vive Go')
 
 @push('styles')
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800;900&family=Montserrat:wght@400;700;900&family=Oswald:wght@500;700&family=Outfit:wght@400;700;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Poppins:wght@400;700;900&family=Roboto:wght@400;700;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         #interactiveLeafletMap .leaflet-popup-content-wrapper {
@@ -30,107 +33,204 @@
             background: rgba(255, 85, 0, 0.08);
             box-shadow: 0 0 20px rgba(255, 85, 0, 0.25);
         }
+
+        /* BARRA SUPERIOR DE FORMATO ESTILO CANVA STUDIO PRO (771PX) */
+        .canva-top-studio-toolbar {
+            width: 771px;
+            max-width: 100%;
+            background: #14141E;
+            border: 1.5px solid rgba(255, 85, 0, 0.4);
+            border-radius: 14px;
+            padding: 0.4rem 0.75rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.45rem;
+            margin-bottom: 0.85rem;
+            flex-wrap: wrap;
+            z-index: 20;
+            backdrop-filter: blur(10px);
+        }
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(255, 255, 255, 0.06);
+            padding: 3px 6px;
+            border-radius: 8px;
+        }
+        .toolbar-btn {
+            background: transparent;
+            border: none;
+            color: #FFFFFF;
+            padding: 0.25rem 0.45rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.825rem;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .toolbar-btn:hover {
+            background: rgba(255, 85, 0, 0.25);
+            color: #FF5500;
+        }
+        .toolbar-btn.active {
+            background: #FF5500;
+            color: #FFFFFF;
+        }
+        .toolbar-btn-danger:hover {
+            background: rgba(239, 68, 68, 0.3);
+            color: #EF4444;
+        }
+        .toolbar-divider {
+            width: 1px;
+            height: 18px;
+            background: rgba(255, 255, 255, 0.15);
+        }
+        .font-size-indicator {
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: #FFFFFF;
+            min-width: 32px;
+            text-align: center;
+        }
+        .toolbar-font-select {
+            background: #1E1E2D;
+            color: #FFFFFF;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            padding: 0.25rem 0.45rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            outline: none;
+            max-width: 140px;
+        }
+        .toolbar-font-select:focus {
+            border-color: #FF5500;
+        }
+        .color-picker-input {
+            width: 26px;
+            height: 26px;
+            border: 1.5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            background: transparent;
+            padding: 0;
+            vertical-align: middle;
+            transition: border-color 0.15s ease;
+        }
+        .color-picker-input:hover {
+            border-color: #FF5500;
+        }
+
+        /* ETIQUETAS Y ELEMENTOS DRAGGABLE 100% LIBRES */
+        .canva-drag-element {
+            position: absolute !important;
+            cursor: move;
+            z-index: 10;
+            display: inline-flex;
+            align-items: center;
+            transform-origin: center center;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .canva-drag-box-container {
+            display: inline-flex;
+            flex-direction: column;
+            padding: 3px 6px;
+            border-radius: 4px;
+            background: transparent;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            justify-content: center;
+            cursor: move;
+            pointer-events: auto !important;
+            user-select: none;
+            -webkit-user-select: none;
+            outline: none;
+        }
+        .canva-drag-box-container[contenteditable="true"] {
+            cursor: text !important;
+            user-select: text !important;
+            -webkit-user-select: text !important;
+            background: rgba(255, 85, 0, 0.06);
+            border-radius: 4px;
+        }
+        .canva-drag-box-container.has-badge-bg {
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        .canva-drag-element.selected-element {
+            outline: 1.5px solid #FF5500 !important;
+            outline-offset: 0px !important;
+            border-radius: 3px;
+        }
+        .canva-resize-handle {
+            position: absolute;
+            width: 7px;
+            height: 7px;
+            background: #FFFFFF;
+            border: 1.5px solid #FF5500;
+            border-radius: 1px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+            z-index: 999;
+            display: none;
+            pointer-events: auto;
+        }
+        .canva-drag-element.selected-element .canva-resize-handle {
+            display: block;
+        }
+        .handle-nw { top: -4px; left: -4px; cursor: nw-resize; }
+        .handle-ne { top: -4px; right: -4px; cursor: ne-resize; }
+        .handle-sw { bottom: -4px; left: -4px; cursor: sw-resize; }
+        .handle-se { bottom: -4px; right: -4px; cursor: se-resize; }
+
+        /* LIENZO OFICIAL CANVA 20.40CM X 9.80CM (771PX X 370PX) */
+        .canva-official-canvas {
+            position: relative;
+            width: 771px;
+            height: 370px;
+            border-radius: 18px;
+            box-shadow: 0 15px 45px rgba(0,0,0,0.15);
+            overflow: hidden;
+            background: #FFFFFF;
+            transition: background 0.3s ease;
+            margin: 0 auto;
+        }
+        .canva-tag-icon {
+            display: inline-block;
+            vertical-align: -2px;
+            margin-right: 5px;
+            flex-shrink: 0;
+        }
+        .canvas-dimension-badge {
+            background: rgba(0, 0, 0, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(8px);
+            padding: 0.35rem 0.85rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: #38BDF8;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
     </style>
 @endpush
 
 @section('content')
     <div class="dashboard-root-wrapper">
-        <!-- SIDEBAR DE NAVEGACIÓN PRO MAX -->
-        <aside class="dash-sidebar" id="dashSidebar">
-            <div class="dash-sidebar-header">
-                <a href="{{ route('web.home') }}" class="dash-brand-logo">
-                    <img src="{{ asset($settings->logo_white ?? 'images/logo-white.png') }}" alt="Vive Go" class="dash-logo-img logo-white-img">
-                    <img src="{{ asset($settings->logo_dark ?? 'images/logo.png') }}" alt="Vive Go" class="dash-logo-img logo-dark-img">
-                </a>
-                <button class="dash-sidebar-toggle-btn" id="dashSidebarToggle" aria-label="Colapsar Menú" title="Plegar / Expandir Menú">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="15 18 9 12 15 6"></polyline>
-                    </svg>
-                </button>
-            </div>
-
-            <!-- Perfil rápido de organizador -->
-            <div class="dash-organizer-pill-card">
-                <div class="dash-avatar-wrapper">
-                    <img src="{{ $organizer['avatar'] }}" alt="{{ $organizer['name'] }}" class="dash-avatar-img">
-                    <span class="dash-online-status-dot"></span>
-                </div>
-                <div class="dash-organizer-info">
-                    <h4 class="dash-organizer-name" title="{{ $organizer['name'] }}">{{ $organizer['name'] }}</h4>
-                    <span class="dash-verified-badge">✓ {{ $organizer['status'] }}</span>
-                </div>
-            </div>
-
-            <!-- Menú de Navegación Principal -->
-            <nav class="dash-nav-menu">
-                <div class="dash-nav-section-title">MENÚ PRINCIPAL</div>
-                <ul class="dash-nav-list">
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.dashboard') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">📊</span>
-                            <span class="dash-nav-text">Dashboard</span>
-                        </a>
-                    </li>
-                    <li class="dash-nav-item active">
-                        <a href="{{ route('web.events') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">🎟️</span>
-                            <span class="dash-nav-text">Mis Eventos</span>
-                        </a>
-                    </li>
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.box_office') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">💰</span>
-                            <span class="dash-nav-text">Taquilla & Ventas</span>
-                        </a>
-                    </li>
-                </ul>
-
-                <div class="dash-nav-section-title" style="margin-top: 1.5rem;">GESTIÓN & HERRAMIENTAS</div>
-                <ul class="dash-nav-list">
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.categories') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">📂</span>
-                            <span class="dash-nav-text">Categorías</span>
-                        </a>
-                    </li>
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.templates') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">🎨</span>
-                            <span class="dash-nav-text">Plantillas de Boletos</span>
-                        </a>
-                    </li>
-                </ul>
-
-                <div class="dash-nav-section-title" style="margin-top: 1.5rem;">INFORMACIÓN EMPRESARIAL</div>
-                <ul class="dash-nav-list">
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.companies') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">🏢</span>
-                            <span class="dash-nav-text">Compañía</span>
-                        </a>
-                    </li>
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.managers') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">👤</span>
-                            <span class="dash-nav-text">Responsable</span>
-                        </a>
-                    </li>
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.capacity_types') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">🏟️</span>
-                            <span class="dash-nav-text">Tipos de Aforo</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-
-            <div class="dash-sidebar-footer">
-                <a href="{{ route('web.home') }}" class="dash-btn-logout" title="Cerrar Sesión">
-                    <span class="dash-btn-logout-icon">🚪</span>
-                    <span class="dash-btn-logout-text">Cerrar Sesión</span>
-                </a>
-            </div>
-        </aside>
+        <!-- SIDEBAR DE NAVEGACIÓN PRO MAX HEREDADO -->
+        @include('layouts.sidebar')
 
         <!-- ÁREA PRINCIPAL DE CONTENIDO -->
         <main class="dash-main-content">
@@ -424,92 +524,399 @@
                                     ← Volver al Paso 1
                                 </button>
                                 <button type="submit" class="btn btn-primary btn-save-settings">
-                                    Siguiente: Plantilla Canva →
+                                    Siguiente: Canva Studio →
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
 
-                <!-- STEP 3: SELECCIÓN DE PLANTILLA CANVA -->
+                <!-- STEP 3: PERSONALIZACIÓN DE BOLETO EN CANVA STUDIO (20.40CM X 9.80CM) -->
                 <div class="step-content-panel" id="stepPanel3">
-                    <div class="settings-card-box">
-                        <div class="settings-card-header">
-                            <div class="card-header-icon" style="background: rgba(234, 179, 8, 0.15); border-color: rgba(234, 179, 8, 0.3); color: #EAB308;">🎨</div>
+                    <div style="display: grid; grid-template-columns: 320px 1fr; gap: 1.5rem; align-items: start;">
+                        
+                        <!-- COLUMNA IZQUIERDA: HERRAMIENTAS, PRESETS & CAPAS DE CANVA -->
+                        <div class="settings-card-box" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 1.25rem;">
+                            
+                            <!-- SECCIÓN: SELECTOR DE PLANTILLA BASE PRECONFIGURADA -->
                             <div>
-                                <h3 class="card-header-title">Paso 3: Asignar Plantilla Oficial de Boletos Canva</h3>
-                                <p class="card-header-subtitle">Selecciona la plantilla con la que se imprimirán los tickets oficiales de este evento</p>
+                                <div class="settings-card-header" style="margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                                    <div class="card-header-icon" style="background: rgba(6, 182, 212, 0.15); border-color: rgba(6, 182, 212, 0.4); color: #06B6D4; width: 34px; height: 34px; font-size: 1rem;">🎨</div>
+                                    <div>
+                                        <h4 style="font-size: 0.925rem; font-weight: 900; color: #FFFFFF; margin: 0;">Plantilla Base</h4>
+                                        <p style="font-size: 0.75rem; color: #94A3B8; margin: 0;">Cargar diseño predefinido</p>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="selected_template_id" value="{{ $eventData['template_id'] ?? 4 }}">
+                                <select id="baseTemplateSelector" class="form-select-custom" style="font-size: 0.85rem; padding: 0.6rem;" onchange="loadPresetTemplate(this.value)">
+                                    <optgroup label="📱 Plantillas Virtuales (E-Tickets)">
+                                        <option value="4" {{ ($eventData['template_id'] ?? 4) == 4 ? 'selected' : '' }}>📱 Plantilla Virtual 1: E-Ticket Dark Neon Pro (Recomendada)</option>
+                                        <option value="5" {{ ($eventData['template_id'] ?? 4) == 5 ? 'selected' : '' }}>📱 Plantilla Virtual 2: Mobile Pass Cyber Glow</option>
+                                        <option value="6" {{ ($eventData['template_id'] ?? 4) == 6 ? 'selected' : '' }}>📱 Plantilla Virtual 3: Entrada Digital Minimal Gold</option>
+                                    </optgroup>
+                                    <optgroup label="🎟️ Plantillas Físicas (Taquilla Impresa)">
+                                        <option value="1" {{ ($eventData['template_id'] ?? 4) == 1 ? 'selected' : '' }}>🎟️ Plantilla 1: Taquilla Clásica Oficial 2026</option>
+                                        <option value="2" {{ ($eventData['template_id'] ?? 4) == 2 ? 'selected' : '' }}>🎟️ Plantilla 2: Franja Logo Derecho & Stub Izquierdo</option>
+                                        <option value="3" {{ ($eventData['template_id'] ?? 4) == 3 ? 'selected' : '' }}>🎟️ Plantilla 3: Hero Banner Panorámico & QR Central</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+
+                            <!-- SECCIÓN 1: AGREGAR ETIQUETA / TEXTO PERSONALIZADO -->
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 0.85rem; border-radius: 14px;">
+                                <h5 style="font-size: 0.8rem; font-weight: 900; color: var(--color-primary-orange); letter-spacing: 0.5px; margin: 0 0 0.5rem 0;">
+                                    ➕ AGREGAR NUEVA ETIQUETA
+                                </h5>
+                                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                    <input type="text" id="newCustomTagInput" class="form-input-custom" placeholder="Ej. #SponsorOficial, Ingreso +18..." style="font-size: 0.825rem; padding: 0.55rem 0.75rem;">
+                                    <button type="button" class="btn btn-primary btn-save-settings" style="padding: 0.55rem 0.75rem; font-size: 0.8rem; text-align: center; justify-content: center;" onclick="createNewCustomTag()">
+                                        ➕ Añadir Etiqueta al Boleto
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- SECCIÓN 2: CAMPOS DEL SISTEMA DISPONIBLES -->
+                            <div>
+                                <h5 style="font-size: 0.8rem; font-weight: 900; color: #94A3B8; letter-spacing: 0.5px; margin-bottom: 0.5rem;">📌 CAMPOS DEL SISTEMA</h5>
+                                <div style="display: flex; flex-direction: column; gap: 0.35rem;" id="systemElementsList">
+                                    <button type="button" class="btn btn-cancel-custom system-field-btn" id="sysBtn_logo" style="justify-content: space-between; font-size: 0.8rem; padding: 0.45rem 0.75rem;" onclick="toggleSystemElement('logo')">
+                                        <span>🖼️ Logo Marca Oficial</span>
+                                        <span class="field-status-badge" style="font-size: 0.725rem; color: #06B6D4;">+ Añadir</span>
+                                    </button>
+                                    <button type="button" class="btn btn-cancel-custom system-field-btn" id="sysBtn_titulo" style="justify-content: space-between; font-size: 0.8rem; padding: 0.45rem 0.75rem;" onclick="toggleSystemElement('titulo')">
+                                        <span>📝 Título / Nombre Show</span>
+                                        <span class="field-status-badge" style="font-size: 0.725rem; color: #06B6D4;">+ Añadir</span>
+                                    </button>
+                                    <button type="button" class="btn btn-cancel-custom system-field-btn" id="sysBtn_zona" style="justify-content: space-between; font-size: 0.8rem; padding: 0.45rem 0.75rem;" onclick="toggleSystemElement('zona')">
+                                        <span>🏷️ Zona / Sector</span>
+                                        <span class="field-status-badge" style="font-size: 0.725rem; color: #06B6D4;">+ Añadir</span>
+                                    </button>
+                                    <button type="button" class="btn btn-cancel-custom system-field-btn" id="sysBtn_precio" style="justify-content: space-between; font-size: 0.8rem; padding: 0.45rem 0.75rem;" onclick="toggleSystemElement('precio')">
+                                        <span>💰 Precio de Entrada</span>
+                                        <span class="field-status-badge" style="font-size: 0.725rem; color: #06B6D4;">+ Añadir</span>
+                                    </button>
+                                    <button type="button" class="btn btn-cancel-custom system-field-btn" id="sysBtn_banner" style="justify-content: space-between; font-size: 0.8rem; padding: 0.45rem 0.75rem;" onclick="toggleSystemElement('banner')">
+                                        <span>🖼️ Banner para Ticket</span>
+                                        <span class="field-status-badge" style="font-size: 0.725rem; color: #06B6D4;">+ Añadir</span>
+                                    </button>
+                                    <button type="button" class="btn btn-cancel-custom system-field-btn" id="sysBtn_comprador_nombre" style="justify-content: space-between; font-size: 0.8rem; padding: 0.45rem 0.75rem;" onclick="toggleSystemElement('buyer_name')">
+                                        <span>👤 Nombre Comprador</span>
+                                        <span class="field-status-badge" style="font-size: 0.725rem; color: #06B6D4;">+ Añadir</span>
+                                    </button>
+                                    <button type="button" class="btn btn-cancel-custom system-field-btn" id="sysBtn_comprador_dni" style="justify-content: space-between; font-size: 0.8rem; padding: 0.45rem 0.75rem;" onclick="toggleSystemElement('buyer_dni')">
+                                        <span>🆔 DNI Comprador</span>
+                                        <span class="field-status-badge" style="font-size: 0.725rem; color: #06B6D4;">+ Añadir</span>
+                                    </button>
+                                    <button type="button" class="btn btn-cancel-custom system-field-btn" id="sysBtn_recinto" style="justify-content: space-between; font-size: 0.8rem; padding: 0.45rem 0.75rem;" onclick="toggleSystemElement('recinto')">
+                                        <span>📍 Recinto del Show</span>
+                                        <span class="field-status-badge" style="font-size: 0.725rem; color: #06B6D4;">+ Añadir</span>
+                                    </button>
+                                    <button type="button" class="btn btn-cancel-custom system-field-btn" id="sysBtn_ciudad" style="justify-content: space-between; font-size: 0.8rem; padding: 0.45rem 0.75rem;" onclick="toggleSystemElement('ciudad')">
+                                        <span>🏙️ Ciudad / Dirección</span>
+                                        <span class="field-status-badge" style="font-size: 0.725rem; color: #06B6D4;">+ Añadir</span>
+                                    </button>
+                                    <button type="button" class="btn btn-cancel-custom system-field-btn" id="sysBtn_fecha" style="justify-content: space-between; font-size: 0.8rem; padding: 0.45rem 0.75rem;" onclick="toggleSystemElement('fecha')">
+                                        <span>📅 Fecha del Evento</span>
+                                        <span class="field-status-badge" style="font-size: 0.725rem; color: #06B6D4;">+ Añadir</span>
+                                    </button>
+                                    <button type="button" class="btn btn-cancel-custom system-field-btn" id="sysBtn_hora" style="justify-content: space-between; font-size: 0.8rem; padding: 0.45rem 0.75rem;" onclick="toggleSystemElement('hora')">
+                                        <span>⏰ Hora del Evento</span>
+                                        <span class="field-status-badge" style="font-size: 0.725rem; color: #06B6D4;">+ Añadir</span>
+                                    </button>
+                                    <button type="button" class="btn btn-cancel-custom system-field-btn" id="sysBtn_ticket_number" style="justify-content: space-between; font-size: 0.8rem; padding: 0.45rem 0.75rem;" onclick="toggleSystemElement('ticket_number')">
+                                        <span>🔢 N° Correlativo</span>
+                                        <span class="field-status-badge" style="font-size: 0.725rem; color: #06B6D4;">+ Añadir</span>
+                                    </button>
+                                    <button type="button" class="btn btn-cancel-custom system-field-btn" id="sysBtn_qr" style="justify-content: space-between; font-size: 0.8rem; padding: 0.45rem 0.75rem;" onclick="toggleSystemElement('qr')">
+                                        <span>📲 Código QR Gigante</span>
+                                        <span class="field-status-badge" style="font-size: 0.725rem; color: #06B6D4;">+ Añadir</span>
+                                    </button>
+                                    <button type="button" class="btn btn-cancel-custom system-field-btn" id="sysBtn_hash" style="justify-content: space-between; font-size: 0.8rem; padding: 0.45rem 0.75rem;" onclick="toggleSystemElement('hash')">
+                                        <span>🔑 Hash Validación</span>
+                                        <span class="field-status-badge" style="font-size: 0.725rem; color: #06B6D4;">+ Añadir</span>
+                                    </button>
+                                    <button type="button" class="btn btn-cancel-custom system-field-btn" id="sysBtn_disclaimer" style="justify-content: space-between; font-size: 0.8rem; padding: 0.45rem 0.75rem;" onclick="toggleSystemElement('disclaimer')">
+                                        <span>📜 Disclaimer / Nota Legal</span>
+                                        <span class="field-status-badge" style="font-size: 0.725rem; color: #06B6D4;">+ Añadir</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- SECCIÓN 3: SUBIR IMÁGENES DESDE PC (BANNER PARA TICKET & FONDO) -->
+                            <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.85rem; display: flex; flex-direction: column; gap: 1rem;">
+                                
+                                <!-- APARTADO: BANNER PARA TICKET -->
+                                <div>
+                                    <h5 style="font-size: 0.8rem; font-weight: 900; color: #94A3B8; letter-spacing: 0.5px; margin-bottom: 0.5rem;">
+                                        🖼️ BANNER PARA TICKET
+                                    </h5>
+                                    
+                                    <input type="file" id="canvaTicketBannerFileInput" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" onchange="handleTicketBannerUpload(event)">
+                                    <input type="hidden" id="canvaTicketBannerInput" value="{{ $eventData['template']['positions']['canvaElBanner']['src'] ?? ($eventData['banner_image'] ?? 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=600&q=80') }}">
+
+                                    <div id="ticketBannerUploadBoxFilled" style="display: flex; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 0.65rem; flex-direction: column; gap: 0.5rem;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <div id="ticketBannerThumbPreview" style="width: 48px; height: 32px; border-radius: 6px; background-size: cover; background-position: center; border: 1px solid rgba(255,255,255,0.2); background-image: url('{{ $eventData['template']['positions']['canvaElBanner']['src'] ?? ($eventData['banner_image'] ?? 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=600&q=80') }}');"></div>
+                                            <div style="flex: 1; overflow: hidden;">
+                                                <div id="ticketBannerFileNameText" style="font-size: 0.775rem; font-weight: 800; color: #FFFFFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Banner de Boleto</div>
+                                                <div style="font-size: 0.68rem; color: #10B981; font-weight: 700;">✓ Imagen para Ticket Activa</div>
+                                            </div>
+                                        </div>
+                                        <div style="display: flex; gap: 0.35rem;">
+                                            <button type="button" class="btn btn-primary btn-save-settings" style="flex: 1; padding: 0.4rem; font-size: 0.725rem; text-align: center; justify-content: center;" onclick="document.getElementById('canvaTicketBannerFileInput').click()">
+                                                🔄 Cambiar Banner
+                                            </button>
+                                            <button type="button" class="btn btn-cancel-custom" style="padding: 0.4rem 0.65rem; font-size: 0.725rem; color: #EF4444;" onclick="removeTicketBannerImage()" title="Quitar Banner">
+                                                ✕
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- APARTADO: COLOR DE FONDO DEL BOLETO -->
+                                <div>
+                                    <h5 style="font-size: 0.8rem; font-weight: 900; color: #94A3B8; letter-spacing: 0.5px; margin-bottom: 0.5rem;">
+                                        🎨 COLOR DE FONDO DEL BOLETO
+                                    </h5>
+                                    <div style="display: flex; align-items: center; gap: 0.65rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 0.6rem 0.85rem;">
+                                        <input type="color" id="canvaBgColorPicker" value="{{ $eventData['template']['bg_color'] ?? '#FFFFFF' }}" oninput="onCanvaBgColorChange(this.value)" onchange="onCanvaBgColorChange(this.value)" style="width: 38px; height: 32px; border: none; border-radius: 6px; cursor: pointer; background: transparent;">
+                                        <span id="canvaBgColorHexText" style="font-size: 0.8rem; font-weight: 800; color: #FFFFFF; font-family: monospace;">{{ $eventData['template']['bg_color'] ?? '#FFFFFF' }}</span>
+                                    </div>
+                                </div>
+
+                                <!-- APARTADO: IMAGEN DE FONDO DESDE TU PC -->
+                                <div>
+                                    <h5 style="font-size: 0.8rem; font-weight: 900; color: #94A3B8; letter-spacing: 0.5px; margin-bottom: 0.5rem;">
+                                        🌌 IMAGEN DE FONDO DEL BOLETO
+                                    </h5>
+                                    
+                                    <input type="file" id="canvaBgFileInput" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" onchange="handleBgFileUpload(event)">
+                                    <input type="hidden" id="canvaBgImageInput" value="{{ $eventData['template']['bg_image'] ?? '' }}">
+                                    <input type="hidden" id="canvaBgColor" value="{{ $eventData['template']['bg_color'] ?? '#FFFFFF' }}">
+                                    <input type="hidden" id="canvaStripColor" value="{{ $eventData['template']['strip_color'] ?? '#FF5500' }}">
+
+                                    <div id="bgUploadBoxEmpty" onclick="document.getElementById('canvaBgFileInput').click()" style="display: {{ empty($eventData['template']['bg_image']) ? 'block' : 'none' }}; border: 2px dashed rgba(255, 85, 0, 0.4); border-radius: 12px; padding: 0.85rem; text-align: center; cursor: pointer; background: rgba(255, 85, 0, 0.05);">
+                                        <div style="font-size: 1.4rem; margin-bottom: 0.2rem;">📁</div>
+                                        <div style="font-size: 0.8rem; font-weight: 800; color: #FFFFFF;">Subir Fondo desde mi PC</div>
+                                        <div style="font-size: 0.7rem; color: #94A3B8;">PNG, JPG o WEBP (Opcional)</div>
+                                    </div>
+
+                                    <div id="bgUploadBoxFilled" style="display: {{ !empty($eventData['template']['bg_image']) ? 'flex' : 'none' }}; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 0.65rem; flex-direction: column; gap: 0.5rem;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <div id="bgThumbPreview" style="width: 48px; height: 32px; border-radius: 6px; background-size: cover; background-position: center; border: 1px solid rgba(255,255,255,0.2); background-image: url('{{ $eventData['template']['bg_image'] ?? '' }}');"></div>
+                                            <div style="flex: 1; overflow: hidden;">
+                                                <div id="bgFileNameText" style="font-size: 0.775rem; font-weight: 800; color: #FFFFFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Fondo de Boleto</div>
+                                                <div style="font-size: 0.68rem; color: #10B981; font-weight: 700;">✓ Fondo Activo</div>
+                                            </div>
+                                        </div>
+                                        <div style="display: flex; gap: 0.35rem;">
+                                            <button type="button" class="btn btn-primary btn-save-settings" style="flex: 1; padding: 0.4rem; font-size: 0.725rem; text-align: center; justify-content: center;" onclick="document.getElementById('canvaBgFileInput').click()">
+                                                🔄 Cambiar Fondo
+                                            </button>
+                                            <button type="button" class="btn btn-cancel-custom" style="padding: 0.4rem 0.65rem; font-size: 0.725rem; color: #EF4444;" onclick="removeCanvaBgImage()" title="Quitar Fondo">
+                                                ✕
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <form class="admin-modal-form" onsubmit="event.preventDefault(); goToStep(4);">
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 2rem;">
-                                @foreach($templates as $tpl)
-                                    <div class="template-select-card {{ ($eventData['template_id'] ?? 1) == $tpl->id ? 'selected-template' : '' }}" data-id="{{ $tpl->id }}" onclick="selectTicketTemplate({{ $tpl->id }})">
-                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                                            <strong style="color: #FFFFFF; font-size: 0.95rem;">{{ $tpl->name }}</strong>
-                                            @if($tpl->is_default)
-                                                <span class="dash-badge-custom badge-green" style="font-size: 0.65rem;">Por Defecto</span>
-                                            @endif
-                                        </div>
-                                        <p style="color: #94A3B8; font-size: 0.8rem; margin-bottom: 0.75rem;">{{ $tpl->category }}</p>
+                        <!-- COLUMNA DERECHA: BARRA SUPERIOR + LIENZO OFICIAL CANVA STUDIO PRO (771PX X 370PX) -->
+                        <div class="settings-card-box" style="padding: 1.25rem; display: flex; flex-direction: column; align-items: center;">
+                            
+                            <div style="width: 771px; max-width: 100%; display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.65rem;">
+                                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                    <div class="card-header-icon" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #10B981; width: 34px; height: 34px; font-size: 1rem;">🎟️</div>
+                                    <h3 class="card-header-title" style="font-size: 1rem;">Diseño Oficial del Boleto</h3>
+                                </div>
+                                <span class="canvas-dimension-badge">
+                                    📐 20.40 cm × 9.80 cm (Proporción Oficial)
+                                </span>
+                            </div>
 
-                                        <!-- MOCKUP VISUAL DE LA PLANTILLA -->
-                                        <div style="width: 100%; height: 100px; border-radius: 12px; border: 1.5px solid rgba(255,255,255,0.15); background: {{ $tpl->bg_color ?? '#FFFFFF' }}; display: flex; overflow: hidden; position: relative;">
-                                            @if($tpl->id == 2)
-                                                <div style="width: 30%; height: 100%; background: #F1F5F9; border-right: 2px dashed #94A3B8; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 4px;">
-                                                    <div style="width: 24px; height: 24px; background: #000; border-radius: 4px;"></div>
-                                                    <span style="font-size: 0.5rem; font-weight: 900; color: #000;">N° 00001</span>
-                                                </div>
-                                                <div style="flex: 1; padding: 6px; display: flex; flex-direction: column; justify-content: space-between; color: #000;">
-                                                    <span style="font-size: 0.65rem; font-weight: 900; line-height: 1.1;">{{ $eventData['title'] }}</span>
-                                                    <span style="font-size: 0.55rem; color: #64748B;">ZONA VIP PLATINUM</span>
-                                                    <span style="font-size: 0.65rem; font-weight: 900; color: #FF5500;">S/ 150.00</span>
-                                                </div>
-                                                <div style="width: 18%; height: 100%; background: {{ $tpl->strip_color ?? '#000000' }}; display: flex; align-items: center; justify-content: center;">
-                                                    <span style="color: #FFF; font-weight: 900; font-size: 0.55rem; transform: rotate(-90deg);">VIVE GO</span>
-                                                </div>
-                                            @elseif($tpl->id == 3)
-                                                <div style="width: 100%; height: 100%; background: {{ $tpl->bg_color ?? '#1E1B4B' }}; color: #FFF; padding: 8px; display: flex; justify-content: space-between;">
-                                                    <div style="display: flex; flex-direction: column; justify-content: space-between;">
-                                                        <span style="background: {{ $tpl->strip_color ?? '#F59E0B' }}; color: #000; font-size: 0.5rem; font-weight: 900; padding: 1px 4px; border-radius: 3px; display: inline-block;">VIP PASS</span>
-                                                        <span style="font-size: 0.65rem; font-weight: 900;">{{ $eventData['title'] }}</span>
-                                                        <span style="font-size: 0.6rem; font-weight: 900; color: {{ $tpl->strip_color ?? '#F59E0B' }};">S/ 150.00</span>
-                                                    </div>
-                                                    <div style="width: 35px; height: 35px; background: #FFF; border-radius: 4px; display: flex; align-items: center; justify-content: center; align-self: center;">
-                                                        <div style="width: 25px; height: 25px; background: #000;"></div>
-                                                    </div>
-                                                </div>
-                                            @else
-                                                <div style="width: 18%; height: 100%; background: {{ $tpl->strip_color ?? '#000000' }}; display: flex; align-items: center; justify-content: center;">
-                                                    <span style="color: #FFF; font-weight: 900; font-size: 0.55rem; transform: rotate(-90deg);">VIVE GO</span>
-                                                </div>
-                                                <div style="flex: 1; padding: 6px; display: flex; flex-direction: column; justify-content: space-between; color: #000;">
-                                                    <span style="font-size: 0.65rem; font-weight: 900; line-height: 1.1;">{{ $eventData['title'] }}</span>
-                                                    <span style="font-size: 0.55rem; color: #64748B;">ZONA VIP PLATINUM</span>
-                                                    <span style="font-size: 0.65rem; font-weight: 900; color: #FF5500;">S/ 150.00</span>
-                                                </div>
-                                                <div style="width: 30%; height: 100%; background: #F1F5F9; border-left: 2px dashed #94A3B8; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 4px;">
-                                                    <div style="width: 24px; height: 24px; background: #000; border-radius: 4px;"></div>
-                                                    <span style="font-size: 0.5rem; font-weight: 900; color: #000;">N° 00001</span>
-                                                </div>
-                                            @endif
+                            <!-- BARRA SUPERIOR DE FORMATO ESTILO CANVA STUDIO PRO -->
+                            <div class="canva-top-studio-toolbar" id="canvaStudioTopToolbar">
+                                <!-- TIPOGRAFÍA / GOOGLE FONTS -->
+                                <div class="toolbar-group">
+                                    <select id="floatingFontFamilySelect" class="toolbar-font-select" onmousedown="event.stopPropagation();" onchange="applyFloatingFormat('fontFamily', this.value)" title="Cambiar Fuente Tipográfica">
+                                        <option value="inherit">🔤 Fuente Estándar</option>
+                                        <option value="'Inter', sans-serif">Inter (Moderna)</option>
+                                        <option value="'Montserrat', sans-serif">Montserrat</option>
+                                        <option value="'Poppins', sans-serif">Poppins</option>
+                                        <option value="'Bebas Neue', sans-serif">Bebas Neue</option>
+                                        <option value="'Oswald', sans-serif">Oswald</option>
+                                        <option value="'Outfit', sans-serif">Outfit</option>
+                                        <option value="'Playfair Display', serif">Playfair Display (VIP)</option>
+                                        <option value="'Space Grotesk', sans-serif">Space Grotesk</option>
+                                        <option value="'Roboto', sans-serif">Roboto</option>
+                                        <option value="monospace">Monospace (Código)</option>
+                                    </select>
+                                </div>
+
+                                <!-- TAMAÑO DE FUENTE -->
+                                <div class="toolbar-group">
+                                    <button type="button" class="toolbar-btn" onmousedown="event.preventDefault();" onclick="applyFloatingFormat('fontSize', 'dec')" title="Disminuir tamaño (A-)">A-</button>
+                                    <span class="font-size-indicator" id="floatingFontSizeText">14px</span>
+                                    <button type="button" class="toolbar-btn" onmousedown="event.preventDefault();" onclick="applyFloatingFormat('fontSize', 'inc')" title="Aumentar tamaño (A+)">A+</button>
+                                </div>
+
+                                <!-- SELECTOR DE COLOR PERSONALIZADO -->
+                                <div class="toolbar-group">
+                                    <input type="color" id="floatingColorPicker" class="color-picker-input" value="#000000" oninput="applyFloatingFormat('color', this.value)" onchange="applyFloatingFormat('color', this.value)" title="Elegir Color de Texto / Elemento">
+                                </div>
+
+                                <!-- ESTILOS DE TEXTO B / I / U -->
+                                <div class="toolbar-group">
+                                    <button type="button" class="toolbar-btn" id="btnFloatingBold" onmousedown="event.preventDefault();" onclick="applyFloatingFormat('bold')" title="Negrita (B)"><strong>B</strong></button>
+                                    <button type="button" class="toolbar-btn" id="btnFloatingItalic" onmousedown="event.preventDefault();" onclick="applyFloatingFormat('italic')" title="Cursiva (I)"><em>I</em></button>
+                                    <button type="button" class="toolbar-btn" id="btnFloatingUnderline" onmousedown="event.preventDefault();" onclick="applyFloatingFormat('underline')" title="Subrayado (U)"><u>U</u></button>
+                                </div>
+
+                                <!-- ALINEACIÓN -->
+                                <div class="toolbar-group">
+                                    <button type="button" class="toolbar-btn" id="btnAlignLeft" onmousedown="event.preventDefault();" onclick="applyFloatingFormat('align', 'left')" title="Alinear Izquierda">⬅</button>
+                                    <button type="button" class="toolbar-btn" id="btnAlignCenter" onmousedown="event.preventDefault();" onclick="applyFloatingFormat('align', 'center')" title="Centrar">⬌</button>
+                                    <button type="button" class="toolbar-btn" id="btnAlignRight" onmousedown="event.preventDefault();" onclick="applyFloatingFormat('align', 'right')" title="Alinear Derecha">➡</button>
+                                </div>
+
+                                <!-- ACCIONES ADICIONALES -->
+                                <div class="toolbar-group">
+                                    <button type="button" class="toolbar-btn" onmousedown="event.preventDefault();" onclick="applyFloatingFormat('textTransform')" title="Mayúsculas / Minúsculas (Aa)">Aa</button>
+                                    <button type="button" class="toolbar-btn" id="btnFloatingBadgeBg" onmousedown="event.preventDefault();" onclick="applyFloatingFormat('badgeBg')" title="Fondo Destacado">🔲</button>
+                                    <button type="button" class="toolbar-btn" onmousedown="event.preventDefault();" onclick="applyFloatingFormat('rotate')" title="Girar 90°">🔄</button>
+                                    <button type="button" class="toolbar-btn toolbar-btn-danger" onmousedown="event.preventDefault();" onclick="deleteSelectedCanvaElement()" title="Eliminar Etiqueta">🗑️</button>
+                                </div>
+                            </div>
+
+                            <!-- CONTENEDOR DEL LIENZO OFICIAL CANVA (771PX X 370PX) -->
+                            <div class="canva-official-canvas" id="canvaTicketCanvas" style="background-color: {{ $eventData['template']->bg_color ?? '#FFFFFF' }}; {{ !empty($eventData['template']->bg_image) ? "background-image: url('" . $eventData['template']->bg_image . "');" : "background-image: none;" }} background-size: cover; background-position: center; border: 1.5px solid #CBD5E1; box-shadow: 0 10px 25px rgba(0,0,0,0.06);">
+                                
+                                <div id="canvaCanvasArea" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+                                    
+                                    <!-- LOGO DE MARCA -->
+                                    <div class="canva-drag-element" id="canvaElLogo" style="top: 15px; left: 25px;">
+                                        <div class="canva-drag-box-container">
+                                            <img src="{{ asset($settings->logo_white ?? 'images/logo-white.png') }}" alt="Logo" style="height: 32px; width: auto; object-fit: contain; pointer-events: none;">
                                         </div>
                                     </div>
-                                @endforeach
+
+                                    <!-- TÍTULO DEL EVENTO (12PX) -->
+                                    <div class="canva-drag-element" id="canvaElTitle" style="top: 55px; left: 25px; width: 380px;">
+                                        <div class="canva-drag-box-container" style="font-size: 12px;">
+                                            <div class="canva-text-content" style="font-size: 12px; font-weight: 900; color: #000000; margin: 0; line-height: 1.25; outline: none; white-space: pre-wrap; word-break: break-word;">{{ $eventData['title'] }}</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- ZONA / SECTOR (12PX) -->
+                                    <div class="canva-drag-element" id="canvaElZone" style="top: 95px; left: 25px;">
+                                        <div class="canva-drag-box-container" style="font-size: 12px;">
+                                            <div class="canva-text-content" style="font-size: 12px; font-weight: 800; color: #000000; line-height: 1.25; outline: none; white-space: pre-wrap; word-break: break-word;">ZONA: {{ $eventData['zones'][0]['name'] ?? 'BOX PLATINUM INDIVIDUAL' }}</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- PRECIO (12PX) -->
+                                    <div class="canva-drag-element" id="canvaElPrice" style="top: 95px; left: 240px;">
+                                        <div class="canva-drag-box-container" style="font-size: 12px;">
+                                            <div class="canva-text-content" style="font-size: 12px; font-weight: 900; color: #000000; line-height: 1.25; outline: none; white-space: pre-wrap; word-break: break-word;">PRECIO: S/ {{ number_format((float)($eventData['zones'][0]['price'] ?? 150), 2) }}</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- BANNER PARA TICKET -->
+                                    <div class="canva-drag-element" id="canvaElBanner" style="top: 15px; left: 340px; width: 250px; height: 110px;">
+                                        <div class="canva-drag-box-container" style="padding: 0; width: 100%; height: 100%; overflow: hidden; border-radius: 12px;">
+                                            <img id="canvaPrevBannerImg" src="{{ $eventData['template']->positions['canvaElBanner']['src'] ?? ($eventData['banner_image'] ?? 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=1000&q=80') }}" alt="Banner" style="width: 100%; height: 100%; object-fit: cover; border: none; outline: none; box-shadow: none; pointer-events: none; display: block;">
+                                        </div>
+                                    </div>
+
+                                    <!-- NOMBRE COMPRADOR (12PX) -->
+                                    <div class="canva-drag-element" id="canvaElBuyerName" style="top: 140px; left: 25px;">
+                                        <div class="canva-drag-box-container" style="font-size: 12px;">
+                                            <div class="canva-text-content" id="canvaPrevBuyerNameText" style="font-weight: 900; font-size: 12px; text-transform: uppercase; color: #000000; line-height: 1.25; outline: none; white-space: pre-wrap; word-break: break-word;">COMPRADOR: CHRISTIAN GOMEZ LUJAN</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- DNI COMPRADOR (SIN ICONO, 12PX) -->
+                                    <div class="canva-drag-element" id="canvaElBuyerDni" style="top: 165px; left: 25px;">
+                                        <div class="canva-drag-box-container" style="font-size: 12px;">
+                                            <div class="canva-text-content" id="canvaPrevBuyerDniText" style="font-weight: 800; font-size: 12px; color: #000000; line-height: 1.25; outline: none; white-space: pre-wrap; word-break: break-word;">DNI: 70436491</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- RECINTO / LUGAR (12PX) -->
+                                    <div class="canva-drag-element" id="canvaElVenue" style="top: 200px; left: 25px;">
+                                        <div class="canva-drag-box-container" style="font-size: 12px;">
+                                            <div class="canva-text-content" id="canvaPrevVenueText" style="font-weight: 900; font-size: 12px; color: #000000; line-height: 1.25; outline: none; white-space: pre-wrap; word-break: break-word;">{{ $eventData['venue_name'] }}</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- CIUDAD / DIRECCIÓN (12PX) -->
+                                    <div class="canva-drag-element" id="canvaElCity" style="top: 225px; left: 25px;">
+                                        <div class="canva-drag-box-container" style="font-size: 12px;">
+                                            <div class="canva-text-content" id="canvaPrevAddressText" style="font-size: 12px; font-weight: 700; color: #000000; line-height: 1.25; outline: none; white-space: pre-wrap; word-break: break-word;">{{ $eventData['address'] }}</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- FECHA DEL EVENTO (12PX) -->
+                                    <div class="canva-drag-element" id="canvaElDate" style="top: 260px; left: 25px;">
+                                        <div class="canva-drag-box-container" style="font-size: 12px;">
+                                            <div class="canva-text-content" id="canvaPrevDateText" style="font-weight: 900; font-size: 12px; color: #000000; line-height: 1.25; outline: none; white-space: pre-wrap; word-break: break-word;">FECHA: {{ $eventData['event_date'] }}</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- HORA DEL EVENTO (12PX) -->
+                                    <div class="canva-drag-element" id="canvaElTime" style="top: 260px; left: 220px;">
+                                        <div class="canva-drag-box-container" style="font-size: 12px;">
+                                            <div class="canva-text-content" id="canvaPrevTimeText" style="font-weight: 900; font-size: 12px; color: #000000; line-height: 1.25; outline: none; white-space: pre-wrap; word-break: break-word;">HORA: {{ $eventData['event_time'] }}</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- NÚMERO CORRELATIVO (SIN ICONO, 12PX) -->
+                                    <div class="canva-drag-element" id="canvaElTicketNumber" style="top: 15px; left: 660px;">
+                                        <div class="canva-drag-box-container" style="font-size: 12px;">
+                                            <div class="canva-text-content" style="font-size: 12px; font-weight: 900; color: #000000; font-family: var(--font-heading); outline: none; white-space: pre-wrap; word-break: break-word;">N° 00396</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- CÓDIGO QR GIGANTE (PROPORCIÓN CUADRADA 1:1) -->
+                                    <div class="canva-drag-element" id="canvaElQR" style="top: 55px; left: 635px; width: 95px; height: 95px;">
+                                        <div class="canva-drag-box-container" style="background: #FFFFFF; padding: 5px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.15); width: 100%; height: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" style="width: 100%; height: 100%; pointer-events: none; display: block;">
+                                                <rect width="256" height="256" fill="#FFFFFF"/>
+                                                <path d="M16,16H96V96H16Z M32,32V80H80V32Z M48,48H64V64H48Z" fill="#000000"/>
+                                                <path d="M160,16H240V96H160Z M176,32V80H224V32Z M192,48H208V64H192Z" fill="#000000"/>
+                                                <path d="M16,160H96V240H16Z M32,176V224H80V176Z M48,192H64V208H48Z" fill="#000000"/>
+                                                <path d="M112,16H144V32H112Z M112,48H128V80H112Z M144,64H160V96H144Z M112,96H128V112H112Z M16,112H48V128H16Z M64,112H96V144H64Z M128,128H160V144H128Z M176,112H224V128H176Z M208,128H240V160H208Z M112,160H144V176H112Z M144,176H176V192H144Z M112,192H128V240H112Z M160,208H192V224H160Z M208,192H240V240H208Z M176,224H208V240H176Z M144,224H160V240H144Z" fill="#000000"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+
+                                    <!-- HASH DE VALIDACIÓN (SIN ICONO, 12PX) -->
+                                    <div class="canva-drag-element" id="canvaElHash" style="top: 175px; left: 645px;">
+                                        <div class="canva-drag-box-container" style="font-size: 12px;">
+                                            <div class="canva-text-content" style="font-family: monospace; font-size: 12px; font-weight: 800; color: #000000; letter-spacing: 1.5px; outline: none; white-space: pre-wrap; word-break: break-word;">JAJHSPWFWJ</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- DISCLAIMER / BOLETO DIGITAL (SIN ICONO, 12PX) -->
+                                    <div class="canva-drag-element" id="canvaElDisclaimer" style="top: 205px; left: 610px; width: 145px;">
+                                        <div class="canva-drag-box-container" style="font-size: 12px;">
+                                            <div class="canva-text-content" style="font-size: 11px; font-weight: 700; color: #000000; line-height: 1.25; margin: 0; text-align: center; outline: none; white-space: pre-wrap; word-break: break-word;">La responsabilidad de este boleto es exclusiva del cliente, no compartir ni publicar. Se recomienda llevar impreso.</div>
+                                        </div>
+                                    </div>
+
+                                </div>
                             </div>
 
-                            <input type="hidden" id="selected_template_id" value="{{ $eventData['template_id'] ?? 1 }}">
-
-                            <div style="display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem;">
+                            <div style="width: 771px; max-width: 100%; display: flex; justify-content: space-between; margin-top: 1.5rem;">
                                 <button type="button" class="btn btn-cancel-custom" onclick="goToStep(2)">
-                                    ← Volver al Paso 2
+                                    ← Anterior: Zonas & Tarifas
                                 </button>
-                                <button type="submit" class="btn btn-primary btn-save-settings">
-                                    Siguiente: Confirmar Cambios →
+                                <button type="button" class="btn btn-primary btn-save-settings" style="padding: 0.85rem 2rem; font-size: 1rem;" onclick="goToStep(4)">
+                                    Continuar a Confirmación ➔
                                 </button>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
 
@@ -524,29 +931,52 @@
                             </div>
                         </div>
 
-                        <div style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.12); padding: 1.5rem; border-radius: 20px; margin-bottom: 2rem;">
-                            <div style="display: grid; grid-template-columns: 200px 1fr; gap: 1.5rem; align-items: center; margin-bottom: 1.5rem;">
-                                <img id="summaryBannerImg" src="{{ $eventData['banner_image'] ?? 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=600&q=80' }}" alt="Banner" style="width: 100%; height: 110px; object-fit: cover; border-radius: 14px; border: 1px solid rgba(255,255,255,0.2);">
-                                
-                                <div>
-                                    <span id="summaryCategory" class="dash-badge-custom badge-blue" style="margin-bottom: 0.5rem; display: inline-block;">🎤 {{ $eventData['category_name'] }}</span>
-                                    <h2 id="summaryTitle" style="color: #FFFFFF; margin: 0 0 0.35rem 0; font-size: 1.35rem; font-weight: 900;">{{ $eventData['title'] }}</h2>
-                                    <p style="color: #94A3B8; margin: 0; font-size: 0.9rem;">
-                                        📍 <strong id="summaryVenue" style="color: #FFFFFF;">{{ $eventData['venue_name'] }}</strong> ({{ $eventData['address'] }}) &nbsp;|&nbsp; 
-                                        🗓️ <span id="summaryDate" style="color: #FF5500; font-weight: 800;">{{ $eventData['event_date'] }} / {{ $eventData['event_time'] }}</span>
-                                    </p>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+                            <!-- RESUMEN DE DATOS -->
+                            <div class="credentials-card" style="margin: 0;">
+                                <div class="cred-row">
+                                    <span class="cred-label">🎟️ Evento:</span>
+                                    <span class="cred-val" id="summaryTitle">{{ $eventData['title'] }}</span>
+                                </div>
+                                <div class="cred-row">
+                                    <span class="cred-label">🏢 Compañía Organizadora:</span>
+                                    <span class="cred-val" id="summaryCompany">{{ $eventData['company_name'] }}</span>
+                                </div>
+                                <div class="cred-row">
+                                    <span class="cred-label">📍 Recinto & Lugar:</span>
+                                    <span class="cred-val" id="summaryVenue">{{ $eventData['venue_name'] }} ({{ $eventData['address'] }})</span>
+                                </div>
+                                <div class="cred-row">
+                                    <span class="cred-label">🗓️ Fecha & Hora:</span>
+                                    <span class="cred-val" id="summaryDate">{{ $eventData['event_date'] }} a las {{ $eventData['event_time'] }}</span>
+                                </div>
+                                <div class="cred-row">
+                                    <span class="cred-label">👥 Aforo Total Registrado:</span>
+                                    <span class="cred-val" id="summaryCapacity" style="color: #10B981; font-weight: 900;">0 Boletos</span>
+                                </div>
+                                <div class="cred-row">
+                                    <span class="cred-label">🌐 Modalidad:</span>
+                                    <span class="cred-val" style="color: #06B6D4; font-weight: 800;" id="summarySalesType">
+                                        {{ ($eventData['sales_type'] ?? 'virtual') === 'virtual' ? '🌐 Venta Virtual (E-Ticket)' : '🎟️ Venta Física (Taquilla Impresa)' }}
+                                    </span>
                                 </div>
                             </div>
 
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                                <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08);">
-                                    <strong style="color: #94A3B8; display: block; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">Compañía / Empresa</strong>
-                                    <span id="summaryCompany" style="color: #FFFFFF; font-weight: 800; font-size: 0.95rem;">🏢 {{ $eventData['company_name'] }}</span>
+                            <!-- VISTA PREVIA RESUMIDA DEL BOLETO DISEÑADO -->
+                            <div style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.12); padding: 1.25rem; border-radius: 16px; display: flex; flex-direction: column; justify-content: space-between;">
+                                <div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                                        <h4 style="font-size: 0.85rem; font-weight: 900; color: #FFFFFF; margin: 0;">🎨 Boleto Oficial Configurado</h4>
+                                        <span class="dash-badge-custom badge-green" style="font-size: 0.75rem;">✓ Listo para emitir</span>
+                                    </div>
+                                    <p style="font-size: 0.8rem; color: #94A3B8; margin-bottom: 0.85rem;">
+                                        El diseño personalizado guardado se aplicará a todas las entradas vendidas para este espectáculo.
+                                    </p>
                                 </div>
-
-                                <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08);">
-                                    <strong style="color: #94A3B8; display: block; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">Aforo Total Registrado</strong>
-                                    <span id="summaryCapacity" style="color: #10B981; font-weight: 900; font-size: 1.1rem;">0 Boletos</span>
+                                <div style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 12px; border: 1px dashed rgba(255,255,255,0.2); text-align: center;">
+                                    <span style="font-size: 1.75rem; display: block; margin-bottom: 0.25rem;">🎟️</span>
+                                    <strong style="color: #FFFFFF; font-size: 0.9rem;" id="summaryTicketLabel">Plantilla Virtual 1 Personalizada</strong>
+                                    <small style="display: block; color: #94A3B8; margin-top: 0.25rem;">Dimensiones: 20.40 cm × 9.80 cm</small>
                                 </div>
                             </div>
                         </div>
@@ -565,7 +995,6 @@
 
             </div>
         </main>
-    </div>
 @endsection
 
 @push('scripts')
@@ -580,30 +1009,132 @@
         let leafletMap = null;
         let leafletMarker = null;
 
+        let currentCanvaElement = null;
+        let isDraggingCanva = false;
+        let isResizingCanva = false;
+        let currentResizeHandle = null;
+        let startX = 0, startY = 0, startLeft = 0, startTop = 0, startWidth = 0, startHeight = 0;
+
+        // PLANTILLAS PREDEFINIDAS
+        // PLANTILLAS PREDEFINIDAS
+        const PRESET_TEMPLATES = {
+            '4': {
+                name: 'Plantilla Virtual 1: E-Ticket Dark Neon Pro',
+                type: 'virtual',
+                bg_color: '#0F172A',
+                strip_color: '#FF5500',
+                bg_image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80',
+                ticket_banner: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=600&q=80',
+                positions: {
+                    canvaElLogo: { top: '15px', left: '25px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElTitle: { top: '55px', left: '25px', width: '380px', height: 'auto', rotate: 0, visible: true },
+                    canvaElZone: { top: '95px', left: '25px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElPrice: { top: '95px', left: '240px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElBanner: { top: '15px', left: '340px', width: '250px', height: '110px', rotate: 0, visible: true },
+                    canvaElBuyerName: { top: '140px', left: '25px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElBuyerDni: { top: '165px', left: '25px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElVenue: { top: '200px', left: '25px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElCity: { top: '225px', left: '25px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElDate: { top: '260px', left: '25px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElTime: { top: '260px', left: '220px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElTicketNumber: { top: '15px', left: '660px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElQR: { top: '55px', left: '635px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElHash: { top: '175px', left: '645px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElDisclaimer: { top: '205px', left: '610px', width: '145px', height: 'auto', rotate: 0, visible: true }
+                }
+            },
+            '5': {
+                name: 'Plantilla Virtual 2: Mobile Pass Cyber Glow',
+                type: 'virtual',
+                bg_color: '#090D16',
+                strip_color: '#00F0FF',
+                bg_image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=1200&q=80',
+                ticket_banner: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=600&q=80',
+                positions: {
+                    canvaElLogo: { top: '20px', left: '30px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElTitle: { top: '65px', left: '30px', width: '360px', height: 'auto', rotate: 0, visible: true },
+                    canvaElZone: { top: '110px', left: '30px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElPrice: { top: '110px', left: '230px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElBanner: { top: '20px', left: '320px', width: '260px', height: '120px', rotate: 0, visible: true },
+                    canvaElBuyerName: { top: '155px', left: '30px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElBuyerDni: { top: '180px', left: '30px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElVenue: { top: '215px', left: '30px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElCity: { top: '240px', left: '30px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElDate: { top: '275px', left: '30px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElTime: { top: '275px', left: '220px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElTicketNumber: { top: '20px', left: '650px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElQR: { top: '60px', left: '625px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElHash: { top: '185px', left: '635px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElDisclaimer: { top: '220px', left: '600px', width: '155px', height: 'auto', rotate: 0, visible: true }
+                }
+            },
+            '6': {
+                name: 'Plantilla Virtual 3: Entrada Digital Minimal Gold',
+                type: 'virtual',
+                bg_color: '#18120C',
+                strip_color: '#F59E0B',
+                bg_image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1200&q=80',
+                ticket_banner: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=600&q=80',
+                positions: {
+                    canvaElLogo: { top: '15px', left: '25px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElTitle: { top: '60px', left: '25px', width: '380px', height: 'auto', rotate: 0, visible: true },
+                    canvaElZone: { top: '105px', left: '25px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElPrice: { top: '105px', left: '240px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElBanner: { top: '15px', left: '330px', width: '260px', height: '115px', rotate: 0, visible: true },
+                    canvaElBuyerName: { top: '150px', left: '25px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElBuyerDni: { top: '175px', left: '25px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElVenue: { top: '210px', left: '25px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElCity: { top: '235px', left: '25px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElDate: { top: '270px', left: '25px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElTime: { top: '270px', left: '220px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElTicketNumber: { top: '15px', left: '650px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElQR: { top: '55px', left: '630px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElHash: { top: '180px', left: '640px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElDisclaimer: { top: '215px', left: '605px', width: '150px', height: 'auto', rotate: 0, visible: true }
+                }
+            },
+            '1': {
+                name: 'Plantilla 1: Taquilla Clásica Oficial 2026',
+                type: 'fisica',
+                bg_color: '#FFFFFF',
+                strip_color: '#000000',
+                bg_image: null,
+                ticket_banner: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=600&q=80',
+                positions: {
+                    canvaElLogo: { top: '20px', left: '20px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElTitle: { top: '15px', left: '95px', width: '340px', height: 'auto', rotate: 0, visible: true },
+                    canvaElZone: { top: '50px', left: '95px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElPrice: { top: '15px', left: '420px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElBanner: { top: '80px', left: '95px', width: '390px', height: '125px', rotate: 0, visible: true },
+                    canvaElBuyerName: { top: '215px', left: '95px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElBuyerDni: { top: '240px', left: '95px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElVenue: { top: '215px', left: '300px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElCity: { top: '240px', left: '300px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElDate: { top: '270px', left: '95px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElTime: { top: '270px', left: '220px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElTicketNumber: { top: '15px', left: '550px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElQR: { top: '50px', left: '540px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElHash: { top: '190px', left: '545px', width: 'auto', height: 'auto', rotate: 0, visible: true },
+                    canvaElDisclaimer: { top: '220px', left: '515px', width: '170px', height: 'auto', rotate: 0, visible: true }
+                }
+            }
+        };
+
         function goToStep(stepNumber) {
             document.querySelectorAll('.stepper-step').forEach((el, idx) => {
-                if (idx + 1 === stepNumber) {
-                    el.classList.add('active');
-                } else {
-                    el.classList.remove('active');
-                }
+                el.classList.toggle('active', idx + 1 === stepNumber);
             });
 
             document.querySelectorAll('.step-content-panel').forEach((el, idx) => {
-                if (idx + 1 === stepNumber) {
-                    el.classList.add('active');
-                } else {
-                    el.classList.remove('active');
-                }
+                el.classList.toggle('active', idx + 1 === stepNumber);
             });
 
             if (stepNumber === 1 && leafletMap) {
                 setTimeout(() => leafletMap.invalidateSize(), 300);
             }
 
-            if (stepNumber === 4) {
-                updateSummaryData();
-            }
+            updateLiveTicketPreview();
+            window.scrollTo({ top: 120, behavior: 'smooth' });
         }
 
         function initLeafletMap() {
@@ -635,14 +1166,55 @@
             });
         }
 
-        function handleBannerUpload(input) {
-            if (input.files && input.files[0]) {
+        function compressImageFile(file, maxWidth = 1200, maxHeight = 800, quality = 0.85) {
+            return new Promise((resolve) => {
+                if (!file || !file.type.startsWith('image/')) {
+                    resolve(null);
+                    return;
+                }
                 const reader = new FileReader();
-                reader.onload = function (e) {
-                    document.getElementById('bannerPreviewImg').src = e.target.result;
-                    document.getElementById('event_banner').value = e.target.result;
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > maxWidth || height > maxHeight) {
+                            if (width / height > maxWidth / maxHeight) {
+                                height = Math.round((height * maxWidth) / width);
+                                width = maxWidth;
+                            } else {
+                                width = Math.round((width * maxHeight) / height);
+                                height = maxHeight;
+                            }
+                        }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        const mimeType = (file.type === 'image/png') ? 'image/png' : 'image/jpeg';
+                        const compressedDataUrl = canvas.toDataURL(mimeType, quality);
+                        resolve(compressedDataUrl);
+                    };
+                    img.onerror = () => resolve(e.target.result);
+                    img.src = e.target.result;
                 };
-                reader.readAsDataURL(input.files[0]);
+                reader.onerror = () => resolve(null);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function handleBannerUpload(input) {
+            if (input.files && input.files[0]) {
+                const compressedDataUrl = await compressImageFile(input.files[0], 1200, 700, 0.85);
+                if (compressedDataUrl) {
+                    document.getElementById('bannerPreviewImg').src = compressedDataUrl;
+                    document.getElementById('event_banner').value = compressedDataUrl;
+                    updateLiveTicketPreview();
+                }
             }
         }
 
@@ -690,13 +1262,13 @@
                     </select>
                 </td>
                 <td>
-                    <input type="text" class="form-input-custom zone-name-input" value="${zoneName || 'ZONA GENERAL'}" placeholder="Ej. PLATINUM" style="font-size: 0.85rem; padding: 0.5rem 0.75rem;">
+                    <input type="text" class="form-input-custom zone-name-input" value="${zoneName || 'ZONA GENERAL'}" placeholder="Ej. PLATINUM" style="font-size: 0.85rem; padding: 0.5rem 0.75rem;" oninput="updateLiveTicketPreview()">
                 </td>
                 <td>
                     <input type="number" class="form-input-custom zone-capacity-input" value="${capacity}" min="1" oninput="recalculateTotalCapacity()" style="font-size: 0.85rem; padding: 0.5rem 0.75rem;">
                 </td>
                 <td>
-                    <input type="number" step="0.50" class="form-input-custom zone-price-input" value="${price}" min="0" style="font-size: 0.85rem; padding: 0.5rem 0.75rem;">
+                    <input type="number" step="0.50" class="form-input-custom zone-price-input" value="${price}" min="0" style="font-size: 0.85rem; padding: 0.5rem 0.75rem; color: #10B981; font-weight: 800;" oninput="updateLiveTicketPreview()">
                 </td>
                 <td style="text-align: center;">
                     <button type="button" class="dash-btn-icon-action" style="color: #FF1E3C;" onclick="removeZoneRow(this)" title="Eliminar Zona">🗑️</button>
@@ -705,12 +1277,14 @@
 
             tbody.appendChild(tr);
             recalculateTotalCapacity();
+            updateLiveTicketPreview();
         }
 
         function removeZoneRow(btn) {
             const tr = btn.closest('tr');
             if (tr) tr.remove();
             recalculateTotalCapacity();
+            updateLiveTicketPreview();
         }
 
         function recalculateTotalCapacity() {
@@ -720,56 +1294,945 @@
             });
             const capText = document.getElementById('calculatedTotalCapacity');
             if (capText) capText.textContent = total.toLocaleString();
+
+            const summaryCap = document.getElementById('summaryCapacity');
+            if (summaryCap) summaryCap.textContent = total.toLocaleString() + ' Boletos Total';
         }
 
-        function selectTicketTemplate(templateId) {
-            document.querySelectorAll('.template-select-card').forEach(card => {
-                if (parseInt(card.getAttribute('data-id'), 10) === templateId) {
-                    card.classList.add('selected-template');
-                } else {
-                    card.classList.remove('selected-template');
+        function loadPresetTemplate(templateId) {
+            const tpl = PRESET_TEMPLATES[templateId] || PRESET_TEMPLATES['4'];
+            document.getElementById('selected_template_id').value = templateId;
+
+            // Actualizar colores y fondo
+            document.getElementById('canvaBgColor').value = tpl.bg_color;
+            document.getElementById('canvaStripColor').value = tpl.strip_color;
+            updateCanvaBgColor(tpl.bg_color);
+            updateCanvaStripColor(tpl.strip_color);
+
+            const canvas = document.getElementById('canvaTicketCanvas');
+            if (tpl.bg_image) {
+                document.getElementById('canvaBgImageInput').value = tpl.bg_image;
+                canvas.style.backgroundImage = `url('${tpl.bg_image}')`;
+                canvas.style.backgroundSize = 'cover';
+                canvas.style.backgroundPosition = 'center';
+
+                const filledBox = document.getElementById('bgUploadBoxFilled');
+                const emptyBox = document.getElementById('bgUploadBoxEmpty');
+                const thumb = document.getElementById('bgThumbPreview');
+                const nameText = document.getElementById('bgFileNameText');
+
+                if (filledBox) filledBox.style.display = 'flex';
+                if (emptyBox) emptyBox.style.display = 'none';
+                if (thumb) thumb.style.backgroundImage = `url('${tpl.bg_image}')`;
+                if (nameText) nameText.textContent = tpl.name;
+            } else {
+                removeCanvaBgImage();
+            }
+
+            // Aplicar banner para ticket
+            if (tpl.ticket_banner) {
+                const bannerInput = document.getElementById('canvaTicketBannerInput');
+                if (bannerInput) bannerInput.value = tpl.ticket_banner;
+
+                const canvaBanner = document.getElementById('canvaPrevBannerImg');
+                if (canvaBanner) canvaBanner.src = tpl.ticket_banner;
+
+                const thumb = document.getElementById('ticketBannerThumbPreview');
+                if (thumb) thumb.style.backgroundImage = `url('${tpl.ticket_banner}')`;
+            }
+
+            // Aplicar posiciones a elementos
+            if (tpl.positions) {
+                Object.keys(tpl.positions).forEach(key => {
+                    const pos = tpl.positions[key];
+                    const el = document.getElementById(key);
+
+                    if (el && pos) {
+                        el.style.top = pos.top || el.style.top;
+                        el.style.left = pos.left || el.style.left;
+                        if (pos.width && pos.width !== 'auto') el.style.width = pos.width;
+                        if (pos.height && pos.height !== 'auto') el.style.height = pos.height;
+                        if (pos.rotate !== undefined) el.dataset.rotate = pos.rotate;
+                        const deg = parseInt(el.dataset.rotate || '0', 10);
+                        el.style.transform = `rotate(${deg}deg)`;
+                        el.style.display = (pos.visible === false) ? 'none' : '';
+                    }
+                });
+            }
+
+            const summaryTicketLabel = document.getElementById('summaryTicketLabel');
+            if (summaryTicketLabel) summaryTicketLabel.textContent = tpl.name;
+
+            updateLiveTicketPreview();
+        }
+
+        function onCanvaBgColorChange(color) {
+            document.getElementById('canvaBgColor').value = color;
+            const hexText = document.getElementById('canvaBgColorHexText');
+            if (hexText) hexText.textContent = color.toUpperCase();
+            const canvas = document.getElementById('canvaTicketCanvas');
+            if (canvas) canvas.style.backgroundColor = color;
+        }
+
+        function updateCanvaBgColor(color) {
+            const hex = color ? (color.startsWith('#') ? color : rgbToHex(color)) : '#FFFFFF';
+            const input = document.getElementById('canvaBgColor');
+            if (input) input.value = hex;
+            const picker = document.getElementById('canvaBgColorPicker');
+            if (picker && hex.startsWith('#') && hex.length === 7) picker.value = hex;
+            const hexText = document.getElementById('canvaBgColorHexText');
+            if (hexText) hexText.textContent = hex.toUpperCase();
+            const canvas = document.getElementById('canvaTicketCanvas');
+            if (canvas) canvas.style.backgroundColor = hex;
+        }
+
+        function updateCanvaStripColor(color) {
+            // Actualizar franja
+        }
+
+        function removeCanvaBgImage() {
+            document.getElementById('canvaBgImageInput').value = '';
+            document.getElementById('canvaBgFileInput').value = '';
+            const canvas = document.getElementById('canvaTicketCanvas');
+            if (canvas) {
+                canvas.style.backgroundImage = 'none';
+                canvas.style.backgroundColor = document.getElementById('canvaBgColor').value || '#FFFFFF';
+            }
+            const filledBox = document.getElementById('bgUploadBoxFilled');
+            const emptyBox = document.getElementById('bgUploadBoxEmpty');
+            if (filledBox) filledBox.style.display = 'none';
+            if (emptyBox) emptyBox.style.display = 'block';
+        }
+
+        async function handleBgFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const dataUrl = await compressImageFile(file, 1200, 600, 0.85);
+            if (!dataUrl) return;
+
+            document.getElementById('canvaBgImageInput').value = dataUrl;
+
+            const canvas = document.getElementById('canvaTicketCanvas');
+            if (canvas) {
+                canvas.style.backgroundImage = `url('${dataUrl}')`;
+                canvas.style.backgroundSize = 'cover';
+                canvas.style.backgroundPosition = 'center';
+            }
+
+            const filledBox = document.getElementById('bgUploadBoxFilled');
+            const emptyBox = document.getElementById('bgUploadBoxEmpty');
+            const thumb = document.getElementById('bgThumbPreview');
+            const nameText = document.getElementById('bgFileNameText');
+
+            if (filledBox) filledBox.style.display = 'flex';
+            if (emptyBox) emptyBox.style.display = 'none';
+            if (thumb) thumb.style.backgroundImage = `url('${dataUrl}')`;
+            if (nameText) nameText.textContent = file.name;
+        }
+
+        async function handleTicketBannerUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const dataUrl = await compressImageFile(file, 1200, 600, 0.85);
+            if (!dataUrl) return;
+            
+            const bannerInput = document.getElementById('canvaTicketBannerInput');
+            if (bannerInput) bannerInput.value = dataUrl;
+
+            const canvaBanner = document.getElementById('canvaPrevBannerImg');
+            if (canvaBanner) canvaBanner.src = dataUrl;
+
+            const bannerThumb = document.getElementById('ticketBannerThumbPreview');
+            if (bannerThumb) bannerThumb.style.backgroundImage = `url('${dataUrl}')`;
+
+            const bannerNameText = document.getElementById('ticketBannerFileNameText');
+            if (bannerNameText) bannerNameText.textContent = file.name;
+        }
+
+        function removeTicketBannerImage() {
+            const defaultBanner = 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=600&q=80';
+            const bannerInput = document.getElementById('canvaTicketBannerInput');
+            if (bannerInput) bannerInput.value = defaultBanner;
+
+            const canvaBanner = document.getElementById('canvaPrevBannerImg');
+            if (canvaBanner) canvaBanner.src = defaultBanner;
+
+            const bannerThumb = document.getElementById('ticketBannerThumbPreview');
+            if (bannerThumb) bannerThumb.style.backgroundImage = `url('${defaultBanner}')`;
+
+            const bannerNameText = document.getElementById('ticketBannerFileNameText');
+            if (bannerNameText) bannerNameText.textContent = 'Banner de Boleto';
+
+            const fileInput = document.getElementById('canvaTicketBannerFileInput');
+            if (fileInput) fileInput.value = '';
+        }
+
+        // AGREGAR 4 MANEJADORES DE ESQUINA
+        function attachTransformHandles(el) {
+            if (el.querySelector('.handle-nw')) return;
+
+            const nw = document.createElement('div'); nw.className = 'canva-resize-handle handle-nw'; nw.dataset.handle = 'nw';
+            const ne = document.createElement('div'); ne.className = 'canva-resize-handle handle-ne'; ne.dataset.handle = 'ne';
+            const sw = document.createElement('div'); sw.className = 'canva-resize-handle handle-sw'; sw.dataset.handle = 'sw';
+            const se = document.createElement('div'); se.className = 'canva-resize-handle handle-se'; se.dataset.handle = 'se';
+
+            el.appendChild(nw);
+            el.appendChild(ne);
+            el.appendChild(sw);
+            el.appendChild(se);
+        }
+
+        let savedCanvaRange = null;
+        let savedSelectedSpan = null;
+
+        document.addEventListener('selectionchange', function () {
+            const sel = window.getSelection();
+            if (sel && !sel.isCollapsed && currentCanvaElement) {
+                const box = currentCanvaElement.querySelector('.canva-drag-box-container');
+                let selNode = sel.anchorNode ? ((sel.anchorNode.nodeType === 3) ? sel.anchorNode.parentElement : sel.anchorNode) : null;
+                if (box && selNode && box.contains(selNode)) {
+                    savedCanvaRange = sel.getRangeAt(0).cloneRange();
+                    let span = selNode ? selNode.closest('span, font') : null;
+                    if (span && box.contains(span) && !span.classList.contains('canva-text-content') && !span.classList.contains('canva-drag-box-container')) {
+                        savedSelectedSpan = span;
+                    } else {
+                        savedSelectedSpan = null;
+                    }
+                }
+            }
+        });
+
+        document.addEventListener('input', function (e) {
+            const box = (e.target && e.target.closest) ? e.target.closest('.canva-drag-box-container') : null;
+            if (box) {
+                box.dataset.userEdited = 'true';
+                const el = box.closest('.canva-drag-element');
+                if (el) el.dataset.userEdited = 'true';
+            }
+        });
+
+        function selectCanvaElement(el) {
+            document.querySelectorAll('.canva-drag-element').forEach(item => {
+                if (item !== el) {
+                    item.classList.remove('selected-element');
+                    const box = item.querySelector('.canva-drag-box-container');
+                    const textEl = item.querySelector('.canva-text-content');
+                    if (box) box.removeAttribute('contenteditable');
+                    if (textEl) textEl.removeAttribute('contenteditable');
                 }
             });
-            const input = document.getElementById('selected_template_id');
-            if (input) input.value = templateId;
+
+            if (currentCanvaElement !== el) {
+                savedSelectedSpan = null;
+                savedCanvaRange = null;
+            }
+
+            currentCanvaElement = el;
+            if (el) {
+                el.classList.add('selected-element');
+                attachTransformHandles(el);
+                syncFloatingToolbarControls(el);
+            }
         }
 
-        function updateSummaryData() {
-            const title = document.getElementById('event_title').value;
-            const categoryName = document.getElementById('event_category').value;
-            const companyName = document.getElementById('event_company').value;
-            const venueName = document.getElementById('event_venue').value;
-            const address = document.getElementById('event_address').value;
-            const eventDate = document.getElementById('event_date').value;
-            const eventTime = document.getElementById('event_time').value;
-            const bannerImage = document.getElementById('event_banner').value;
+        function rgbToHex(color) {
+            if (!color) return '#000000';
+            if (color.startsWith('#')) {
+                return (color.length === 4) ? '#' + color[1] + color[1] + color[2] + color[2] + color[3] + color[3] : color;
+            }
+            const rgb = color.match(/\d+/g);
+            if (rgb && rgb.length >= 3) {
+                return "#" + ((1 << 24) + (parseInt(rgb[0]) << 16) + (parseInt(rgb[1]) << 8) + parseInt(rgb[2])).toString(16).slice(1);
+            }
+            return '#000000';
+        }
+
+        function syncFloatingToolbarControls(el) {
+            if (!el) return;
+            const box = el.querySelector('.canva-drag-box-container');
+            const textEl = el.querySelector('.canva-text-content');
+            const target = textEl || box || el;
+
+            const selection = window.getSelection();
+            let activeEl = target;
+            if (selection && !selection.isCollapsed && box && box.contains(selection.anchorNode)) {
+                let node = (selection.anchorNode.nodeType === 3) ? selection.anchorNode.parentElement : selection.anchorNode;
+                activeEl = node.closest('span, font') || node;
+            } else if (savedSelectedSpan && box && box.contains(savedSelectedSpan)) {
+                activeEl = savedSelectedSpan;
+            } else if (box) {
+                const inner = box.querySelector('span[style*="font-size"], font[style*="font-size"]');
+                if (inner) activeEl = inner;
+            }
+
+            const size = window.getComputedStyle(activeEl).fontSize || '12px';
+            const sizeInt = parseInt(size, 10) || 12;
+            const sizeEl = document.getElementById('floatingFontSizeText');
+            if (sizeEl) sizeEl.textContent = sizeInt + 'px';
+
+            const family = target.style.fontFamily || window.getComputedStyle(target).fontFamily || 'inherit';
+            const fontSelect = document.getElementById('floatingFontFamilySelect');
+            if (fontSelect) {
+                let found = false;
+                const cleanFamily = family.replace(/['"]/g, '').toLowerCase();
+                for (let i = 0; i < fontSelect.options.length; i++) {
+                    const optVal = fontSelect.options[i].value.replace(/['"]/g, '').toLowerCase();
+                    const optName = fontSelect.options[i].text.toLowerCase().split(' ')[0];
+                    if (cleanFamily.includes(optName) || cleanFamily.includes(optVal.split(',')[0].trim())) {
+                        fontSelect.selectedIndex = i;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) fontSelect.value = 'inherit';
+            }
+
+            const rawColor = target.style.color || window.getComputedStyle(target).color || '#000000';
+            const colorPicker = document.getElementById('floatingColorPicker');
+            if (colorPicker) {
+                colorPicker.value = rgbToHex(rawColor);
+            }
+
+            const btnBold = document.getElementById('btnFloatingBold');
+            const isBold = window.getComputedStyle(target).fontWeight >= 700 || window.getComputedStyle(target).fontWeight === 'bold';
+            if (btnBold) btnBold.classList.toggle('active', isBold);
+
+            const btnItalic = document.getElementById('btnFloatingItalic');
+            const isItalic = window.getComputedStyle(target).fontStyle === 'italic';
+            if (btnItalic) btnItalic.classList.toggle('active', isItalic);
+
+            const btnUnderline = document.getElementById('btnFloatingUnderline');
+            const isUnderline = window.getComputedStyle(target).textDecorationLine.includes('underline');
+            if (btnUnderline) btnUnderline.classList.toggle('active', isUnderline);
+
+            const btnBadge = document.getElementById('btnFloatingBadgeBg');
+            if (btnBadge && box) {
+                btnBadge.classList.toggle('active', box.classList.contains('has-badge-bg'));
+            }
+        }
+
+        function applyFloatingFormat(cmd, value = null) {
+            if (!currentCanvaElement) return;
+
+            const box = currentCanvaElement.querySelector('.canva-drag-box-container');
+            const textEl = currentCanvaElement.querySelector('.canva-text-content');
+            const target = textEl || box || currentCanvaElement;
+            const selection = window.getSelection();
+
+            let anchorNodeEl = (selection && selection.anchorNode) ? ((selection.anchorNode.nodeType === 3) ? selection.anchorNode.parentElement : selection.anchorNode) : null;
+            const isDomSelectionActive = selection && !selection.isCollapsed && box && anchorNodeEl && box.contains(anchorNodeEl);
+            if (isDomSelectionActive) {
+                let activeSpan = anchorNodeEl ? anchorNodeEl.closest('span, font') : null;
+                if (activeSpan && (activeSpan.classList.contains('canva-text-content') || activeSpan.classList.contains('canva-drag-box-container'))) {
+                    activeSpan = null;
+                }
+                savedSelectedSpan = activeSpan;
+                if (selection.rangeCount > 0) {
+                    savedCanvaRange = selection.getRangeAt(0).cloneRange();
+                }
+            }
+
+            let rangeEl = (savedCanvaRange && savedCanvaRange.commonAncestorContainer) ? ((savedCanvaRange.commonAncestorContainer.nodeType === 3) ? savedCanvaRange.commonAncestorContainer.parentElement : savedCanvaRange.commonAncestorContainer) : null;
+            const isSavedRangeValid = rangeEl && box && box.contains(rangeEl);
+
+            const hasTextSelection = isDomSelectionActive || (savedSelectedSpan && box && box.contains(savedSelectedSpan)) || (savedCanvaRange && !savedCanvaRange.collapsed && isSavedRangeValid);
+
+            if (box) {
+                box.dataset.userEdited = 'true';
+                currentCanvaElement.dataset.userEdited = 'true';
+            }
+
+            if (hasTextSelection) {
+                if (cmd === 'fontSize') {
+                    if (savedSelectedSpan && box && box.contains(savedSelectedSpan)) {
+                        const curSize = parseInt(window.getComputedStyle(savedSelectedSpan).fontSize || '12', 10);
+                        const newSize = (value === 'inc') ? Math.min(curSize + 1, 96) : Math.max(curSize - 1, 8);
+                        savedSelectedSpan.style.fontSize = newSize + 'px';
+                        if (savedSelectedSpan.tagName === 'FONT') savedSelectedSpan.removeAttribute('size');
+                        
+                        console.log('[CanvaStudio] Scaled active text span to:', newSize + 'px');
+                        const sizeEl = document.getElementById('floatingFontSizeText');
+                        if (sizeEl) sizeEl.textContent = newSize + 'px';
+                        syncFloatingToolbarControls(currentCanvaElement);
+                        return;
+                    }
+
+                    const curSize = parseInt(window.getComputedStyle(target).fontSize || '12', 10);
+                    const newSize = (value === 'inc') ? Math.min(curSize + 1, 96) : Math.max(curSize - 1, 8);
+                    
+                    try {
+                        const range = (selection && !selection.isCollapsed) ? selection.getRangeAt(0) : savedCanvaRange;
+                        if (range) {
+                            const span = document.createElement('span');
+                            span.style.fontSize = newSize + 'px';
+                            range.surroundContents(span);
+                            savedSelectedSpan = span;
+                            console.log('[CanvaStudio] Wrapped new text selection in span:', newSize + 'px');
+                        }
+                    } catch (e) {
+                        if (selection && selection.toString()) {
+                            document.execCommand('insertHTML', false, `<span style="font-size: ${newSize}px;">${selection.toString()}</span>`);
+                            const newSpans = box.querySelectorAll('span[style*="font-size"]');
+                            if (newSpans.length > 0) savedSelectedSpan = newSpans[newSpans.length - 1];
+                        }
+                    }
+
+                    const sizeEl = document.getElementById('floatingFontSizeText');
+                    if (sizeEl) sizeEl.textContent = newSize + 'px';
+                    syncFloatingToolbarControls(currentCanvaElement);
+                    return;
+                }
+
+                document.execCommand('styleWithCSS', false, true);
+
+                if (cmd === 'bold') {
+                    document.execCommand('bold', false, null);
+                } else if (cmd === 'italic') {
+                    document.execCommand('italic', false, null);
+                } else if (cmd === 'underline') {
+                    document.execCommand('underline', false, null);
+                } else if (cmd === 'color') {
+                    if (savedSelectedSpan && box && box.contains(savedSelectedSpan)) {
+                        savedSelectedSpan.style.color = value;
+                    } else if (savedCanvaRange && !savedCanvaRange.collapsed && box && box.contains(savedCanvaRange.commonAncestorContainer)) {
+                        try {
+                            const span = document.createElement('span');
+                            span.style.color = value;
+                            savedCanvaRange.surroundContents(span);
+                            savedSelectedSpan = span;
+                            console.log('[CanvaStudio] Wrapped range in color span:', value);
+                        } catch (e) {
+                            document.execCommand('foreColor', false, value);
+                        }
+                    } else {
+                        document.execCommand('foreColor', false, value);
+                    }
+                } else if (cmd === 'fontFamily') {
+                    if (savedSelectedSpan && box && box.contains(savedSelectedSpan)) {
+                        savedSelectedSpan.style.fontFamily = value;
+                    } else {
+                        document.execCommand('fontName', false, value.replace(/['"]/g, ''));
+                    }
+                } else if (cmd === 'align') {
+                    document.execCommand('justify' + (value.charAt(0).toUpperCase() + value.slice(1)), false, null);
+                }
+
+                syncFloatingToolbarControls(currentCanvaElement);
+                return;
+            }
+
+            // Aplicar a todo el elemento contenedor (cuando NO hay texto individual seleccionado)
+            if (cmd === 'fontSize') {
+                console.log('[CanvaStudio] Full Container FontSize Scaling:', {
+                    action: value,
+                    elementId: currentCanvaElement.id
+                });
+                const childStyled = box ? box.querySelectorAll('span, font, div, p, h1, h2, h3, h4, b, strong, i, u') : [];
+                if (childStyled && childStyled.length > 0) {
+                    let lastSize = 12;
+                    childStyled.forEach(c => {
+                        const cur = parseInt(window.getComputedStyle(c).fontSize || '12', 10);
+                        const nxt = (value === 'inc') ? Math.min(cur + 1, 96) : Math.max(cur - 1, 8);
+                        c.style.fontSize = nxt + 'px';
+                        if (c.tagName === 'FONT') c.removeAttribute('size');
+                        console.log('[CanvaStudio] Scaled child node:', c.textContent, 'from', cur + 'px', 'to', nxt + 'px');
+                        lastSize = nxt;
+                    });
+                    target.style.fontSize = lastSize + 'px';
+                    if (box) box.style.fontSize = lastSize + 'px';
+                    const sizeEl = document.getElementById('floatingFontSizeText');
+                    if (sizeEl) sizeEl.textContent = lastSize + 'px';
+                } else {
+                    const curSize = parseInt(window.getComputedStyle(target).fontSize || '12', 10);
+                    const newSize = (value === 'inc') ? Math.min(curSize + 1, 96) : Math.max(curSize - 1, 8);
+                    target.style.fontSize = newSize + 'px';
+                    if (box) box.style.fontSize = newSize + 'px';
+                    console.log('[CanvaStudio] Scaled single target:', target.textContent, 'from', curSize + 'px', 'to', newSize + 'px');
+                    const sizeEl = document.getElementById('floatingFontSizeText');
+                    if (sizeEl) sizeEl.textContent = newSize + 'px';
+                }
+            } else if (cmd === 'fontFamily') {
+                target.style.fontFamily = value;
+                if (box) box.style.fontFamily = value;
+                currentCanvaElement.style.fontFamily = value;
+                currentCanvaElement.querySelectorAll('*').forEach(c => {
+                    if (!c.classList.contains('canva-resize-handle')) {
+                        c.style.fontFamily = value;
+                        if (c.tagName === 'FONT') c.removeAttribute('face');
+                    }
+                });
+            } else if (cmd === 'color') {
+                target.style.color = value;
+                if (box) box.style.color = value;
+                currentCanvaElement.style.color = value;
+                currentCanvaElement.querySelectorAll('*').forEach(c => {
+                    if (!c.classList.contains('canva-resize-handle')) {
+                        c.style.color = value;
+                        if (c.tagName === 'FONT') c.removeAttribute('color');
+                    }
+                });
+            } else if (cmd === 'bold') {
+                const cur = window.getComputedStyle(target).fontWeight;
+                const next = (cur >= 700 || cur === 'bold') ? '400' : '900';
+                target.style.fontWeight = next;
+                if (box) box.style.fontWeight = next;
+                currentCanvaElement.querySelectorAll('*').forEach(c => {
+                    if (!c.classList.contains('canva-resize-handle')) c.style.fontWeight = next;
+                });
+            } else if (cmd === 'italic') {
+                const cur = window.getComputedStyle(target).fontStyle;
+                const next = (cur === 'italic') ? 'normal' : 'italic';
+                target.style.fontStyle = next;
+                if (box) box.style.fontStyle = next;
+                currentCanvaElement.querySelectorAll('*').forEach(c => {
+                    if (!c.classList.contains('canva-resize-handle')) c.style.fontStyle = next;
+                });
+            } else if (cmd === 'underline') {
+                const cur = window.getComputedStyle(target).textDecorationLine;
+                const next = cur.includes('underline') ? 'none' : 'underline';
+                target.style.textDecoration = next;
+                if (box) box.style.textDecoration = next;
+                currentCanvaElement.querySelectorAll('*').forEach(c => {
+                    if (!c.classList.contains('canva-resize-handle')) c.style.textDecoration = next;
+                });
+            } else if (cmd === 'align') {
+                target.style.textAlign = value;
+                if (box) box.style.textAlign = value;
+                currentCanvaElement.style.textAlign = value;
+            } else if (cmd === 'textTransform') {
+                const cur = window.getComputedStyle(target).textTransform;
+                const next = (cur === 'uppercase') ? 'none' : 'uppercase';
+                target.style.textTransform = next;
+                if (box) box.style.textTransform = next;
+                currentCanvaElement.querySelectorAll('*').forEach(c => {
+                    if (!c.classList.contains('canva-resize-handle')) c.style.textTransform = next;
+                });
+            } else if (cmd === 'badgeBg') {
+                if (box) box.classList.toggle('has-badge-bg');
+            } else if (cmd === 'rotate') {
+                const cur = parseInt(currentCanvaElement.dataset.rotate || '0', 10);
+                const next = (cur + 90) % 360;
+                currentCanvaElement.dataset.rotate = next;
+                currentCanvaElement.style.transform = `rotate(${next}deg)`;
+            }
+
+            syncFloatingToolbarControls(currentCanvaElement);
+        }
+
+        function deleteSelectedCanvaElement() {
+            if (!currentCanvaElement) return;
+            const elId = currentCanvaElement.id;
+            const standardIds = ['canvaElLogo', 'canvaElTitle', 'canvaElZone', 'canvaElPrice', 'canvaElBanner', 'canvaElBuyerName', 'canvaElBuyerDni', 'canvaElVenue', 'canvaElCity', 'canvaElDate', 'canvaElTime', 'canvaElTicketNumber', 'canvaElQR', 'canvaElHash', 'canvaElDisclaimer'];
+
+            currentCanvaElement.style.display = 'none';
+            const unselectEl = currentCanvaElement;
+            currentCanvaElement = null;
+            unselectEl.classList.remove('selected-element');
+
+            if (elId && standardIds.includes(elId)) {
+                const sysKey = elId.replace('canvaEl', '').toLowerCase();
+                const btn = document.getElementById('sysBtn_' + sysKey);
+                if (btn) {
+                    const badge = btn.querySelector('.field-status-badge');
+                    if (badge) {
+                        badge.textContent = '+ Añadir';
+                        badge.style.color = '#06B6D4';
+                    }
+                }
+            }
+        }
+
+        function createNewCustomTag() {
+            const input = document.getElementById('newCustomTagInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const canvas = document.getElementById('canvaCanvasArea');
+            if (!canvas) return;
+
+            const tagId = 'canvaCustomTag_' + Date.now();
+            const tagEl = document.createElement('div');
+            tagEl.className = 'canva-drag-element';
+            tagEl.id = tagId;
+            tagEl.style.top = '120px';
+            tagEl.style.left = '100px';
+
+            const box = document.createElement('div');
+            box.className = 'canva-drag-box-container';
+            box.style.fontSize = '12px';
+            box.style.color = '#000000';
+            box.innerHTML = `<div class="canva-text-content" style="font-size: 12px; font-weight: 800; color: #000000; outline: none; white-space: pre-wrap; line-height: 1.25; word-break: break-word;">${text}</div>`;
+
+            tagEl.appendChild(box);
+            canvas.appendChild(tagEl);
+
+            attachTransformHandles(tagEl);
+            selectCanvaElement(tagEl);
+            input.value = '';
+        }
+
+        function toggleSystemElement(key) {
+            const elMap = {
+                'logo': 'canvaElLogo',
+                'titulo': 'canvaElTitle',
+                'zona': 'canvaElZone',
+                'precio': 'canvaElPrice',
+                'banner': 'canvaElBanner',
+                'comprador_nombre': 'canvaElBuyerName',
+                'buyer_name': 'canvaElBuyerName',
+                'comprador_dni': 'canvaElBuyerDni',
+                'buyer_dni': 'canvaElBuyerDni',
+                'recinto': 'canvaElVenue',
+                'ciudad': 'canvaElCity',
+                'fecha': 'canvaElDate',
+                'hora': 'canvaElTime',
+                'ticket_number': 'canvaElTicketNumber',
+                'qr': 'canvaElQR',
+                'hash': 'canvaElHash',
+                'disclaimer': 'canvaElDisclaimer'
+            };
+
+            const elId = elMap[key];
+            const el = document.getElementById(elId);
+            const btn = document.getElementById('sysBtn_' + key);
+            const badge = btn?.querySelector('.field-status-badge');
+
+            if (el) {
+                if (el.style.display === 'none') {
+                    el.style.display = '';
+                    if (badge) {
+                        badge.textContent = '✓ Visible';
+                        badge.style.color = '#10B981';
+                    }
+                    selectCanvaElement(el);
+                } else {
+                    el.style.display = 'none';
+                    if (badge) {
+                        badge.textContent = '+ Añadir';
+                        badge.style.color = '#06B6D4';
+                    }
+                    if (currentCanvaElement === el) {
+                        currentCanvaElement = null;
+                        el.classList.remove('selected-element');
+                    }
+                }
+            }
+        }
+
+        // DRAG & RESIZE WORKFLOW
+        document.addEventListener('mousedown', function (e) {
+            const handle = e.target.closest('.canva-resize-handle');
+            if (handle) {
+                isResizingCanva = true;
+                currentResizeHandle = handle.dataset.handle;
+                const parentEl = handle.closest('.canva-drag-element');
+                selectCanvaElement(parentEl);
+
+                startX = e.clientX;
+                startY = e.clientY;
+                startLeft = parentEl.offsetLeft;
+                startTop = parentEl.offsetTop;
+                startWidth = parentEl.offsetWidth;
+                startHeight = parentEl.offsetHeight;
+
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+
+            const dragEl = e.target.closest('.canva-drag-element');
+            if (dragEl) {
+                const box = dragEl.querySelector('.canva-drag-box-container');
+                const textEl = dragEl.querySelector('.canva-text-content');
+                if ((box && box.getAttribute('contenteditable') === 'true') || (textEl && textEl.getAttribute('contenteditable') === 'true')) {
+                    return; // Permite mover el cursor de texto libremente
+                }
+
+                selectCanvaElement(dragEl);
+                isDraggingCanva = true;
+
+                startX = e.clientX;
+                startY = e.clientY;
+                startLeft = dragEl.offsetLeft;
+                startTop = dragEl.offsetTop;
+
+                e.preventDefault();
+            } else if (!e.target.closest('#canvaStudioTopToolbar') && !e.target.closest('.settings-card-box')) {
+                selectCanvaElement(null);
+            }
+        });
+
+        // DOBLE CLICK PARA EDITAR TEXTO INTERNO CON SOPORTE MULTILÍNEA Y TABULACIÓN
+        document.addEventListener('dblclick', function (e) {
+            const dragEl = e.target.closest('.canva-drag-element');
+            if (dragEl) {
+                if (dragEl.id === 'canvaElLogo' || dragEl.id === 'canvaElBanner' || dragEl.id === 'canvaElQR') {
+                    return;
+                }
+                const textEl = dragEl.querySelector('.canva-text-content') || dragEl.querySelector('.canva-drag-box-container');
+                if (textEl) {
+                    textEl.setAttribute('contenteditable', 'true');
+                    textEl.focus();
+                    
+                    const range = document.createRange();
+                    range.selectNodeContents(textEl);
+                    const sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                }
+            }
+        });
+
+        // SOPORTE PARA TABULACIÓN Y SALTO DE LÍNEA EN MODO EDICIÓN DE TEXTO
+        document.addEventListener('keydown', function (e) {
+            const activeEditable = document.querySelector('[contenteditable="true"]');
+            if (activeEditable && (activeEditable === e.target || activeEditable.contains(e.target))) {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    document.execCommand('insertText', false, '    ');
+                } else if (e.key === 'Escape') {
+                    activeEditable.removeAttribute('contenteditable');
+                    activeEditable.blur();
+                }
+            }
+        });
+
+        document.addEventListener('focusout', function (e) {
+            if (e.target && e.target.hasAttribute && e.target.hasAttribute('contenteditable')) {
+                if (e.relatedTarget && (e.relatedTarget.closest('#canvaStudioTopToolbar') || e.relatedTarget.closest('.canva-drag-element'))) {
+                    return;
+                }
+                const active = document.activeElement;
+                if (active && (active.closest('#canvaStudioTopToolbar') || active.closest('.canva-drag-element'))) {
+                    return;
+                }
+                if (!e.relatedTarget || (!e.relatedTarget.closest('#canvaTicketCanvas') && !e.relatedTarget.closest('#canvaStudioTopToolbar'))) {
+                    e.target.removeAttribute('contenteditable');
+                }
+            }
+        });
+
+        document.addEventListener('mousemove', function (e) {
+            if (isResizingCanva && currentCanvaElement) {
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                const isQR = (currentCanvaElement.id === 'canvaElQR');
+
+                if (isQR) {
+                    // Mantener estricta proporción cuadrada 1:1 para el QR
+                    if (currentResizeHandle === 'se') {
+                        const side = Math.max(startWidth + Math.max(dx, dy), 40);
+                        currentCanvaElement.style.width = side + 'px';
+                        currentCanvaElement.style.height = side + 'px';
+                    } else if (currentResizeHandle === 'sw') {
+                        const side = Math.max(startWidth + Math.max(-dx, dy), 40);
+                        const newLeft = startLeft + (startWidth - side);
+                        currentCanvaElement.style.width = side + 'px';
+                        currentCanvaElement.style.height = side + 'px';
+                        currentCanvaElement.style.left = newLeft + 'px';
+                    } else if (currentResizeHandle === 'ne') {
+                        const side = Math.max(startWidth + Math.max(dx, -dy), 40);
+                        const newTop = startTop + (startHeight - side);
+                        currentCanvaElement.style.width = side + 'px';
+                        currentCanvaElement.style.height = side + 'px';
+                        currentCanvaElement.style.top = newTop + 'px';
+                    } else if (currentResizeHandle === 'nw') {
+                        const side = Math.max(startWidth + Math.max(-dx, -dy), 40);
+                        const newLeft = startLeft + (startWidth - side);
+                        const newTop = startTop + (startHeight - side);
+                        currentCanvaElement.style.width = side + 'px';
+                        currentCanvaElement.style.height = side + 'px';
+                        currentCanvaElement.style.left = newLeft + 'px';
+                        currentCanvaElement.style.top = newTop + 'px';
+                    }
+                } else {
+                    // Redimensionamiento 2D libre en cualquier dirección (ancho y alto) para banner y demás
+                    if (currentResizeHandle === 'se') {
+                        currentCanvaElement.style.width = Math.max(startWidth + dx, 30) + 'px';
+                        currentCanvaElement.style.height = Math.max(startHeight + dy, 20) + 'px';
+                    } else if (currentResizeHandle === 'sw') {
+                        const newW = Math.max(startWidth - dx, 30);
+                        currentCanvaElement.style.width = newW + 'px';
+                        currentCanvaElement.style.left = (startLeft + (startWidth - newW)) + 'px';
+                        currentCanvaElement.style.height = Math.max(startHeight + dy, 20) + 'px';
+                    } else if (currentResizeHandle === 'ne') {
+                        const newW = Math.max(startWidth + dx, 30);
+                        const newH = Math.max(startHeight - dy, 20);
+                        currentCanvaElement.style.width = newW + 'px';
+                        currentCanvaElement.style.height = newH + 'px';
+                        currentCanvaElement.style.top = (startTop + (startHeight - newH)) + 'px';
+                    } else if (currentResizeHandle === 'nw') {
+                        const newW = Math.max(startWidth - dx, 30);
+                        const newH = Math.max(startHeight - dy, 20);
+                        currentCanvaElement.style.width = newW + 'px';
+                        currentCanvaElement.style.height = newH + 'px';
+                        currentCanvaElement.style.left = (startLeft + (startWidth - newW)) + 'px';
+                        currentCanvaElement.style.top = (startTop + (startHeight - newH)) + 'px';
+                    }
+                }
+            } else if (isDraggingCanva && currentCanvaElement) {
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+
+                const newLeft = Math.max(0, Math.min(startLeft + dx, 771 - currentCanvaElement.offsetWidth));
+                const newTop = Math.max(0, Math.min(startTop + dy, 370 - currentCanvaElement.offsetHeight));
+
+                currentCanvaElement.style.left = newLeft + 'px';
+                currentCanvaElement.style.top = newTop + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', function () {
+            isDraggingCanva = false;
+            isResizingCanva = false;
+            currentResizeHandle = null;
+        });
+
+        function updateLiveTicketPreview() {
+            const title = document.getElementById('event_title')?.value || initialEventData.title;
+            const company = document.getElementById('event_company')?.value || initialEventData.company_name;
+            const venue = document.getElementById('event_venue')?.value || initialEventData.venue_name;
+            const address = document.getElementById('event_address')?.value || initialEventData.address;
+            const date = document.getElementById('event_date')?.value || initialEventData.event_date;
+            const time = document.getElementById('event_time')?.value || initialEventData.event_time;
+            const banner = document.getElementById('event_banner')?.value || initialEventData.banner_image;
+
+            const firstZoneRow = document.querySelector('.zone-row-item');
+            const zoneName = firstZoneRow?.querySelector('.zone-name-input')?.value || 'BOX PLATINUM INDIVIDUAL';
+            const zonePrice = parseFloat(firstZoneRow?.querySelector('.zone-price-input')?.value) || 150.00;
+
+            const previewImg = document.getElementById('bannerPreviewImg');
+            if (previewImg && banner) previewImg.src = banner;
+
+            const titleEl = document.querySelector('#canvaElTitle .canva-text-content') || document.querySelector('#canvaElTitle h2');
+            if (titleEl && !titleEl.closest('.canva-drag-element')?.dataset.userEdited && titleEl.querySelectorAll('span, font').length === 0) {
+                titleEl.textContent = title;
+            }
+
+            const zoneEl = document.querySelector('#canvaElZone .canva-text-content') || document.querySelector('#canvaElZone span');
+            if (zoneEl && !zoneEl.closest('.canva-drag-element')?.dataset.userEdited && zoneEl.querySelectorAll('span, font').length === 0) {
+                zoneEl.textContent = `ZONA: ${zoneName}`;
+            }
+
+            const priceEl = document.querySelector('#canvaElPrice .canva-text-content') || document.querySelector('#canvaElPrice span');
+            if (priceEl && !priceEl.closest('.canva-drag-element')?.dataset.userEdited && priceEl.querySelectorAll('span, font').length === 0) {
+                priceEl.textContent = `PRECIO: S/ ${zonePrice.toFixed(2)}`;
+            }
+
+            const venueText = document.getElementById('canvaPrevVenueText');
+            if (venueText && !venueText.closest('.canva-drag-element')?.dataset.userEdited && venueText.querySelectorAll('span, font').length === 0) {
+                venueText.textContent = venue;
+            }
+
+            const addressText = document.getElementById('canvaPrevAddressText');
+            if (addressText && !addressText.closest('.canva-drag-element')?.dataset.userEdited && addressText.querySelectorAll('span, font').length === 0) {
+                addressText.textContent = address;
+            }
+
+            const dateText = document.getElementById('canvaPrevDateText');
+            if (dateText && !dateText.closest('.canva-drag-element')?.dataset.userEdited && dateText.querySelectorAll('span, font').length === 0) {
+                dateText.textContent = `FECHA: ${date}`;
+            }
+
+            const timeText = document.getElementById('canvaPrevTimeText');
+            if (timeText && !timeText.closest('.canva-drag-element')?.dataset.userEdited && timeText.querySelectorAll('span, font').length === 0) {
+                timeText.textContent = `HORA: ${time}`;
+            }
 
             document.getElementById('summaryTitle').textContent = title || 'Sin Título';
-            document.getElementById('summaryCategory').textContent = '🎤 ' + categoryName;
-            document.getElementById('summaryCompany').textContent = '🏢 ' + companyName;
-            document.getElementById('summaryVenue').textContent = venueName || 'Recinto';
-            document.getElementById('summaryDate').textContent = `${eventDate} / ${eventTime}`;
-            document.getElementById('summaryBannerImg').src = bannerImage;
+            document.getElementById('summaryCompany').textContent = company || 'Compañía';
+            document.getElementById('summaryVenue').textContent = `${venue} (${address})`;
+            document.getElementById('summaryDate').textContent = `${date} a las ${time}`;
+            if (document.getElementById('summaryBannerImg') && banner) {
+                document.getElementById('summaryBannerImg').src = banner;
+            }
 
-            let total = 0;
-            document.querySelectorAll('.zone-capacity-input').forEach(input => {
-                total += parseInt(input.value, 10) || 0;
+            const salesTypeVal = document.querySelector('input[name="event_sales_type"]:checked')?.value || 'virtual';
+            const summarySalesType = document.getElementById('summarySalesType');
+            if (summarySalesType) {
+                summarySalesType.textContent = (salesTypeVal === 'virtual') ? '🌐 Venta Virtual (E-Ticket)' : '🎟️ Venta Física (Taquilla Impresa)';
+                summarySalesType.style.color = (salesTypeVal === 'virtual') ? '#06B6D4' : '#FF5500';
+            }
+
+            recalculateTotalCapacity();
+        }
+
+        function getCanvaPositionsPayload() {
+            const positions = {};
+            const standardIds = [
+                'canvaElLogo', 'canvaElTitle', 'canvaElZone', 'canvaElPrice',
+                'canvaElBanner', 'canvaElBuyerName', 'canvaElBuyerDni', 'canvaElVenue',
+                'canvaElCity', 'canvaElDate', 'canvaElTime', 'canvaElTicketNumber',
+                'canvaElQR', 'canvaElHash', 'canvaElDisclaimer'
+            ];
+
+            document.querySelectorAll('#canvaCanvasArea .canva-drag-element').forEach(el => {
+                const id = el.id || ('canvaCustomTag_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5));
+                const box = el.querySelector('.canva-drag-box-container');
+                const textEl = el.querySelector('.canva-text-content');
+                const target = textEl || box || el;
+                
+                const topVal = el.style.top ? el.style.top : (el.offsetTop + 'px');
+                const leftVal = el.style.left ? el.style.left : (el.offsetLeft + 'px');
+                const widthVal = (el.style.width && el.style.width !== 'auto') ? el.style.width : (el.offsetWidth ? (el.offsetWidth + 'px') : 'auto');
+                const heightVal = (el.style.height && el.style.height !== 'auto') ? el.style.height : (el.offsetHeight ? (el.offsetHeight + 'px') : 'auto');
+                
+                const img = el.querySelector('img');
+
+                // Evitar duplicar base64 pesados en el campo HTML para prevenir sobrecarga en POST
+                let cleanHtml = box ? box.innerHTML : el.innerHTML;
+                if (id === 'canvaElBanner' || id === 'canvaElLogo' || id === 'canvaElQR') {
+                    cleanHtml = null;
+                } else if (cleanHtml) {
+                    // Limpiar iconos SVG de etiquetas para asegurar diseño limpio
+                    cleanHtml = cleanHtml.replace(/<svg\b[^>]*class="[^"]*canva-tag-icon[^"]*"[\s\S]*?<\/svg>/gi, '').trim();
+                }
+
+                const computed = window.getComputedStyle(target);
+                const isCustom = id.startsWith('canvaCustomTag_') || !standardIds.includes(id);
+
+                positions[id] = {
+                    top: topVal,
+                    left: leftVal,
+                    width: widthVal,
+                    height: heightVal,
+                    rotate: parseInt(el.dataset.rotate || '0', 10),
+                    html: cleanHtml,
+                    text: textEl ? textEl.innerText.trim() : (box ? box.innerText.trim() : ''),
+                    fontSize: target.style.fontSize || box?.style.fontSize || computed.fontSize || '12px',
+                    fontFamily: target.style.fontFamily || box?.style.fontFamily || computed.fontFamily || 'inherit',
+                    color: target.style.color || box?.style.color || computed.color || '#000000',
+                    fontWeight: target.style.fontWeight || box?.style.fontWeight || computed.fontWeight || '700',
+                    fontStyle: target.style.fontStyle || box?.style.fontStyle || computed.fontStyle || 'normal',
+                    textDecoration: target.style.textDecoration || box?.style.textDecoration || computed.textDecorationLine || 'none',
+                    textAlign: target.style.textAlign || box?.style.textAlign || el.style.textAlign || computed.textAlign || 'left',
+                    textTransform: target.style.textTransform || box?.style.textTransform || computed.textTransform || 'none',
+                    hasBadgeBg: box ? box.classList.contains('has-badge-bg') : false,
+                    backgroundColor: box ? box.style.backgroundColor : '',
+                    visible: (el.style.display !== 'none') && (window.getComputedStyle(el).display !== 'none'),
+                    isCustomTag: isCustom,
+                    src: (id === 'canvaElBanner') ? (document.getElementById('canvaTicketBannerInput')?.value || (img ? img.src : null)) : (img ? img.src : null)
+                };
             });
-            document.getElementById('summaryCapacity').textContent = total.toLocaleString() + ' Boletos Total';
+            return positions;
         }
 
         function saveEditedEvent() {
-            const title = document.getElementById('event_title').value;
-            const categoryName = document.getElementById('event_category').value;
-            const companyName = document.getElementById('event_company').value;
-            const bannerImage = document.getElementById('event_banner').value;
-            const eventDate = document.getElementById('event_date').value;
-            const eventTime = document.getElementById('event_time').value;
-            const venueName = document.getElementById('event_venue').value;
-            const address = document.getElementById('event_address').value;
-            const details = document.getElementById('event_details').value;
-            const tags = document.getElementById('event_tags').value.split(',').map(t => t.trim()).filter(Boolean);
-            const templateId = document.getElementById('selected_template_id').value;
+            const title = document.getElementById('event_title')?.value || '';
+            const categoryName = document.getElementById('event_category')?.value || 'Conciertos';
+            const companyName = document.getElementById('event_company')?.value || 'Vive Go';
+            const bannerImage = document.getElementById('event_banner')?.value || '';
+            const eventDate = document.getElementById('event_date')?.value || '';
+            const eventTime = document.getElementById('event_time')?.value || '';
+            const venueName = document.getElementById('event_venue')?.value || '';
+            const address = document.getElementById('event_address')?.value || '';
+            const details = document.getElementById('event_details')?.value || '';
+            const tagsRaw = document.getElementById('event_tags')?.value || '';
+            const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+            const templateId = document.getElementById('selected_template_id')?.value || '4';
+            const salesType = document.querySelector('input[name="event_sales_type"]:checked')?.value || 'virtual';
 
             const zones = [];
             document.querySelectorAll('.zone-row-item').forEach(row => {
@@ -786,6 +2249,15 @@
                 });
             });
 
+            const customTicketPayload = {
+                positions: getCanvaPositionsPayload(),
+                bg_color: document.getElementById('canvaBgColor').value || '#FFFFFF',
+                bg_image: document.getElementById('canvaBgImageInput').value || null,
+                ticket_banner: document.getElementById('canvaTicketBannerInput')?.value || null,
+                strip_color: document.getElementById('canvaStripColor').value || '#FF5500',
+                type: salesType
+            };
+
             const payload = {
                 title: title,
                 category_name: categoryName,
@@ -801,8 +2273,18 @@
                 tags: tags,
                 template_id: parseInt(templateId, 10),
                 zones: zones,
-                sales_type: document.querySelector('input[name="event_sales_type"]:checked')?.value || 'fisica'
+                sales_type: salesType,
+                custom_ticket: customTicketPayload
             };
+
+            Swal.fire({
+                title: 'Guardando Cambios...',
+                text: 'Actualizando evento y boleto en la base de datos MySQL',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); },
+                background: '#14141E',
+                color: '#FFFFFF'
+            });
 
             fetch("{{ route('web.events.update', $eventData['id']) }}", {
                 method: 'PUT',
@@ -818,7 +2300,7 @@
                 if (data.success) {
                     Swal.fire({
                         title: '🎉 ¡Evento Actualizado con Éxito!',
-                        text: `El espectáculo "${title}" y sus modificaciones se han guardado exitosamente en la Base de Datos.`,
+                        text: `El espectáculo "${title}" y su boleto oficial se han guardado exitosamente.`,
                         icon: 'success',
                         confirmButtonColor: '#FF5500',
                         background: '#14141E',
@@ -827,7 +2309,7 @@
                         window.location.href = "{{ route('web.events') }}";
                     });
                 } else {
-                    Swal.fire({ title: 'Error', text: 'No se pudieron guardar las modificaciones.', icon: 'error', background: '#14141E', color: '#FFF' });
+                    Swal.fire({ title: 'Error', text: data.message || 'No se pudieron guardar las modificaciones.', icon: 'error', background: '#14141E', color: '#FFF' });
                 }
             })
             .catch(err => {
@@ -859,23 +2341,211 @@
                     labelFisica.style.background = 'rgba(255,255,255,0.02)';
                 }
             }
+
+            updateLiveTicketPreview();
         }
 
         document.addEventListener('DOMContentLoaded', function () {
             initLeafletMap();
             populateZoneRows(initialEventData.zones);
-            selectTicketTemplate(initialEventData.template_id || 1);
+            
+            // Adjuntar manejadores de transformación base
+            document.querySelectorAll('#canvaCanvasArea .canva-drag-element').forEach(el => {
+                attachTransformHandles(el);
+            });
 
-            // Sidebar Toggle
-            const sidebar = document.getElementById('dashSidebar');
-            const toggleBtn = document.getElementById('dashSidebarToggle');
+            // Si el template del evento viene guardado, restaurarlo con máxima fidelidad
+            if (initialEventData.template) {
+                const tpl = initialEventData.template;
+                const canvas = document.getElementById('canvaTicketCanvas');
 
-            if (toggleBtn && sidebar) {
-                toggleBtn.addEventListener('click', function () {
-                    sidebar.classList.add('dash-animating');
-                    sidebar.classList.toggle('collapsed');
-                    setTimeout(function () { sidebar.classList.remove('dash-animating'); }, 450);
-                });
+                if (tpl.id) {
+                    document.getElementById('selected_template_id').value = tpl.id;
+                    const tplSelect = document.getElementById('canvaTemplateSelector');
+                    if (tplSelect && tplSelect.querySelector(`option[value="${tpl.id}"]`)) {
+                        tplSelect.value = tpl.id;
+                    }
+                }
+
+                // Restaurar color de fondo
+                if (tpl.bg_color) {
+                    updateCanvaBgColor(tpl.bg_color);
+                }
+
+                // Restaurar color de franja
+                if (tpl.strip_color) {
+                    document.getElementById('canvaStripColor').value = tpl.strip_color;
+                    updateCanvaStripColor(tpl.strip_color);
+                }
+
+                // Restaurar imagen de fondo
+                if (tpl.bg_image) {
+                    document.getElementById('canvaBgImageInput').value = tpl.bg_image;
+                    if (canvas) {
+                        canvas.style.backgroundImage = `url('${tpl.bg_image}')`;
+                        canvas.style.backgroundSize = 'cover';
+                        canvas.style.backgroundPosition = 'center';
+                    }
+                    const filledBox = document.getElementById('bgUploadBoxFilled');
+                    const emptyBox = document.getElementById('bgUploadBoxEmpty');
+                    const thumb = document.getElementById('bgThumbPreview');
+                    const nameText = document.getElementById('bgFileNameText');
+                    if (filledBox) filledBox.style.display = 'flex';
+                    if (emptyBox) emptyBox.style.display = 'none';
+                    if (thumb) thumb.style.backgroundImage = `url('${tpl.bg_image}')`;
+                    if (nameText) nameText.textContent = 'Fondo Personalizado';
+                } else {
+                    removeCanvaBgImage();
+                }
+
+                // Restaurar Banner para ticket
+                const bannerSrc = (tpl.positions && tpl.positions.canvaElBanner && tpl.positions.canvaElBanner.src) ? tpl.positions.canvaElBanner.src : (initialEventData.banner_image || null);
+                if (bannerSrc) {
+                    const bannerInput = document.getElementById('canvaTicketBannerInput');
+                    if (bannerInput) bannerInput.value = bannerSrc;
+                    const canvaBanner = document.getElementById('canvaPrevBannerImg');
+                    if (canvaBanner) canvaBanner.src = bannerSrc;
+                    const thumb = document.getElementById('ticketBannerThumbPreview');
+                    if (thumb) thumb.style.backgroundImage = `url('${bannerSrc}')`;
+                }
+
+                // Restaurar posiciones y estilos de todos los elementos
+                if (tpl.positions && Object.keys(tpl.positions).length > 0) {
+                    const customPositions = tpl.positions;
+                    const canvasArea = document.getElementById('canvaCanvasArea');
+
+                    Object.keys(customPositions).forEach(key => {
+                        const p = customPositions[key];
+                        let el = document.getElementById(key);
+
+                        // Si es una etiqueta personalizada que no existe en el DOM, crearla dinámicamente
+                        if (!el && (key.startsWith('canvaCustomTag_') || p.isCustomTag)) {
+                            if (canvasArea) {
+                                el = document.createElement('div');
+                                el.className = 'canva-drag-element';
+                                el.id = key;
+                                const box = document.createElement('div');
+                                box.className = 'canva-drag-box-container';
+                                box.style.fontSize = p.fontSize || '12px';
+                                box.style.color = p.color || '#000000';
+                                box.innerHTML = p.html || `<div class="canva-text-content" style="font-size: ${p.fontSize || '12px'}; font-weight: ${p.fontWeight || '800'}; color: ${p.color || '#000000'}; outline: none; white-space: pre-wrap; line-height: 1.25; word-break: break-word;">${p.text || 'Etiqueta'}</div>`;
+                                el.appendChild(box);
+                                canvasArea.appendChild(el);
+                                attachTransformHandles(el);
+                            }
+                        }
+
+                        if (el && p) {
+                            if (p.top) el.style.top = p.top;
+                            if (p.left) el.style.left = p.left;
+                            if (p.width && p.width !== 'auto') el.style.width = p.width;
+                            if (p.height && p.height !== 'auto') el.style.height = p.height;
+                            if (p.rotate !== undefined) el.dataset.rotate = p.rotate;
+                            const deg = parseInt(el.dataset.rotate || '0', 10);
+                            el.style.transform = `rotate(${deg}deg)`;
+                            if (p.visible !== undefined) {
+                                el.style.display = (p.visible === false) ? 'none' : '';
+                            }
+
+                            const box = el.querySelector('.canva-drag-box-container');
+
+                            if (box && p.html && key !== 'canvaElBanner' && key !== 'canvaElLogo' && key !== 'canvaElQR') {
+                                const cleanHtml = p.html.replace(/<svg\b[^>]*class="[^"]*canva-tag-icon[^"]*"[\s\S]*?<\/svg>/gi, '').trim();
+                                box.innerHTML = cleanHtml;
+                            } else {
+                                const refreshedTextEl = el.querySelector('.canva-text-content');
+                                const target = refreshedTextEl || box || el;
+                                if (target) {
+                                    if (p.fontSize) {
+                                        target.style.fontSize = p.fontSize;
+                                        if (box) box.style.fontSize = p.fontSize;
+                                    }
+                                    if (p.fontFamily && p.fontFamily !== 'inherit') {
+                                        target.style.fontFamily = p.fontFamily;
+                                        if (box) box.style.fontFamily = p.fontFamily;
+                                    }
+                                    if (p.color) {
+                                        target.style.color = p.color;
+                                        if (box) box.style.color = p.color;
+                                        el.style.color = p.color;
+                                    }
+                                    if (p.fontWeight) {
+                                        target.style.fontWeight = p.fontWeight;
+                                        if (box) box.style.fontWeight = p.fontWeight;
+                                    }
+                                    if (p.fontStyle) {
+                                        target.style.fontStyle = p.fontStyle;
+                                        if (box) box.style.fontStyle = p.fontStyle;
+                                    }
+                                    if (p.textDecoration) {
+                                        target.style.textDecoration = p.textDecoration;
+                                        if (box) box.style.textDecoration = p.textDecoration;
+                                    }
+                                    if (p.textAlign) {
+                                        target.style.textAlign = p.textAlign;
+                                        if (box) box.style.textAlign = p.textAlign;
+                                        el.style.textAlign = p.textAlign;
+                                    }
+                                    if (p.textTransform) {
+                                        target.style.textTransform = p.textTransform;
+                                        if (box) box.style.textTransform = p.textTransform;
+                                    }
+                                }
+                            }
+
+                            // Asegurar disclaimer oficial correcto
+                            if (key === 'canvaElDisclaimer') {
+                                const discText = el.querySelector('.canva-text-content, p');
+                                if (discText) {
+                                    discText.textContent = 'La responsabilidad de este boleto es exclusiva del cliente, no compartir ni publicar. Se recomienda llevar impreso.';
+                                }
+                            }
+
+                            const img = el.querySelector('img');
+                            if (img && p.src) {
+                                img.src = p.src;
+                            }
+                        }
+                    });
+
+                    // Sincronizar estado de los badges en la barra lateral
+                    const standardKeys = {
+                        'canvaElLogo': 'logo',
+                        'canvaElTitle': 'titulo',
+                        'canvaElZone': 'zona',
+                        'canvaElPrice': 'precio',
+                        'canvaElBanner': 'banner',
+                        'canvaElBuyerName': 'buyer_name',
+                        'canvaElBuyerDni': 'buyer_dni',
+                        'canvaElVenue': 'recinto',
+                        'canvaElCity': 'ciudad',
+                        'canvaElDate': 'fecha',
+                        'canvaElTime': 'hora',
+                        'canvaElTicketNumber': 'ticket_number',
+                        'canvaElQR': 'qr',
+                        'canvaElHash': 'hash',
+                        'canvaElDisclaimer': 'disclaimer'
+                    };
+                    Object.keys(standardKeys).forEach(stdId => {
+                        const stdEl = document.getElementById(stdId);
+                        const btnKey = standardKeys[stdId];
+                        const btn = document.getElementById('sysBtn_' + btnKey);
+                        const badge = btn?.querySelector('.field-status-badge');
+                        if (stdEl && badge) {
+                            if (stdEl.style.display === 'none') {
+                                badge.textContent = '+ Añadir';
+                                badge.style.color = '#06B6D4';
+                            } else {
+                                badge.textContent = '✓ Visible';
+                                badge.style.color = '#10B981';
+                            }
+                        }
+                    });
+                }
+            } else {
+                // Cargar la plantilla asignada al evento o Plantilla Virtual 1
+                const initialTplId = initialEventData.template_id || 4;
+                loadPresetTemplate(String(initialTplId));
             }
 
             // Theme Toggle (Dark / Light)

@@ -37,117 +37,8 @@
 
 @section('content')
     <div class="dashboard-root-wrapper">
-        <!-- SIDEBAR DE NAVEGACIÓN PRO MAX -->
-        <aside class="dash-sidebar" id="dashSidebar">
-            <div class="dash-sidebar-header">
-                <a href="{{ route('web.home') }}" class="dash-brand-logo">
-                    <img src="{{ asset($settings->logo_white ?? 'images/logo-white.png') }}" alt="Vive Go" class="dash-logo-img logo-white-img">
-                    <img src="{{ asset($settings->logo_dark ?? 'images/logo.png') }}" alt="Vive Go" class="dash-logo-img logo-dark-img">
-                </a>
-                <button class="dash-sidebar-toggle-btn" id="dashSidebarToggle" aria-label="Colapsar Menú" title="Plegar / Expandir Menú">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="15 18 9 12 15 6"></polyline>
-                    </svg>
-                </button>
-            </div>
-
-            <!-- Perfil rápido de organizador -->
-            <div class="dash-organizer-pill-card">
-                <div class="dash-avatar-wrapper">
-                    <img src="{{ $organizer['avatar'] }}" alt="{{ $organizer['name'] }}" class="dash-avatar-img">
-                    <span class="dash-online-status-dot"></span>
-                </div>
-                <div class="dash-organizer-info">
-                    <h4 class="dash-organizer-name" title="{{ $organizer['name'] }}">{{ $organizer['name'] }}</h4>
-                    <span class="dash-verified-badge">✓ {{ $organizer['status'] }}</span>
-                </div>
-            </div>
-
-            <!-- Menú de Navegación Principal -->
-            <nav class="dash-nav-menu">
-                <div class="dash-nav-section-title">MENÚ PRINCIPAL</div>
-                <ul class="dash-nav-list">
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.dashboard') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">📊</span>
-                            <span class="dash-nav-text">Dashboard</span>
-                        </a>
-                    </li>
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.events') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">🎟️</span>
-                            <span class="dash-nav-text">Mis Eventos</span>
-                        </a>
-                    </li>
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.box_office') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">💰</span>
-                            <span class="dash-nav-text">Taquilla & Ventas</span>
-                        </a>
-                    </li>
-                    <li class="dash-nav-item">
-                        <a href="#" class="dash-nav-link">
-                            <span class="dash-nav-icon">📈</span>
-                            <span class="dash-nav-text">Analíticas Pro</span>
-                        </a>
-                    </li>
-                    <li class="dash-nav-item active">
-                        <a href="{{ route('web.attendees') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">👥</span>
-                            <span class="dash-nav-text">Asistentes & Scanner</span>
-                        </a>
-                    </li>
-                </ul>
-
-                <div class="dash-nav-section-title" style="margin-top: 1.5rem;">GESTIÓN & HERRAMIENTAS</div>
-                <ul class="dash-nav-list">
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.categories') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">📂</span>
-                            <span class="dash-nav-text">Categorías</span>
-                        </a>
-                    </li>
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.templates') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">🎨</span>
-                            <span class="dash-nav-text">Plantillas de Boletos</span>
-                        </a>
-                    </li>
-                </ul>
-
-                <div class="dash-nav-section-title" style="margin-top: 1.5rem;">INFORMACIÓN EMPRESARIAL</div>
-                <ul class="dash-nav-list">
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.companies') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">🏢</span>
-                            <span class="dash-nav-text">Compañía</span>
-                        </a>
-                    </li>
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.managers') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">👔</span>
-                            <span class="dash-nav-text">Responsables</span>
-                        </a>
-                    </li>
-                </ul>
-
-                <div class="dash-nav-section-title" style="margin-top: 1.5rem;">SISTEMA & AJUSTES</div>
-                <ul class="dash-nav-list">
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.admins') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">🛡️</span>
-                            <span class="dash-nav-text">Administradores</span>
-                        </a>
-                    </li>
-                    <li class="dash-nav-item">
-                        <a href="{{ route('web.settings') }}" class="dash-nav-link">
-                            <span class="dash-nav-icon">⚙️</span>
-                            <span class="dash-nav-text">Configuración</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-        </aside>
+        <!-- SIDEBAR DE NAVEGACIÓN PRO MAX HEREDADO -->
+        @include('layouts.sidebar')
 
         <!-- ÁREA PRINCIPAL DE CONTENIDO -->
         <main class="dash-main-content">
@@ -439,17 +330,6 @@
                         const text = row.innerText.toLowerCase();
                         row.style.display = text.includes(q) ? '' : 'none';
                     });
-                });
-            }
-
-            // Sidebar Toggle
-            const sidebar = document.getElementById('dashSidebar');
-            const toggleBtn = document.getElementById('dashSidebarToggle');
-            if (toggleBtn && sidebar) {
-                toggleBtn.addEventListener('click', function () {
-                    sidebar.classList.add('dash-animating');
-                    sidebar.classList.toggle('collapsed');
-                    setTimeout(function () { sidebar.classList.remove('dash-animating'); }, 450);
                 });
             }
 

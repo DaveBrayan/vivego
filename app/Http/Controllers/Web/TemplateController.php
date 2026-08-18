@@ -98,13 +98,21 @@ class TemplateController extends Controller
             ]);
         }
 
-        // Obtener plantillas guardadas de la base de datos
+        // Obtener plantillas guardadas de la base de datos divididas por tipo
         $templates = TicketTemplate::where('status', 'active')
             ->orderBy('is_default', 'desc')
             ->orderBy('id', 'asc')
             ->get();
 
-        return view('web.templates', compact('templates', 'settings', 'organizer'));
+        $physicalTemplates = $templates->filter(function ($t) {
+            return ($t->type === 'fisica' || empty($t->type) || !in_array($t->type, ['virtual']));
+        });
+
+        $virtualTemplates = $templates->filter(function ($t) {
+            return ($t->type === 'virtual');
+        });
+
+        return view('web.templates', compact('templates', 'physicalTemplates', 'virtualTemplates', 'settings', 'organizer'));
     }
 
     /**
@@ -115,16 +123,40 @@ class TemplateController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'category' => 'nullable|string|max:100',
+            'type' => 'nullable|string|in:fisica,virtual',
             'bg_color' => 'nullable|string|max:20',
+            'bg_image' => 'nullable|string',
             'strip_color' => 'nullable|string|max:20',
             'positions' => 'nullable|array',
             'elements' => 'nullable|array',
         ]);
 
+        if (array_key_exists('bg_image', $validated)) {
+            if ($validated['bg_image'] === '' || $validated['bg_image'] === 'null' || empty($validated['bg_image'])) {
+                $validated['bg_image'] = null;
+            } elseif (str_starts_with($validated['bg_image'], 'data:image')) {
+                if (preg_match('/^data:image\/(\w+);base64,/', $validated['bg_image'], $typeMatch)) {
+                    $data = substr($validated['bg_image'], strpos($validated['bg_image'], ',') + 1);
+                    $ext = strtolower($typeMatch[1]);
+                    if (!in_array($ext, ['jpg', 'jpeg', 'gif', 'png', 'webp'])) {
+                        $ext = 'png';
+                    }
+                    $decoded = base64_decode($data);
+                    if ($decoded !== false) {
+                        $fileName = 'bg_' . uniqid() . '_' . time() . '.' . $ext;
+                        \Illuminate\Support\Facades\Storage::disk('public')->put('templates/' . $fileName, $decoded);
+                        $validated['bg_image'] = 'storage/templates/' . $fileName;
+                    }
+                }
+            }
+        }
+
         $template = TicketTemplate::create([
             'name' => $validated['name'],
-            'category' => $validated['category'] ?? 'General',
+            'category' => $validated['category'] ?? ($request->input('type') === 'virtual' ? 'Virtual: E-Ticket' : 'General'),
+            'type' => $validated['type'] ?? 'fisica',
             'bg_color' => $validated['bg_color'] ?? '#FFFFFF',
+            'bg_image' => $validated['bg_image'] ?? null,
             'strip_color' => $validated['strip_color'] ?? '#000000',
             'positions' => $validated['positions'] ?? [],
             'elements' => $validated['elements'] ?? [],
@@ -147,11 +179,33 @@ class TemplateController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'category' => 'nullable|string|max:100',
+            'type' => 'nullable|string|in:fisica,virtual',
             'bg_color' => 'nullable|string|max:20',
+            'bg_image' => 'nullable|string',
             'strip_color' => 'nullable|string|max:20',
             'positions' => 'nullable|array',
             'elements' => 'nullable|array',
         ]);
+
+        if (array_key_exists('bg_image', $validated)) {
+            if ($validated['bg_image'] === '' || $validated['bg_image'] === 'null' || empty($validated['bg_image'])) {
+                $validated['bg_image'] = null;
+            } elseif (str_starts_with($validated['bg_image'], 'data:image')) {
+                if (preg_match('/^data:image\/(\w+);base64,/', $validated['bg_image'], $typeMatch)) {
+                    $data = substr($validated['bg_image'], strpos($validated['bg_image'], ',') + 1);
+                    $ext = strtolower($typeMatch[1]);
+                    if (!in_array($ext, ['jpg', 'jpeg', 'gif', 'png', 'webp'])) {
+                        $ext = 'png';
+                    }
+                    $decoded = base64_decode($data);
+                    if ($decoded !== false) {
+                        $fileName = 'bg_' . uniqid() . '_' . time() . '.' . $ext;
+                        \Illuminate\Support\Facades\Storage::disk('public')->put('templates/' . $fileName, $decoded);
+                        $validated['bg_image'] = 'storage/templates/' . $fileName;
+                    }
+                }
+            }
+        }
 
         $template->update($validated);
 

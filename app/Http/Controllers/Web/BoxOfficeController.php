@@ -313,12 +313,17 @@ class BoxOfficeController extends Controller
         // Generar códigos únicos e información para cada boleto individual
         $ticketsData = [];
         for ($i = 1; $i <= $validated['quantity']; $i++) {
-            $ticketCode = 'TK-' . strtoupper(substr(Str::slug($event->title), 0, 3)) . '-' . str_pad($nextNum, 4, '0', STR_PAD_LEFT) . '-' . str_pad($i, 2, '0', STR_PAD_LEFT);
+            $ticketNumFormatted = 'N° ' . str_pad($nextNum, 5, '0', STR_PAD_LEFT);
+            $ticketCode = 'TK-' . strtoupper(substr(Str::slug($event->title), 0, 3)) . '-' . str_pad($nextNum, 5, '0', STR_PAD_LEFT) . '-' . str_pad($i, 2, '0', STR_PAD_LEFT);
             $validationHash = strtoupper(Str::random(10));
-            $qrPayload = "VIVEGO|EVT:{$event->id}|REC:{$receiptNumber}|TK:{$ticketCode}|HASH:{$validationHash}|ZONE:{$validated['zone_name']}";
+
+            // Hash encriptado de alta seguridad exclusivo para el scanner móvil del evento
+            $encryptedToken = strtoupper(substr(hash_hmac('sha256', "VIVEGO_ENC_{$event->id}_{$receiptNumber}_{$validationHash}_{$i}", config('app.key', 'ViveGoSecretKey2026')), 0, 24));
+            $qrPayload = "VGENC:{$encryptedToken}";
 
             $ticketsData[] = [
                 'ticket_code' => $ticketCode,
+                'ticket_number' => $ticketNumFormatted,
                 'ticket_index' => $i,
                 'validation_hash' => $validationHash,
                 'qr_payload' => $qrPayload,
@@ -429,6 +434,44 @@ class BoxOfficeController extends Controller
                 'change_amount_formatted' => 'S/ ' . number_format($changeAmount, 2),
                 'tickets' => $ticketsData,
             ]
+        ]);
+    }
+
+    /**
+     * Elimina / Anula una venta de taquilla, revierte el stock del evento y elimina boletos asociados.
+     */
+    public function destroySale($id): JsonResponse
+    {
+        $sale = TicketSale::find($id);
+        if (!$sale) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La venta especificada no existe.'
+            ], 404);
+        }
+
+        $event = Event::find($sale->event_id);
+        if ($event && is_array($event->zones)) {
+            $zones = $event->zones;
+            foreach ($zones as $idx => $z) {
+                if (($z['name'] ?? '') === $sale->zone_name) {
+                    $zones[$idx]['capacity'] = (int) ($z['capacity'] ?? 0) + (int) $sale->quantity;
+                    break;
+                }
+            }
+            $event->zones = $zones;
+            $event->save();
+        }
+
+        // Eliminar boletos individuales asociados
+        \App\Models\EventTicket::where('ticket_sale_id', $sale->id)->delete();
+
+        // Eliminar la venta
+        $sale->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => '¡Entrada / venta eliminada correctamente y aforo restaurado!'
         ]);
     }
 }

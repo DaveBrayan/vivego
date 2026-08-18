@@ -43,6 +43,7 @@ Route::post('/admin/eventos/{event}/registrar-boletos-pdf', [EventController::cl
 Route::get('/admin/taquilla', [BoxOfficeController::class, 'index'])->name('web.box_office');
 Route::get('/admin/taquilla/{event}', [BoxOfficeController::class, 'manage'])->name('web.box_office.manage');
 Route::post('/admin/taquilla/{event}/venta', [BoxOfficeController::class, 'storeSale'])->name('web.box_office.store_sale');
+Route::delete('/admin/taquilla/venta/{sale}', [BoxOfficeController::class, 'destroySale'])->name('web.box_office.destroy_sale');
 
 // Control de Acceso & Asistentes (Scanner de Boletos QR en Tiempo Real)
 Route::get('/admin/asistentes', [AttendeeController::class, 'index'])->name('web.attendees');
