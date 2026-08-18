@@ -664,15 +664,25 @@ class EventController extends Controller
             return $imageString;
         }
 
-        if (preg_match('/(storage\/[^\s"\']+)/i', $imageString, $matches)) {
-            return 'storage/' . $matches[1];
+        if (str_starts_with($imageString, 'http://') || str_starts_with($imageString, 'https://')) {
+            return $imageString;
         }
 
-        if (preg_match('/(images\/[^\s"\']+)/i', $imageString, $matches)) {
-            return 'images/' . $matches[1];
+        $clean = ltrim($imageString, '/');
+
+        if (preg_match('/(?:storage\/)+(.+)/i', $clean, $matches)) {
+            return 'storage/' . ltrim($matches[1], '/');
         }
 
-        return ltrim($imageString, '/');
+        if (preg_match('/(?:images\/)+(.+)/i', $clean, $matches)) {
+            return 'images/' . ltrim($matches[1], '/');
+        }
+
+        if (str_starts_with($clean, 'events/') || str_starts_with($clean, 'templates/') || str_starts_with($clean, 'uploads/')) {
+            return 'storage/' . $clean;
+        }
+
+        return $clean;
     }
 
     /**

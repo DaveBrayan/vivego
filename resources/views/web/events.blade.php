@@ -777,15 +777,18 @@
                 function getFullAssetUrl(urlStr) {
                     if (!urlStr) return null;
                     if (urlStr.startsWith('data:')) return urlStr;
+                    if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) return urlStr;
 
-                    if (urlStr.includes('/storage/')) {
-                        urlStr = '/storage/' + urlStr.split('/storage/')[1];
-                    } else if (urlStr.includes('/images/')) {
-                        urlStr = '/images/' + urlStr.split('/images/')[1];
+                    let clean = urlStr.replace(/^\//, '');
+                    if (clean.includes('storage/')) {
+                        clean = 'storage/' + clean.split('storage/').pop();
+                    } else if (clean.includes('images/')) {
+                        clean = 'images/' + clean.split('images/').pop();
+                    } else if (clean.startsWith('events/') || clean.startsWith('templates/')) {
+                        clean = 'storage/' + clean;
                     }
 
-                    if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) return urlStr;
-                    return window.location.origin + '/' + urlStr.replace(/^\//, '');
+                    return window.location.origin + '/' + clean;
                 }
 
                 const tpl = evt.template || { id: 1, name: 'Plantilla 1', bg_color: '#FFFFFF', strip_color: '#000000', positions: {} };

@@ -1238,15 +1238,18 @@ const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
                 function getFullAssetUrl(urlStr) {
                     if (!urlStr) return null;
                     if (urlStr.startsWith('data:')) return urlStr;
+                    if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) return urlStr;
 
-                    if (urlStr.includes('/storage/')) {
-                        urlStr = '/storage/' + urlStr.split('/storage/')[1];
-                    } else if (urlStr.includes('/images/')) {
-                        urlStr = '/images/' + urlStr.split('/images/')[1];
+                    let clean = urlStr.replace(/^\//, '');
+                    if (clean.includes('storage/')) {
+                        clean = 'storage/' + clean.split('storage/').pop();
+                    } else if (clean.includes('images/')) {
+                        clean = 'images/' + clean.split('images/').pop();
+                    } else if (clean.startsWith('events/') || clean.startsWith('templates/')) {
+                        clean = 'storage/' + clean;
                     }
 
-                    if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) return urlStr;
-                    return window.location.origin + '/' + urlStr.replace(/^\//, '');
+                    return window.location.origin + '/' + clean;
                 }
 
                 // Precargar imágenes a Data URLs

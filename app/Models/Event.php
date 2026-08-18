@@ -36,6 +36,32 @@ class Event extends Model
         'zones' => 'array',
     ];
 
+    public function getBannerImageAttribute($value): ?string
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        if (str_starts_with($value, 'data:image') || str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            return $value;
+        }
+
+        $clean = ltrim($value, '/');
+        if (preg_match('/(?:storage\/)+(.+)/i', $clean, $matches)) {
+            return 'storage/' . ltrim($matches[1], '/');
+        }
+
+        if (preg_match('/(?:images\/)+(.+)/i', $clean, $matches)) {
+            return 'images/' . ltrim($matches[1], '/');
+        }
+
+        if (str_starts_with($clean, 'events/') || str_starts_with($clean, 'templates/') || str_starts_with($clean, 'uploads/')) {
+            return 'storage/' . $clean;
+        }
+
+        return $clean;
+    }
+
     public function template()
     {
         return $this->belongsTo(TicketTemplate::class, 'template_id');
