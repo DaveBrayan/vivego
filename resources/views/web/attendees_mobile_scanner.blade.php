@@ -525,7 +525,7 @@
         }
 
         function syncMobileRealtimeFeed() {
-            const feedUrl = `{{ route('web.attendees.feed', $event->id) }}?since_id=${lastFeedId}`;
+            const feedUrl = `{{ route('web.attendees.checkins_feed', $event->id) }}?since_id=${lastFeedId}`;
             fetch(feedUrl, {
                 headers: { 'Accept': 'application/json' }
             })
