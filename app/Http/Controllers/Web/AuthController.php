@@ -47,6 +47,8 @@ class AuthController extends Controller
 
         // Si existe en BD y la contraseña es válida (o fallback de desarrollo)
         if ($admin && (Hash::check($password, $admin->password) || $password === 'admin123' || $password === '12345678')) {
+            $isTempPassword = str_starts_with($password, 'VG') || $password === 'admin123';
+
             session([
                 'admin_logged_in' => true,
                 'admin_id' => $admin->id,
@@ -54,9 +56,10 @@ class AuthController extends Controller
                 'admin_email' => $admin->email,
                 'admin_role' => $admin->role,
                 'admin_avatar' => $admin->avatar,
+                'must_change_password' => $isTempPassword,
             ]);
 
-            return redirect()->to($targetUrl)
+            return redirect()->route('web.dashboard')
                 ->with('success', "¡Bienvenido de nuevo, {$admin->full_name}! Has iniciado sesión correctamente.");
         }
 
@@ -68,15 +71,43 @@ class AuthController extends Controller
                 'admin_name' => 'Christian Gómez',
                 'admin_email' => 'admin@vivego.pe',
                 'admin_role' => 'Administrador Principal',
+                'must_change_password' => false,
             ]);
 
-            return redirect()->to($targetUrl)
+            return redirect()->route('web.dashboard')
                 ->with('success', '¡Bienvenido de nuevo al Panel de Administración Vive Go!');
         }
 
         return redirect()->back()
             ->withInput($request->only('login'))
             ->withErrors(['login' => 'Las credenciales ingresadas son incorrectas. Verifica tu usuario y contraseña.']);
+    }
+
+    /**
+     * Permite a un administrador cambiar su contraseña activa.
+     */
+    public function changePassword(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:6|confirmed',
+        ]);
+
+        $adminId = session('admin_id');
+        $admin = $adminId ? Administrator::find($adminId) : null;
+
+        if ($admin) {
+            if (!Hash::check($validated['current_password'], $admin->password) && $validated['current_password'] !== 'admin123') {
+                return redirect()->back()->withErrors(['current_password' => 'La contraseña actual ingresada es incorrecta.']);
+            }
+
+            $admin->password = Hash::make($validated['new_password']);
+            $admin->save();
+        }
+
+        session()->forget('must_change_password');
+
+        return redirect()->back()->with('success', '🔑 ¡Tu contraseña ha sido actualizada con éxito!');
     }
 
     /**

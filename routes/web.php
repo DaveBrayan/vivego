@@ -99,4 +99,5 @@ Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group
     Route::put('/admin/administradores/{administrator}', [AdminController::class, 'update'])->name('web.admins.update');
     Route::delete('/admin/administradores/{administrator}', [AdminController::class, 'destroy'])->name('web.admins.destroy');
     Route::post('/admin/administradores/{administrator}/reset-password', [AdminController::class, 'resetPassword'])->name('web.admins.reset-password');
+    Route::post('/admin/cambiar-password', [AuthController::class, 'changePassword'])->name('web.change_password');
 });

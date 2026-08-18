@@ -143,11 +143,83 @@
         </ul>
     </nav>
 
-    <!-- Footer Sidebar: Botón Salir -->
-    <div class="dash-sidebar-footer">
-        <a href="{{ route('web.home') }}" class="dash-btn-logout" title="Cerrar Sesión">
+    <!-- Footer Sidebar: Botón Cambiar Contraseña & Salir -->
+    <div class="dash-sidebar-footer" style="display: flex; flex-direction: column; gap: 0.5rem; padding: 1rem;">
+        <button type="button" class="dash-btn-logout" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #CBD5E1; width: 100%; cursor: pointer;" onclick="openChangePasswordModal()" title="Cambiar Contraseña">
+            <span class="dash-btn-logout-icon">🔑</span>
+            <span class="dash-btn-logout-text">Cambiar Clave</span>
+        </button>
+
+        <a href="#" class="dash-btn-logout" title="Cerrar Sesión" onclick="event.preventDefault(); document.getElementById('sidebar-logout-form').submit();">
             <span class="dash-btn-logout-icon">🚪</span>
             <span class="dash-btn-logout-text">Cerrar Sesión</span>
         </a>
+
+        <form id="sidebar-logout-form" action="{{ route('web.logout') }}" method="POST" style="display: none;">
+            @csrf
+        </form>
     </div>
 </aside>
+
+<!-- Modal de Cambio de Contraseña -->
+<div id="changePasswordModal" class="admin-modal-backdrop" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 1rem;">
+    <div class="admin-modal-content" style="background: #14141E; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 20px; max-width: 440px; width: 100%; padding: 2rem; box-shadow: 0 25px 50px rgba(0,0,0,0.5); color: #FFFFFF; font-family: 'Plus Jakarta Sans', sans-serif;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">
+            <h3 style="font-size: 1.25rem; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                🔑 Actualizar Contraseña
+            </h3>
+            <button type="button" onclick="closeChangePasswordModal()" style="background: none; border: none; color: #94A3B8; font-size: 1.25rem; cursor: pointer;">✕</button>
+        </div>
+
+        @if(session('must_change_password'))
+            <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #FDE68A; padding: 0.75rem 1rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; margin-bottom: 1.25rem; line-height: 1.4;">
+                ⚠️ Se detectó una contraseña temporal. Por tu seguridad, actualízala antes de continuar.
+            </div>
+        @endif
+
+        <form action="{{ route('web.change_password') }}" method="POST">
+            @csrf
+            <div style="margin-bottom: 1.15rem;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 800; color: #CBD5E1; text-transform: uppercase; margin-bottom: 0.4rem;">Contraseña Actual</label>
+                <input type="password" name="current_password" required placeholder="••••••••" style="width: 100%; padding: 0.75rem 1rem; background: rgba(15, 23, 42, 0.6); border: 1.5px solid rgba(255, 255, 255, 0.15); border-radius: 12px; color: #FFFFFF; font-size: 0.95rem; outline: none;">
+            </div>
+
+            <div style="margin-bottom: 1.15rem;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 800; color: #CBD5E1; text-transform: uppercase; margin-bottom: 0.4rem;">Nueva Contraseña</label>
+                <input type="password" name="new_password" required placeholder="Mínimo 6 caracteres" style="width: 100%; padding: 0.75rem 1rem; background: rgba(15, 23, 42, 0.6); border: 1.5px solid rgba(255, 255, 255, 0.15); border-radius: 12px; color: #FFFFFF; font-size: 0.95rem; outline: none;">
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 800; color: #CBD5E1; text-transform: uppercase; margin-bottom: 0.4rem;">Confirmar Nueva Contraseña</label>
+                <input type="password" name="new_password_confirmation" required placeholder="Repite la nueva contraseña" style="width: 100%; padding: 0.75rem 1rem; background: rgba(15, 23, 42, 0.6); border: 1.5px solid rgba(255, 255, 255, 0.15); border-radius: 12px; color: #FFFFFF; font-size: 0.95rem; outline: none;">
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                <button type="button" onclick="closeChangePasswordModal()" style="padding: 0.75rem 1.25rem; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; color: #FFFFFF; font-weight: 700; cursor: pointer;">Cancelar</button>
+                <button type="submit" style="padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #FF5500, #E04B00); border: none; border-radius: 12px; color: #FFFFFF; font-weight: 800; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 85, 0, 0.4);">Actualizar Clave</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openChangePasswordModal() {
+        const m = document.getElementById('changePasswordModal');
+        if (m) {
+            m.style.display = 'flex';
+        }
+    }
+
+    function closeChangePasswordModal() {
+        const m = document.getElementById('changePasswordModal');
+        if (m) {
+            m.style.display = 'none';
+        }
+    }
+
+    @if(session('must_change_password'))
+        document.addEventListener('DOMContentLoaded', function() {
+            openChangePasswordModal();
+        });
+    @endif
+</script>
