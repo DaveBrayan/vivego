@@ -680,6 +680,26 @@ class EventController extends Controller
     }
 
     /**
+     * Escribe datos binarios de imagen directamente en disco sin requerir la extensión PHP finfo.
+     */
+    protected function writeBinaryFile(string $folder, string $fileName, string $binaryData): string
+    {
+        $storageDir = storage_path('app/public/' . $folder);
+        if (!file_exists($storageDir)) {
+            @mkdir($storageDir, 0755, true);
+        }
+        @file_put_contents($storageDir . '/' . $fileName, $binaryData);
+
+        $publicDir = public_path('storage/' . $folder);
+        if (!file_exists($publicDir)) {
+            @mkdir($publicDir, 0755, true);
+        }
+        @file_put_contents($publicDir . '/' . $fileName, $binaryData);
+
+        return '/storage/' . $folder . '/' . $fileName;
+    }
+
+    /**
      * Decodifica una imagen base64 y la guarda en el disco público de Laravel.
      */
     protected function saveBase64Image(?string $imageString, string $folder = 'events', string $prefix = 'img'): ?string
@@ -705,8 +725,7 @@ class EventController extends Controller
             $data = base64_decode(str_replace(' ', '+', $matches[2]));
             if ($data !== false && !empty($data)) {
                 $fileName = $prefix . '_' . uniqid() . '_' . time() . '.' . $ext;
-                \Illuminate\Support\Facades\Storage::disk('public')->put($folder . '/' . $fileName, $data);
-                return '/storage/' . $folder . '/' . $fileName;
+                return $this->writeBinaryFile($folder, $fileName, $data);
             }
         }
 

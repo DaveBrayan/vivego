@@ -144,8 +144,7 @@ class TemplateController extends Controller
                     $decoded = base64_decode($data);
                     if ($decoded !== false) {
                         $fileName = 'bg_' . uniqid() . '_' . time() . '.' . $ext;
-                        \Illuminate\Support\Facades\Storage::disk('public')->put('templates/' . $fileName, $decoded);
-                        $validated['bg_image'] = 'storage/templates/' . $fileName;
+                        $validated['bg_image'] = $this->writeBinaryFile('templates', $fileName, $decoded);
                     }
                 }
             }
@@ -200,8 +199,7 @@ class TemplateController extends Controller
                     $decoded = base64_decode($data);
                     if ($decoded !== false) {
                         $fileName = 'bg_' . uniqid() . '_' . time() . '.' . $ext;
-                        \Illuminate\Support\Facades\Storage::disk('public')->put('templates/' . $fileName, $decoded);
-                        $validated['bg_image'] = 'storage/templates/' . $fileName;
+                        $validated['bg_image'] = $this->writeBinaryFile('templates', $fileName, $decoded);
                     }
                 }
             }
@@ -214,6 +212,26 @@ class TemplateController extends Controller
             'message' => 'Plantilla actualizada correctamente en la Base de Datos',
             'template' => $template,
         ]);
+    }
+
+    /**
+     * Escribe datos binarios de imagen directamente en disco sin requerir la extensión PHP finfo.
+     */
+    protected function writeBinaryFile(string $folder, string $fileName, string $binaryData): string
+    {
+        $storageDir = storage_path('app/public/' . $folder);
+        if (!file_exists($storageDir)) {
+            @mkdir($storageDir, 0755, true);
+        }
+        @file_put_contents($storageDir . '/' . $fileName, $binaryData);
+
+        $publicDir = public_path('storage/' . $folder);
+        if (!file_exists($publicDir)) {
+            @mkdir($publicDir, 0755, true);
+        }
+        @file_put_contents($publicDir . '/' . $fileName, $binaryData);
+
+        return '/storage/' . $folder . '/' . $fileName;
     }
 
     /**
