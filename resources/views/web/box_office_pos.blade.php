@@ -1451,91 +1451,119 @@ const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
                     bgImgHtml = `<div style="position: absolute; inset: 0; background-image: url('${bgDataUrl || bgImgSrc}'); background-size: cover; background-position: center; z-index: 0; pointer-events: none;"></div>`;
                 }
 
-                const pdfContainer = document.createElement('div');
-                pdfContainer.id = 'posPdfSingleCanvas';
-                pdfContainer.style.position = 'fixed';
-                pdfContainer.style.left = '-9999px';
-                pdfContainer.style.top = '0';
-                pdfContainer.style.width = '794px';
-                pdfContainer.style.height = '1123px';
-                pdfContainer.style.zIndex = '999999';
-                pdfContainer.style.backgroundImage = `url('${boletoDataUrl || boletoSrc}')`;
-                pdfContainer.style.backgroundSize = '100% 100%';
-                pdfContainer.style.backgroundPosition = 'center';
-                pdfContainer.style.fontFamily = "'Plus Jakarta Sans', sans-serif";
-                pdfContainer.style.boxSizing = 'border-box';
-                pdfContainer.style.overflow = 'hidden';
-
-                pdfContainer.innerHTML = `
-                    <div class="ticket-canvas-inner" style="width: 771px; height: 370px; position: absolute; top: 12px; left: 11.5px; background: ${bgColor}; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; border-radius: 18px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15); box-sizing: border-box;">
-                        ${bgImgHtml}
-                        
-                        <div style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;" class="canva-main-area">
-                            ${logoHtml}
-                            ${bannerHtml}
-                            ${titleHtml}
-                            ${zoneHtml}
-                            ${priceHtml}
-                            ${venueHtml}
-                            ${cityHtml}
-                            ${dateHtml}
-                            ${timeHtml}
-                            ${buyerNameHtml}
-                            ${buyerDniHtml}
-                            ${ticketNumberHtml}
-                            ${qrBoxHtml}
-                            ${hashHtml}
-                            ${disclaimerHtml}
-                            ${customTagsHtml}
-                        </div>
-                    </div>
-                `;
-
-                document.body.appendChild(pdfContainer);
-
-                if (document.fonts && document.fonts.ready) {
-                    await document.fonts.ready;
-                }
-                await new Promise(r => setTimeout(r, 250));
-
-                console.log('[CanvaStudio POS PDF] Rendering html2canvas A4...');
-                const canvas = await html2canvas(pdfContainer, {
-                    scale: 2.5,
-                    useCORS: true,
-                    allowTaint: true,
-                    backgroundColor: '#FFFFFF',
-                    logging: true
-                });
-
-                console.log('[CanvaStudio POS PDF] Canvas A4 rendered successfully:', canvas.width, 'x', canvas.height);
-
-                const imgData = canvas.toDataURL('image/jpeg', 0.95);
-                pdfContainer.remove();
+                const ticketsList = (sale.tickets_data && Array.isArray(sale.tickets_data) && sale.tickets_data.length > 0)
+                    ? sale.tickets_data
+                    : Array.from({ length: parseInt(sale.quantity || 1, 10) }, (_, i) => ({
+                        ticket_code: `TK-${sale.receipt_number}-${i + 1}`,
+                        ticket_number: i + 1,
+                        zone: sale.zone_name,
+                        price: sale.unit_price,
+                        validation_hash: null,
+                        qr_payload: null
+                    }));
 
                 const jsPdfObj = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF || null);
+                let pdf = null;
                 if (jsPdfObj) {
-                    const pdf = new jsPdfObj({
+                    pdf = new jsPdfObj({
                         orientation: 'portrait',
                         unit: 'mm',
                         format: 'a4'
                     });
-                    pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
-                    pdf.save(`Entrada_VIRTUAL_${sale.receipt_number}.pdf`);
-                    console.log('[CanvaStudio POS PDF] Saved A4 PDF via jsPDF:', `Entrada_VIRTUAL_${sale.receipt_number}.pdf`);
-                } else if (typeof html2pdf !== 'undefined') {
-                    const opt = {
-                        margin: 0,
-                        filename: `Entrada_VIRTUAL_${sale.receipt_number}.pdf`,
-                        image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: { scale: 2.5, useCORS: true, backgroundColor: '#FFFFFF' },
-                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                    };
-                    await html2pdf().set(opt).from(pdfContainer).save();
+                }
+
+                for (let i = 0; i < ticketsList.length; i++) {
+                    const tItem = ticketsList[i];
+                    const ticketNumStr = tItem.ticket_code ? `N° ${tItem.ticket_code}` : `N° ${String(sale.id || 1).padStart(5, '0')}-${i + 1}`;
+
+                    let hashVal = tItem.validation_hash || sale.validation_hash;
+                    if (!hashVal || hashVal.length !== 10) {
+                        hashVal = 'VG' + Math.random().toString(36).substring(2, 10).toUpperCase();
+                        if (hashVal.length > 10) hashVal = hashVal.substring(0, 10);
+                        while (hashVal.length < 10) hashVal += 'X';
+                    }
+
+                    const qrPayload = tItem.qr_payload || sale.qr_payload || `VGENC:${hashVal}`;
+                    const qrDataUrl = generateQrBase64(qrPayload);
+
+                    const ticketNumberHtml = renderCanvaStudioElement('canvaElTicketNumber', pNum, '15px', '660px', '', '', `<span style="font-size: ${pNum.fontSize || '1.2rem'}; font-weight: 900; color: ${pNum.color || primaryTextColor}; font-family: var(--font-heading, sans-serif); letter-spacing: 0.5px; display: inline-block;">${ticketNumStr}</span>`, { ticketNum: ticketNumStr });
+                    const qrBoxHtml = renderCanvaStudioElement('canvaElQR', pQR, '55px', '635px', '95px', '95px', `<div style="padding: 0.35rem; background: #FFFFFF; border-radius: 12px; border: 1.5px solid #E2E8F0; width: 100%; height: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.08);"><img src="${qrDataUrl}" style="width: 100%; height: 100%; object-fit: contain; display: block; border-radius: 4px;" alt="QR Code" /></div>`);
+                    const hashHtml = renderCanvaStudioElement('canvaElHash', pHash, '175px', '645px', '', '', `<span style="font-family: monospace; font-size: ${pHash.fontSize || '0.85rem'}; font-weight: 800; color: ${pHash.color || secondaryTextColor}; letter-spacing: 1.5px; display: inline-block;">${hashVal}</span>`, { hash: hashVal });
+
+                    const pdfContainer = document.createElement('div');
+                    pdfContainer.className = 'posPdfSingleCanvas';
+                    pdfContainer.style.position = 'fixed';
+                    pdfContainer.style.left = '-9999px';
+                    pdfContainer.style.top = '0';
+                    pdfContainer.style.width = '794px';
+                    pdfContainer.style.height = '1123px';
+                    pdfContainer.style.zIndex = '999999';
+                    pdfContainer.style.backgroundImage = `url('${boletoDataUrl || boletoSrc}')`;
+                    pdfContainer.style.backgroundSize = '100% 100%';
+                    pdfContainer.style.backgroundPosition = 'center';
+                    pdfContainer.style.fontFamily = "'Plus Jakarta Sans', sans-serif";
+                    pdfContainer.style.boxSizing = 'border-box';
+                    pdfContainer.style.overflow = 'hidden';
+
+                    pdfContainer.innerHTML = `
+                        <div class="ticket-canvas-inner" style="width: 771px; height: 370px; position: absolute; top: 12px; left: 11.5px; background: ${bgColor}; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; border-radius: 18px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15); box-sizing: border-box;">
+                            ${bgImgHtml}
+                            
+                            <div style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;" class="canva-main-area">
+                                ${logoHtml}
+                                ${bannerHtml}
+                                ${titleHtml}
+                                ${zoneHtml}
+                                ${priceHtml}
+                                ${venueHtml}
+                                ${cityHtml}
+                                ${dateHtml}
+                                ${timeHtml}
+                                ${buyerNameHtml}
+                                ${buyerDniHtml}
+                                ${ticketNumberHtml}
+                                ${qrBoxHtml}
+                                ${hashHtml}
+                                ${disclaimerHtml}
+                                ${customTagsHtml}
+                            </div>
+                        </div>
+                    `;
+
+                    document.body.appendChild(pdfContainer);
+
+                    if (document.fonts && document.fonts.ready) {
+                        await document.fonts.ready;
+                    }
+                    await new Promise(r => setTimeout(r, 200));
+
+                    console.log(`[CanvaStudio POS PDF] Rendering A4 page ${i + 1}/${ticketsList.length}...`);
+                    const canvas = await html2canvas(pdfContainer, {
+                        scale: 2.5,
+                        useCORS: true,
+                        allowTaint: true,
+                        backgroundColor: '#FFFFFF',
+                        logging: false
+                    });
+
+                    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                    pdfContainer.remove();
+
+                    if (pdf) {
+                        if (i > 0) {
+                            pdf.addPage('a4', 'portrait');
+                        }
+                        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+                    }
+                }
+
+                if (pdf) {
+                    pdf.save(`Entradas_VIRTUAL_${sale.receipt_number}.pdf`);
                 }
 
                 Swal.fire({
-                    title: '📥 Entrada PDF Generada Exitosamente',
-                    text: `La entrada en PDF del recibo N° ${sale.receipt_number} se ha generado manteniendo el diseño oficial.`,
+                    title: '📥 PDF de Entradas Generado Exitosamente',
+                    text: `Se ha generado el PDF con ${ticketsList.length} hoja(s) A4 para la venta N° ${sale.receipt_number}.`,
                     icon: 'success',
                     confirmButtonColor: '#06B6D4',
                     background: '#14141E',
