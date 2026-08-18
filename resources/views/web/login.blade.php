@@ -435,7 +435,7 @@
                 <div class="form-group">
                     <label class="form-label" for="login">Usuario o Correo Electrónico</label>
                     <div class="input-wrapper">
-                        <input type="text" id="login" name="login" class="form-control" placeholder="ejemplo@vivego.pe o usuario" value="{{ old('login', 'admin@vivego.pe') }}" required autofocus>
+                        <input type="text" id="login" name="login" class="form-control" placeholder="ejemplo@vivego.pe o usuario" value="{{ old('login') }}" required autofocus>
                         <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                             <circle cx="12" cy="7" r="4"></circle>
@@ -446,7 +446,7 @@
                 <div class="form-group">
                     <label class="form-label" for="password">Contraseña</label>
                     <div class="input-wrapper">
-                        <input type="password" id="password" name="password" class="form-control" placeholder="••••••••••••" value="admin123" required>
+                        <input type="password" id="password" name="password" class="form-control" placeholder="••••••••••••" required>
                         <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
@@ -472,15 +472,6 @@
                     🚀 Iniciar Sesión en el Dashboard
                 </button>
             </form>
-
-            <div class="demo-credentials-box">
-                <div class="demo-title">
-                    <span>⚡ Acceso Rápido Demo</span>
-                </div>
-                <div class="demo-credentials" id="demoCredBtn" title="Hacer clic para autocompletar">
-                    Email: <strong>admin@vivego.pe</strong> | Clave: <strong>admin123</strong>
-                </div>
-            </div>
         </div>
     </main>
 
@@ -500,15 +491,6 @@
                 const isPassword = passInput.type === 'password';
                 passInput.type = isPassword ? 'text' : 'password';
                 eyeIcon.style.color = isPassword ? '#FF5500' : '#64748B';
-            });
-        }
-
-        // Demo autocompletar al hacer clic en las credenciales
-        const demoBtn = document.getElementById('demoCredBtn');
-        if (demoBtn) {
-            demoBtn.addEventListener('click', () => {
-                document.getElementById('login').value = 'admin@vivego.pe';
-                document.getElementById('password').value = 'admin123';
             });
         }
     </script>
