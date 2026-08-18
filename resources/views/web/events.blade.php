@@ -950,12 +950,6 @@
                         return html.replace(inlineRegex, `$1${newValue}`);
                     }
 
-                    // Patrón 4: Etiqueta directa en HTML (ej. <div>COMPRADOR: NOMBRE</div> o <div>DNI: 12345678</div>)
-                    const directLabelRegex = new RegExp(`(${labelPattern}:?\\s*)([^<\\n\\r]+)`, 'i');
-                    if (directLabelRegex.test(html)) {
-                        return html.replace(directLabelRegex, `$1${newValue}`);
-                    }
-
                     return html;
                 }
 
@@ -1012,9 +1006,7 @@
                     }
 
                     let finalHtml = fallbackHtml;
-                    if (id === 'canvaElQR' || id === 'canvaElLogo' || id === 'canvaElBanner') {
-                        finalHtml = fallbackHtml;
-                    } else if (posObj.html && typeof posObj.html === 'string' && posObj.html.trim().length > 0) {
+                    if (posObj.html && typeof posObj.html === 'string' && posObj.html.trim().length > 0) {
                         finalHtml = posObj.html;
                         if (dynamicData) {
                             if (id === 'canvaElZone' && dynamicData.zoneName) {
@@ -1024,14 +1016,7 @@
                             } else if ((id === 'canvaElBuyerName' || id === 'canvaElBuyer') && dynamicData.buyerName) {
                                 finalHtml = replaceDynamicHtmlValue(finalHtml, 'Comprador', dynamicData.buyerName);
                             } else if (id === 'canvaElBuyerDni' && dynamicData.buyerDni) {
-                                let updated = replaceDynamicHtmlValue(finalHtml, 'DNI', dynamicData.buyerDni);
-                                if (updated === finalHtml) {
-                                    updated = replaceDynamicHtmlValue(finalHtml, 'Documento', dynamicData.buyerDni);
-                                }
-                                if (updated === finalHtml) {
-                                    updated = finalHtml.replace(/\b\d{8}\b/g, dynamicData.buyerDni);
-                                }
-                                finalHtml = updated;
+                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'DNI', dynamicData.buyerDni);
                             } else if (id === 'canvaElDate' && dynamicData.date) {
                                 finalHtml = replaceDynamicHtmlValue(finalHtml, 'FECHA', dynamicData.date);
                             } else if (id === 'canvaElTime' && dynamicData.time) {
