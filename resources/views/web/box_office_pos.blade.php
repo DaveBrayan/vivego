@@ -1364,7 +1364,9 @@ const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
                     }
 
                     let finalHtml = fallbackHtml;
-                    if (posObj.html && typeof posObj.html === 'string' && posObj.html.trim().length > 0) {
+                    if (id === 'canvaElQR' || id === 'canvaElLogo' || id === 'canvaElBanner') {
+                        finalHtml = fallbackHtml;
+                    } else if (posObj.html && typeof posObj.html === 'string' && posObj.html.trim().length > 0) {
                         finalHtml = posObj.html;
                         if (dynamicData) {
                             if (id === 'canvaElZone' && dynamicData.zoneName) {
@@ -1374,7 +1376,14 @@ const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
                             } else if ((id === 'canvaElBuyerName' || id === 'canvaElBuyer') && dynamicData.buyerName) {
                                 finalHtml = replaceDynamicHtmlValue(finalHtml, 'Comprador', dynamicData.buyerName);
                             } else if (id === 'canvaElBuyerDni' && dynamicData.buyerDni) {
-                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'DNI', dynamicData.buyerDni);
+                                let updated = replaceDynamicHtmlValue(finalHtml, 'DNI', dynamicData.buyerDni);
+                                if (updated === finalHtml) {
+                                    updated = replaceDynamicHtmlValue(finalHtml, 'Documento', dynamicData.buyerDni);
+                                }
+                                if (updated === finalHtml) {
+                                    updated = finalHtml.replace(/\b\d{8}\b/g, dynamicData.buyerDni);
+                                }
+                                finalHtml = updated;
                             } else if (id === 'canvaElDate' && dynamicData.date) {
                                 finalHtml = replaceDynamicHtmlValue(finalHtml, 'FECHA', dynamicData.date);
                             } else if (id === 'canvaElTime' && dynamicData.time) {
