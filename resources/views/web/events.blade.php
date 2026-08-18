@@ -1088,7 +1088,7 @@
                         const disclaimerHtml = renderCanvaStudioElement('canvaElDisclaimer', pDisc, '245px', '570px', '190px', '', `<div style="border-top: 1.5px solid #CBD5E1; padding-top: 0.25rem;"><p style="font-size: ${pDisc.fontSize || '0.625rem'}; font-weight: 700; color: ${pDisc.color || mutedTextColor}; line-height: 1.2; margin: 0; text-align: center;">La responsabilidad de este boleto es exclusiva del cliente, no compartir ni publicar. Se recomienda llevar impreso.</p></div>`);
 
                         pageTicketsHtml += `
-                            <div class="ticket-wrapper-card" style="width: ${printCardWidth}; height: ${printCardHeight}; position: relative; overflow: hidden; border-radius: 18px; border: 1.5px solid #000000; margin-bottom: ${cardMarginBottom}; flex-shrink: 0; box-sizing: border-box; background: ${bgColor};">
+                            <div class="ticket-wrapper-card" style="width: ${printCardWidth}; height: ${printCardHeight}; position: relative; overflow: hidden; border-radius: 18px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15); margin-bottom: ${cardMarginBottom}; flex-shrink: 0; box-sizing: border-box; background: ${bgColor};">
                                 <div class="ticket-canvas-inner" style="width: 771px; height: 370px; transform: scale(${scaleRatio}); transform-origin: top left; position: absolute; top: 0; left: 0; background: ${bgColor}; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; overflow: hidden; border-radius: 18px; box-sizing: border-box;">
                                     ${(bgDataUrl || bgImgSrc) ? `<div style="position: absolute; inset: 0; background-image: url('${bgDataUrl || bgImgSrc}'); background-size: cover; background-position: center; z-index: 0; pointer-events: none;"></div>` : ''}
                                     
@@ -1139,7 +1139,7 @@
                             body { margin: 0; padding: 0; background: #FFFFFF; color: #000000; font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
                             .print-page-sheet { width: ${pageWidthMm}mm; min-height: ${pageHeightMm}mm; max-height: ${pageHeightMm}mm; page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: ${sheetPaddingTopBottom}; padding-bottom: ${sheetPaddingTopBottom}; overflow: hidden; }
                             .print-page-sheet:last-child { page-break-after: auto; break-after: auto; }
-                            .ticket-wrapper-card { border: 1.5px solid #000000; border-radius: 20px; overflow: hidden; position: relative; box-sizing: border-box; box-shadow: none; flex-shrink: 0; page-break-inside: avoid; break-inside: avoid; }
+                            .ticket-wrapper-card { border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15); border-radius: 20px; overflow: hidden; position: relative; box-sizing: border-box; flex-shrink: 0; page-break-inside: avoid; break-inside: avoid; }
                             .ticket-wrapper-card:last-child { margin-bottom: 0 !important; }
                             .ticket-canvas-inner { border-radius: 20px; overflow: hidden; font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
                             .ticket-side-strip { display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }

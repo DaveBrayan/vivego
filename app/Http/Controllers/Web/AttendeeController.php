@@ -238,6 +238,7 @@ class AttendeeController extends Controller
             'ticket' => [
                 'id' => $ticket->id,
                 'ticket_code' => $ticket->ticket_code,
+                'validation_hash' => $hashVal,
                 'zone_name' => $ticket->zone_name,
                 'unit_price' => 'S/ ' . number_format($ticket->unit_price, 2),
                 'buyer_name' => $ticket->buyer_name,
@@ -273,7 +274,7 @@ class AttendeeController extends Controller
         $recentCheckins = EventTicket::where('event_id', $event->id)
             ->where('is_used', true)
             ->orderBy('checked_in_at', 'desc')
-            ->take(10)
+            ->take(15)
             ->get();
 
         $metrics = [
@@ -301,18 +302,20 @@ class AttendeeController extends Controller
         }
 
         $newCheckins = $newCheckinsQuery->orderBy('checked_in_at', 'desc')
-            ->take(20)
+            ->take(25)
             ->get()
             ->map(function ($ticket) {
+                $hash = $ticket->validation_hash ?: ('VG' . strtoupper(substr(md5($ticket->id), 0, 8)));
                 return [
                     'id' => $ticket->id,
                     'ticket_code' => $ticket->ticket_code,
+                    'validation_hash' => $hash,
                     'zone_name' => $ticket->zone_name,
                     'buyer_name' => $ticket->buyer_name,
                     'buyer_dni' => $ticket->buyer_dni,
                     'checked_in_at' => $ticket->checked_in_at ? $ticket->checked_in_at->format('h:i:s A') : '',
                     'checked_in_date' => $ticket->checked_in_at ? $ticket->checked_in_at->format('d/m/Y') : '',
-                    'scanned_by' => $ticket->scanned_by ?: 'Puerta Principal',
+                    'scanned_by' => $ticket->scanned_by ?: 'Móvil Scanner',
                 ];
             });
 

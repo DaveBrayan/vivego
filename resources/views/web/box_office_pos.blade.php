@@ -1464,7 +1464,7 @@ const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
                 pdfContainer.style.overflow = 'hidden';
 
                 pdfContainer.innerHTML = `
-                    <div class="ticket-canvas-inner" style="width: 771px; height: 370px; position: absolute; top: 12px; left: 11.5px; background: ${bgColor}; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; border-radius: 18px; border: 1.5px solid #000000; box-sizing: border-box;">
+                    <div class="ticket-canvas-inner" style="width: 771px; height: 370px; position: absolute; top: 12px; left: 11.5px; background: ${bgColor}; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; border-radius: 18px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15); box-sizing: border-box;">
                         ${bgImgHtml}
                         
                         <div style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;" class="canva-main-area">

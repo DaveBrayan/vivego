@@ -790,7 +790,7 @@
                             </div>
 
                             <!-- CONTENEDOR DEL LIENZO OFICIAL CANVA (771PX X 370PX) -->
-                            <div class="canva-official-canvas" id="canvaTicketCanvas" style="background-color: {{ $eventData['template']->bg_color ?? '#FFFFFF' }}; {{ !empty($eventData['template']->bg_image) ? "background-image: url('" . $eventData['template']->bg_image . "');" : "background-image: none;" }} background-size: cover; background-position: center; border: 1.5px solid #CBD5E1; box-shadow: 0 10px 25px rgba(0,0,0,0.06);">
+                            <div class="canva-official-canvas" id="canvaTicketCanvas" style="background-color: {{ $eventData['template']->bg_color ?? '#FFFFFF' }}; {{ !empty($eventData['template']->bg_image) ? "background-image: url('" . $eventData['template']->bg_image . "');" : "background-image: none;" }} background-size: cover; background-position: center; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.12);">
                                 
                                 <div id="canvaCanvasArea" style="position: absolute; inset: 0; width: 100%; height: 100%;">
                                     

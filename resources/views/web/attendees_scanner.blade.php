@@ -258,6 +258,9 @@
                                             <span style="font-family: monospace; font-weight: 800; color: #FFFFFF; font-size: 0.9rem;">
                                                 {{ $chk->ticket_code }}
                                             </span>
+                                            <small style="display: block; font-family: monospace; color: #FF7733; font-size: 0.75rem; font-weight: 800;">
+                                                🔑 {{ $chk->validation_hash ?: ('VG' . strtoupper(substr(md5($chk->id), 0, 8))) }}
+                                            </small>
                                         </td>
                                         <td>
                                             <span class="dash-badge-custom badge-green" style="font-size: 0.75rem;">
@@ -512,7 +515,10 @@
             tr.className = 'checkin-row-item row-highlight-new';
             tr.innerHTML = `
                 <td><span style="font-weight: 800; color: #10B981;">NUEVO</span></td>
-                <td><span style="font-family: monospace; font-weight: 800; color: #FFFFFF; font-size: 0.9rem;">${ticket.ticket_code}</span></td>
+                <td>
+                    <span style="font-family: monospace; font-weight: 800; color: #FFFFFF; font-size: 0.9rem;">${ticket.ticket_code}</span>
+                    <small style="display: block; font-family: monospace; color: #FF7733; font-size: 0.75rem; font-weight: 800;">🔑 ${ticket.validation_hash || ''}</small>
+                </td>
                 <td><span class="dash-badge-custom badge-green" style="font-size: 0.75rem;">${ticket.zone_name}</span></td>
                 <td><strong style="color: #FFFFFF;">${ticket.buyer_name}</strong></td>
                 <td><span style="color: #94A3B8; font-family: monospace;">${ticket.buyer_dni || '-'}</span></td>

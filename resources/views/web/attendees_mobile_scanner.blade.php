@@ -328,6 +328,10 @@
                         <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">👤 <strong style="color: #FFFFFF;" id="mResultBuyer">-</strong></span>
                         <span style="color: #00F0FF; font-weight: 800; font-size: 0.72rem; flex-shrink: 0;" id="mResultTime">-</span>
                     </div>
+                    <div style="margin-top: 0.35rem; padding-top: 0.25rem; border-top: 1px dashed rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: space-between; font-size: 0.72rem;">
+                        <span style="font-family: monospace; font-weight: 800; color: #FF7733; letter-spacing: 0.8px;" id="mResultHash">🔑 HASH: -</span>
+                        <small style="color: #94A3B8; font-weight: 700;" id="mResultDevice">📱 Móvil 1</small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -381,12 +385,18 @@
             </small>
             <div id="mobileRecentFeed">
                 @forelse($recentCheckins as $chk)
-                    <div class="feed-mini-item">
-                        <div>
-                            <strong style="color: #FFFFFF;">{{ $chk->ticket_code }}</strong>
-                            <small style="color: #10B981; display: block;">{{ $chk->zone_name }}</small>
+                    <div class="feed-mini-item" id="feedItem_{{ $chk->id }}">
+                        <div style="min-width: 0; flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                <strong style="color: #FFFFFF; font-size: 0.85rem;">{{ $chk->ticket_code }}</strong>
+                                <span style="font-family: monospace; color: #FF7733; font-weight: 800; font-size: 0.725rem;">({{ $chk->validation_hash ?: ('VG' . strtoupper(substr(md5($chk->id), 0, 8))) }})</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.15rem;">
+                                <small style="color: #10B981; font-weight: 700; font-size: 0.72rem; text-transform: uppercase;">{{ $chk->zone_name }}</small>
+                                <small style="color: #94A3B8; font-size: 0.7rem;">📱 {{ $chk->scanned_by ?: 'Móvil Scanner' }}</small>
+                            </div>
                         </div>
-                        <span style="color: #00F0FF; font-size: 0.75rem;">{{ $chk->checked_in_at ? $chk->checked_in_at->format('h:i:s A') : '-' }}</span>
+                        <span style="color: #00F0FF; font-weight: 800; font-size: 0.75rem; flex-shrink: 0;">{{ $chk->checked_in_at ? $chk->checked_in_at->format('h:i:s A') : '-' }}</span>
                     </div>
                 @empty
                     <div id="emptyMobileFeed" style="text-align: center; padding: 1.5rem; color: #64748B; font-size: 0.8rem;">
@@ -407,6 +417,143 @@
         let isProcessingMobileScan = false;
         let currentFacingMode = "environment";
         let audioCtx = null;
+        let lastFeedId = {{ $recentCheckins->first() ? $recentCheckins->first()->id : 0 }};
+        let toastHideTimer = null;
+
+        function renderMobileScanResult(data) {
+            const toast = document.getElementById('mobileResultToast');
+            const icon = document.getElementById('mResultIcon');
+            const title = document.getElementById('mResultTitle');
+            const zone = document.getElementById('mResultZone');
+            const buyer = document.getElementById('mResultBuyer');
+            const time = document.getElementById('mResultTime');
+            const hashEl = document.getElementById('mResultHash');
+            const devEl = document.getElementById('mResultDevice');
+
+            if (!toast) return;
+            if (toastHideTimer) clearTimeout(toastHideTimer);
+
+            toast.style.display = 'block';
+            toast.style.opacity = '1';
+
+            const currentDev = document.getElementById('mobileDeviceName')?.value || 'Móvil';
+            if (devEl) devEl.textContent = '📱 ' + currentDev;
+
+            if (data.status === 'granted') {
+                playMobileTone('granted');
+                toast.className = 'result-top-toast result-granted';
+                icon.innerHTML = '✅';
+                title.textContent = '¡ACCESO PERMITIDO!';
+                zone.textContent = data.ticket?.zone_name || 'VÁLIDO';
+                buyer.textContent = data.ticket?.buyer_name || (data.ticket?.ticket_code ? `Boleto #${data.ticket.ticket_code}` : 'Público General');
+                time.textContent = data.ticket?.checked_in_at || 'Ahora';
+                if (hashEl) hashEl.textContent = '🔑 HASH: ' + (data.ticket?.validation_hash || '-');
+
+                if (data.ticket && data.ticket.id > lastFeedId) {
+                    lastFeedId = data.ticket.id;
+                }
+                appendMobileFeed(data.ticket);
+
+                if (data.metrics) {
+                    document.getElementById('mKpiIssued').textContent = data.metrics.tickets_issued;
+                    document.getElementById('mKpiChecked').textContent = data.metrics.checked_in_count;
+                    document.getElementById('mKpiRate').textContent = `${data.metrics.attendance_rate}%`;
+                }
+            } else if (data.status === 'already_used') {
+                playMobileTone('already_used');
+                toast.className = 'result-top-toast result-already-used';
+                icon.innerHTML = '🚫';
+                title.textContent = 'BOLETO YA REGISTRADO';
+                zone.textContent = 'YA INGRESÓ';
+                buyer.textContent = data.ticket?.buyer_name || 'Boleto ya usado previamente';
+                time.textContent = data.ticket?.checked_in_at || 'Previamente';
+                if (hashEl) hashEl.textContent = '🔑 HASH: ' + (data.ticket?.validation_hash || '-');
+            } else {
+                playMobileTone('invalid');
+                toast.className = 'result-top-toast result-invalid';
+                icon.innerHTML = '❌';
+                title.textContent = 'BOLETO INVÁLIDO';
+                zone.textContent = 'NO VÁLIDO';
+                buyer.textContent = 'Código no encontrado en el sistema';
+                time.textContent = '-';
+                if (hashEl) hashEl.textContent = '🔑 HASH: NO ENCONTRADO';
+            }
+
+            toastHideTimer = setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => {
+                    if (toast.style.opacity === '0') {
+                        toast.style.display = 'none';
+                    }
+                }, 300);
+            }, 4500);
+        }
+
+        function appendMobileFeed(t) {
+            if (!t || !t.id) return;
+            const container = document.getElementById('mobileRecentFeed');
+            const empty = document.getElementById('emptyMobileFeed');
+            if (empty) empty.remove();
+
+            if (document.getElementById(`feedItem_${t.id}`)) return;
+
+            const hashVal = t.validation_hash || ('VG' + String(t.id).padStart(8, '0'));
+            const scannedBy = t.scanned_by || 'Móvil Scanner';
+
+            const item = document.createElement('div');
+            item.id = `feedItem_${t.id}`;
+            item.className = 'feed-mini-item';
+            item.innerHTML = `
+                <div style="min-width: 0; flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                        <strong style="color: #FFFFFF; font-size: 0.85rem;">${t.ticket_code || 'Boleto'}</strong>
+                        <span style="font-family: monospace; color: #FF7733; font-weight: 800; font-size: 0.725rem;">(${hashVal})</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.15rem;">
+                        <small style="color: #10B981; font-weight: 700; font-size: 0.72rem; text-transform: uppercase;">${t.zone_name || 'General'}</small>
+                        <small style="color: #94A3B8; font-size: 0.7rem;">📱 ${scannedBy}</small>
+                    </div>
+                </div>
+                <span style="color: #00F0FF; font-weight: 800; font-size: 0.75rem; flex-shrink: 0;">${t.checked_in_at || ''}</span>
+            `;
+
+            if (container.firstChild) {
+                container.insertBefore(item, container.firstChild);
+            } else {
+                container.appendChild(item);
+            }
+        }
+
+        function syncMobileRealtimeFeed() {
+            const feedUrl = `{{ route('web.attendees.feed', $event->id) }}?since_id=${lastFeedId}`;
+            fetch(feedUrl, {
+                headers: { 'Accept': 'application/json' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.metrics) {
+                        const issuedEl = document.getElementById('mKpiIssued');
+                        const checkedEl = document.getElementById('mKpiChecked');
+                        const rateEl = document.getElementById('mKpiRate');
+
+                        if (issuedEl) issuedEl.textContent = data.metrics.tickets_issued;
+                        if (checkedEl) checkedEl.textContent = data.metrics.checked_in_count;
+                        if (rateEl) rateEl.textContent = `${data.metrics.attendance_rate}%`;
+                    }
+
+                    if (data.new_checkins && data.new_checkins.length > 0) {
+                        data.new_checkins.forEach(chk => {
+                            if (chk.id > lastFeedId) {
+                                lastFeedId = chk.id;
+                            }
+                            appendMobileFeed(chk);
+                        });
+                    }
+                }
+            })
+            .catch(err => console.log(err));
+        }
 
         function playMobileTone(type) {
             try {
@@ -524,91 +671,7 @@
             });
         }
 
-        let toastHideTimer = null;
 
-        function renderMobileScanResult(data) {
-            const toast = document.getElementById('mobileResultToast');
-            const icon = document.getElementById('mResultIcon');
-            const title = document.getElementById('mResultTitle');
-            const zone = document.getElementById('mResultZone');
-            const msg = document.getElementById('mResultMessage');
-            const buyer = document.getElementById('mResultBuyer');
-            const time = document.getElementById('mResultTime');
-
-            if (!toast) return;
-
-            if (toastHideTimer) {
-                clearTimeout(toastHideTimer);
-            }
-
-            toast.style.display = 'block';
-            toast.style.opacity = '1';
-
-            if (data.status === 'granted') {
-                playMobileTone('granted');
-                toast.className = 'result-top-toast result-granted';
-                icon.innerHTML = '✅';
-                title.textContent = '¡ACCESO PERMITIDO!';
-                zone.textContent = data.ticket?.zone_name || 'VÁLIDO';
-                buyer.textContent = data.ticket?.buyer_name || (data.ticket?.ticket_code ? `Boleto #${data.ticket.ticket_code}` : 'Público General');
-                time.textContent = data.ticket?.checked_in_at || 'Ahora';
-
-                appendMobileFeed(data.ticket);
-
-                if (data.metrics) {
-                    document.getElementById('mKpiIssued').textContent = data.metrics.tickets_issued;
-                    document.getElementById('mKpiChecked').textContent = data.metrics.checked_in_count;
-                    document.getElementById('mKpiRate').textContent = `${data.metrics.attendance_rate}%`;
-                }
-            } else if (data.status === 'already_used') {
-                playMobileTone('already_used');
-                toast.className = 'result-top-toast result-already-used';
-                icon.innerHTML = '🚫';
-                title.textContent = 'BOLETO YA REGISTRADO';
-                zone.textContent = 'YA INGRESÓ';
-                buyer.textContent = data.ticket?.buyer_name || 'Boleto ya usado previamente';
-                time.textContent = data.ticket?.checked_in_at || 'Previamente';
-            } else {
-                playMobileTone('invalid');
-                toast.className = 'result-top-toast result-invalid';
-                icon.innerHTML = '❌';
-                title.textContent = 'BOLETO INVÁLIDO';
-                zone.textContent = 'NO VÁLIDO';
-                buyer.textContent = 'Código no encontrado en el sistema';
-                time.textContent = '-';
-            }
-
-            // Auto-ocultar suavemente después de 4.5 segundos
-            toastHideTimer = setTimeout(() => {
-                toast.style.opacity = '0';
-                setTimeout(() => {
-                    if (toast.style.opacity === '0') {
-                        toast.style.display = 'none';
-                    }
-                }, 300);
-            }, 4500);
-        }
-
-        function appendMobileFeed(t) {
-            const container = document.getElementById('mobileRecentFeed');
-            const empty = document.getElementById('emptyMobileFeed');
-            if (empty) empty.remove();
-
-            const item = document.createElement('div');
-            item.className = 'feed-mini-item';
-            item.innerHTML = `
-                <div>
-                    <strong style="color: #FFFFFF;">${t.ticket_code}</strong>
-                    <small style="color: #10B981; display: block;">${t.zone_name}</small>
-                </div>
-                <span style="color: #00F0FF; font-size: 0.75rem;">${t.checked_in_at}</span>
-            `;
-            if (container.firstChild) {
-                container.insertBefore(item, container.firstChild);
-            } else {
-                container.appendChild(item);
-            }
-        }
 
         function toggleMobileCamera() {
             if (isMobileScanning) {
@@ -712,8 +775,31 @@
             }, 300);
         }
 
-        // Auto-activación inmediata de la cámara al ingresar a la pantalla
+        // Auto-activación e inicialización en vivo
         document.addEventListener('DOMContentLoaded', function() {
+            let savedDevName = localStorage.getItem('vivego_scanner_device_name');
+            if (!savedDevName) {
+                // Auto-asignar secuencial o aleatorio Móvil 1, Móvil 2, etc.
+                const randomDevNum = Math.floor(Math.random() * 5) + 1;
+                savedDevName = 'Móvil ' + randomDevNum;
+                localStorage.setItem('vivego_scanner_device_name', savedDevName);
+            }
+
+            const devInput = document.getElementById('mobileDeviceName');
+            if (devInput) {
+                devInput.value = savedDevName;
+                devInput.addEventListener('change', function() {
+                    const val = this.value.trim();
+                    if (val) {
+                        localStorage.setItem('vivego_scanner_device_name', val);
+                    }
+                });
+            }
+
+            // Iniciar sincronización continua cada 2 segundos
+            setInterval(syncMobileRealtimeFeed, 2000);
+
+            // Iniciar cámara
             startMobileCamera();
         });
     </script>
