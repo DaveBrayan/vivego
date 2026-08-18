@@ -1474,7 +1474,8 @@ const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 
                 for (let i = 0; i < ticketsList.length; i++) {
                     const tItem = ticketsList[i];
-                    const ticketNumStr = tItem.ticket_code ? `N° ${tItem.ticket_code}` : `N° ${String(sale.id || 1).padStart(5, '0')}-${i + 1}`;
+                    const numSeq = tItem.ticket_number || (i + 1);
+                    const ticketNumStr = 'N° ' + String(numSeq).padStart(5, '0');
 
                     let hashVal = tItem.validation_hash || sale.validation_hash;
                     if (!hashVal || hashVal.length !== 10) {
