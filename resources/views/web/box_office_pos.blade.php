@@ -1302,6 +1302,12 @@ const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
                         return html.replace(inlineRegex, `$1${newValue}`);
                     }
 
+                    // Patrón 4: Etiqueta directa en HTML (ej. <div>COMPRADOR: NOMBRE</div> o <div>DNI: 12345678</div>)
+                    const directLabelRegex = new RegExp(`(${labelPattern}:?\\s*)([^<\\n\\r]+)`, 'i');
+                    if (directLabelRegex.test(html)) {
+                        return html.replace(directLabelRegex, `$1${newValue}`);
+                    }
+
                     return html;
                 }
 
