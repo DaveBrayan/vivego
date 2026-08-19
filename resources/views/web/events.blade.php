@@ -131,6 +131,7 @@
                                             <div class="dash-actions-cell" style="justify-content: flex-end;">
                                                 <a href="{{ route('web.event.detail', $evt['slug']) }}" class="dash-btn-icon-action" title="Previsualizar Evento" target="_blank" style="color: var(--color-neon-cyan);">👁️</a>
                                                 <a href="{{ route('web.events.edit', $evt['id']) }}" class="dash-btn-icon-action" title="Editar Evento">✏️</a>
+                                                <button type="button" class="dash-btn-icon-action btn-duplicate-event" data-id="{{ $evt['id'] }}" data-title="{{ $evt['title'] }}" title="Duplicar Evento Completo" style="color: #A855F7;">📋</button>
                                                 @if(($evt['sales_type'] ?? 'virtual') !== 'virtual')
                                                     <button type="button" class="dash-btn-icon-action btn-generate-pdf-tickets" data-event='@json($evt)' title="Generar Boletos PDF" style="color: #EAB308;">🖨️</button>
                                                 @endif
@@ -1396,6 +1397,77 @@
 
             if (closeGenBtn && genModal) closeGenBtn.addEventListener('click', () => genModal.classList.remove('active'));
             if (cancelGenBtn && genModal) cancelGenBtn.addEventListener('click', () => genModal.classList.remove('active'));
+
+            // Duplicar Evento Completo en MySQL con SweetAlert2
+            const duplicateBtns = document.querySelectorAll('.btn-duplicate-event');
+            duplicateBtns.forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const title = this.getAttribute('data-title');
+                    const id = this.getAttribute('data-id');
+
+                    Swal.fire({
+                        title: '¿Duplicar Evento?',
+                        html: `Se creará una copia completa de <b>"${title}"</b> incluyendo su información, todas las zonas de aforo y el diseño del boleto.`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#A855F7',
+                        cancelButtonColor: '#475569',
+                        confirmButtonText: '📋 Sí, Duplicar Todo',
+                        cancelButtonText: 'Cancelar',
+                        background: '#14141E',
+                        color: '#FFFFFF'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            Swal.fire({
+                                title: '⚡ Duplicando Evento...',
+                                html: 'Clonando información, zonas de aforo y diseño del boleto...',
+                                allowOutsideClick: false,
+                                didOpen: () => { Swal.showLoading(); },
+                                background: '#14141E',
+                                color: '#FFFFFF'
+                            });
+
+                            fetch(`/admin/eventos/${id}/duplicar`, {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json'
+                                }
+                            })
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.success) {
+                                    Swal.fire({
+                                        title: '🎉 ¡Evento Duplicado!',
+                                        text: data.message || `El evento "${title}" ha sido duplicado con éxito.`,
+                                        icon: 'success',
+                                        confirmButtonColor: '#FF5500',
+                                        confirmButtonText: 'Entendido',
+                                        background: '#14141E',
+                                        color: '#FFFFFF'
+                                    }).then(() => {
+                                        window.location.reload();
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        title: 'Error al Duplicar',
+                                        text: data.message || 'Ocurrió un error al intentar duplicar el evento.',
+                                        icon: 'error',
+                                        confirmButtonColor: '#FF5500',
+                                        background: '#14141E',
+                                        color: '#FFFFFF'
+                                    });
+                                }
+                            })
+                            .catch(err => {
+                                console.error('Error al duplicar evento:', err);
+                                window.location.reload();
+                            });
+                        }
+                    });
+                });
+            });
 
             // Eliminar Evento de MySQL con SweetAlert2
             const deleteBtns = document.querySelectorAll('.btn-delete-event');

@@ -44,6 +44,7 @@ Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group
     Route::get('/admin/eventos/{event}/editar', [EventController::class, 'edit'])->name('web.events.edit');
     Route::put('/admin/eventos/{event}', [EventController::class, 'update'])->name('web.events.update');
     Route::delete('/admin/eventos/{event}', [EventController::class, 'destroy'])->name('web.events.destroy');
+    Route::post('/admin/eventos/{event}/duplicar', [EventController::class, 'duplicate'])->name('web.events.duplicate');
     Route::get('/admin/eventos/{event}/boletos-registrados', [EventController::class, 'getRegisteredTickets'])->name('web.events.registered_tickets');
     Route::post('/admin/eventos/{event}/registrar-boletos-pdf', [EventController::class, 'storeBatchTickets'])->name('web.events.store_batch_tickets');
 

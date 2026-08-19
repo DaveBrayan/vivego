@@ -565,6 +565,69 @@ class EventController extends Controller
     }
 
     /**
+     * Duplica un evento existente clonando toda su información, zonas de aforo y el diseño del boleto.
+     */
+    public function duplicate(Request $request, Event $event): JsonResponse
+    {
+        $baseTitle = $event->title;
+        $newTitle = '[Copia] ' . $baseTitle;
+        $slug = Str::slug($newTitle) . '-' . rand(100, 999);
+
+        $rawBanner = $event->getRawOriginal('banner_image') ?? $event->banner_image;
+
+        $newEvent = Event::create([
+            'title' => $newTitle,
+            'slug' => $slug,
+            'category_name' => $event->category_name,
+            'company_name' => $event->company_name,
+            'banner_image' => $rawBanner,
+            'event_date' => $event->event_date,
+            'event_time' => $event->event_time,
+            'venue_name' => $event->venue_name,
+            'address' => $event->address,
+            'latitude' => $event->latitude,
+            'longitude' => $event->longitude,
+            'description' => $event->description,
+            'tags' => $event->tags,
+            'template_id' => null,
+            'zones' => $event->zones,
+            'status' => $event->status ?? 'Publicado',
+            'sales_type' => $event->sales_type ?? 'fisica',
+        ]);
+
+        if ($event->template_id) {
+            $originalTemplate = TicketTemplate::find($event->template_id);
+            if ($originalTemplate) {
+                $rawBgImage = $originalTemplate->getRawOriginal('bg_image') ?? $originalTemplate->bg_image;
+                $rawPositions = $originalTemplate->getRawOriginal('positions');
+                $positionsArray = is_string($rawPositions) ? json_decode($rawPositions, true) : ($originalTemplate->positions ?? []);
+
+                $newTemplate = TicketTemplate::create([
+                    'name' => 'Boleto: ' . $newTitle,
+                    'category' => $originalTemplate->category,
+                    'type' => $originalTemplate->type,
+                    'bg_color' => $originalTemplate->bg_color,
+                    'bg_image' => $rawBgImage,
+                    'strip_color' => $originalTemplate->strip_color,
+                    'positions' => $positionsArray,
+                    'elements' => $originalTemplate->elements,
+                    'is_default' => false,
+                    'status' => 'active',
+                ]);
+
+                $newEvent->template_id = $newTemplate->id;
+                $newEvent->save();
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => '¡Evento y diseño del boleto duplicados con éxito!',
+            'event' => $newEvent,
+        ]);
+    }
+
+    /**
      * Registra en la base de datos el lote de boletos generados para impresión PDF.
      */
     public function storeBatchTickets(Request $request, Event $event): JsonResponse
