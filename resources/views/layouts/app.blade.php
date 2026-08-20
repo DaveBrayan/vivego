@@ -11,32 +11,26 @@
     <!-- Icono del sistema oficial: loading.png -->
     <link rel="icon" type="image/png" href="{{ asset('images/loading.png') }}">
 
-    <!-- Vite Assets Processing -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-
-    <!-- Production Asset & Direct Inline CSS (Garantiza 100% la carga de estilos) -->
+    <!-- Assets Compilados de Producción con Caché HTTP del Navegador -->
     @php
         $manifestPath = public_path('build/manifest.json');
-        $cssContent = null;
+        $cssFile = null;
         $jsAsset = null;
         if (file_exists($manifestPath)) {
             $manifestData = json_decode(file_get_contents($manifestPath), true);
             $cssFile = $manifestData['resources/css/app.css']['file'] ?? null;
             $jsAsset = $manifestData['resources/js/app.js']['file'] ?? null;
-            if ($cssFile && file_exists(public_path('build/' . $cssFile))) {
-                $cssContent = file_get_contents(public_path('build/' . $cssFile));
-            }
         }
     @endphp
 
-    @if($cssContent)
-        <style>
-            {!! $cssContent !!}
-        </style>
+    @if($cssFile && file_exists(public_path('build/' . $cssFile)))
+        <link rel="stylesheet" href="{{ asset('build/' . $cssFile) }}">
+    @else
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
     @endif
 
-    @if($jsAsset)
-        <script defer src="{{ asset('build/' . $jsAsset) }}?v={{ time() }}"></script>
+    @if($jsAsset && file_exists(public_path('build/' . $jsAsset)))
+        <script defer src="{{ asset('build/' . $jsAsset) }}"></script>
     @endif
 
     <style>
@@ -253,13 +247,26 @@
     @endunless
 
     <script>
-        window.addEventListener('load', function() {
-            var preloader = document.getElementById('pagePreloader');
-            if (preloader) {
-                preloader.classList.add('fade-out');
-                setTimeout(function() { preloader.style.display = 'none'; }, 600);
+        (function() {
+            function hidePreloader() {
+                var preloader = document.getElementById('pagePreloader');
+                if (preloader && !preloader.classList.contains('fade-out')) {
+                    preloader.classList.add('fade-out');
+                    setTimeout(function() {
+                        if (preloader) preloader.style.display = 'none';
+                    }, 300);
+                }
             }
-        });
+
+            if (document.readyState === 'interactive' || document.readyState === 'complete') {
+                hidePreloader();
+            } else {
+                document.addEventListener('DOMContentLoaded', hidePreloader);
+                window.addEventListener('load', hidePreloader);
+            }
+            // Timeout de seguridad para que la página sea interactiva al instante
+            setTimeout(hidePreloader, 600);
+        })();
 
         // Mobile Nav Drawer Toggle
         document.addEventListener('DOMContentLoaded', function() {

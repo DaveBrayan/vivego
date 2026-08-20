@@ -105,3 +105,46 @@ Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group
     Route::post('/admin/administradores/{administrator}/reset-password', [AdminController::class, 'resetPassword'])->name('web.admins.reset-password');
     Route::post('/admin/cambiar-password', [AuthController::class, 'changePassword'])->name('web.change_password');
 });
+
+// ==========================================================================
+// RUTAS DE OPTIMIZACIÓN WEB DIRECTA PARA SERVIDORES SIN ACCESO SSH / CPANEL
+// ==========================================================================
+Route::get('/optimizar-sistema', function () {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('optimize:clear');
+        \Illuminate\Support\Facades\Artisan::call('config:cache');
+        \Illuminate\Support\Facades\Artisan::call('route:cache');
+        \Illuminate\Support\Facades\Artisan::call('view:cache');
+
+        return response('
+            <div style="font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; background: #0A0A10; display: flex; align-items: center; justify-content: center; padding: 1.5rem; color: #FFFFFF;">
+                <div style="background: #14141E; border: 1px solid rgba(255,85,0,0.3); padding: 2.5rem; border-radius: 20px; max-width: 520px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.6); text-align: center;">
+                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">⚡</div>
+                    <h2 style="color: #FF5500; font-size: 1.6rem; font-weight: 900; margin: 0 0 0.5rem 0;">¡Sistema ViveGo Optimizado!</h2>
+                    <p style="color: #94A3B8; font-size: 0.95rem; margin-bottom: 1.5rem;">Todos los cachés de producción han sido generados exitosamente.</p>
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1rem; text-align: left; font-size: 0.9rem; color: #10B981; line-height: 1.8; margin-bottom: 1.5rem;">
+                        <div>✔ Caché de Configuración (.env) activada</div>
+                        <div>✔ Caché de Rutas compilada</div>
+                        <div>✔ Caché de Plantillas Blade compilada</div>
+                        <div>✔ Caché de Optimización lista</div>
+                    </div>
+                    <a href="' . route('web.home') . '" style="display: inline-block; background: linear-gradient(135deg, #FF5500, #E04B00); color: #FFFFFF; font-weight: 800; text-decoration: none; padding: 0.85rem 1.8rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(255,85,0,0.4);">
+                        Ir a la Página Principal
+                    </a>
+                </div>
+            </div>
+        ', 200)->header('Content-Type', 'text/html');
+    } catch (\Exception $e) {
+        return response('<h3 style="color:red;">Error al optimizar:</h3><pre>' . $e->getMessage() . '</pre>', 500);
+    }
+});
+
+Route::get('/limpiar-cache', function () {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('optimize:clear');
+        return '<div style="font-family: sans-serif; padding: 2rem; background: #14141E; color: #10B981; text-align: center;"><h2 style="color:#FF5500;">✔ Caché limpiada con éxito</h2><p><a href="/" style="color:#FFF;">Volver al Inicio</a></p></div>';
+    } catch (\Exception $e) {
+        return 'Error: ' . $e->getMessage();
+    }
+});
+
