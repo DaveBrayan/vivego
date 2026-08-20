@@ -1,6 +1,54 @@
 @extends('layouts.app')
 
-@section('title', 'Mis Eventos | Vive Go')
+@push('styles')
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Anton&family=Bebas+Neue&family=Caveat:wght@600;700&family=Cinzel:wght@600;800&family=Comfortaa:wght@600;700&family=Dancing+Script:wght@600;700&family=Fira+Sans:ital,wght@0,400;0,700;1,400&family=Great+Vibes&family=Inter:wght@400;600;800;900&family=Lato:wght@400;700;900&family=Lobster&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Monoton&family=Montserrat:wght@400;700;900&family=Nunito:wght@400;700;900&family=Open+Sans:wght@400;700&family=Oswald:wght@500;700&family=Outfit:wght@400;700;900&family=Pacifico&family=Permanent+Marker&family=Playfair+Display:ital,wght@0,600;0,800;1,600&family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=Poppins:wght@400;700;900&family=Raleway:wght@400;700;900&family=Righteous&family=Roboto:wght@400;700;900&family=Rubik:wght@400;700;900&family=Satisfy&family=Space+Grotesk:wght@500;700&family=Syne:wght@700;800&family=Work+Sans:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        .font-lato { font-family: 'Lato', sans-serif !important; }
+        .font-montserrat { font-family: 'Montserrat', sans-serif !important; }
+        .font-opensans { font-family: 'Open Sans', sans-serif !important; }
+        .font-roboto { font-family: 'Roboto', sans-serif !important; }
+        .font-inter { font-family: 'Inter', sans-serif !important; }
+        .font-poppins { font-family: 'Poppins', sans-serif !important; }
+        .font-outfit { font-family: 'Outfit', sans-serif !important; }
+        .font-raleway { font-family: 'Raleway', sans-serif !important; }
+        .font-nunito { font-family: 'Nunito', sans-serif !important; }
+        .font-rubik { font-family: 'Rubik', sans-serif !important; }
+        .font-work-sans { font-family: 'Work Sans', sans-serif !important; }
+        .font-oswald { font-family: 'Oswald', sans-serif !important; }
+        .font-bebas { font-family: 'Bebas Neue', sans-serif !important; }
+        .font-anton { font-family: 'Anton', sans-serif !important; }
+        .font-syne { font-family: 'Syne', sans-serif !important; }
+        .font-space-grotesk { font-family: 'Space Grotesk', sans-serif !important; }
+        .font-righteous { font-family: 'Righteous', sans-serif !important; }
+        .font-monoton { font-family: 'Monoton', sans-serif !important; }
+        .font-merriweather { font-family: 'Merriweather', serif !important; }
+        .font-playfair { font-family: 'Playfair Display', serif !important; }
+        .font-cinzel { font-family: 'Cinzel', serif !important; }
+        .font-abril { font-family: 'Abril Fatface', serif !important; }
+        .font-dancing { font-family: 'Dancing Script', cursive !important; }
+        .font-greatvibes { font-family: 'Great Vibes', cursive !important; }
+        .font-pacifico { font-family: 'Pacifico', cursive !important; }
+        .font-satisfy { font-family: 'Satisfy', cursive !important; }
+        .font-caveat { font-family: 'Caveat', cursive !important; }
+        .font-lobster { font-family: 'Lobster', cursive !important; }
+        .font-comfortaa { font-family: 'Comfortaa', cursive !important; }
+
+        .ticket-element-node p, 
+        .ticket-element-node div, 
+        .ticket-element-node span, 
+        .ticket-element-node h1, 
+        .ticket-element-node h2, 
+        .ticket-element-node h3, 
+        .ticket-element-node h4 {
+            margin: 0 !important;
+            padding: 0 !important;
+            text-align: inherit !important;
+            box-sizing: border-box !important;
+        }
+    </style>
+@endpush
 
 @section('content')
     <div class="dashboard-root-wrapper">
@@ -251,7 +299,7 @@
                         </button>
                     </div>
 
-                    <button type="button" class="btn btn-cancel-custom" id="btnCancelGenerateModal" style="width: 100%; text-align: center; padding: 0.7rem;">Cancelar</button>
+                    <button type="button" class="btn btn-cancel-custom" id="btnCancelGenerateModal" style="text-align: center; padding: 0.75rem; width: 100%;">Cancelar</button>
                 </div>
             </form>
         </div>
@@ -767,9 +815,366 @@
             }, 600);
         }
 
+        function convertPositionsToElements(positions) {
+            if (!positions || typeof positions !== 'object') return [];
+            const elements = [];
+            const fieldMap = {
+                canvaElLogo: { field: 'logo', type: 'image' },
+                canvaElBanner: { field: 'banner', type: 'image' },
+                canvaElTitle: { field: 'title', type: 'text' },
+                canvaElZone: { field: 'zone', type: 'text' },
+                canvaElPrice: { field: 'price', type: 'text' },
+                canvaElVenue: { field: 'venue', type: 'text' },
+                canvaElCity: { field: 'city', type: 'text' },
+                canvaElDate: { field: 'date', type: 'text' },
+                canvaElTime: { field: 'time', type: 'text' },
+                canvaElBuyerName: { field: 'buyer_name', type: 'text' },
+                canvaElBuyer: { field: 'buyer_name', type: 'text' },
+                canvaElBuyerDni: { field: 'buyer_dni', type: 'text' },
+                canvaElTicketNumber: { field: 'ticket_number', type: 'text' },
+                canvaElQR: { field: 'qr', type: 'qr' },
+                canvaElHash: { field: 'hash', type: 'text' },
+                canvaElDisclaimer: { field: 'disclaimer', type: 'disclaimer' },
+            };
+
+            Object.keys(positions).forEach((id) => {
+                const p = positions[id];
+                if (!p || p.hidden === true || p.display === 'none' || p.visible === false) return;
+
+                const mapped = fieldMap[id] || { field: 'custom', type: 'text' };
+                const isDisclaimer = id === 'canvaElDisclaimer' || mapped.field === 'disclaimer' || (id && String(id).toLowerCase().includes('disclaimer'));
+                const topVal = parseFloat(p.top) || 0;
+                const leftVal = parseFloat(p.left) || 0;
+                const widthVal = parseFloat(p.width) || 120;
+                const heightVal = parseFloat(p.height) || 40;
+
+                // Leer textAlign desde múltiples fuentes en orden de prioridad:
+                // 1. p.textAlign guardado (del wrapper canva-drag-element)
+                // 2. Del HTML guardado (text-align puede estar en los hijos del box-container)
+                // 3. Mapa de alineaciones por defecto por ID/campo (refleja el diseño original de los templates)
+                const defaultAlignMap = {
+                    canvaElPrice: 'right',
+                    canvaElVenue: 'right',
+                    canvaElTicketNumber: 'left',
+                    canvaElHash: 'left',
+                    canvaElDisclaimer: 'center',
+                };
+                let resolvedTextAlign = p.textAlign || '';
+                if (!resolvedTextAlign && p.html) {
+                    const taMatch = p.html.match(/text-align\s*:\s*(left|center|right|justify)/i);
+                    if (taMatch) resolvedTextAlign = taMatch[1];
+                }
+                if (!resolvedTextAlign) {
+                    resolvedTextAlign = defaultAlignMap[id] || (isDisclaimer ? 'center' : 'left');
+                }
+
+                elements.push({
+                    id: id,
+                    field: mapped.field,
+                    type: mapped.type,
+                    content: p.html || p.text || '',
+                    src: p.src || '',
+                    x: leftVal,
+                    y: topVal,
+                    width: widthVal,
+                    height: heightVal,
+                    rotation: parseFloat(p.rotate) || 0,
+                    fit: 'cover',
+                    style: {
+                        fontFamily: p.fontFamily || 'Plus Jakarta Sans',
+                        fontSize: parseFloat(p.fontSize) || 14,
+                        color: p.color || '#FFFFFF',
+                        fontWeight: p.fontWeight || 'bold',
+                        fontStyle: p.fontStyle || 'normal',
+                        textAlign: resolvedTextAlign,
+                        letterSpacing: 0,
+                        lineHeight: 1.2,
+                        background: p.backgroundColor || 'transparent'
+                    }
+                });
+            });
+
+            return elements;
+        }
+
+        function getRealFontFamily(fontName) {
+            if (!fontName) return 'Plus Jakarta Sans';
+            const fontMap = {
+                'font-lato': 'Lato',
+                'font-montserrat': 'Montserrat',
+                'font-opensans': 'Open Sans',
+                'font-roboto': 'Roboto',
+                'font-inter': 'Inter',
+                'font-poppins': 'Poppins',
+                'font-outfit': 'Outfit',
+                'font-raleway': 'Raleway',
+                'font-nunito': 'Nunito',
+                'font-rubik': 'Rubik',
+                'font-work-sans': 'Work Sans',
+                'font-oswald': 'Oswald',
+                'font-bebas': 'Bebas Neue',
+                'font-anton': 'Anton',
+                'font-syne': 'Syne',
+                'font-space-grotesk': 'Space Grotesk',
+                'font-righteous': 'Righteous',
+                'font-monoton': 'Monoton',
+                'font-merriweather': 'Merriweather',
+                'font-playfair': 'Playfair Display',
+                'font-cinzel': 'Cinzel',
+                'font-abril': 'Abril Fatface',
+                'font-dancing': 'Dancing Script',
+                'font-greatvibes': 'Great Vibes',
+                'font-pacifico': 'Pacifico',
+                'font-satisfy': 'Satisfy',
+                'font-caveat': 'Caveat',
+                'font-lobster': 'Lobster',
+                'font-comfortaa': 'Comfortaa'
+            };
+
+            if (fontMap[fontName]) return fontMap[fontName];
+            if (typeof fontName === 'string' && fontName.startsWith('font-')) {
+                const clean = fontName.replace('font-', '');
+                return clean.charAt(0).toUpperCase() + clean.slice(1);
+            }
+            return fontName;
+        }
+
+        function replaceDynamicValueInHtml(html, labelKeyword, newValue) {
+            if (!html || typeof html !== 'string') return html;
+            const cleanLabel = labelKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            
+            // Caso 1: Estructura multilínea de párrafos <p>Label:</p><p>Valor</p>
+            const multiPRegex = new RegExp(`(<p[^>]*>\\s*${cleanLabel}:?\\s*<\\/p>\\s*<p[^>]*>)(.*?)(<\\/p>)`, 'gi');
+            if (multiPRegex.test(html)) {
+                return html.replace(multiPRegex, `$1${newValue}$3`);
+            }
+
+            // Caso 2: Estructura en línea Label: Valor
+            const singleRegex = new RegExp(`(${cleanLabel}:?\\s*)((?:<[^>]+>\\s*)*)([^<\\s]+[^<]*)`, 'gi');
+            if (singleRegex.test(html)) {
+                return html.replace(singleRegex, `$1$2${newValue}`);
+            }
+
+            return html;
+        }
+
+        function renderTicketCanvasContent(template, dynamicData, assetMap = {}) {
+            let elements = [];
+            if (template && Array.isArray(template.elements) && template.elements.length > 0) {
+                elements = template.elements;
+            } else if (template && template.positions) {
+                let rawPos = typeof template.positions === 'string' ? JSON.parse(template.positions) : template.positions;
+                elements = convertPositionsToElements(rawPos);
+            }
+
+            // Deduplicar elementos del sistema para evitar renderizado doble
+            const seenFields = new Set();
+            const uniqueElements = [];
+            for (let i = elements.length - 1; i >= 0; i--) {
+                const el = elements[i];
+                if (!el || el.hidden === true || el.display === 'none' || el.visible === false) continue;
+                const key = el.field || el.id;
+                if (key && (key.startsWith('canvaEl') || key === 'title' || key === 'zone' || key === 'price' || key === 'buyer_name' || key === 'buyer_dni' || key === 'ticket_number' || key === 'hash' || key === 'venue' || key === 'date' || key === 'time' || key === 'disclaimer')) {
+                    if (seenFields.has(key)) continue;
+                    seenFields.add(key);
+                }
+                uniqueElements.unshift(el);
+            }
+            elements = uniqueElements;
+
+            const bgUrl = assetMap.bgDataUrl || (template ? (template.background || template.bg_image) : null);
+            let bgHtml = '';
+            if (bgUrl) {
+                bgHtml = `<div style="position: absolute; inset: 0; background-image: url('${bgUrl}'); background-size: cover; background-position: center; z-index: 0; pointer-events: none;"></div>`;
+            }
+
+            let elementsHtml = '';
+
+            elements.forEach((el, idx) => {
+                if (!el || el.hidden === true || el.display === 'none' || el.visible === false) return;
+
+                const type = el.type || 'text';
+                const field = el.field || 'custom';
+
+                const x = parseFloat(el.x) || 0;
+                const y = parseFloat(el.y) || 0;
+
+                const w = el.style?.width ? (typeof el.style.width === 'number' ? el.style.width + 'px' : el.style.width) : (el.width ? (typeof el.width === 'number' ? el.width + 'px' : el.width) : 'auto');
+                const h = el.style?.height ? (typeof el.style.height === 'number' ? el.style.height + 'px' : el.style.height) : (el.height ? (typeof el.height === 'number' ? el.height + 'px' : el.height) : 'auto');
+                const rotation = parseFloat(el.style?.rotation || el.rotation || el.rotate) || 0;
+                const transform = rotation ? `transform: rotate(${rotation}deg); transform-origin: center center;` : '';
+
+                const style = el.style || {};
+                const rawFontName = style.fontFamily || el.fontFamily || 'Plus Jakarta Sans';
+                const realFontName = getRealFontFamily(rawFontName);
+                const font = realFontName.includes(',') ? `font-family: ${realFontName};` : `font-family: '${realFontName}', sans-serif;`;
+                const fontSize = style.fontSize ? (typeof style.fontSize === 'number' ? `font-size: ${style.fontSize}px;` : `font-size: ${style.fontSize};`) : 'font-size: 14px;';
+                const color = style.color ? `color: ${style.color};` : 'color: #FFFFFF;';
+                const weight = style.fontWeight ? `font-weight: ${style.fontWeight};` : 'font-weight: bold;';
+                const fontStyle = style.fontStyle ? `font-style: ${style.fontStyle};` : 'font-style: normal;';
+                let textAlign = style.textAlign || el.textAlign || el.align || 'left';
+                const letterSpacing = style.letterSpacing ? `letter-spacing: ${style.letterSpacing}px;` : '';
+                const lineHeight = style.lineHeight ? `line-height: ${style.lineHeight};` : 'line-height: 1.2;';
+                const bgStyle = style.background && style.background !== 'transparent' ? `background-color: ${style.background}; border-radius: ${style.borderRadius || '8px'}; padding: ${style.padding || '2px 6px'};` : '';
+
+                let innerContent = '';
+
+                if (type === 'qr' || field === 'qr' || el.id === 'canvaElQR') {
+                    const qrSrc = dynamicData.qr_data_url || el.src;
+                    innerContent = `<div style="padding: 0.35rem; background: #FFFFFF; border-radius: 12px; border: 1.5px solid #E2E8F0; width: 100%; height: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.08);"><img src="${qrSrc}" style="width: 100%; height: 100%; object-fit: contain; display: block; border-radius: 4px;" alt="QR Code" /></div>`;
+                } else if (type === 'image' || type === 'logo' || type === 'banner' || field === 'logo' || field === 'banner' || field === 'image' || el.id === 'canvaElLogo' || el.id === 'canvaElBanner') {
+                    let imgSrc = el.src;
+                    if ((field === 'banner' || type === 'banner' || el.id === 'canvaElBanner') && (!imgSrc || imgSrc === '')) {
+                        imgSrc = assetMap.bannerDataUrl;
+                    }
+                    if ((field === 'logo' || type === 'logo' || el.id === 'canvaElLogo') && (!imgSrc || imgSrc === '')) {
+                        imgSrc = assetMap.logoDataUrl;
+                    }
+                    const fitMode = style.objectFit || el.fit || (type === 'banner' || field === 'banner' ? 'cover' : 'contain');
+                    if (imgSrc) {
+                        innerContent = `<img src="${imgSrc}" style="width: 100%; height: 100%; display: block; object-fit: ${fitMode}; ${field === 'logo' || type === 'logo' ? 'filter: drop-shadow(0 0 8px rgba(255,85,0,0.6));' : ''}" />`;
+                    }
+                } else {
+                    let rawTxt = el.content || el.html || el.text || '';
+
+                    // Limpieza de artefactos de Quill
+                    if (typeof rawTxt === 'string') {
+                        rawTxt = rawTxt.replace(/<span class="ql-cursor">.*?<\/span>/gi, '').replace(/\uFEFF/g, '');
+                    }
+
+                    if (field === 'title' || el.id === 'canvaElTitle') {
+                        if (dynamicData.title) {
+                            rawTxt = (rawTxt && (rawTxt.includes('<') || rawTxt.includes('>')))
+                                ? rawTxt.replace(/(<h[1-6][^>]*>|<p[^>]*>|<span[^>]*>)(.*?)(<\/h[1-6]>|<\/p>|<\/span>|$)/gi, (m, p1, p2, p3) => p1 + dynamicData.title + p3)
+                                : dynamicData.title;
+                        }
+                    } else if (field === 'zone' || el.id === 'canvaElZone' || /ZONA/i.test(rawTxt)) {
+                        const zVal = (dynamicData.zone || 'GENERAL').toUpperCase();
+                        if (/ZONA/i.test(rawTxt)) {
+                            rawTxt = replaceDynamicValueInHtml(rawTxt, 'ZONA', zVal);
+                        } else if (rawTxt && rawTxt.trim().length > 0) {
+                            rawTxt = rawTxt.includes('<') ? rawTxt.replace(/([^>]+)(?=<|$)/, zVal) : zVal;
+                        } else {
+                            rawTxt = `<span style="font-size: inherit; font-weight: inherit; color: inherit; text-transform: uppercase;">ZONA: ${zVal}</span>`;
+                        }
+                    } else if (field === 'price' || el.id === 'canvaElPrice' || /PRECIO/i.test(rawTxt)) {
+                        const pVal = dynamicData.price ? (String(dynamicData.price).startsWith('S/') ? dynamicData.price : 'S/ ' + dynamicData.price) : 'S/ 0.00';
+                        if (/PRECIO/i.test(rawTxt)) {
+                            rawTxt = replaceDynamicValueInHtml(rawTxt, 'PRECIO', pVal);
+                        } else if (rawTxt && rawTxt.trim().length > 0) {
+                            rawTxt = rawTxt.includes('<') ? rawTxt.replace(/([^>]+)(?=<|$)/, pVal) : pVal;
+                        } else {
+                            rawTxt = `<div style="line-height: 1.15; text-align: inherit; width: 100%;"><span style="font-size: 0.75em; font-weight: 900; display: block;">PRECIO:</span><span style="font-size: 1.2em; font-weight: 900; display: block; margin-top: 2px;">${pVal}</span></div>`;
+                        }
+                    } else if (field === 'buyer_name' || el.id === 'canvaElBuyerName' || el.id === 'canvaElBuyer' || /Comprador/i.test(rawTxt)) {
+                        const bName = (dynamicData.buyer_name || 'CLIENTE VARIOS').toUpperCase();
+                        if (/Comprador/i.test(rawTxt)) {
+                            rawTxt = replaceDynamicValueInHtml(rawTxt, 'Comprador', bName);
+                        } else if (rawTxt && rawTxt.trim().length > 0) {
+                            rawTxt = rawTxt.includes('<') ? rawTxt.replace(/([^>]+)(?=<|$)/, bName) : bName;
+                        } else {
+                            rawTxt = `<div style="display: flex; flex-direction: column; text-align: inherit; width: 100%;"><span style="font-size: 0.75em; opacity: 0.85;">Comprador:</span><span style="font-weight: 900; text-transform: uppercase;">${bName}</span></div>`;
+                        }
+                    } else if (field === 'buyer_dni' || el.id === 'canvaElBuyerDni' || /DNI/i.test(rawTxt)) {
+                        const bDni = dynamicData.buyer_dni || '00000000';
+                        if (/DNI/i.test(rawTxt)) {
+                            rawTxt = replaceDynamicValueInHtml(rawTxt, 'DNI', bDni);
+                        } else if (rawTxt && rawTxt.trim().length > 0) {
+                            rawTxt = rawTxt.includes('<') ? rawTxt.replace(/([^>]+)(?=<|$)/, bDni) : bDni;
+                        } else {
+                            rawTxt = `<span style="font-weight: 800;">DNI: ${bDni}</span>`;
+                        }
+                    } else if (field === 'ticket_number' || el.id === 'canvaElTicketNumber' || /N[°º]/i.test(rawTxt)) {
+                        const numStr = dynamicData.ticket_number || 'N° 00001';
+                        if (/N[°º]/i.test(rawTxt)) {
+                            rawTxt = rawTxt.replace(/N[°º]\s*[\d]+/gi, numStr);
+                        } else if (rawTxt && rawTxt.trim().length > 0) {
+                            rawTxt = rawTxt.includes('<') ? rawTxt.replace(/([^>]+)(?=<|$)/, numStr) : numStr;
+                        } else {
+                            rawTxt = `<span style="font-weight: 900; letter-spacing: 0.5px;">${numStr}</span>`;
+                        }
+                    } else if (field === 'hash' || el.id === 'canvaElHash' || (el.id && String(el.id).toLowerCase().includes('hash')) || /VG-?[A-Z0-9]{6,12}/i.test(rawTxt)) {
+                        const hStr = dynamicData.hash || 'VG00000000';
+                        if (/VG-?[A-Z0-9]{6,12}/i.test(rawTxt)) {
+                            rawTxt = rawTxt.replace(/VG-?[A-Z0-9]{6,12}/gi, hStr);
+                        } else if (rawTxt && rawTxt.trim().length > 0) {
+                            rawTxt = rawTxt.includes('<') ? rawTxt.replace(/([^>]+)(?=<|$)/, hStr) : hStr;
+                        } else {
+                            rawTxt = `<span style="font-family: monospace; font-weight: 800; letter-spacing: 1.5px;">${hStr}</span>`;
+                        }
+                    } else if (field === 'venue' || el.id === 'canvaElVenue') {
+                        const vName = dynamicData.venue || '';
+                        const vAddr = dynamicData.city || '';
+                        const vDate = dynamicData.date || '';
+                        const vTime = dynamicData.time || '';
+                        if (!rawTxt || rawTxt.trim().length === 0) {
+                            rawTxt = `<div style="display: flex; flex-direction: column; text-align: inherit; width: 100%;"><span style="font-weight: 900; display: block;">${vName}</span>${vAddr ? `<span style="font-size: 0.85em; opacity: 0.8; display: block; margin-top: 2px;">${vAddr}</span>` : ''}<span style="font-weight: 900; color: #FF5500; display: block; margin-top: 2px;">${vDate} / ${vTime}</span></div>`;
+                        }
+                    } else if (field === 'city' || el.id === 'canvaElCity') {
+                        rawTxt = dynamicData.city || rawTxt;
+                    } else if (field === 'date' || el.id === 'canvaElDate' || /FECHA/i.test(rawTxt)) {
+                        if (/FECHA/i.test(rawTxt)) {
+                            rawTxt = replaceDynamicValueInHtml(rawTxt, 'FECHA', dynamicData.date || '');
+                        } else if (rawTxt && rawTxt.trim().length > 0) {
+                            rawTxt = dynamicData.date ? (rawTxt.includes('<') ? rawTxt.replace(/([^>]+)(?=<|$)/, dynamicData.date) : dynamicData.date) : rawTxt;
+                        } else {
+                            rawTxt = `<span style="font-weight: 900;">FECHA: ${dynamicData.date || ''}</span>`;
+                        }
+                    } else if (field === 'time' || el.id === 'canvaElTime' || /HORA/i.test(rawTxt)) {
+                        if (/HORA/i.test(rawTxt)) {
+                            rawTxt = replaceDynamicValueInHtml(rawTxt, 'HORA', dynamicData.time || '');
+                        } else if (rawTxt && rawTxt.trim().length > 0) {
+                            rawTxt = dynamicData.time ? (rawTxt.includes('<') ? rawTxt.replace(/([^>]+)(?=<|$)/, dynamicData.time) : dynamicData.time) : rawTxt;
+                        } else {
+                            rawTxt = `<span style="font-weight: 900;">HORA: ${dynamicData.time || ''}</span>`;
+                        }
+                    } else if (field === 'disclaimer' || el.id === 'canvaElDisclaimer' || (el.id && String(el.id).toLowerCase().includes('disclaimer'))) {
+                        rawTxt = rawTxt || `<div style="border-top: 1.5px solid #CBD5E1; padding-top: 0.25rem; width: 100%; text-align: inherit;"><p style="font-size: 0.65em; font-weight: 700; opacity: 0.8; line-height: 1.2; margin: 0; text-align: inherit;">La responsabilidad de este boleto es exclusiva del cliente, no compartir ni publicar. Se recomienda llevar impreso.</p></div>`;
+                    }
+
+                    const flexAlign = textAlign === 'center' ? 'center' : (textAlign === 'right' ? 'flex-end' : 'flex-start');
+
+                    if (typeof rawTxt === 'string' && rawTxt.includes('<')) {
+                        // Forzar text-align en cualquier estilo existente
+                        rawTxt = rawTxt
+                            .replace(/text-align\s*:\s*(left|center|right|justify)/gi, `text-align: ${textAlign}`)
+                            .replace(/align-items\s*:\s*(flex-start|center|flex-end|stretch)/gi, `align-items: ${flexAlign}`);
+                        
+                        // Inyectar text-align y width: 100% en todas las etiquetas de bloque internas
+                        rawTxt = rawTxt.replace(/<(p|div|h[1-6])\b([^>]*)>/gi, (match, tag, attrs) => {
+                            if (/style\s*=/i.test(attrs)) {
+                                return `<${tag} ${attrs.replace(/style\s*=\s*(['"])/i, `style=$1text-align: ${textAlign} !important; width: 100% !important; `)}>`;
+                            } else {
+                                return `<${tag} style="text-align: ${textAlign} !important; width: 100% !important; margin: 0; padding: 0;" ${attrs}>`;
+                            }
+                        });
+                    }
+
+                    innerContent = `
+                        <div style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: ${flexAlign}; text-align: ${textAlign} !important; box-sizing: border-box; ${font} ${fontSize} ${color} ${weight} ${fontStyle} ${letterSpacing} ${lineHeight} ${bgStyle}">
+                            ${rawTxt}
+                        </div>
+                    `;
+                }
+
+                elementsHtml += `
+                    <div class="ticket-element-node" style="position: absolute; top: ${y}px; left: ${x}px; width: ${w}; height: ${h}; z-index: ${idx + 5}; ${transform} box-sizing: border-box; text-align: ${textAlign} !important;">
+                        ${innerContent}
+                    </div>
+                `;
+            });
+
+            return `
+                ${bgHtml}
+                <div style="position: absolute; inset: 0; width: 100%; height: 100%;" class="ticket-elements-layer">
+                    ${elementsHtml}
+                </div>
+            `;
+        }
+
         async function generatePdfPrintWindow(evt, ticketsQueue, perPage, paperSize, orientation) {
             try {
-                // 1. PRECARGA DE ASSETS A BASE64 DATA URLS (Garantiza 0 errores de CORS y 0 hojas en blanco en Hosting)
+                // 1. PRECARGA DE ASSETS A BASE64 DATA URLS
                 Swal.update({
                     title: '⚡ 1/3 - Procesando Gráficos & QR Codes...',
                     html: 'Convirtiendo logotipos, imágenes de fondo y códigos QR a alta definición sin dependencias de red...'
@@ -778,57 +1183,60 @@
                 function getFullAssetUrl(urlStr) {
                     if (!urlStr) return null;
                     if (urlStr.startsWith('data:')) return urlStr;
-                    if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) return urlStr;
+                    if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) {
+                        try {
+                            const parsed = new URL(urlStr);
+                            return window.location.origin + parsed.pathname + (parsed.search || '');
+                        } catch(e) {
+                            return urlStr;
+                        }
+                    }
 
                     let clean = urlStr.replace(/^\//, '');
                     if (clean.includes('storage/')) {
                         clean = 'storage/' + clean.split('storage/').pop();
                     } else if (clean.includes('images/')) {
                         clean = 'images/' + clean.split('images/').pop();
-                    } else if (clean.startsWith('events/') || clean.startsWith('templates/')) {
+                    } else if (clean.startsWith('events/') || clean.startsWith('templates/') || clean.startsWith('media/') || clean.startsWith('uploads/')) {
                         clean = 'storage/' + clean;
                     }
 
                     return window.location.origin + '/' + clean;
                 }
 
-                const tpl = evt.template || { id: 1, name: 'Plantilla 1', bg_color: '#FFFFFF', strip_color: '#000000', positions: {} };
+                const tpl = evt.template || { id: 1, name: 'Plantilla 1', bg_color: '#FFFFFF', positions: {}, elements: [] };
                 const bgColor = tpl.bg_color || '#FFFFFF';
-                const stripColor = tpl.strip_color || '#000000';
 
+                const bgImgSrc = tpl.background ? getFullAssetUrl(tpl.background) : (tpl.bg_image ? getFullAssetUrl(tpl.bg_image) : null);
+                const bannerImgSrc = evt.image ? getFullAssetUrl(evt.image) : null;
                 const logoRawUrl = window.location.origin + '/images/logo-white.png';
-                const ticketBannerSrc = (tpl.positions && tpl.positions.canvaElBanner && tpl.positions.canvaElBanner.src) 
-                    ? getFullAssetUrl(tpl.positions.canvaElBanner.src) 
-                    : (evt.image ? getFullAssetUrl(evt.image) : 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=600&q=80');
-                const bgImgSrc = tpl.bg_image ? getFullAssetUrl(tpl.bg_image) : (tpl.positions && tpl.positions.canvaBgImage ? getFullAssetUrl(tpl.positions.canvaBgImage) : null);
                 const boletoSrc = getFullAssetUrl('/images/Boleto.jpg');
 
-                const [logoDataUrl, bannerDataUrl, bgDataUrl, boletoDataUrl] = await Promise.all([
-                    preloadImageAsDataUrl(logoRawUrl, 'logo'),
-                    preloadImageAsDataUrl(ticketBannerSrc, 'banner', evt.title),
+                const [bgDataUrl, bannerDataUrl, logoDataUrl, boletoDataUrl] = await Promise.all([
                     bgImgSrc ? preloadImageAsDataUrl(bgImgSrc, 'bg') : Promise.resolve(''),
+                    bannerImgSrc ? preloadImageAsDataUrl(bannerImgSrc, 'banner') : Promise.resolve(''),
+                    logoRawUrl ? preloadImageAsDataUrl(logoRawUrl, 'logo') : Promise.resolve(''),
                     preloadImageAsDataUrl(boletoSrc, 'boleto')
                 ]);
-                
-                const isPlantilla2 = (tpl.id == 2 || (tpl.name && tpl.name.includes('Plantilla 2')) || (tpl.category && tpl.category.includes('Logo Derecho')));
-                const isPlantilla3 = (tpl.id == 3 || (tpl.name && tpl.name.includes('Plantilla 3')) || (tpl.category && tpl.category.includes('Panorámico')));
-                const isPlantilla1 = (!isPlantilla2 && !isPlantilla3);
 
-                function isColorDark(hexColor) {
-                    if (!hexColor || hexColor.charAt(0) !== '#') return false;
-                    const hex = hexColor.substring(1);
-                    if (hex.length < 6) return false;
-                    const r = parseInt(hex.substr(0, 2), 16) || 0;
-                    const g = parseInt(hex.substr(2, 2), 16) || 0;
-                    const b = parseInt(hex.substr(4, 2), 16) || 0;
-                    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-                    return lum < 0.55;
+                const assetMap = {
+                    bgDataUrl: bgDataUrl,
+                    bannerDataUrl: bannerDataUrl,
+                    logoDataUrl: logoDataUrl
+                };
+
+                let tplElements = tpl.elements || [];
+                if ((!Array.isArray(tplElements) || tplElements.length === 0) && tpl.positions) {
+                    let rawPos = typeof tpl.positions === 'string' ? JSON.parse(tpl.positions) : tpl.positions;
+                    tplElements = convertPositionsToElements(rawPos);
                 }
 
-                const isDarkBg = isColorDark(bgColor);
-                const primaryTextColor = isDarkBg ? '#FFFFFF' : '#000000';
-                const secondaryTextColor = isDarkBg ? '#E2E8F0' : '#1E293B';
-                const mutedTextColor = isDarkBg ? '#94A3B8' : '#475569';
+                for (let el of tplElements) {
+                    if (el.src) {
+                        const fullUrl = getFullAssetUrl(el.src);
+                        el.src = await preloadImageAsDataUrl(fullUrl, 'el_' + el.id);
+                    }
+                }
 
                 function formatTime12h(timeStr) {
                     if (!timeStr) return '06:00PM';
@@ -853,7 +1261,7 @@
                 const cleanTime = formatTime12h(evt.time_formatted || '06:00PM');
                 const venue = evt.venue || 'Complejo San Luis';
                 const address = evt.city || 'Av. Cusco 528 - AYACUCHO';
-                const title = evt.title || 'Chúpate la Plata con Son del Duke en Ayacucho';
+                const title = evt.title || 'Evento Especial';
 
                 // Detección de tamaño de papel (A4 o Carta)
                 const isCarta = (paperSize.toUpperCase() === 'CARTA' || paperSize.toUpperCase() === 'LETTER');
@@ -862,7 +1270,7 @@
                 const pageHeightMm = isCarta ? 279.4 : (isA5 ? 210 : 297);
                 const jsPdfFormat = isCarta ? 'letter' : (isA5 ? 'a5' : 'a4');
 
-                // Parámetros de escalado y proporción panorámica exacta (3.0:1)
+                // Parámetros de escalado
                 let printCardWidth, printCardHeight, scaleRatio, cardMarginBottom, sheetPaddingTopBottom;
 
                 if (perPage === 5) {
@@ -913,135 +1321,6 @@
                     sheetPaddingTopBottom = '20mm';
                 }
 
-                const tplPositions = tpl.positions || {};
-
-                const pTitle = tplPositions.canvaElTitle || {};
-                const pZone = tplPositions.canvaElZone || {};
-                const pPrice = tplPositions.canvaElPrice || {};
-                const pBanner = tplPositions.canvaElBanner || {};
-                const pBuyer = tplPositions.canvaElBuyer || tplPositions.canvaElBuyerName || {};
-                const pVenue = tplPositions.canvaElVenue || {};
-                const pNum = tplPositions.canvaElTicketNumber || {};
-                const pQR = tplPositions.canvaElQR || {};
-                const pHash = tplPositions.canvaElHash || {};
-                const pDisc = tplPositions.canvaElDisclaimer || {};
-                const pLogo = tplPositions.canvaElLogo || {};
-                const pDate = tplPositions.canvaElDate || {};
-                const pTime = tplPositions.canvaElTime || {};
-                const pCity = tplPositions.canvaElCity || {};
-
-                function replaceDynamicHtmlValue(html, labelPattern, newValue) {
-                    if (!html || typeof html !== 'string') return html;
-
-                    // Patrón 1: <span ...>LABEL:</span><div><span ...>VALOR</span></div>
-                    const divSpanRegex = new RegExp(`(${labelPattern}:?\\s*<\\/span>\\s*<div>\\s*<span[^>]*>)[^<]+(<\\/span>\\s*<\\/div>)`, 'i');
-                    if (divSpanRegex.test(html)) {
-                        return html.replace(divSpanRegex, `$1${newValue}$2`);
-                    }
-
-                    // Patrón 2: <span ...>LABEL:</span><div>VALOR</div>
-                    const divRegex = new RegExp(`(${labelPattern}:?\\s*<\\/span>\\s*<div>)[^<]+(<\\/div>)`, 'i');
-                    if (divRegex.test(html)) {
-                        return html.replace(divRegex, `$1${newValue}$2`);
-                    }
-
-                    // Patrón 3: <span ...>LABEL:</span> VALOR
-                    const inlineRegex = new RegExp(`(${labelPattern}:?\\s*<\\/span>\\s*)([^<\\s]+[^<]*)`, 'i');
-                    if (inlineRegex.test(html)) {
-                        return html.replace(inlineRegex, `$1${newValue}`);
-                    }
-
-                    return html;
-                }
-
-                function renderCanvaStudioElement(id, posObj, defaultTop, defaultLeft, defaultWidth, defaultHeight, fallbackHtml, dynamicData = null) {
-                    posObj = posObj || {};
-                    if (posObj.hidden === true || posObj.display === 'none' || posObj.visible === false) {
-                        return '';
-                    }
-
-                    const top = posObj.top !== undefined ? (typeof posObj.top === 'number' ? posObj.top + 'px' : posObj.top) : defaultTop;
-                    const left = posObj.left !== undefined ? (typeof posObj.left === 'number' ? posObj.left + 'px' : posObj.left) : defaultLeft;
-                    const width = posObj.width !== undefined ? (typeof posObj.width === 'number' ? posObj.width + 'px' : posObj.width) : (defaultWidth || '');
-                    const height = posObj.height !== undefined ? (typeof posObj.height === 'number' ? posObj.height + 'px' : posObj.height) : (defaultHeight || '');
-                    const rotate = (posObj.rotate && posObj.rotate !== '0') ? `transform: rotate(${posObj.rotate}deg);` : '';
-
-                    const widthStyle = width ? `width: ${width};` : '';
-                    const heightStyle = height ? `height: ${height};` : '';
-
-                    const textAlignVal = posObj.textAlign || 'left';
-                    let flexAlign = 'flex-start';
-                    if (textAlignVal === 'center') flexAlign = 'center';
-                    else if (textAlignVal === 'right') flexAlign = 'flex-end';
-
-                    const font = posObj.fontFamily && posObj.fontFamily !== 'inherit' ? `font-family: ${posObj.fontFamily};` : '';
-                    const fontSize = posObj.fontSize ? `font-size: ${posObj.fontSize};` : '';
-                    const color = posObj.color ? `color: ${posObj.color};` : '';
-                    const weight = posObj.fontWeight ? `font-weight: ${posObj.fontWeight};` : '';
-                    const style = posObj.fontStyle ? `font-style: ${posObj.fontStyle};` : '';
-                    const transform = posObj.textTransform && posObj.textTransform !== 'none' ? `text-transform: ${posObj.textTransform};` : '';
-
-                    const containerStyle = `
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: center;
-                        align-items: ${flexAlign};
-                        text-align: ${textAlignVal};
-                        width: 100%;
-                        height: 100%;
-                        box-sizing: border-box;
-                        padding: 3px 6px;
-                        border-radius: 4px;
-                        ${font}
-                        ${fontSize}
-                        ${color}
-                        ${weight}
-                        ${style}
-                        ${transform}
-                    `.replace(/\s+/g, ' ').trim();
-
-                    const hasBadge = posObj.hasBadgeBg || false;
-                    let badgeStyle = hasBadge ? 'background: rgba(255, 85, 0, 0.25); border: 1.5px solid #FF5500; border-radius: 8px;' : '';
-                    if (posObj.backgroundColor && posObj.backgroundColor !== 'transparent') {
-                        badgeStyle += ` background-color: ${posObj.backgroundColor}; border-radius: 8px;`;
-                    }
-
-                    let finalHtml = fallbackHtml;
-                    if (posObj.html && typeof posObj.html === 'string' && posObj.html.trim().length > 0) {
-                        finalHtml = posObj.html;
-                        if (dynamicData) {
-                            if (id === 'canvaElZone' && dynamicData.zoneName) {
-                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'ZONA', dynamicData.zoneName);
-                            } else if (id === 'canvaElPrice' && dynamicData.price) {
-                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'PRECIO', 'S/ ' + dynamicData.price);
-                            } else if ((id === 'canvaElBuyerName' || id === 'canvaElBuyer') && dynamicData.buyerName) {
-                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'Comprador', dynamicData.buyerName);
-                            } else if (id === 'canvaElBuyerDni' && dynamicData.buyerDni) {
-                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'DNI', dynamicData.buyerDni);
-                            } else if (id === 'canvaElDate' && dynamicData.date) {
-                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'FECHA', dynamicData.date);
-                            } else if (id === 'canvaElTime' && dynamicData.time) {
-                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'HORA', dynamicData.time);
-                            } else if (id === 'canvaElTicketNumber' && dynamicData.ticketNum) {
-                                finalHtml = finalHtml.replace(/N[°º]\s*\d+/gi, dynamicData.ticketNum);
-                            } else if (id === 'canvaElHash' && dynamicData.hash) {
-                                finalHtml = finalHtml.replace(/[A-Z0-9]{8,12}/gi, dynamicData.hash);
-                            }
-                        }
-                        if (posObj.textAlign) {
-                            finalHtml = finalHtml.replace(/text-align:\s*(center|right|left|justify);?/gi, `text-align: ${textAlignVal};`);
-                        }
-                    }
-
-                    return `
-                        <div class="canva-drag-element" id="${id}" style="position: absolute; top: ${top}; left: ${left}; ${widthStyle} ${heightStyle} z-index: 5; ${rotate} box-sizing: border-box;">
-                            <div class="canva-drag-box-container ${hasBadge ? 'has-badge-bg' : ''}" style="${badgeStyle} ${containerStyle}">
-                                ${finalHtml}
-                            </div>
-                        </div>
-                    `;
-                }
-
                 let pagesHtml = '';
                 const totalQty = ticketsQueue.length;
 
@@ -1067,56 +1346,27 @@
                         const qrPayload = ticketItem.qrPayload || `VGENC:${hash}`;
                         const qrDataUrl = ticketItem.qrDataUrl || getQrCodeDataUrl(qrPayload);
 
-                        let customTagsHtml = '';
-                        Object.keys(tplPositions).forEach(key => {
-                            if ((key.startsWith('canvaCustomTag_') || tplPositions[key].isCustomTag) && !tplPositions[key].hidden && tplPositions[key].display !== 'none' && tplPositions[key].visible !== false) {
-                                const p = tplPositions[key];
-                                const tagText = p.text || (p.html ? p.html.replace(/<[^>]*>/g, '').trim() : 'Etiqueta');
-                                const tagContent = p.html || tagText;
-                                customTagsHtml += renderCanvaStudioElement(key, p, '40px', '120px', p.width, p.height, tagContent);
-                            }
-                        });
+                        const dynamicData = {
+                            title: title,
+                            venue: venue,
+                            city: address,
+                            date: cleanDate,
+                            time: cleanTime,
+                            zone: zoneName,
+                            price: 'S/ ' + priceFormatted,
+                            buyer_name: ticketItem.buyerName || 'PÚBLICO GENERAL',
+                            buyer_dni: ticketItem.buyerDni || '00000000',
+                            ticket_number: ticketNum,
+                            hash: hash,
+                            qr_data_url: qrDataUrl
+                        };
 
-                        const logoHtml = renderCanvaStudioElement('canvaElLogo', pLogo, '15px', '25px', '', '36px', logoDataUrl ? `<img src="${logoDataUrl}" style="height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0 0 8px rgba(255,85,0,0.6)); display: block;">` : '');
-                        const bannerHtml = renderCanvaStudioElement('canvaElBanner', pBanner, '15px', '340px', '250px', '110px', bannerDataUrl ? `<img src="${bannerDataUrl}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 10px; display: block;">` : '');
-                        const titleHtml = renderCanvaStudioElement('canvaElTitle', pTitle, '55px', '25px', '380px', '', `<h2 style="font-size: ${pTitle.fontSize || '1.15rem'}; font-weight: ${pTitle.fontWeight || '900'}; color: ${pTitle.color || primaryTextColor}; margin: 0; line-height: 1.15; text-align: ${pTitle.textAlign || 'left'};">${title}</h2>`);
-                        const zoneHtml = renderCanvaStudioElement('canvaElZone', pZone, '95px', '25px', '', '', `<span style="font-size: ${pZone.fontSize || '0.925rem'}; font-weight: ${pZone.fontWeight || '800'}; color: ${pZone.color || '#1E293B'}; text-transform: uppercase;">ZONA: ${zoneName}</span>`, { zoneName: zoneName });
-                        const priceHtml = renderCanvaStudioElement('canvaElPrice', pPrice, '95px', '240px', '', '', `<div style="text-align: ${pPrice.textAlign || 'left'}; line-height: 1.15;"><span style="font-size: 0.75rem; font-weight: 900; color: ${pPrice.color || primaryTextColor}; display: block;">PRECIO:</span><span style="font-size: ${pPrice.fontSize || '1.3rem'}; font-weight: 900; color: ${pPrice.color || primaryTextColor}; display: block; margin-top: 2px;">S/ ${priceFormatted}</span></div>`, { price: priceFormatted });
-                        const venueHtml = renderCanvaStudioElement('canvaElVenue', pVenue, '200px', '25px', '', '', `<div style="display: flex; flex-direction: column; font-size: 0.8rem; color: ${pVenue.color || primaryTextColor}; text-align: ${pVenue.textAlign || 'left'};"><span style="font-weight: 900; font-size: 0.95rem; display: block;">${venue}</span>${address ? `<span style="font-size: 0.8rem; font-weight: 700; color: ${mutedTextColor}; display: block; margin-top: 2px;">${address}</span>` : ''}<span style="font-weight: 900; font-size: 1rem; color: #FF5500; display: block; margin-top: 2px;">${cleanDate} / ${cleanTime}</span></div>`);
-                        const buyerNameHtml = renderCanvaStudioElement('canvaElBuyerName', pBuyer, '140px', '25px', '', '', `<div style="display: flex; flex-direction: column; font-size: ${pBuyer.fontSize || '0.8rem'}; color: ${pBuyer.color || primaryTextColor};"><span style="font-size: 0.725rem; color: ${mutedTextColor};">Comprador:</span><span style="font-weight: 900; font-size: 0.95rem; text-transform: uppercase;">CLIENTE PROSPECTO</span></div>`, { buyerName: 'CLIENTE PROSPECTO' });
-                        const buyerDniHtml = renderCanvaStudioElement('canvaElBuyerDni', tplPositions.canvaElBuyerDni || {}, '165px', '25px', '', '', `<span style="font-weight: 800; font-size: 0.825rem; color: ${primaryTextColor};">DNI: 00000000</span>`, { buyerDni: '00000000' });
-                        const dateHtml = renderCanvaStudioElement('canvaElDate', pDate, '260px', '25px', '', '', `<span style="font-weight: 900; font-size: 0.9rem; color: ${pDate.color || primaryTextColor};">FECHA: ${cleanDate}</span>`, { date: cleanDate });
-                        const timeHtml = renderCanvaStudioElement('canvaElTime', pTime, '260px', '220px', '', '', `<span style="font-weight: 900; font-size: 0.9rem; color: ${pTime.color || primaryTextColor};">HORA: ${cleanTime}</span>`, { time: cleanTime });
-                        const cityHtml = renderCanvaStudioElement('canvaElCity', pCity, '225px', '25px', '', '', address ? `<span style="font-size: 0.8rem; font-weight: 700; color: ${mutedTextColor};">${address}</span>` : '');
-
-                        const ticketNumberHtml = renderCanvaStudioElement('canvaElTicketNumber', pNum, '15px', '660px', '', '', `<span style="font-size: ${pNum.fontSize || '1.2rem'}; font-weight: 900; color: ${pNum.color || primaryTextColor}; font-family: var(--font-heading, sans-serif); letter-spacing: 0.5px; display: inline-block;">${ticketNum}</span>`, { ticketNum: ticketNum });
-                        const qrBoxHtml = renderCanvaStudioElement('canvaElQR', pQR, '55px', '635px', '95px', '95px', `<div style="padding: 0.35rem; background: #FFFFFF; border-radius: 12px; border: 1.5px solid #E2E8F0; width: 100%; height: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.08);"><img src="${qrDataUrl}" style="width: 100%; height: 100%; object-fit: contain; display: block; border-radius: 4px;" alt="QR Code" /></div>`);
-                        const hashHtml = renderCanvaStudioElement('canvaElHash', pHash, '175px', '645px', '', '', `<span style="font-family: monospace; font-size: ${pHash.fontSize || '0.85rem'}; font-weight: 800; color: ${pHash.color || secondaryTextColor}; letter-spacing: 1.5px; display: inline-block;">${hash}</span>`, { hash: hash });
-                        const disclaimerHtml = renderCanvaStudioElement('canvaElDisclaimer', pDisc, '245px', '570px', '190px', '', `<div style="border-top: 1.5px solid #CBD5E1; padding-top: 0.25rem;"><p style="font-size: ${pDisc.fontSize || '0.625rem'}; font-weight: 700; color: ${pDisc.color || mutedTextColor}; line-height: 1.2; margin: 0; text-align: center;">La responsabilidad de este boleto es exclusiva del cliente, no compartir ni publicar. Se recomienda llevar impreso.</p></div>`);
+                        const canvasHtml = renderTicketCanvasContent({ ...tpl, elements: tplElements }, dynamicData, assetMap);
 
                         pageTicketsHtml += `
                             <div class="ticket-wrapper-card" style="width: ${printCardWidth}; height: ${printCardHeight}; position: relative; overflow: hidden; border-radius: 18px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15); margin-bottom: ${cardMarginBottom}; flex-shrink: 0; box-sizing: border-box; background: ${bgColor};">
                                 <div class="ticket-canvas-inner" style="width: 771px; height: 370px; transform: scale(${scaleRatio}); transform-origin: top left; position: absolute; top: 0; left: 0; background: ${bgColor}; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; overflow: hidden; border-radius: 18px; box-sizing: border-box;">
-                                    ${(bgDataUrl || bgImgSrc) ? `<div style="position: absolute; inset: 0; background-image: url('${bgDataUrl || bgImgSrc}'); background-size: cover; background-position: center; z-index: 0; pointer-events: none;"></div>` : ''}
-                                    
-                                    <div style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;" class="canva-main-area">
-                                        ${logoHtml}
-                                        ${bannerHtml}
-                                        ${titleHtml}
-                                        ${zoneHtml}
-                                        ${priceHtml}
-                                        ${venueHtml}
-                                        ${cityHtml}
-                                        ${dateHtml}
-                                        ${timeHtml}
-                                        ${buyerNameHtml}
-                                        ${buyerDniHtml}
-                                        ${ticketNumberHtml}
-                                        ${qrBoxHtml}
-                                        ${hashHtml}
-                                        ${disclaimerHtml}
-                                        ${customTagsHtml}
-                                    </div>
+                                    ${canvasHtml}
                                 </div>
                             </div>
                         `;
@@ -1139,8 +1389,51 @@
                         <title>Boletos Oficiales - ${title}</title>
                         <link rel="preconnect" href="https://fonts.googleapis.com">
                         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-                        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+                        <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Anton&family=Bebas+Neue&family=Caveat:wght@600;700&family=Cinzel:wght@600;800&family=Comfortaa:wght@600;700&family=Dancing+Script:wght@600;700&family=Fira+Sans:ital,wght@0,400;0,700;1,400&family=Great+Vibes&family=Inter:wght@400;600;800;900&family=Lato:wght@400;700;900&family=Lobster&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Monoton&family=Montserrat:wght@400;700;900&family=Nunito:wght@400;700;900&family=Open+Sans:wght@400;700&family=Oswald:wght@500;700&family=Outfit:wght@400;700;900&family=Pacifico&family=Permanent+Marker&family=Playfair+Display:ital,wght@0,600;0,800;1,600&family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=Poppins:wght@400;700;900&family=Raleway:wght@400;700;900&family=Righteous&family=Roboto:wght@400;700;900&family=Rubik:wght@400;700;900&family=Satisfy&family=Space+Grotesk:wght@500;700&family=Syne:wght@700;800&family=Work+Sans:wght@400;700;900&display=swap" rel="stylesheet">
                         <style>
+                            .font-lato { font-family: 'Lato', sans-serif !important; }
+                            .font-montserrat { font-family: 'Montserrat', sans-serif !important; }
+                            .font-opensans { font-family: 'Open Sans', sans-serif !important; }
+                            .font-roboto { font-family: 'Roboto', sans-serif !important; }
+                            .font-inter { font-family: 'Inter', sans-serif !important; }
+                            .font-poppins { font-family: 'Poppins', sans-serif !important; }
+                            .font-outfit { font-family: 'Outfit', sans-serif !important; }
+                            .font-raleway { font-family: 'Raleway', sans-serif !important; }
+                            .font-nunito { font-family: 'Nunito', sans-serif !important; }
+                            .font-rubik { font-family: 'Rubik', sans-serif !important; }
+                            .font-work-sans { font-family: 'Work Sans', sans-serif !important; }
+                            .font-oswald { font-family: 'Oswald', sans-serif !important; }
+                            .font-bebas { font-family: 'Bebas Neue', sans-serif !important; }
+                            .font-anton { font-family: 'Anton', sans-serif !important; }
+                            .font-syne { font-family: 'Syne', sans-serif !important; }
+                            .font-space-grotesk { font-family: 'Space Grotesk', sans-serif !important; }
+                            .font-righteous { font-family: 'Righteous', sans-serif !important; }
+                            .font-monoton { font-family: 'Monoton', sans-serif !important; }
+                            .font-merriweather { font-family: 'Merriweather', serif !important; }
+                            .font-playfair { font-family: 'Playfair Display', serif !important; }
+                            .font-cinzel { font-family: 'Cinzel', serif !important; }
+                            .font-abril { font-family: 'Abril Fatface', serif !important; }
+                            .font-dancing { font-family: 'Dancing Script', cursive !important; }
+                            .font-greatvibes { font-family: 'Great Vibes', cursive !important; }
+                            .font-pacifico { font-family: 'Pacifico', cursive !important; }
+                            .font-satisfy { font-family: 'Satisfy', cursive !important; }
+                            .font-caveat { font-family: 'Caveat', cursive !important; }
+                            .font-lobster { font-family: 'Lobster', cursive !important; }
+                            .font-comfortaa { font-family: 'Comfortaa', cursive !important; }
+
+                            .ticket-element-node p, 
+                            .ticket-element-node div, 
+                            .ticket-element-node span, 
+                            .ticket-element-node h1, 
+                            .ticket-element-node h2, 
+                            .ticket-element-node h3, 
+                            .ticket-element-node h4 {
+                                margin: 0 !important;
+                                padding: 0 !important;
+                                text-align: inherit !important;
+                                box-sizing: border-box !important;
+                            }
+
                             @page { size: ${pageWidthMm}mm ${pageHeightMm}mm; margin: 0; }
                             * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
                             body { margin: 0; padding: 0; background: #FFFFFF; color: #000000; font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }

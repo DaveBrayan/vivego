@@ -1,36 +1,334 @@
 @php
     $sidebarSettings = $settings ?? \App\Models\Setting::first();
-    $sidebarOrganizer = $organizer ?? null;
     
-    // Normalizar datos de la compañía u organizador
-    $orgName = 'Vive Go Producciones';
-    $orgAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
-    $orgStatus = 'Organizador Oficial';
+    // Obtener datos del usuario administrador que inició sesión
+    $adminId = session('admin_id');
+    $loggedAdmin = $adminId ? \App\Models\Administrator::find($adminId) : null;
+    
+    $loggedUserName = session('admin_name') ?? ($loggedAdmin ? $loggedAdmin->full_name : 'Administrador');
+    $loggedUserRole = session('admin_role') ?? ($loggedAdmin ? $loggedAdmin->role : 'Administrador Principal');
+    $loggedUserAvatar = session('admin_avatar') ?? ($loggedAdmin ? $loggedAdmin->avatar : null);
 
-    if ($sidebarOrganizer) {
-        if (is_array($sidebarOrganizer)) {
-            $orgName = $sidebarOrganizer['name'] ?? $orgName;
-            $orgAvatar = $sidebarOrganizer['avatar'] ?? $orgAvatar;
-            $orgStatus = $sidebarOrganizer['status'] ?? $orgStatus;
-        } elseif (is_object($sidebarOrganizer)) {
-            $orgName = $sidebarOrganizer->name ?? $sidebarOrganizer->company_name ?? $orgName;
-            if (!empty($sidebarOrganizer->logo)) {
-                $orgAvatar = asset($sidebarOrganizer->logo);
-            } elseif (!empty($sidebarOrganizer->avatar)) {
-                $orgAvatar = asset($sidebarOrganizer->avatar);
-            }
-            $orgStatus = $sidebarOrganizer->status ?? 'Verificado';
-        }
-    } else {
-        $firstCompany = \App\Models\Company::first();
-        if ($firstCompany) {
-            $orgName = $firstCompany->name ?: $orgName;
-            if (!empty($firstCompany->logo)) {
-                $orgAvatar = asset($firstCompany->logo);
-            }
-        }
+    if (empty($loggedUserAvatar)) {
+        $loggedUserAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
     }
 @endphp
+
+<!-- ESTILOS DIRECTOS DEL SISTEMA RESPONSIVE MÓVIL (OFFCANVAS + TABLAS + BANNERS) -->
+<style>
+    /* Botón Hamburguesa Móvil */
+    .dash-mobile-hamburger-btn {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #FFFFFF;
+        font-size: 1.25rem;
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .dash-mobile-hamburger-btn:active {
+        background: rgba(255, 85, 0, 0.25);
+        border-color: #FF5500;
+        color: #FF5500;
+        transform: scale(0.95);
+    }
+
+    /* Fondo difuminado al abrir el menú móvil */
+    .dash-sidebar-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.78);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        z-index: 99998;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+    }
+
+    .dash-sidebar-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* Botón Cerrar Menú en Móvil */
+    .dash-sidebar-close-mobile-btn {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: #CBD5E1;
+        font-size: 1.15rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .dash-sidebar-close-mobile-btn:active {
+        background: rgba(239, 68, 68, 0.25);
+        border-color: #EF4444;
+        color: #EF4444;
+    }
+
+    /* TABLAS RESPONSIVAS CON HORIZONTAL SCROLL TÁCTIL */
+    .dash-table-container,
+    .dash-table-responsive,
+    .admin-table-container,
+    .table-responsive {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        display: block !important;
+        margin-bottom: 1rem !important;
+        padding-bottom: 0.5rem !important;
+        scrollbar-width: thin;
+        scrollbar-color: #FF5500 rgba(255, 255, 255, 0.08);
+    }
+
+    .dash-table-container::-webkit-scrollbar,
+    .dash-table-responsive::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .dash-table-container::-webkit-scrollbar-thumb,
+    .dash-table-responsive::-webkit-scrollbar-thumb {
+        background: #FF5500;
+        border-radius: 4px;
+    }
+
+    .dash-table,
+    table.admin-table {
+        min-width: 780px !important;
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+
+    .dash-table th,
+    .dash-table td,
+    table.admin-table th,
+    table.admin-table td {
+        padding: 0.85rem 0.75rem !important;
+        white-space: nowrap !important;
+    }
+
+    /* REGLAS EXCLUSIVAS PARA CELULARES Y TABLETS (<= 991px) */
+    @media (max-width: 991px) {
+        .dash-mobile-hamburger-btn {
+            display: flex !important;
+        }
+
+        .dash-sidebar-close-mobile-btn {
+            display: flex !important;
+        }
+
+        .dash-sidebar-toggle-btn {
+            display: none !important;
+        }
+
+        .dashboard-root-wrapper {
+            flex-direction: column !important;
+            min-height: 100vh !important;
+            width: 100% !important;
+            overflow-x: hidden !important;
+            position: relative !important;
+        }
+
+        /* SIDEBAR EN MÓVIL: OFFCANVAS TOTALMENTE OCULTO A LA IZQUIERDA */
+        aside.dash-sidebar {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            bottom: 0 !important;
+            width: 290px !important;
+            min-width: 290px !important;
+            max-width: 85vw !important;
+            height: 100vh !important;
+            z-index: 99999 !important;
+            transform: translateX(-100%) !important;
+            transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.32s ease !important;
+            box-shadow: none !important;
+            padding: 1.25rem 1rem !important;
+            background: #12121B !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            visibility: visible !important;
+            overflow-y: auto !important;
+        }
+
+        /* CUANDO EL MENÚ ESTÁ ABIERTO */
+        aside.dash-sidebar.mobile-open {
+            transform: translateX(0) !important;
+            box-shadow: 25px 0 70px rgba(0, 0, 0, 0.95) !important;
+        }
+
+        /* TEXTOS VISIBLES DENTRO DEL SIDEBAR MÓVIL */
+        aside.dash-sidebar .dash-nav-text,
+        aside.dash-sidebar .dash-organizer-info,
+        aside.dash-sidebar .dash-nav-section-title,
+        aside.dash-sidebar .dash-nav-pill-count,
+        aside.dash-sidebar .dash-nav-badge-orange,
+        aside.dash-sidebar .dash-btn-logout-text {
+            display: block !important;
+        }
+
+        aside.dash-sidebar .dash-brand-logo {
+            display: flex !important;
+        }
+
+        aside.dash-sidebar .dash-organizer-pill-card {
+            display: flex !important;
+            padding: 0.85rem !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            background: rgba(255, 255, 255, 0.03) !important;
+        }
+
+        aside.dash-sidebar .dash-nav-link {
+            justify-content: flex-start !important;
+            padding: 0.75rem 1rem !important;
+        }
+
+        aside.dash-sidebar .dash-btn-logout {
+            justify-content: flex-start !important;
+            padding: 0.75rem 1rem !important;
+        }
+
+        /* CONTENIDO PRINCIPAL FULL WIDTH */
+        main.dash-main-content {
+            width: 100% !important;
+            min-width: 0 !important;
+            flex: 1 !important;
+            height: auto !important;
+            min-height: 100vh !important;
+            overflow-x: hidden !important;
+        }
+
+        /* TOP NAVBAR UNIFICADO CON BOTÓN HAMBURGUESA */
+        .dash-top-navbar {
+            display: flex !important;
+            align-items: center !important;
+            padding: 0.65rem 0.85rem !important;
+            gap: 0.5rem !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 900 !important;
+            background: #0A0A10 !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        .dash-search-container {
+            padding: 0.45rem 0.75rem !important;
+            flex: 1 !important;
+            min-width: 0 !important;
+        }
+
+        .dash-search-input {
+            font-size: 0.8rem !important;
+        }
+
+        .dash-kbd-shortcut,
+        .dash-period-select-capsule {
+            display: none !important;
+        }
+
+        .dash-top-actions {
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.4rem !important;
+            flex-shrink: 0 !important;
+        }
+
+        .dash-icon-btn {
+            width: 38px !important;
+            height: 38px !important;
+        }
+
+        .dash-btn-create {
+            display: none !important;
+        }
+
+        .dash-container {
+            padding: 1rem 0.85rem !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        /* BANNERS Y BOTONES DE ACCIÓN FLUIDOS */
+        .settings-header-banner,
+        .table-header-card,
+        .dash-hero-welcome-card {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            padding: 1.25rem 1rem !important;
+            gap: 1rem !important;
+        }
+
+        .settings-header-banner > div:last-child,
+        .settings-header-actions,
+        .table-header-card > div:last-child {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            gap: 0.6rem !important;
+            width: 100% !important;
+        }
+
+        .settings-header-banner .btn,
+        .table-header-card .btn {
+            flex: 1 1 calc(50% - 0.6rem) !important;
+            min-width: 130px !important;
+            justify-content: center !important;
+            text-align: center !important;
+            font-size: 0.85rem !important;
+            padding: 0.75rem 0.85rem !important;
+            white-space: nowrap !important;
+        }
+
+        .settings-page-title {
+            font-size: 1.35rem !important;
+        }
+
+        .settings-page-subtitle {
+            font-size: 0.825rem !important;
+            line-height: 1.4 !important;
+        }
+
+        .settings-card-box,
+        .dash-chart-card,
+        .dash-feed-card,
+        .dash-table-card {
+            padding: 1.15rem 0.85rem !important;
+            border-radius: 18px !important;
+        }
+
+        .dash-kpi-grid {
+            grid-template-columns: 1fr !important;
+            gap: 0.85rem !important;
+        }
+
+        .dash-charts-grid,
+        .dash-bottom-grid {
+            grid-template-columns: 1fr !important;
+            gap: 1rem !important;
+        }
+    }
+</style>
+
+<!-- BACKDROP OVERLAY PARA SIDEBAR MÓVIL -->
+<div class="dash-sidebar-overlay" id="dashMobileOverlay"></div>
 
 <!-- SIDEBAR DE NAVEGACIÓN PRO MAX HEREDADO -->
 <aside class="dash-sidebar" id="dashSidebar">
@@ -39,22 +337,27 @@
             <img src="{{ asset($sidebarSettings->logo_white ?? 'images/logo-white.png') }}" alt="Vive Go" class="dash-logo-img logo-white-img">
             <img src="{{ asset($sidebarSettings->logo_dark ?? 'images/logo.png') }}" alt="Vive Go" class="dash-logo-img logo-dark-img">
         </a>
-        <button class="dash-sidebar-toggle-btn" id="dashSidebarToggle" aria-label="Colapsar Menú" title="Plegar / Expandir Menú">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="15 18 9 12 15 6"></polyline>
-            </svg>
-        </button>
+        <div style="display: flex; align-items: center; gap: 0.4rem;">
+            <button class="dash-sidebar-toggle-btn" id="dashSidebarToggle" aria-label="Colapsar Menú" title="Plegar / Expandir Menú">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </button>
+            <button class="dash-sidebar-close-mobile-btn" id="dashSidebarCloseMobile" type="button" aria-label="Cerrar Menú" title="Cerrar Menú">
+                ✕
+            </button>
+        </div>
     </div>
 
-    <!-- Perfil rápido de organizador -->
+    <!-- Perfil rápido del usuario autenticado -->
     <div class="dash-organizer-pill-card">
         <div class="dash-avatar-wrapper">
-            <img src="{{ $orgAvatar }}" alt="{{ $orgName }}" class="dash-avatar-img">
+            <img src="{{ $loggedUserAvatar }}" alt="{{ $loggedUserName }}" class="dash-avatar-img">
             <span class="dash-online-status-dot"></span>
         </div>
         <div class="dash-organizer-info">
-            <h4 class="dash-organizer-name" title="{{ $orgName }}">{{ $orgName }}</h4>
-            <span class="dash-verified-badge">✓ {{ $orgStatus }}</span>
+            <h4 class="dash-organizer-name" title="{{ $loggedUserName }}">{{ $loggedUserName }}</h4>
+            <span class="dash-verified-badge">{{ $loggedUserRole }}</span>
         </div>
     </div>
 
@@ -94,12 +397,6 @@
                 <a href="{{ route('web.categories') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">📂</span>
                     <span class="dash-nav-text">Categorías</span>
-                </a>
-            </li>
-            <li class="dash-nav-item {{ request()->routeIs('web.templates*') ? 'active' : '' }}">
-                <a href="{{ route('web.templates') }}" class="dash-nav-link">
-                    <span class="dash-nav-icon">🎨</span>
-                    <span class="dash-nav-text">Plantillas de Boletos</span>
                 </a>
             </li>
         </ul>
@@ -222,4 +519,110 @@
             openChangePasswordModal();
         });
     @endif
+
+    // CONTROL GLOBAL DEL SIDEBAR (RESPONSIVE MÓVIL & ESCRITORIO)
+    document.addEventListener('DOMContentLoaded', function() {
+        const dashSidebar = document.getElementById('dashSidebar');
+        const dashMobileOverlay = document.getElementById('dashMobileOverlay');
+        const dashToggleBtn = document.getElementById('dashSidebarToggle');
+        const dashCloseMobileBtn = document.getElementById('dashSidebarCloseMobile');
+
+        // Auto-inyectar botón hamburguesa en la barra de navegación superior si no existe
+        const topNavbars = document.querySelectorAll('.dash-top-navbar');
+        topNavbars.forEach(navbar => {
+            if (!navbar.querySelector('.dash-mobile-hamburger-btn')) {
+                const hamburgerBtn = document.createElement('button');
+                hamburgerBtn.type = 'button';
+                hamburgerBtn.className = 'dash-mobile-hamburger-btn';
+                hamburgerBtn.setAttribute('aria-label', 'Abrir Menú');
+                hamburgerBtn.setAttribute('title', 'Abrir Menú de Navegación');
+                hamburgerBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                `;
+                hamburgerBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openMobileSidebar();
+                });
+                navbar.insertBefore(hamburgerBtn, navbar.firstChild);
+            }
+        });
+
+        function openMobileSidebar() {
+            if (!dashSidebar) return;
+            dashSidebar.classList.remove('collapsed');
+            dashSidebar.classList.add('mobile-open');
+            if (dashMobileOverlay) dashMobileOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobileSidebar() {
+            if (!dashSidebar) return;
+            dashSidebar.classList.remove('mobile-open');
+            if (dashMobileOverlay) dashMobileOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        if (dashCloseMobileBtn) {
+            dashCloseMobileBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                closeMobileSidebar();
+            });
+        }
+
+        if (dashMobileOverlay) {
+            dashMobileOverlay.addEventListener('click', function(e) {
+                e.preventDefault();
+                closeMobileSidebar();
+            });
+        }
+
+        // Cerrar con tecla Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && dashSidebar && dashSidebar.classList.contains('mobile-open')) {
+                closeMobileSidebar();
+            }
+        });
+
+        // Desktop Toggle behavior
+        if (dashToggleBtn && dashSidebar) {
+            dashToggleBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                if (window.innerWidth <= 991) {
+                    closeMobileSidebar();
+                    return;
+                }
+                dashSidebar.classList.add('dash-animating');
+                dashSidebar.classList.toggle('collapsed');
+
+                const state = dashSidebar.classList.contains('collapsed');
+                localStorage.setItem('vivego_sidebar_collapsed', state ? 'true' : 'false');
+
+                setTimeout(function () {
+                    dashSidebar.classList.remove('dash-animating');
+                }, 450);
+            });
+
+            // Restaurar estado guardado sólo en pantallas de escritorio
+            const isCollapsed = localStorage.getItem('vivego_sidebar_collapsed') === 'true';
+            if (isCollapsed && window.innerWidth > 991) {
+                dashSidebar.classList.add('collapsed');
+            }
+        }
+
+        // Auto-cerrar sidebar en móvil al hacer clic en enlaces
+        const sidebarLinks = document.querySelectorAll('.dash-sidebar .dash-nav-link');
+        sidebarLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                if (window.innerWidth <= 991) {
+                    closeMobileSidebar();
+                }
+            });
+        });
+    });
 </script>

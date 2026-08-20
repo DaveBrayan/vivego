@@ -41,7 +41,7 @@
                     </button>
 
                     <!-- Botón CTA Nuevo Evento -->
-                    <a href="#" class="btn btn-primary dash-btn-create">
+                    <a href="{{ route('web.events.create') }}" class="btn btn-primary dash-btn-create">
                         <span>+ Crear Nuevo Evento</span>
                     </a>
                 </div>
@@ -56,16 +56,6 @@
                         <h1 class="dash-hero-title">¡Hola, {{ $organizer['name'] }}! 👋</h1>
                         <p class="dash-hero-subtitle">Tus eventos tienen un excelente rendimiento esta semana. Has alcanzado
                             el <strong>{{ $metrics['tickets_percentage'] }}%</strong> de ocupación total.</p>
-
-                        <div class="dash-hero-actions">
-                            <a href="{{ route('web.event.detail', 'mezcla-2026') }}" class="btn btn-white btn-sm"
-                                target="_blank">
-                                <span>👁️ Ver Evento En Vivo</span>
-                            </a>
-                            <button class="btn btn-glass-white btn-sm" id="btnExportReport">
-                                <span>📥 Descargar Reporte PDF</span>
-                            </button>
-                        </div>
                     </div>
 
                     <div class="dash-hero-badge-graphic">
@@ -257,7 +247,7 @@
                                 <h3 class="dash-card-title">Mis Eventos Activos</h3>
                                 <p class="dash-card-subtitle">Administración de taquilla y estado de venta</p>
                             </div>
-                            <a href="#" class="dash-link-orange">Ver Todos (3) ➔</a>
+                            <a href="{{ route('web.events') }}" class="dash-link-orange">Ver Todos ({{ $totalEventsCount ?? count($events) }}) ➔</a>
                         </div>
 
                         <div class="dash-table-responsive">
@@ -297,7 +287,7 @@
                                                         {{ $event['tickets_total'] }}</span>
                                                     <div class="dash-progress-track">
                                                         <div class="dash-progress-fill"
-                                                            style="width: {{ ($event['tickets_sold'] / $event['tickets_total']) * 100 }}%;">
+                                                            style="width: {{ $event['tickets_total'] > 0 ? ($event['tickets_sold'] / $event['tickets_total']) * 100 : 0 }}%;">
                                                         </div>
                                                     </div>
                                                 </div>
@@ -316,11 +306,11 @@
                                             </td>
                                             <td>
                                                 <div class="dash-actions-cell">
-                                                    <a href="{{ route('web.event.detail', 'mezcla-2026') }}"
+                                                    <a href="{{ !empty($event['slug']) ? route('web.event.detail', $event['slug']) : route('web.events') }}"
                                                         class="dash-btn-icon-action" title="Ver Evento" target="_blank">👁️</a>
-                                                    <button class="dash-btn-icon-action"
-                                                        title="Administrar Taquilla">🎟️</button>
-                                                    <button class="dash-btn-icon-action" title="Opciones">⚙️</button>
+                                                    <a href="{{ route('web.box_office.manage', $event['id']) }}" class="dash-btn-icon-action"
+                                                        title="Administrar Taquilla">🎟️</a>
+                                                    <a href="{{ route('web.events.edit', $event['id']) }}" class="dash-btn-icon-action" title="Editar Evento">✏️</a>
                                                 </div>
                                             </td>
                                         </tr>

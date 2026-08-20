@@ -4148,7 +4148,75 @@ html, body {
   white-space: nowrap;
 }
 
-/* RESPONSIVE DESIGN PARA DASHBOARD */
+/* ==========================================================================
+   SISTEMA DE NAVEGACIÓN MÓVIL (HAMBURGUESA, OFFCANVAS Y OVERLAY)
+   ========================================================================== */
+.dash-mobile-hamburger-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #FFFFFF;
+  font-size: 1.2rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+}
+
+.dash-mobile-hamburger-btn:hover,
+.dash-mobile-hamburger-btn:active {
+  background: rgba(255, 85, 0, 0.2);
+  border-color: #FF5500;
+  color: #FF5500;
+  transform: scale(1.05);
+}
+
+.dash-sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 99998;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.dash-sidebar-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.dash-sidebar-close-mobile-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #CBD5E1;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dash-sidebar-close-mobile-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #EF4444;
+  color: #EF4444;
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN PARA DASHBOARD & ADMIN PAGES (TABLETS & CELULARES)
+   ========================================================================== */
 @media (max-width: 1280px) {
   .dash-kpi-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -4160,25 +4228,264 @@ html, body {
   }
 }
 
-@media (max-width: 900px) {
-  .dashboard-root-wrapper {
-    flex-direction: column;
+@media (max-width: 991px) {
+  .dash-mobile-hamburger-btn {
+    display: flex !important;
   }
 
+  .dash-sidebar-close-mobile-btn {
+    display: flex !important;
+  }
+
+  .dash-sidebar-toggle-btn {
+    display: none !important;
+  }
+
+  .dashboard-root-wrapper {
+    flex-direction: column !important;
+    min-height: 100vh !important;
+    position: relative !important;
+    width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  /* SIDEBAR COMO DRAWER OFFCANVAS FLOTANTE EN MÓVIL */
   .dash-sidebar {
-    width: 100%;
-    height: auto;
-    position: static;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 290px !important;
+    min-width: 290px !important;
+    max-width: 85vw !important;
+    height: 100vh !important;
+    z-index: 99999 !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.35s ease !important;
+    box-shadow: none !important;
+    padding: 1.25rem 1rem !important;
+    background: #12121B !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+  }
+
+  .dash-sidebar.mobile-open {
+    transform: translateX(0) !important;
+    box-shadow: 20px 0 60px rgba(0, 0, 0, 0.9) !important;
+  }
+
+  /* Asegurar que todos los elementos y textos del sidebar se vean en móvil */
+  .dash-sidebar .dash-nav-text,
+  .dash-sidebar .dash-organizer-info,
+  .dash-sidebar .dash-nav-section-title,
+  .dash-sidebar .dash-nav-pill-count,
+  .dash-sidebar .dash-nav-badge-orange,
+  .dash-sidebar .dash-btn-logout-text {
+    display: block !important;
+  }
+
+  .dash-sidebar .dash-brand-logo {
+    display: flex !important;
+  }
+
+  .dash-sidebar .dash-organizer-pill-card {
+    display: flex !important;
+    padding: 0.85rem !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+  }
+
+  .dash-sidebar .dash-nav-link {
+    justify-content: flex-start !important;
+    padding: 0.75rem 1rem !important;
+  }
+
+  .dash-sidebar .dash-btn-logout {
+    justify-content: flex-start !important;
+    padding: 0.75rem 1rem !important;
+  }
+
+  /* ÁREA PRINCIPAL FULL WIDTH */
+  .dash-main-content {
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    overflow-x: hidden !important;
+  }
+
+  /* TOP NAVBAR RESPONSIVO */
+  .dash-top-navbar {
+    padding: 0.75rem 1rem !important;
+    gap: 0.65rem !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 90 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .dash-search-container {
+    padding: 0.45rem 0.85rem !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+
+  .dash-search-input {
+    font-size: 0.8rem !important;
+  }
+
+  .dash-kbd-shortcut {
+    display: none !important;
+  }
+
+  .dash-period-select-capsule {
+    display: none !important;
+  }
+
+  .dash-btn-create {
+    padding: 0.5rem 0.85rem !important;
+    font-size: 0.8rem !important;
+    white-space: nowrap !important;
+  }
+
+  .dash-container {
+    padding: 1rem 0.85rem !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   .dash-kpi-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
+    gap: 0.85rem !important;
+  }
+
+  .dash-charts-grid,
+  .dash-bottom-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
   }
 
   .dash-hero-welcome-card {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1.5rem;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    padding: 1.25rem !important;
+    gap: 1rem !important;
+  }
+
+  .dash-hero-title {
+    font-size: 1.45rem !important;
+  }
+
+  .settings-header-banner,
+  .table-header-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 1.25rem 1rem !important;
+    gap: 1rem !important;
+  }
+
+  .settings-header-banner > div:last-child,
+  .settings-header-actions,
+  .table-header-card > div:last-child {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 0.6rem !important;
+    width: 100% !important;
+  }
+
+  .settings-header-banner .btn,
+  .table-header-card .btn {
+    flex: 1 1 calc(50% - 0.6rem) !important;
+    min-width: 130px !important;
+    justify-content: center !important;
+    text-align: center !important;
+    font-size: 0.85rem !important;
+    padding: 0.75rem 0.85rem !important;
+    white-space: nowrap !important;
+  }
+
+  .settings-page-title {
+    font-size: 1.35rem !important;
+  }
+
+  /* TABLAS RESPONSIVAS CON DESPLAZAMIENTO SUAVE Y ANCHO COMPLETO */
+  .dash-table-container,
+  .dash-table-responsive,
+  .admin-table-container,
+  .table-responsive {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    border-radius: 14px !important;
+    display: block !important;
+    padding-bottom: 0.5rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .dash-table,
+  .admin-table {
+    min-width: 780px !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .dash-table th,
+  .dash-table td,
+  .admin-table th,
+  .admin-table td {
+    padding: 0.85rem 0.75rem !important;
+    white-space: nowrap !important;
+  }
+
+  /* MODALES RESPONSIVOS */
+  .admin-modal-card,
+  .admin-modal-content {
+    width: 95% !important;
+    max-width: 95% !important;
+    padding: 1.25rem 0.9rem !important;
+    max-height: 94vh !important;
+    margin: auto !important;
+    border-radius: 20px !important;
+    box-sizing: border-box !important;
+  }
+
+  .pos-quick-qty-pills {
+    display: grid !important;
+    grid-template-columns: repeat(6, 1fr) !important;
+    gap: 0.3rem !important;
+    width: 100% !important;
+  }
+
+  .pos-quick-btn {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 36px !important;
+    padding: 0 !important;
+    font-size: 0.8rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .dash-sales-bar-chart {
+    gap: 0.35rem !important;
+    padding-top: 1rem !important;
+  }
+
+  .chart-bar-val {
+    font-size: 0.65rem !important;
+  }
+
+  .chart-bar-day {
+    font-size: 0.7rem !important;
+  }
+
+  .dash-donut-distribution-box {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 1.5rem !important;
   }
 }
 

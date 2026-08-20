@@ -3,7 +3,53 @@
 @section('title', 'Punto de Venta POS - ' . $event->title . ' | Vive Go')
 
 @push('styles')
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Anton&family=Bebas+Neue&family=Caveat:wght@600;700&family=Cinzel:wght@600;800&family=Comfortaa:wght@600;700&family=Dancing+Script:wght@600;700&family=Fira+Sans:ital,wght@0,400;0,700;1,400&family=Great+Vibes&family=Inter:wght@400;600;800;900&family=Lato:wght@400;700;900&family=Lobster&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Monoton&family=Montserrat:wght@400;700;900&family=Nunito:wght@400;700;900&family=Open+Sans:wght@400;700&family=Oswald:wght@500;700&family=Outfit:wght@400;700;900&family=Pacifico&family=Permanent+Marker&family=Playfair+Display:ital,wght@0,600;0,800;1,600&family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=Poppins:wght@400;700;900&family=Raleway:wght@400;700;900&family=Righteous&family=Roboto:wght@400;700;900&family=Rubik:wght@400;700;900&family=Satisfy&family=Space+Grotesk:wght@500;700&family=Syne:wght@700;800&family=Work+Sans:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
+        .font-lato { font-family: 'Lato', sans-serif !important; }
+        .font-montserrat { font-family: 'Montserrat', sans-serif !important; }
+        .font-opensans { font-family: 'Open Sans', sans-serif !important; }
+        .font-roboto { font-family: 'Roboto', sans-serif !important; }
+        .font-inter { font-family: 'Inter', sans-serif !important; }
+        .font-poppins { font-family: 'Poppins', sans-serif !important; }
+        .font-outfit { font-family: 'Outfit', sans-serif !important; }
+        .font-raleway { font-family: 'Raleway', sans-serif !important; }
+        .font-nunito { font-family: 'Nunito', sans-serif !important; }
+        .font-rubik { font-family: 'Rubik', sans-serif !important; }
+        .font-work-sans { font-family: 'Work Sans', sans-serif !important; }
+        .font-oswald { font-family: 'Oswald', sans-serif !important; }
+        .font-bebas { font-family: 'Bebas Neue', sans-serif !important; }
+        .font-anton { font-family: 'Anton', sans-serif !important; }
+        .font-syne { font-family: 'Syne', sans-serif !important; }
+        .font-space-grotesk { font-family: 'Space Grotesk', sans-serif !important; }
+        .font-righteous { font-family: 'Righteous', sans-serif !important; }
+        .font-monoton { font-family: 'Monoton', sans-serif !important; }
+        .font-merriweather { font-family: 'Merriweather', serif !important; }
+        .font-playfair { font-family: 'Playfair Display', serif !important; }
+        .font-cinzel { font-family: 'Cinzel', serif !important; }
+        .font-abril { font-family: 'Abril Fatface', serif !important; }
+        .font-dancing { font-family: 'Dancing Script', cursive !important; }
+        .font-greatvibes { font-family: 'Great Vibes', cursive !important; }
+        .font-pacifico { font-family: 'Pacifico', cursive !important; }
+        .font-satisfy { font-family: 'Satisfy', cursive !important; }
+        .font-caveat { font-family: 'Caveat', cursive !important; }
+        .font-lobster { font-family: 'Lobster', cursive !important; }
+        .font-comfortaa { font-family: 'Comfortaa', cursive !important; }
+
+        .ticket-element-node p, 
+        .ticket-element-node div, 
+        .ticket-element-node span, 
+        .ticket-element-node h1, 
+        .ticket-element-node h2, 
+        .ticket-element-node h3, 
+        .ticket-element-node h4 {
+            margin: 0 !important;
+            padding: 0 !important;
+            text-align: inherit !important;
+            box-sizing: border-box !important;
+        }
+
         .pos-header-card {
             background: linear-gradient(135deg, rgba(20, 20, 30, 0.95), rgba(30, 30, 45, 0.95));
             border: 1.5px solid rgba(255, 85, 0, 0.3);
@@ -192,6 +238,38 @@
             border-radius: 14px;
         }
 
+        /* BOTONES QUICK QUANTITY Y QUICK CASH */
+        .pos-quick-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #CBD5E1;
+            font-weight: 800;
+            font-size: 0.85rem;
+            border-radius: 10px;
+            padding: 0.4rem 0.65rem;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 38px;
+            height: 36px;
+            box-sizing: border-box;
+        }
+
+        .pos-quick-btn:hover {
+            background: rgba(255, 85, 0, 0.15);
+            border-color: #FF5500;
+            color: #FF5500;
+        }
+
+        .pos-quick-btn.active {
+            background: var(--color-primary-orange, #FF5500) !important;
+            border-color: var(--color-primary-orange, #FF5500) !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 4px 12px rgba(255, 85, 0, 0.4);
+        }
+
         /* CARD DE TOTAL RESUMEN */
         .pos-total-summary-card {
             background: rgba(255, 85, 0, 0.08);
@@ -205,9 +283,68 @@
         }
 
         @media (max-width: 860px) {
+            #posSaleModal .admin-modal-card {
+                padding: 1.25rem 0.9rem !important;
+                width: 96% !important;
+                max-width: 96% !important;
+                border-radius: 20px !important;
+                max-height: 94vh !important;
+                margin: auto !important;
+                box-sizing: border-box !important;
+            }
+
             .pos-modal-two-columns {
                 grid-template-columns: 1fr !important;
-                gap: 1.25rem !important;
+                gap: 1.15rem !important;
+            }
+
+            .zone-card-item {
+                padding: 0.75rem 0.85rem !important;
+                border-radius: 14px !important;
+            }
+
+            .zone-card-name {
+                font-size: 0.875rem !important;
+            }
+
+            .zone-card-price {
+                font-size: 1.05rem !important;
+            }
+
+            .pos-quick-qty-pills {
+                display: grid !important;
+                grid-template-columns: repeat(6, 1fr) !important;
+                gap: 0.3rem !important;
+                width: 100% !important;
+            }
+
+            .pos-quick-btn {
+                width: 100% !important;
+                min-width: 0 !important;
+                height: 36px !important;
+                padding: 0 !important;
+                font-size: 0.8rem !important;
+            }
+
+            .pos-total-summary-card {
+                padding: 0.85rem 1rem !important;
+                border-radius: 14px !important;
+            }
+
+            #posTotalAmountDisplay {
+                font-size: 1.6rem !important;
+            }
+
+            .pos-modal-footer-actions {
+                flex-direction: column-reverse !important;
+                gap: 0.6rem !important;
+            }
+
+            .pos-modal-footer-actions .btn {
+                width: 100% !important;
+                padding: 0.85rem 1rem !important;
+                justify-content: center !important;
+                text-align: center !important;
             }
         }
 
@@ -497,43 +634,43 @@
     <div class="admin-modal-overlay" id="posSaleModal">
         <div class="admin-modal-card" style="max-width: 1060px; width: 95%; max-height: 92vh; overflow-y: auto; padding: 2rem; border-radius: 28px; box-sizing: border-box;">
             
-            <div class="admin-modal-header" style="margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center; gap: 0.85rem;">
-                    <div class="card-header-icon" style="width: 44px; height: 44px; background: rgba(255, 85, 0, 0.15); border-color: rgba(255, 85, 0, 0.3); color: var(--color-primary-orange); display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 1.4rem;">🛒</div>
-                    <div>
-                        <h3 class="card-header-title" style="font-size: 1.25rem; margin: 0; color: #FFFFFF; font-weight: 900;">Nueva Venta de Taquilla (POS)</h3>
-                        <p class="card-header-subtitle" style="margin: 0; font-size: 0.825rem; color: #94A3B8;">{{ $event->title }}</p>
+            <div class="admin-modal-header" style="margin-bottom: 1.25rem; padding-bottom: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem; min-width: 0; flex: 1;">
+                    <div class="card-header-icon" style="width: 42px; height: 42px; background: rgba(255, 85, 0, 0.15); border-color: rgba(255, 85, 0, 0.3); color: var(--color-primary-orange); display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 1.3rem; flex-shrink: 0;">🛒</div>
+                    <div style="min-width: 0; flex: 1;">
+                        <h3 class="card-header-title" style="font-size: 1.15rem; margin: 0; color: #FFFFFF; font-weight: 900; line-height: 1.25;">Nueva Venta de Taquilla (POS)</h3>
+                        <p class="card-header-subtitle" style="margin: 0; font-size: 0.8rem; color: #94A3B8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $event->title }}</p>
                     </div>
                 </div>
-                <button type="button" class="admin-modal-close" onclick="closePosSaleModal()" style="font-size: 1.3rem; color: #94A3B8; background: transparent; border: none; cursor: pointer;">✕</button>
+                <button type="button" class="admin-modal-close" onclick="closePosSaleModal()" style="font-size: 1.3rem; color: #94A3B8; background: transparent; border: none; cursor: pointer; flex-shrink: 0; padding: 0.25rem 0.5rem;" aria-label="Cerrar">✕</button>
             </div>
 
             <form id="posSaleForm" onsubmit="handlePosSaleSubmit(event)">
                 <!-- GRID DE 2 COLUMNAS PRINCIPALES -->
-                <div class="pos-modal-two-columns" style="display: grid; grid-template-columns: 1.15fr 1fr; gap: 1.75rem; align-items: start; margin-bottom: 1.5rem;">
+                <div class="pos-modal-two-columns" style="display: grid; grid-template-columns: 1.15fr 1fr; gap: 1.5rem; align-items: start; margin-bottom: 1.25rem;">
                     
                     <!-- COLUMNA 1: SELECCIÓN DE SECTORES / ZONAS EN CARDS + CANTIDAD + TOTAL A COBRAR -->
                     <div>
                         <!-- SECTORES / ZONAS EN CARDS INTERACTIVAS -->
-                        <div class="form-group-custom" style="margin-bottom: 1.35rem;">
-                            <label class="form-label-custom" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                        <div class="form-group-custom" style="margin-bottom: 1.25rem;">
+                            <label class="form-label-custom" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-size: 0.85rem;">
                                 <span>🎟️ Sector / Zona de Entrada <span class="required-star">*</span></span>
                                 <small style="color: #94A3B8; font-weight: 600;">Haz clic para seleccionar</small>
                             </label>
                             
-                            <div style="display: flex; flex-direction: column; gap: 0.65rem;" id="zoneCardsContainer">
+                            <div style="display: flex; flex-direction: column; gap: 0.6rem;" id="zoneCardsContainer">
                                 @foreach($zonesWithStats as $index => $z)
                                     <div class="zone-card-item {{ $index === 0 && $z['available'] > 0 ? 'active' : '' }} {{ $z['available'] <= 0 ? 'disabled' : '' }}"
                                          data-name="{{ $z['name'] }}"
                                          data-price="{{ $z['price'] }}"
                                          data-available="{{ $z['available'] }}"
                                          onclick="selectZoneCard('{{ addslashes($z['name']) }}', {{ $z['price'] }}, {{ $z['available'] }}, this)">
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.6rem;">
+                                            <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0; flex: 1;">
                                                 <div class="zone-radio-indicator"></div>
-                                                <div>
-                                                    <strong class="zone-card-name">{{ $z['name'] }}</strong>
-                                                    <div style="margin-top: 0.2rem;">
+                                                <div style="min-width: 0; flex: 1;">
+                                                    <strong class="zone-card-name" style="word-break: break-word;">{{ $z['name'] }}</strong>
+                                                    <div style="margin-top: 0.15rem;">
                                                         @if($z['available'] > 0)
                                                             <span class="zone-stock-badge available">📦 Stock: {{ number_format($z['available']) }} libres</span>
                                                         @else
@@ -542,9 +679,9 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div style="text-align: right;">
-                                                <span class="zone-card-price">S/ {{ number_format($z['price'], 2) }}</span>
-                                                <small style="display: block; font-size: 0.7rem; color: #94A3B8;">por entrada</small>
+                                            <div style="text-align: right; flex-shrink: 0;">
+                                                <span class="zone-card-price" style="white-space: nowrap;">S/ {{ number_format($z['price'], 2) }}</span>
+                                                <small style="display: block; font-size: 0.68rem; color: #94A3B8; white-space: nowrap;">por entrada</small>
                                             </div>
                                         </div>
                                     </div>
@@ -555,10 +692,10 @@
                         </div>
 
                         <!-- CANTIDAD DE ENTRADAS CON BOTONES NARANJAS Y QUICK PILLS -->
-                        <div class="form-group-custom" style="margin-bottom: 1.35rem; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); padding: 1.15rem; border-radius: 18px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
-                                <label class="form-label-custom" style="margin: 0;">🎫 Cantidad de Entradas <span class="required-star">*</span></label>
-                                <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                        <div class="form-group-custom" style="margin-bottom: 1.25rem; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); padding: 1rem; border-radius: 18px;">
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                <label class="form-label-custom" style="margin: 0; font-size: 0.85rem;">🎫 Cantidad de Entradas <span class="required-star">*</span></label>
+                                <div class="pos-quick-qty-pills" style="display: flex; gap: 0.35rem; width: 100%;">
                                     <button type="button" class="pos-quick-btn active" id="btnQuickQty1" onclick="setPosQuantity(1)">1</button>
                                     <button type="button" class="pos-quick-btn" id="btnQuickQty2" onclick="setPosQuantity(2)">2</button>
                                     <button type="button" class="pos-quick-btn" id="btnQuickQty3" onclick="setPosQuantity(3)">3</button>
@@ -568,7 +705,7 @@
                                 </div>
                             </div>
 
-                            <div style="display: flex; align-items: center; gap: 0.85rem; justify-content: center; margin-top: 0.6rem;">
+                            <div style="display: flex; align-items: center; gap: 0.85rem; justify-content: center; margin-top: 0.5rem;">
                                 <button type="button" class="pos-stepper-btn orange-btn" onclick="stepPosQuantity(-1)" title="Restar una entrada">-</button>
                                 <input type="number" id="pos_quantity" class="form-input-custom pos-stepper-input" value="1" min="1" max="50" required oninput="calculatePosTotal()">
                                 <button type="button" class="pos-stepper-btn orange-btn" onclick="stepPosQuantity(1)" title="Sumar una entrada">+</button>
@@ -578,10 +715,10 @@
                         <!-- TOTAL A PAGAR RESALTADO PRO MAX -->
                         <div class="pos-total-summary-card">
                             <div>
-                                <span style="font-size: 0.8rem; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; display: block;">Total a Cobrar</span>
-                                <small style="color: #FFFFFF; font-weight: 600;" id="posUnitPriceDesc">1 entrada x S/ 0.00</small>
+                                <span style="font-size: 0.75rem; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; display: block;">Total a Cobrar</span>
+                                <small style="color: #FFFFFF; font-weight: 600; font-size: 0.85rem;" id="posUnitPriceDesc">1 entrada x S/ 0.00</small>
                             </div>
-                            <div style="font-size: 2.2rem; font-weight: 900; color: #10B981; text-shadow: 0 2px 12px rgba(16, 185, 129, 0.3);" id="posTotalAmountDisplay">
+                            <div style="font-size: 1.85rem; font-weight: 900; color: #10B981; text-shadow: 0 2px 12px rgba(16, 185, 129, 0.3); text-align: right;" id="posTotalAmountDisplay">
                                 S/ 0.00
                             </div>
                         </div>
@@ -590,23 +727,23 @@
                     <!-- COLUMNA 2: DATOS DEL CLIENTE + MÉTODO DE PAGO + CALCULADORA DE VUELTO -->
                     <div>
                         <!-- DATOS DEL CLIENTE / COMPRADOR CON CHECKBOX SIN DATOS -->
-                        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); padding: 1.25rem; border-radius: 18px; margin-bottom: 1.25rem;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
-                                <h4 style="font-size: 0.9rem; font-weight: 800; color: #FFFFFF; text-transform: uppercase; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); padding: 1.15rem; border-radius: 18px; margin-bottom: 1.15rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                                <h4 style="font-size: 0.85rem; font-weight: 800; color: #FFFFFF; text-transform: uppercase; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
                                     <span>👤</span> <span>Datos del Comprador</span>
                                 </h4>
-                                <label style="display: flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.775rem; font-weight: 800; color: var(--color-primary-orange); background: rgba(255,85,0,0.12); padding: 0.35rem 0.75rem; border-radius: 10px; border: 1px solid rgba(255,85,0,0.35); user-select: none;">
-                                    <input type="checkbox" id="chkAnonymousBuyer" onchange="toggleAnonymousBuyer(this)" style="cursor: pointer; width: 16px; height: 16px; accent-color: #FF5500;">
+                                <label style="display: flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.75rem; font-weight: 800; color: var(--color-primary-orange); background: rgba(255,85,0,0.12); padding: 0.3rem 0.65rem; border-radius: 10px; border: 1px solid rgba(255,85,0,0.35); user-select: none;">
+                                    <input type="checkbox" id="chkAnonymousBuyer" onchange="toggleAnonymousBuyer(this)" style="cursor: pointer; width: 15px; height: 15px; accent-color: #FF5500;">
                                     <span>Sin Datos (Venta Rápida)</span>
                                 </label>
                             </div>
 
-                            <div class="form-group-custom" style="margin-bottom: 0.9rem;">
+                            <div class="form-group-custom" style="margin-bottom: 0.8rem;">
                                 <label for="pos_buyer_dni" class="form-label-custom">DNI / Documento <span class="required-star" id="star_buyer_dni">*</span></label>
                                 <input type="text" id="pos_buyer_dni" class="form-input-custom" placeholder="Ej: 72819203" required style="font-weight: 700; letter-spacing: 0.5px;">
                             </div>
 
-                            <div class="form-group-custom" style="margin-bottom: 0.9rem;">
+                            <div class="form-group-custom" style="margin-bottom: 0.8rem;">
                                 <label for="pos_buyer_name" class="form-label-custom">Nombre Completo <span class="required-star" id="star_buyer_name">*</span></label>
                                 <input type="text" id="pos_buyer_name" class="form-input-custom" placeholder="Ej: Juan Pérez Morales" required style="font-weight: 600;">
                             </div>
@@ -618,9 +755,9 @@
                         </div>
 
                         <!-- MÉTODO DE PAGO CON PILLS -->
-                        <div class="form-group-custom" style="margin-bottom: 1.25rem;">
+                        <div class="form-group-custom" style="margin-bottom: 1.15rem;">
                             <label class="form-label-custom">Método de Pago <span class="required-star">*</span></label>
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(85px, 1fr)); gap: 0.4rem;" id="paymentMethodsGroup">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 0.4rem;" id="paymentMethodsGroup">
                                 <div class="payment-method-pill active" onclick="selectPaymentMethod('Efectivo', this)">
                                     <span>💵</span> <span>Efectivo</span>
                                 </div>
@@ -641,10 +778,10 @@
                         </div>
 
                         <!-- CALCULADORA DE VUELTO / CAMBIO (SOLO EN EFECTIVO) -->
-                        <div id="cashCalculatorBox" style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 18px; padding: 1.15rem; margin-bottom: 1.25rem;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                                <label class="form-label-custom" style="margin: 0;">💵 Monto Recibido del Cliente <span class="required-star">*</span></label>
-                                <div style="display: flex; gap: 0.3rem; flex-wrap: wrap;">
+                        <div id="cashCalculatorBox" style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 18px; padding: 1rem 0.85rem; margin-bottom: 1.15rem;">
+                            <div style="display: flex; flex-direction: column; gap: 0.45rem; margin-bottom: 0.65rem;">
+                                <label class="form-label-custom" style="margin: 0; font-size: 0.85rem;">💵 Monto Recibido del Cliente <span class="required-star">*</span></label>
+                                <div style="display: flex; gap: 0.3rem; flex-wrap: wrap; width: 100%;">
                                     <button type="button" class="pos-quick-btn" onclick="setCashPaid(10)">S/ 10</button>
                                     <button type="button" class="pos-quick-btn" onclick="setCashPaid(20)">S/ 20</button>
                                     <button type="button" class="pos-quick-btn" onclick="setCashPaid(50)">S/ 50</button>
@@ -654,13 +791,13 @@
                                 </div>
                             </div>
 
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; align-items: center;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; align-items: center;">
                                 <div>
-                                    <input type="number" id="pos_amount_paid" class="form-input-custom" step="0.50" min="0" placeholder="0.00" style="font-size: 1.2rem; font-weight: 800;" oninput="calculateChange()">
+                                    <input type="number" id="pos_amount_paid" class="form-input-custom" step="0.50" min="0" placeholder="0.00" style="font-size: 1.15rem; font-weight: 800;" oninput="calculateChange()">
                                 </div>
-                                <div style="background: rgba(0,0,0,0.5); padding: 0.65rem 0.85rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: right;">
-                                    <span style="font-size: 0.7rem; color: #94A3B8; font-weight: 700; display: block; text-transform: uppercase;">Cambio / Vuelto:</span>
-                                    <strong style="font-size: 1.3rem; font-weight: 900; color: #10B981;" id="posChangeAmountDisplay">S/ 0.00</strong>
+                                <div style="background: rgba(0,0,0,0.5); padding: 0.55rem 0.75rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: right;">
+                                    <span style="font-size: 0.65rem; color: #94A3B8; font-weight: 700; display: block; text-transform: uppercase;">Cambio / Vuelto:</span>
+                                    <strong style="font-size: 1.15rem; font-weight: 900; color: #10B981;" id="posChangeAmountDisplay">S/ 0.00</strong>
                                 </div>
                             </div>
                         </div>
@@ -669,12 +806,12 @@
                 </div>
 
                 <!-- BOTONES DE ACCIÓN DEL FOOTER -->
-                <div style="display: flex; gap: 0.85rem; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.25rem;">
-                    <button type="button" class="btn btn-secondary" onclick="closePosSaleModal()" style="padding: 0.85rem 1.6rem; font-weight: 700;">
+                <div class="pos-modal-footer-actions" style="display: flex; gap: 0.75rem; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.15rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closePosSaleModal()" style="padding: 0.75rem 1.4rem; font-weight: 700;">
                         Cancelar
                     </button>
-                    <button type="submit" id="btnSubmitPosSale" class="btn btn-primary btn-save-settings" style="padding: 0.85rem 2rem; font-size: 1rem; font-weight: 900; box-shadow: 0 6px 20px rgba(255, 85, 0, 0.45);">
-                        🧾 Confirmar Venta & Imprimir Recibo
+                    <button type="submit" id="btnSubmitPosSale" class="btn btn-primary btn-save-settings" style="padding: 0.75rem 1.8rem; font-size: 0.95rem; font-weight: 900; box-shadow: 0 6px 20px rgba(255, 85, 0, 0.45);">
+                        🧾 Confirmar Venta & Imprimir
                     </button>
                 </div>
             </form>
@@ -1138,6 +1275,14 @@
             if (!url || typeof url !== 'string' || url.trim() === '') return '';
             if (url.startsWith('data:')) return url;
             try {
+                if (url.startsWith('http://') || url.startsWith('https://')) {
+                    const parsed = new URL(url);
+                    if (parsed.origin !== window.location.origin) {
+                        return url;
+                    }
+                }
+            } catch(e) {}
+            try {
                 const response = await fetch(url, { mode: 'cors', cache: 'force-cache' });
                 if (response.ok) {
                     const blob = await response.blob();
@@ -1166,16 +1311,373 @@
                             resolve(canvas.toDataURL('image/jpeg', 0.92));
                         } catch (err) { reject(err); }
                     };
-                    img.onerror = () => { clearTimeout(timeout); reject(new Error('Image load error')); };
+                    img.onerror = () => { clearTimeout(timeout); resolve(url); };
                     img.src = url;
                 });
-                return dataUrl;
+                return dataUrl || url;
             } catch (e) {
-                return '';
+                return url;
             }
         }
 
-        // Descargar Entrada PDF individual manteniendo el diseño de Canva Studio
+        function convertPositionsToElements(positions) {
+            if (!positions || typeof positions !== 'object') return [];
+            const elements = [];
+            const fieldMap = {
+                canvaElLogo: { field: 'logo', type: 'image' },
+                canvaElBanner: { field: 'banner', type: 'image' },
+                canvaElTitle: { field: 'title', type: 'text' },
+                canvaElZone: { field: 'zone', type: 'text' },
+                canvaElPrice: { field: 'price', type: 'text' },
+                canvaElVenue: { field: 'venue', type: 'text' },
+                canvaElCity: { field: 'city', type: 'text' },
+                canvaElDate: { field: 'date', type: 'text' },
+                canvaElTime: { field: 'time', type: 'text' },
+                canvaElBuyerName: { field: 'buyer_name', type: 'text' },
+                canvaElBuyer: { field: 'buyer_name', type: 'text' },
+                canvaElBuyerDni: { field: 'buyer_dni', type: 'text' },
+                canvaElTicketNumber: { field: 'ticket_number', type: 'text' },
+                canvaElQR: { field: 'qr', type: 'qr' },
+                canvaElHash: { field: 'hash', type: 'text' },
+                canvaElDisclaimer: { field: 'disclaimer', type: 'disclaimer' },
+            };
+
+            Object.keys(positions).forEach((id) => {
+                const p = positions[id];
+                if (!p || p.hidden === true || p.display === 'none' || p.visible === false) return;
+
+                const mapped = fieldMap[id] || { field: 'custom', type: 'text' };
+                const isDisclaimer = id === 'canvaElDisclaimer' || mapped.field === 'disclaimer' || (id && String(id).toLowerCase().includes('disclaimer'));
+                const topVal = parseFloat(p.top) || 0;
+                const leftVal = parseFloat(p.left) || 0;
+                const widthVal = parseFloat(p.width) || 120;
+                const heightVal = parseFloat(p.height) || 40;
+
+                // Leer textAlign desde múltiples fuentes en orden de prioridad:
+                // 1. p.textAlign guardado (del wrapper canva-drag-element)
+                // 2. Del HTML guardado (text-align puede estar en los hijos del box-container)
+                // 3. Mapa de alineaciones por defecto por ID/campo (refleja el diseño original de los templates)
+                const defaultAlignMap = {
+                    canvaElPrice: 'right',
+                    canvaElVenue: 'right',
+                    canvaElTicketNumber: 'left',
+                    canvaElHash: 'left',
+                    canvaElDisclaimer: 'center',
+                };
+                let resolvedTextAlign = p.textAlign || '';
+                if (!resolvedTextAlign && p.html) {
+                    const taMatch = p.html.match(/text-align\s*:\s*(left|center|right|justify)/i);
+                    if (taMatch) resolvedTextAlign = taMatch[1];
+                }
+                if (!resolvedTextAlign) {
+                    resolvedTextAlign = defaultAlignMap[id] || (isDisclaimer ? 'center' : 'left');
+                }
+
+                elements.push({
+                    id: id,
+                    field: mapped.field,
+                    type: mapped.type,
+                    content: p.html || p.text || '',
+                    src: p.src || '',
+                    x: leftVal,
+                    y: topVal,
+                    width: widthVal,
+                    height: heightVal,
+                    rotation: parseFloat(p.rotate) || 0,
+                    fit: 'cover',
+                    style: {
+                        fontFamily: p.fontFamily || 'Plus Jakarta Sans',
+                        fontSize: parseFloat(p.fontSize) || 14,
+                        color: p.color || '#FFFFFF',
+                        fontWeight: p.fontWeight || 'bold',
+                        fontStyle: p.fontStyle || 'normal',
+                        textAlign: resolvedTextAlign,
+                        letterSpacing: 0,
+                        lineHeight: 1.2,
+                        background: p.backgroundColor || 'transparent'
+                    }
+                });
+            });
+
+            return elements;
+        }
+
+        function getRealFontFamily(fontName) {
+            if (!fontName) return 'Plus Jakarta Sans';
+            const fontMap = {
+                'font-lato': 'Lato',
+                'font-montserrat': 'Montserrat',
+                'font-opensans': 'Open Sans',
+                'font-roboto': 'Roboto',
+                'font-inter': 'Inter',
+                'font-poppins': 'Poppins',
+                'font-outfit': 'Outfit',
+                'font-raleway': 'Raleway',
+                'font-nunito': 'Nunito',
+                'font-rubik': 'Rubik',
+                'font-work-sans': 'Work Sans',
+                'font-oswald': 'Oswald',
+                'font-bebas': 'Bebas Neue',
+                'font-anton': 'Anton',
+                'font-syne': 'Syne',
+                'font-space-grotesk': 'Space Grotesk',
+                'font-righteous': 'Righteous',
+                'font-monoton': 'Monoton',
+                'font-merriweather': 'Merriweather',
+                'font-playfair': 'Playfair Display',
+                'font-cinzel': 'Cinzel',
+                'font-abril': 'Abril Fatface',
+                'font-dancing': 'Dancing Script',
+                'font-greatvibes': 'Great Vibes',
+                'font-pacifico': 'Pacifico',
+                'font-satisfy': 'Satisfy',
+                'font-caveat': 'Caveat',
+                'font-lobster': 'Lobster',
+                'font-comfortaa': 'Comfortaa'
+            };
+
+            if (fontMap[fontName]) return fontMap[fontName];
+            if (typeof fontName === 'string' && fontName.startsWith('font-')) {
+                const clean = fontName.replace('font-', '');
+                return clean.charAt(0).toUpperCase() + clean.slice(1);
+            }
+            return fontName;
+        }
+
+        function replaceDynamicValueInHtml(html, labelKeyword, newValue) {
+            if (!html || typeof html !== 'string') return html;
+            const cleanLabel = labelKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            
+            // Caso 1: Estructura multilínea de párrafos <p>Label:</p><p>Valor</p>
+            const multiPRegex = new RegExp(`(<p[^>]*>\\s*${cleanLabel}:?\\s*<\\/p>\\s*<p[^>]*>)(.*?)(<\\/p>)`, 'gi');
+            if (multiPRegex.test(html)) {
+                return html.replace(multiPRegex, `$1${newValue}$3`);
+            }
+
+            // Caso 2: Estructura en línea Label: Valor
+            const singleRegex = new RegExp(`(${cleanLabel}:?\\s*)((?:<[^>]+>\\s*)*)([^<\\s]+[^<]*)`, 'gi');
+            if (singleRegex.test(html)) {
+                return html.replace(singleRegex, `$1$2${newValue}`);
+            }
+
+            return html;
+        }
+
+        function renderTicketCanvasContent(template, dynamicData, assetMap = {}) {
+            let elements = [];
+            if (template && Array.isArray(template.elements) && template.elements.length > 0) {
+                elements = template.elements;
+            } else if (template && template.positions) {
+                let rawPos = typeof template.positions === 'string' ? JSON.parse(template.positions) : template.positions;
+                elements = convertPositionsToElements(rawPos);
+            }
+
+            // Deduplicar elementos del sistema para evitar renderizado doble
+            const seenFields = new Set();
+            const uniqueElements = [];
+            for (let i = elements.length - 1; i >= 0; i--) {
+                const el = elements[i];
+                if (!el || el.hidden === true || el.display === 'none' || el.visible === false) continue;
+                const key = el.field || el.id;
+                if (key && (key.startsWith('canvaEl') || key === 'title' || key === 'zone' || key === 'price' || key === 'buyer_name' || key === 'buyer_dni' || key === 'ticket_number' || key === 'hash' || key === 'venue' || key === 'date' || key === 'time' || key === 'disclaimer')) {
+                    if (seenFields.has(key)) continue;
+                    seenFields.add(key);
+                }
+                uniqueElements.unshift(el);
+            }
+            elements = uniqueElements;
+
+            const bgUrl = assetMap.bgDataUrl || (template ? (template.background || template.bg_image) : null);
+            let bgHtml = '';
+            if (bgUrl) {
+                bgHtml = `<div style="position: absolute; inset: 0; background-image: url('${bgUrl}'); background-size: cover; background-position: center; z-index: 0; pointer-events: none;"></div>`;
+            }
+
+            let elementsHtml = '';
+
+            elements.forEach((el, idx) => {
+                if (!el || el.hidden === true || el.display === 'none' || el.visible === false) return;
+
+                const type = el.type || 'text';
+                const field = el.field || 'custom';
+
+                const x = parseFloat(el.x) || 0;
+                const y = parseFloat(el.y) || 0;
+
+                const w = el.style?.width ? (typeof el.style.width === 'number' ? el.style.width + 'px' : el.style.width) : (el.width ? (typeof el.width === 'number' ? el.width + 'px' : el.width) : 'auto');
+                const h = el.style?.height ? (typeof el.style.height === 'number' ? el.style.height + 'px' : el.style.height) : (el.height ? (typeof el.height === 'number' ? el.height + 'px' : el.height) : 'auto');
+                const rotation = parseFloat(el.style?.rotation || el.rotation || el.rotate) || 0;
+                const transform = rotation ? `transform: rotate(${rotation}deg); transform-origin: center center;` : '';
+
+                const style = el.style || {};
+                const rawFontName = style.fontFamily || el.fontFamily || 'Plus Jakarta Sans';
+                const realFontName = getRealFontFamily(rawFontName);
+                const font = realFontName.includes(',') ? `font-family: ${realFontName};` : `font-family: '${realFontName}', sans-serif;`;
+                const fontSize = style.fontSize ? (typeof style.fontSize === 'number' ? `font-size: ${style.fontSize}px;` : `font-size: ${style.fontSize};`) : 'font-size: 14px;';
+                const color = style.color ? `color: ${style.color};` : 'color: #FFFFFF;';
+                const weight = style.fontWeight ? `font-weight: ${style.fontWeight};` : 'font-weight: bold;';
+                const fontStyle = style.fontStyle ? `font-style: ${style.fontStyle};` : 'font-style: normal;';
+                let textAlign = style.textAlign || el.textAlign || el.align || 'left';
+                const letterSpacing = style.letterSpacing ? `letter-spacing: ${style.letterSpacing}px;` : '';
+                const lineHeight = style.lineHeight ? `line-height: ${style.lineHeight};` : 'line-height: 1.2;';
+                const bgStyle = style.background && style.background !== 'transparent' ? `background-color: ${style.background}; border-radius: ${style.borderRadius || '8px'}; padding: ${style.padding || '2px 6px'};` : '';
+
+                let innerContent = '';
+
+                if (type === 'qr' || field === 'qr' || el.id === 'canvaElQR') {
+                    const qrSrc = dynamicData.qr_data_url || el.src;
+                    innerContent = `<div style="padding: 0.35rem; background: #FFFFFF; border-radius: 12px; border: 1.5px solid #E2E8F0; width: 100%; height: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.08);"><img src="${qrSrc}" style="width: 100%; height: 100%; object-fit: contain; display: block; border-radius: 4px;" alt="QR Code" /></div>`;
+                } else if (type === 'image' || type === 'logo' || type === 'banner' || field === 'logo' || field === 'banner' || field === 'image' || el.id === 'canvaElLogo' || el.id === 'canvaElBanner') {
+                    let imgSrc = el.src;
+                    if ((field === 'banner' || type === 'banner' || el.id === 'canvaElBanner') && (!imgSrc || imgSrc === '')) {
+                        imgSrc = assetMap.bannerDataUrl;
+                    }
+                    if ((field === 'logo' || type === 'logo' || el.id === 'canvaElLogo') && (!imgSrc || imgSrc === '')) {
+                        imgSrc = assetMap.logoDataUrl;
+                    }
+                    const fitMode = style.objectFit || el.fit || (type === 'banner' || field === 'banner' ? 'cover' : 'contain');
+                    if (imgSrc) {
+                        innerContent = `<img src="${imgSrc}" style="width: 100%; height: 100%; display: block; object-fit: ${fitMode}; ${field === 'logo' || type === 'logo' ? 'filter: drop-shadow(0 0 8px rgba(255,85,0,0.6));' : ''}" />`;
+                    }
+                } else {
+                    let rawTxt = el.content || el.html || el.text || '';
+
+                    // Limpieza de artefactos de Quill
+                    if (typeof rawTxt === 'string') {
+                        rawTxt = rawTxt.replace(/<span class="ql-cursor">.*?<\/span>/gi, '').replace(/\uFEFF/g, '');
+                    }
+
+                    if (field === 'title' || el.id === 'canvaElTitle') {
+                        if (dynamicData.title) {
+                            rawTxt = (rawTxt && (rawTxt.includes('<') || rawTxt.includes('>')))
+                                ? rawTxt.replace(/(<h[1-6][^>]*>|<p[^>]*>|<span[^>]*>)(.*?)(<\/h[1-6]>|<\/p>|<\/span>|$)/gi, (m, p1, p2, p3) => p1 + dynamicData.title + p3)
+                                : dynamicData.title;
+                        }
+                    } else if (field === 'zone' || el.id === 'canvaElZone' || /ZONA/i.test(rawTxt)) {
+                        const zVal = (dynamicData.zone || 'GENERAL').toUpperCase();
+                        if (/ZONA/i.test(rawTxt)) {
+                            rawTxt = replaceDynamicValueInHtml(rawTxt, 'ZONA', zVal);
+                        } else if (rawTxt && rawTxt.trim().length > 0) {
+                            rawTxt = rawTxt.includes('<') ? rawTxt.replace(/([^>]+)(?=<|$)/, zVal) : zVal;
+                        } else {
+                            rawTxt = `<span style="font-size: inherit; font-weight: inherit; color: inherit; text-transform: uppercase;">ZONA: ${zVal}</span>`;
+                        }
+                    } else if (field === 'price' || el.id === 'canvaElPrice' || /PRECIO/i.test(rawTxt)) {
+                        const pVal = dynamicData.price ? (String(dynamicData.price).startsWith('S/') ? dynamicData.price : 'S/ ' + dynamicData.price) : 'S/ 0.00';
+                        if (/PRECIO/i.test(rawTxt)) {
+                            rawTxt = replaceDynamicValueInHtml(rawTxt, 'PRECIO', pVal);
+                        } else if (rawTxt && rawTxt.trim().length > 0) {
+                            rawTxt = rawTxt.includes('<') ? rawTxt.replace(/([^>]+)(?=<|$)/, pVal) : pVal;
+                        } else {
+                            rawTxt = `<div style="line-height: 1.15; text-align: inherit; width: 100%;"><span style="font-size: 0.75em; font-weight: 900; display: block;">PRECIO:</span><span style="font-size: 1.2em; font-weight: 900; display: block; margin-top: 2px;">${pVal}</span></div>`;
+                        }
+                    } else if (field === 'buyer_name' || el.id === 'canvaElBuyerName' || el.id === 'canvaElBuyer' || /Comprador/i.test(rawTxt)) {
+                        const bName = (dynamicData.buyer_name || 'CLIENTE VARIOS').toUpperCase();
+                        if (/Comprador/i.test(rawTxt)) {
+                            rawTxt = replaceDynamicValueInHtml(rawTxt, 'Comprador', bName);
+                        } else if (rawTxt && rawTxt.trim().length > 0) {
+                            rawTxt = rawTxt.includes('<') ? rawTxt.replace(/([^>]+)(?=<|$)/, bName) : bName;
+                        } else {
+                            rawTxt = `<div style="display: flex; flex-direction: column; text-align: inherit; width: 100%;"><span style="font-size: 0.75em; opacity: 0.85;">Comprador:</span><span style="font-weight: 900; text-transform: uppercase;">${bName}</span></div>`;
+                        }
+                    } else if (field === 'buyer_dni' || el.id === 'canvaElBuyerDni' || /DNI/i.test(rawTxt)) {
+                        const bDni = dynamicData.buyer_dni || '00000000';
+                        if (/DNI/i.test(rawTxt)) {
+                            rawTxt = replaceDynamicValueInHtml(rawTxt, 'DNI', bDni);
+                        } else if (rawTxt && rawTxt.trim().length > 0) {
+                            rawTxt = rawTxt.includes('<') ? rawTxt.replace(/([^>]+)(?=<|$)/, bDni) : bDni;
+                        } else {
+                            rawTxt = `<span style="font-weight: 800;">DNI: ${bDni}</span>`;
+                        }
+                    } else if (field === 'ticket_number' || el.id === 'canvaElTicketNumber' || /N[°º]/i.test(rawTxt)) {
+                        const numStr = dynamicData.ticket_number || 'N° 00001';
+                        if (/N[°º]/i.test(rawTxt)) {
+                            rawTxt = rawTxt.replace(/N[°º]\s*[\d]+/gi, numStr);
+                        } else if (rawTxt && rawTxt.trim().length > 0) {
+                            rawTxt = rawTxt.includes('<') ? rawTxt.replace(/([^>]+)(?=<|$)/, numStr) : numStr;
+                        } else {
+                            rawTxt = `<span style="font-weight: 900; letter-spacing: 0.5px;">${numStr}</span>`;
+                        }
+                    } else if (field === 'hash' || el.id === 'canvaElHash' || (el.id && String(el.id).toLowerCase().includes('hash')) || /VG-?[A-Z0-9]{6,12}/i.test(rawTxt)) {
+                        const hStr = dynamicData.hash || 'VG00000000';
+                        if (/VG-?[A-Z0-9]{6,12}/i.test(rawTxt)) {
+                            rawTxt = rawTxt.replace(/VG-?[A-Z0-9]{6,12}/gi, hStr);
+                        } else if (rawTxt && rawTxt.trim().length > 0) {
+                            rawTxt = rawTxt.includes('<') ? rawTxt.replace(/([^>]+)(?=<|$)/, hStr) : hStr;
+                        } else {
+                            rawTxt = `<span style="font-family: monospace; font-weight: 800; letter-spacing: 1.5px;">${hStr}</span>`;
+                        }
+                    } else if (field === 'venue' || el.id === 'canvaElVenue') {
+                        const vName = dynamicData.venue || '';
+                        const vAddr = dynamicData.city || '';
+                        const vDate = dynamicData.date || '';
+                        const vTime = dynamicData.time || '';
+                        if (!rawTxt || rawTxt.trim().length === 0) {
+                            rawTxt = `<div style="display: flex; flex-direction: column; text-align: inherit; width: 100%;"><span style="font-weight: 900; display: block;">${vName}</span>${vAddr ? `<span style="font-size: 0.85em; opacity: 0.8; display: block; margin-top: 2px;">${vAddr}</span>` : ''}<span style="font-weight: 900; color: #FF5500; display: block; margin-top: 2px;">${vDate} / ${vTime}</span></div>`;
+                        }
+                    } else if (field === 'city' || el.id === 'canvaElCity') {
+                        rawTxt = dynamicData.city || rawTxt;
+                    } else if (field === 'date' || el.id === 'canvaElDate' || /FECHA/i.test(rawTxt)) {
+                        if (/FECHA/i.test(rawTxt)) {
+                            rawTxt = replaceDynamicValueInHtml(rawTxt, 'FECHA', dynamicData.date || '');
+                        } else if (rawTxt && rawTxt.trim().length > 0) {
+                            rawTxt = dynamicData.date ? (rawTxt.includes('<') ? rawTxt.replace(/([^>]+)(?=<|$)/, dynamicData.date) : dynamicData.date) : rawTxt;
+                        } else {
+                            rawTxt = `<span style="font-weight: 900;">FECHA: ${dynamicData.date || ''}</span>`;
+                        }
+                    } else if (field === 'time' || el.id === 'canvaElTime' || /HORA/i.test(rawTxt)) {
+                        if (/HORA/i.test(rawTxt)) {
+                            rawTxt = replaceDynamicValueInHtml(rawTxt, 'HORA', dynamicData.time || '');
+                        } else if (rawTxt && rawTxt.trim().length > 0) {
+                            rawTxt = dynamicData.time ? (rawTxt.includes('<') ? rawTxt.replace(/([^>]+)(?=<|$)/, dynamicData.time) : dynamicData.time) : rawTxt;
+                        } else {
+                            rawTxt = `<span style="font-weight: 900;">HORA: ${dynamicData.time || ''}</span>`;
+                        }
+                    } else if (field === 'disclaimer' || el.id === 'canvaElDisclaimer' || (el.id && String(el.id).toLowerCase().includes('disclaimer'))) {
+                        rawTxt = rawTxt || `<div style="border-top: 1.5px solid #CBD5E1; padding-top: 0.25rem; width: 100%; text-align: inherit;"><p style="font-size: 0.65em; font-weight: 700; opacity: 0.8; line-height: 1.2; margin: 0; text-align: inherit;">La responsabilidad de este boleto es exclusiva del cliente, no compartir ni publicar. Se recomienda llevar impreso.</p></div>`;
+                    }
+
+                    const flexAlign = textAlign === 'center' ? 'center' : (textAlign === 'right' ? 'flex-end' : 'flex-start');
+
+                    if (typeof rawTxt === 'string' && rawTxt.includes('<')) {
+                        // Forzar text-align en cualquier estilo existente
+                        rawTxt = rawTxt
+                            .replace(/text-align\s*:\s*(left|center|right|justify)/gi, `text-align: ${textAlign}`)
+                            .replace(/align-items\s*:\s*(flex-start|center|flex-end|stretch)/gi, `align-items: ${flexAlign}`);
+                        
+                        // Inyectar text-align y width: 100% en todas las etiquetas de bloque internas
+                        rawTxt = rawTxt.replace(/<(p|div|h[1-6])\b([^>]*)>/gi, (match, tag, attrs) => {
+                            if (/style\s*=/i.test(attrs)) {
+                                return `<${tag} ${attrs.replace(/style\s*=\s*(['"])/i, `style=$1text-align: ${textAlign} !important; width: 100% !important; `)}>`;
+                            } else {
+                                return `<${tag} style="text-align: ${textAlign} !important; width: 100% !important; margin: 0; padding: 0;" ${attrs}>`;
+                            }
+                        });
+                    }
+
+                    innerContent = `
+                        <div style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: ${flexAlign}; text-align: ${textAlign} !important; box-sizing: border-box; ${font} ${fontSize} ${color} ${weight} ${fontStyle} ${letterSpacing} ${lineHeight} ${bgStyle}">
+                            ${rawTxt}
+                        </div>
+                    `;
+                }
+
+                elementsHtml += `
+                    <div class="ticket-element-node" style="position: absolute; top: ${y}px; left: ${x}px; width: ${w}; height: ${h}; z-index: ${idx + 5}; ${transform} box-sizing: border-box; text-align: ${textAlign} !important;">
+                        ${innerContent}
+                    </div>
+                `;
+            });
+
+            return `
+                ${bgHtml}
+                <div style="position: absolute; inset: 0; width: 100%; height: 100%;" class="ticket-elements-layer">
+                    ${elementsHtml}
+                </div>
+            `;
+        }
+
+        // Descargar PDF individual / multipágina para la venta en Taquilla (POS)
         async function downloadPosSalePdf(sale) {
             if (!sale) return;
 
@@ -1198,257 +1700,59 @@
                 const eventTime = "{{ addslashes($event->event_time ?? '') }}";
                 const logoWhite = "{{ asset($settings->logo_white ?? 'images/logo-white.png') }}";
 
-                const template = @json($event->template ?? null) || { id: 1, name: 'Plantilla 1: Taquilla Clásica Oficial', bg_color: '#FFFFFF', strip_color: '#000000', positions: {} };
-                
-                let tplPositions = {};
-                if (template.positions) {
-                    let raw = typeof template.positions === 'string' ? JSON.parse(template.positions) : template.positions;
-                    if (Array.isArray(raw)) {
-                        raw.forEach(p => { if (p && p.id) tplPositions[p.id] = p; });
-                    } else if (typeof raw === 'object') {
-                        tplPositions = raw;
-                    }
-                }
-
-                console.log('[CanvaStudio POS PDF] Positions map:', tplPositions);
-
+                const template = @json($event->template ?? null) || { id: 1, name: 'Plantilla 1', bg_color: '#FFFFFF', positions: {}, elements: [] };
                 const bgColor = template.bg_color || '#FFFFFF';
-                const stripColor = template.strip_color || '#000000';
-
-                const isPlantilla2 = (template.id == 2 || (template.name && template.name.includes('Plantilla 2')) || (template.category && template.category.includes('Logo Derecho')));
-                const isPlantilla3 = (template.id == 3 || (template.name && template.name.includes('Plantilla 3')) || (template.category && template.category.includes('Panorámico')));
-                const isPlantilla1 = (!isPlantilla2 && !isPlantilla3);
-
-                function isColorDark(hexColor) {
-                    if (!hexColor || hexColor.charAt(0) !== '#') return false;
-                    const hex = hexColor.substring(1);
-                    if (hex.length < 6) return false;
-                    const r = parseInt(hex.substr(0, 2), 16) || 0;
-                    const g = parseInt(hex.substr(2, 2), 16) || 0;
-                    const b = parseInt(hex.substr(4, 2), 16) || 0;
-const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-                    return lum < 0.55;
-                }
-
-                const isDarkBg = isColorDark(bgColor);
-                const primaryTextColor = isDarkBg ? '#FFFFFF' : '#000000';
-                const secondaryTextColor = isDarkBg ? '#E2E8F0' : '#1E293B';
-                const mutedTextColor = isDarkBg ? '#94A3B8' : '#475569';
 
                 function getFullAssetUrl(urlStr) {
                     if (!urlStr) return null;
                     if (urlStr.startsWith('data:')) return urlStr;
-                    if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) return urlStr;
+                    if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) {
+                        return urlStr;
+                    }
 
                     let clean = urlStr.replace(/^\//, '');
                     if (clean.includes('storage/')) {
                         clean = 'storage/' + clean.split('storage/').pop();
                     } else if (clean.includes('images/')) {
                         clean = 'images/' + clean.split('images/').pop();
-                    } else if (clean.startsWith('events/') || clean.startsWith('templates/')) {
+                    } else if (clean.startsWith('events/') || clean.startsWith('templates/') || clean.startsWith('media/') || clean.startsWith('uploads/')) {
                         clean = 'storage/' + clean;
                     }
 
                     return window.location.origin + '/' + clean;
                 }
 
-                // Precargar imágenes a Data URLs
-                const logoSrc = (tplPositions.canvaElLogo && tplPositions.canvaElLogo.src) ? getFullAssetUrl(tplPositions.canvaElLogo.src) : logoWhite;
-                const bannerSrc = (tplPositions.canvaElBanner && tplPositions.canvaElBanner.src) ? getFullAssetUrl(tplPositions.canvaElBanner.src) : null;
-                const bgImgSrc = template.bg_image ? getFullAssetUrl(template.bg_image) : (tplPositions.canvaBgImage ? getFullAssetUrl(tplPositions.canvaBgImage) : null);
+                // Precargar imágenes base
+                const bgImgSrc = template.background ? getFullAssetUrl(template.background) : (template.bg_image ? getFullAssetUrl(template.bg_image) : null);
+                const bannerImgSrc = "{{ !empty($event->banner_image) ? asset($event->banner_image) : '' }}";
                 const boletoSrc = getFullAssetUrl('/images/Boleto.jpg');
 
-                const [logoDataUrl, bannerDataUrl, bgDataUrl, boletoDataUrl] = await Promise.all([
-                    preloadPosImageAsDataUrl(logoSrc, 'logo'),
-                    preloadPosImageAsDataUrl(bannerSrc, 'banner'),
+                const [bgDataUrl, bannerDataUrl, logoDataUrl, boletoDataUrl] = await Promise.all([
                     bgImgSrc ? preloadPosImageAsDataUrl(bgImgSrc, 'bg') : Promise.resolve(''),
+                    bannerImgSrc ? preloadPosImageAsDataUrl(bannerImgSrc, 'banner') : Promise.resolve(''),
+                    logoWhite ? preloadPosImageAsDataUrl(logoWhite, 'logo') : Promise.resolve(''),
                     preloadPosImageAsDataUrl(boletoSrc, 'boleto')
                 ]);
 
-                const pTitle = tplPositions.canvaElTitle || {};
-                const pZone = tplPositions.canvaElZone || {};
-                const pPrice = tplPositions.canvaElPrice || {};
-                const pBanner = tplPositions.canvaElBanner || {};
-                const pBuyerName = tplPositions.canvaElBuyerName || tplPositions.canvaElBuyer || {};
-                const pBuyerDni = tplPositions.canvaElBuyerDni || {};
-                const pVenue = tplPositions.canvaElVenue || {};
-                const pCity = tplPositions.canvaElCity || {};
-                const pDate = tplPositions.canvaElDate || {};
-                const pTime = tplPositions.canvaElTime || {};
-                const pNum = tplPositions.canvaElTicketNumber || {};
-                const pQR = tplPositions.canvaElQR || {};
-                const pHash = tplPositions.canvaElHash || {};
-                const pDisc = tplPositions.canvaElDisclaimer || {};
-                const pLogo = tplPositions.canvaElLogo || {};
+                const assetMap = {
+                    bgDataUrl: bgDataUrl,
+                    bannerDataUrl: bannerDataUrl,
+                    logoDataUrl: logoDataUrl
+                };
 
-                function replaceDynamicHtmlValue(html, labelPattern, newValue) {
-                    if (!html || typeof html !== 'string') return html;
-
-                    // Patrón 1: <span ...>LABEL:</span><div><span ...>VALOR</span></div>
-                    const divSpanRegex = new RegExp(`(${labelPattern}:?\\s*<\\/span>\\s*<div>\\s*<span[^>]*>)[^<]+(<\\/span>\\s*<\\/div>)`, 'i');
-                    if (divSpanRegex.test(html)) {
-                        return html.replace(divSpanRegex, `$1${newValue}$2`);
-                    }
-
-                    // Patrón 2: <span ...>LABEL:</span><div>VALOR</div>
-                    const divRegex = new RegExp(`(${labelPattern}:?\\s*<\\/span>\\s*<div>)[^<]+(<\\/div>)`, 'i');
-                    if (divRegex.test(html)) {
-                        return html.replace(divRegex, `$1${newValue}$2`);
-                    }
-
-                    // Patrón 3: <span ...>LABEL:</span> VALOR
-                    const inlineRegex = new RegExp(`(${labelPattern}:?\\s*<\\/span>\\s*)([^<\\s]+[^<]*)`, 'i');
-                    if (inlineRegex.test(html)) {
-                        return html.replace(inlineRegex, `$1${newValue}`);
-                    }
-
-                    return html;
+                // Pre-procesar URLs en los elementos de la plantilla
+                let tplElements = template.elements || [];
+                if ((!Array.isArray(tplElements) || tplElements.length === 0) && template.positions) {
+                    let rawPos = typeof template.positions === 'string' ? JSON.parse(template.positions) : template.positions;
+                    tplElements = convertPositionsToElements(rawPos);
                 }
 
-                function renderCanvaStudioElement(id, posObj, defaultTop, defaultLeft, defaultWidth, defaultHeight, fallbackHtml, dynamicData = null) {
-                    posObj = posObj || {};
-                    if (posObj.hidden === true || posObj.display === 'none' || posObj.visible === false) {
-                        return '';
+                // Precargar todas las imágenes individuales de los elementos (incluyendo banner ticket subidos)
+                for (let el of tplElements) {
+                    if (el.src) {
+                        const fullUrl = getFullAssetUrl(el.src);
+                        el.src = await preloadPosImageAsDataUrl(fullUrl, 'el_' + el.id);
                     }
-
-                    const top = posObj.top !== undefined ? (typeof posObj.top === 'number' ? posObj.top + 'px' : posObj.top) : defaultTop;
-                    const left = posObj.left !== undefined ? (typeof posObj.left === 'number' ? posObj.left + 'px' : posObj.left) : defaultLeft;
-                    const width = posObj.width !== undefined ? (typeof posObj.width === 'number' ? posObj.width + 'px' : posObj.width) : (defaultWidth || '');
-                    const height = posObj.height !== undefined ? (typeof posObj.height === 'number' ? posObj.height + 'px' : posObj.height) : (defaultHeight || '');
-                    const rotate = (posObj.rotate && posObj.rotate !== '0') ? `transform: rotate(${posObj.rotate}deg);` : '';
-
-                    const widthStyle = width ? `width: ${width};` : '';
-                    const heightStyle = height ? `height: ${height};` : '';
-
-                    const textAlignVal = posObj.textAlign || 'left';
-                    let flexAlign = 'flex-start';
-                    if (textAlignVal === 'center') flexAlign = 'center';
-                    else if (textAlignVal === 'right') flexAlign = 'flex-end';
-
-                    const font = posObj.fontFamily && posObj.fontFamily !== 'inherit' ? `font-family: ${posObj.fontFamily};` : '';
-                    const fontSize = posObj.fontSize ? `font-size: ${posObj.fontSize};` : '';
-                    const color = posObj.color ? `color: ${posObj.color};` : '';
-                    const weight = posObj.fontWeight ? `font-weight: ${posObj.fontWeight};` : '';
-                    const style = posObj.fontStyle ? `font-style: ${posObj.fontStyle};` : '';
-                    const transform = posObj.textTransform && posObj.textTransform !== 'none' ? `text-transform: ${posObj.textTransform};` : '';
-
-                    const containerStyle = `
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: center;
-                        align-items: ${flexAlign};
-                        text-align: ${textAlignVal};
-                        width: 100%;
-                        height: 100%;
-                        box-sizing: border-box;
-                        padding: 3px 6px;
-                        border-radius: 4px;
-                        ${font}
-                        ${fontSize}
-                        ${color}
-                        ${weight}
-                        ${style}
-                        ${transform}
-                    `.replace(/\s+/g, ' ').trim();
-
-                    const hasBadge = posObj.hasBadgeBg || false;
-                    let badgeStyle = hasBadge ? 'background: rgba(255, 85, 0, 0.25); border: 1.5px solid #FF5500; border-radius: 8px;' : '';
-                    if (posObj.backgroundColor && posObj.backgroundColor !== 'transparent') {
-                        badgeStyle += ` background-color: ${posObj.backgroundColor}; border-radius: 8px;`;
-                    }
-
-                    let finalHtml = fallbackHtml;
-                    if (posObj.html && typeof posObj.html === 'string' && posObj.html.trim().length > 0) {
-                        finalHtml = posObj.html;
-                        if (dynamicData) {
-                            if (id === 'canvaElZone' && dynamicData.zoneName) {
-                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'ZONA', dynamicData.zoneName);
-                            } else if (id === 'canvaElPrice' && dynamicData.price) {
-                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'PRECIO', 'S/ ' + dynamicData.price);
-                            } else if ((id === 'canvaElBuyerName' || id === 'canvaElBuyer') && dynamicData.buyerName) {
-                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'Comprador', dynamicData.buyerName);
-                            } else if (id === 'canvaElBuyerDni' && dynamicData.buyerDni) {
-                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'DNI', dynamicData.buyerDni);
-                            } else if (id === 'canvaElDate' && dynamicData.date) {
-                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'FECHA', dynamicData.date);
-                            } else if (id === 'canvaElTime' && dynamicData.time) {
-                                finalHtml = replaceDynamicHtmlValue(finalHtml, 'HORA', dynamicData.time);
-                            } else if (id === 'canvaElTicketNumber' && dynamicData.ticketNum) {
-                                finalHtml = finalHtml.replace(/N[°º]\s*\d+/gi, dynamicData.ticketNum);
-                            } else if (id === 'canvaElHash' && dynamicData.hash) {
-                                finalHtml = finalHtml.replace(/[A-Z0-9]{8,12}/gi, dynamicData.hash);
-                            }
-                        }
-                        if (posObj.textAlign) {
-                            finalHtml = finalHtml.replace(/text-align:\s*(center|right|left|justify);?/gi, `text-align: ${textAlignVal};`);
-                        }
-                    }
-
-                    return `
-                        <div class="canva-drag-element" id="${id}" style="position: absolute; top: ${top}; left: ${left}; ${widthStyle} ${heightStyle} z-index: 5; ${rotate} box-sizing: border-box;">
-                            <div class="canva-drag-box-container ${hasBadge ? 'has-badge-bg' : ''}" style="${badgeStyle} ${containerStyle}">
-                                ${finalHtml}
-                            </div>
-                        </div>
-                    `;
-                }
-
-                // Renderizar etiquetas personalizadas adicionales (canvaCustomTag_...)
-                let customTagsHtml = '';
-                Object.keys(tplPositions).forEach(key => {
-                    if ((key.startsWith('canvaCustomTag_') || tplPositions[key].isCustomTag) && !tplPositions[key].hidden && tplPositions[key].display !== 'none' && tplPositions[key].visible !== false) {
-                        const p = tplPositions[key];
-                        const tagText = p.text || (p.html ? p.html.replace(/<[^>]*>/g, '').trim() : 'Etiqueta');
-                        const tagContent = p.html || tagText;
-                        customTagsHtml += renderCanvaStudioElement(key, p, '40px', '120px', p.width, p.height, tagContent);
-                    }
-                });
-
-                const logoHtml = renderCanvaStudioElement('canvaElLogo', pLogo, '15px', '25px', '', '36px', (logoDataUrl || logoSrc) ? `<img src="${logoDataUrl || logoSrc}" style="height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0 0 8px rgba(255,85,0,0.6)); display: block;">` : '');
-                const bannerHtml = renderCanvaStudioElement('canvaElBanner', pBanner, '15px', '340px', '250px', '110px', (bannerDataUrl || bannerSrc) ? `<img src="${bannerDataUrl || bannerSrc}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 10px; display: block;">` : '');
-                const titleHtml = renderCanvaStudioElement('canvaElTitle', pTitle, '55px', '25px', '380px', '', `<h2 style="font-size: ${pTitle.fontSize || '1.15rem'}; font-weight: ${pTitle.fontWeight || '900'}; color: ${pTitle.color || primaryTextColor}; margin: 0; line-height: 1.15; text-align: ${pTitle.textAlign || 'left'};">${eventTitle}</h2>`);
-                const zoneHtml = renderCanvaStudioElement('canvaElZone', pZone, '95px', '25px', '', '', `<span style="font-size: ${pZone.fontSize || '0.925rem'}; font-weight: ${pZone.fontWeight || '800'}; color: ${pZone.color || '#1E293B'}; text-transform: uppercase;">ZONA: ${sale.zone_name}</span>`, { zoneName: sale.zone_name });
-                
-                const unitPriceVal = parseFloat(sale.unit_price || sale.total_amount).toFixed(2);
-                const priceHtml = renderCanvaStudioElement('canvaElPrice', pPrice, '95px', '240px', '', '', `<div style="text-align: ${pPrice.textAlign || 'left'}; line-height: 1.15;"><span style="font-size: 0.75rem; font-weight: 900; color: ${pPrice.color || primaryTextColor}; display: block;">PRECIO:</span><span style="font-size: ${pPrice.fontSize || '1.3rem'}; font-weight: 900; color: ${pPrice.color || primaryTextColor}; display: block; margin-top: 2px;">S/ ${unitPriceVal}</span></div>`, { price: unitPriceVal });
-                
-                const venueHtml = renderCanvaStudioElement('canvaElVenue', pVenue, '200px', '25px', '', '', `<div style="display: flex; flex-direction: column; font-size: 0.8rem; color: ${pVenue.color || primaryTextColor}; text-align: ${pVenue.textAlign || 'left'};"><span style="font-weight: 900; font-size: 0.95rem; display: block;">${eventVenue}</span>${eventAddress ? `<span style="font-size: 0.8rem; font-weight: 700; color: ${mutedTextColor}; display: block; margin-top: 2px;">${eventAddress}</span>` : ''}<span style="font-weight: 900; font-size: 1rem; color: #FF5500; display: block; margin-top: 2px;">${eventDate} / ${eventTime}</span></div>`);
-                const cityHtml = renderCanvaStudioElement('canvaElCity', pCity, '225px', '25px', '', '', eventAddress ? `<span style="font-size: 0.8rem; font-weight: 700; color: ${mutedTextColor};">${eventAddress}</span>` : '');
-                const dateHtml = renderCanvaStudioElement('canvaElDate', pDate, '260px', '25px', '', '', `<span style="font-weight: 900; font-size: 0.9rem; color: ${pDate.color || primaryTextColor};">FECHA: ${eventDate}</span>`, { date: eventDate });
-                const timeHtml = renderCanvaStudioElement('canvaElTime', pTime, '260px', '220px', '', '', `<span style="font-weight: 900; font-size: 0.9rem; color: ${pTime.color || primaryTextColor};">HORA: ${eventTime}</span>`, { time: eventTime });
-                
-                const buyerNameHtml = renderCanvaStudioElement('canvaElBuyerName', pBuyerName, '140px', '25px', '', '', `<div style="display: flex; flex-direction: column; font-size: ${pBuyerName.fontSize || '0.8rem'}; color: ${pBuyerName.color || primaryTextColor};"><span style="font-size: 0.725rem; color: ${mutedTextColor};">Comprador:</span><span style="font-weight: 900; font-size: 0.95rem; text-transform: uppercase;">${sale.buyer_name ? sale.buyer_name : 'CLIENTE VARIOS'}</span></div>`, { buyerName: sale.buyer_name || 'CLIENTE VARIOS' });
-                const buyerDniHtml = renderCanvaStudioElement('canvaElBuyerDni', pBuyerDni, '165px', '25px', '', '', `<span style="font-weight: 800; font-size: ${pBuyerDni.fontSize || '0.825rem'}; color: ${pBuyerDni.color || primaryTextColor};">DNI: ${sale.buyer_dni ? sale.buyer_dni : '00000000'}</span>`, { buyerDni: sale.buyer_dni || '00000000' });
-
-                const ticketNumStr = 'N° ' + String(sale.id || 1).padStart(5, '0');
-
-                // Hash único aleatorio de 10 dígitos / caracteres guardado
-                let hashVal = sale.validation_hash 
-                    || (sale.tickets_data && sale.tickets_data[0] ? sale.tickets_data[0].validation_hash : null);
-
-                if (!hashVal || hashVal.length !== 10) {
-                    hashVal = 'VG' + Math.random().toString(36).substring(2, 10).toUpperCase();
-                    if (hashVal.length > 10) hashVal = hashVal.substring(0, 10);
-                    while (hashVal.length < 10) hashVal += 'X';
-                }
-
-                // QR como token encriptado exclusivo para el scanner móvil del evento (no legible por apps externas)
-                const qrPayload = (sale.tickets_data && sale.tickets_data[0] && sale.tickets_data[0].qr_payload)
-                    ? sale.tickets_data[0].qr_payload
-                    : (sale.qr_payload || `VGENC:${hashVal}`);
-                const qrDataUrl = generateQrBase64(qrPayload);
-
-                const ticketNumberHtml = renderCanvaStudioElement('canvaElTicketNumber', pNum, '15px', '660px', '', '', `<span style="font-size: ${pNum.fontSize || '1.2rem'}; font-weight: 900; color: ${pNum.color || primaryTextColor}; font-family: var(--font-heading, sans-serif); letter-spacing: 0.5px; display: inline-block;">${ticketNumStr}</span>`, { ticketNum: ticketNumStr });
-
-                const qrBoxHtml = renderCanvaStudioElement('canvaElQR', pQR, '55px', '635px', '95px', '95px', `<div style="padding: 0.35rem; background: #FFFFFF; border-radius: 12px; border: 1.5px solid #E2E8F0; width: 100%; height: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.08);"><img src="${qrDataUrl}" style="width: 100%; height: 100%; object-fit: contain; display: block; border-radius: 4px;" alt="QR Code" /></div>`);
-
-                const hashHtml = renderCanvaStudioElement('canvaElHash', pHash, '175px', '645px', '', '', `<span style="font-family: monospace; font-size: ${pHash.fontSize || '0.85rem'}; font-weight: 800; color: ${pHash.color || secondaryTextColor}; letter-spacing: 1.5px; display: inline-block;">${hashVal}</span>`, { hash: hashVal });
-
-                const disclaimerHtml = renderCanvaStudioElement('canvaElDisclaimer', pDisc, '245px', '570px', '190px', '', `<div style="border-top: 1.5px solid #CBD5E1; padding-top: 0.25rem;"><p style="font-size: ${pDisc.fontSize || '0.625rem'}; font-weight: 700; color: ${pDisc.color || mutedTextColor}; line-height: 1.2; margin: 0; text-align: center;">La responsabilidad de este boleto es exclusiva del cliente, no compartir ni publicar. Se recomienda llevar impreso.</p></div>`);
-
-                let bgImgHtml = '';
-                if (bgDataUrl || bgImgSrc) {
-                    bgImgHtml = `<div style="position: absolute; inset: 0; background-image: url('${bgDataUrl || bgImgSrc}'); background-size: cover; background-position: center; z-index: 0; pointer-events: none;"></div>`;
                 }
 
                 const ticketsList = (sale.tickets_data && Array.isArray(sale.tickets_data) && sale.tickets_data.length > 0)
@@ -1490,9 +1794,24 @@ const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
                     const qrPayload = tItem.qr_payload || sale.qr_payload || `VGENC:${hashVal}`;
                     const qrDataUrl = generateQrBase64(qrPayload);
 
-                    const ticketNumberHtml = renderCanvaStudioElement('canvaElTicketNumber', pNum, '15px', '660px', '', '', `<span style="font-size: ${pNum.fontSize || '1.2rem'}; font-weight: 900; color: ${pNum.color || primaryTextColor}; font-family: var(--font-heading, sans-serif); letter-spacing: 0.5px; display: inline-block;">${ticketNumStr}</span>`, { ticketNum: ticketNumStr });
-                    const qrBoxHtml = renderCanvaStudioElement('canvaElQR', pQR, '55px', '635px', '95px', '95px', `<div style="padding: 0.35rem; background: #FFFFFF; border-radius: 12px; border: 1.5px solid #E2E8F0; width: 100%; height: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.08);"><img src="${qrDataUrl}" style="width: 100%; height: 100%; object-fit: contain; display: block; border-radius: 4px;" alt="QR Code" /></div>`);
-                    const hashHtml = renderCanvaStudioElement('canvaElHash', pHash, '175px', '645px', '', '', `<span style="font-family: monospace; font-size: ${pHash.fontSize || '0.85rem'}; font-weight: 800; color: ${pHash.color || secondaryTextColor}; letter-spacing: 1.5px; display: inline-block;">${hashVal}</span>`, { hash: hashVal });
+                    const unitPriceVal = parseFloat(tItem.price || sale.unit_price || sale.total_amount).toFixed(2);
+
+                    const dynamicData = {
+                        title: eventTitle,
+                        venue: eventVenue,
+                        city: eventAddress,
+                        date: eventDate,
+                        time: eventTime,
+                        zone: tItem.zone || sale.zone_name,
+                        price: 'S/ ' + unitPriceVal,
+                        buyer_name: sale.buyer_name || 'CLIENTE VARIOS',
+                        buyer_dni: sale.buyer_dni || '00000000',
+                        ticket_number: ticketNumStr,
+                        hash: hashVal,
+                        qr_data_url: qrDataUrl
+                    };
+
+                    const canvasHtml = renderTicketCanvasContent({ ...template, elements: tplElements }, dynamicData, assetMap);
 
                     const pdfContainer = document.createElement('div');
                     pdfContainer.className = 'posPdfSingleCanvas';
@@ -1511,26 +1830,7 @@ const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 
                     pdfContainer.innerHTML = `
                         <div class="ticket-canvas-inner" style="width: 771px; height: 370px; position: absolute; top: 12px; left: 11.5px; background: ${bgColor}; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; border-radius: 18px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15); box-sizing: border-box;">
-                            ${bgImgHtml}
-                            
-                            <div style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;" class="canva-main-area">
-                                ${logoHtml}
-                                ${bannerHtml}
-                                ${titleHtml}
-                                ${zoneHtml}
-                                ${priceHtml}
-                                ${venueHtml}
-                                ${cityHtml}
-                                ${dateHtml}
-                                ${timeHtml}
-                                ${buyerNameHtml}
-                                ${buyerDniHtml}
-                                ${ticketNumberHtml}
-                                ${qrBoxHtml}
-                                ${hashHtml}
-                                ${disclaimerHtml}
-                                ${customTagsHtml}
-                            </div>
+                            ${canvasHtml}
                         </div>
                     `;
 

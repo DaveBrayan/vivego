@@ -47,6 +47,9 @@ Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group
     Route::post('/admin/eventos/{event}/duplicar', [EventController::class, 'duplicate'])->name('web.events.duplicate');
     Route::get('/admin/eventos/{event}/boletos-registrados', [EventController::class, 'getRegisteredTickets'])->name('web.events.registered_tickets');
     Route::post('/admin/eventos/{event}/registrar-boletos-pdf', [EventController::class, 'storeBatchTickets'])->name('web.events.store_batch_tickets');
+    Route::get('/admin/media', [EventController::class, 'getMedia'])->name('web.media.index');
+    Route::post('/admin/media/upload', [EventController::class, 'uploadMedia'])->name('web.media.upload');
+    Route::post('/admin/media/delete', [EventController::class, 'deleteMedia'])->name('web.media.delete');
 
     // Taquilla & Ventas POS (Punto de Venta Presencial / Físico)
     Route::get('/admin/taquilla', [BoxOfficeController::class, 'index'])->name('web.box_office');

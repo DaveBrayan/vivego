@@ -1365,9 +1365,17 @@
                         });
                     }
                 } else if (action === 'align') {
+                    const flexVal = val === 'center' ? 'center' : (val === 'right' ? 'flex-end' : 'flex-start');
                     selectedCanvaElement.style.textAlign = val;
+                    // También aplicar al box-container para que se serialice en p.html y sea leído por el PDF
+                    const box = selectedCanvaElement.querySelector('.canva-drag-box-container');
+                    if (box) box.style.textAlign = val;
                     selectedCanvaElement.querySelectorAll('h1, h2, h3, p, span, div, strong').forEach(child => {
                         child.style.textAlign = val;
+                        const disp = window.getComputedStyle(child).display;
+                        if (disp === 'flex' || child.style.display === 'flex') {
+                            child.style.alignItems = flexVal;
+                        }
                     });
                 } else if (action === 'color') {
                     selectedCanvaElement.style.color = val;
@@ -2176,7 +2184,7 @@
                     text: tagText,
                     display: isHidden ? 'none' : (el.style.display || 'inline-flex'),
                     hidden: isHidden,
-                    textAlign: el.style.textAlign || computed.textAlign || 'left',
+                    textAlign: el.style.textAlign || (box ? box.style.textAlign : '') || computed.textAlign || 'left',
                     fontFamily: el.style.fontFamily || '',
                     fontSize: el.style.fontSize || computed.fontSize || '',
                     color: el.style.color || rgbToHex(computed.color) || '',

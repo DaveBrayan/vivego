@@ -73,4 +73,28 @@ class TicketTemplate extends Model
         }
         return is_array($positions) ? $positions : [];
     }
+
+    public function getElementsAttribute($value): array
+    {
+        $elements = is_string($value) ? json_decode($value, true) : ($value ?: []);
+        if (is_array($elements)) {
+            foreach ($elements as &$el) {
+                if (is_array($el) && !empty($el['src'])) {
+                    $src = $el['src'];
+                    if (!str_starts_with($src, 'data:image') && !str_starts_with($src, 'http://') && !str_starts_with($src, 'https://')) {
+                        $clean = ltrim($src, '/');
+                        if (preg_match('/(?:storage\/)+(.+)/i', $clean, $matches)) {
+                            $clean = 'storage/' . ltrim($matches[1], '/');
+                        } elseif (preg_match('/(?:images\/)+(.+)/i', $clean, $matches)) {
+                            $clean = 'images/' . ltrim($matches[1], '/');
+                        } elseif (str_starts_with($clean, 'events/') || str_starts_with($clean, 'templates/') || str_starts_with($clean, 'uploads/')) {
+                            $clean = 'storage/' . $clean;
+                        }
+                        $el['src'] = asset($clean);
+                    }
+                }
+            }
+        }
+        return is_array($elements) ? $elements : [];
+    }
 }

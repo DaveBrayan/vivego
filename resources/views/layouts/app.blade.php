@@ -283,31 +283,6 @@
             if (toggleBtn) toggleBtn.addEventListener('click', openDrawer);
             if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
             if (overlay) overlay.addEventListener('click', closeDrawer);
-
-            // Global Dashboard Sidebar Toggle
-            const dashSidebar = document.getElementById('dashSidebar');
-            const dashToggleBtn = document.getElementById('dashSidebarToggle');
-
-            if (dashSidebar && dashToggleBtn) {
-                // Restaurar preferencia colapsada si existe en localStorage
-                const isCollapsed = localStorage.getItem('vivego_sidebar_collapsed') === 'true';
-                if (isCollapsed && window.innerWidth > 992) {
-                    dashSidebar.classList.add('collapsed');
-                }
-
-                dashToggleBtn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    dashSidebar.classList.add('dash-animating');
-                    dashSidebar.classList.toggle('collapsed');
-
-                    const state = dashSidebar.classList.contains('collapsed');
-                    localStorage.setItem('vivego_sidebar_collapsed', state ? 'true' : 'false');
-
-                    setTimeout(function () {
-                        dashSidebar.classList.remove('dash-animating');
-                    }, 450);
-                });
-            }
         });
     </script>
     @stack('scripts')

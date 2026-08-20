@@ -251,8 +251,18 @@ class EventController extends Controller
 
         $customTicket = $request->input('custom_ticket');
         if (!empty($customTicket) && is_array($customTicket)) {
-            $bgImage = $this->saveBase64Image($customTicket['bg_image'] ?? null, 'templates', 'bg');
+            $rawBg = $customTicket['background'] ?? $customTicket['bg_image'] ?? null;
+            $bgImage = !empty($rawBg) ? $this->saveBase64Image($rawBg, 'templates', 'bg') : null;
             $ticketBanner = $this->saveBase64Image($customTicket['ticket_banner'] ?? null, 'templates', 'ticket_banner');
+
+            $elements = $customTicket['elements'] ?? [];
+            if (is_array($elements)) {
+                foreach ($elements as &$el) {
+                    if (is_array($el) && !empty($el['src']) && str_starts_with($el['src'], 'data:image')) {
+                        $el['src'] = $this->saveBase64Image($el['src'], 'templates', 'tpl_elem_' . ($el['id'] ?? rand(100, 999)));
+                    }
+                }
+            }
 
             $positions = $customTicket['positions'] ?? [];
             if (is_array($positions)) {
@@ -275,7 +285,7 @@ class EventController extends Controller
                 'bg_image' => $bgImage,
                 'strip_color' => $customTicket['strip_color'] ?? '#FF5500',
                 'positions' => $positions,
-                'elements' => $customTicket['elements'] ?? [],
+                'elements' => $elements,
                 'is_default' => false,
                 'status' => 'active',
             ]);
@@ -491,8 +501,18 @@ class EventController extends Controller
 
         $customTicket = $request->input('custom_ticket');
         if (!empty($customTicket) && is_array($customTicket)) {
-            $bgImage = array_key_exists('bg_image', $customTicket) ? $this->saveBase64Image($customTicket['bg_image'], 'templates', 'bg') : null;
+            $rawBg = $customTicket['background'] ?? $customTicket['bg_image'] ?? null;
+            $bgImage = !empty($rawBg) ? $this->saveBase64Image($rawBg, 'templates', 'bg') : null;
             $ticketBanner = array_key_exists('ticket_banner', $customTicket) ? $this->saveBase64Image($customTicket['ticket_banner'], 'templates', 'ticket_banner') : null;
+
+            $elements = $customTicket['elements'] ?? [];
+            if (is_array($elements)) {
+                foreach ($elements as &$el) {
+                    if (is_array($el) && !empty($el['src']) && str_starts_with($el['src'], 'data:image')) {
+                        $el['src'] = $this->saveBase64Image($el['src'], 'templates', 'tpl_elem_' . ($el['id'] ?? rand(100, 999)));
+                    }
+                }
+            }
 
             $positions = $customTicket['positions'] ?? [];
             if (is_array($positions)) {
@@ -518,10 +538,10 @@ class EventController extends Controller
                     'category' => (($validated['sales_type'] ?? 'virtual') === 'virtual' ? 'Virtual: E-Ticket Evento' : 'Física: Taquilla Evento'),
                     'type' => $validated['sales_type'] ?? $event->sales_type ?? 'virtual',
                     'bg_color' => $customTicket['bg_color'] ?? $existingTemplate->bg_color,
-                    'bg_image' => array_key_exists('bg_image', $customTicket) ? $bgImage : $existingTemplate->bg_image,
+                    'bg_image' => $bgImage ?? $existingTemplate->bg_image,
                     'strip_color' => $customTicket['strip_color'] ?? $existingTemplate->strip_color,
                     'positions' => $positions,
-                    'elements' => $customTicket['elements'] ?? $existingTemplate->elements,
+                    'elements' => count($elements) > 0 ? $elements : $existingTemplate->elements,
                 ]);
             } else {
                 $tpl = TicketTemplate::create([
@@ -532,7 +552,7 @@ class EventController extends Controller
                     'bg_image' => $bgImage,
                     'strip_color' => $customTicket['strip_color'] ?? '#FF5500',
                     'positions' => $positions,
-                    'elements' => $customTicket['elements'] ?? [],
+                    'elements' => $elements,
                     'is_default' => false,
                     'status' => 'active',
                 ]);
@@ -799,5 +819,101 @@ class EventController extends Controller
         }
 
         return $imageString;
+    }
+
+    /**
+     * Sube un archivo de imagen desde el cliente directamente a la carpeta del proyecto.
+     */
+    public function uploadMedia(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|image|mimes:jpeg,png,jpg,gif,svg,webp|max:10240',
+        ]);
+
+        if ($request->hasFile('file') && $request->file('file')->isValid()) {
+            $file = $request->file('file');
+            $extension = $file->getClientOriginalExtension() ?: 'png';
+            $fileName = 'media_' . time() . '_' . Str::random(8) . '.' . $extension;
+
+            $binaryData = file_get_contents($file->getRealPath());
+            $relativePath = $this->writeBinaryFile('media', $fileName, $binaryData);
+            $fullUrl = asset($relativePath);
+
+            return response()->json([
+                'success' => true,
+                'url' => $fullUrl,
+                'path' => $relativePath,
+            ]);
+        }
+
+        return response()->json(['success' => false, 'message' => 'Archivo no válido o corrupto'], 400);
+    }
+
+    /**
+     * Obtiene la lista de imágenes guardadas en la biblioteca de medios del proyecto.
+     */
+    public function getMedia(): JsonResponse
+    {
+        $defaultMedia = [
+            'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=600&q=80',
+            'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80',
+            'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80',
+            'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80',
+            'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=600&q=80'
+        ];
+
+        $uploadedFiles = [];
+        $mediaDirs = [
+            public_path('storage/media'),
+            storage_path('app/public/media')
+        ];
+
+        foreach ($mediaDirs as $dir) {
+            if (file_exists($dir)) {
+                $files = glob($dir . '/*.{jpg,jpeg,png,gif,webp,svg,JPG,PNG,JPEG}', GLOB_BRACE);
+                if (is_array($files)) {
+                    usort($files, function ($a, $b) {
+                        return filemtime($b) - filemtime($a);
+                    });
+
+                    foreach ($files as $file) {
+                        $basename = basename($file);
+                        $url = asset('storage/media/' . $basename);
+                        if (!in_array($url, $uploadedFiles)) {
+                            $uploadedFiles[] = $url;
+                        }
+                    }
+                }
+            }
+        }
+
+        $allMedia = array_values(array_unique(array_merge($uploadedFiles, $defaultMedia)));
+
+        return response()->json([
+            'success' => true,
+            'media' => $allMedia,
+        ]);
+    }
+
+    /**
+     * Elimina una imagen de la biblioteca de medios.
+     */
+    public function deleteMedia(Request $request): JsonResponse
+    {
+        $url = $request->input('url');
+        if (!empty($url)) {
+            $filename = basename($url);
+            $storageFile = storage_path('app/public/media/' . $filename);
+            $publicFile = public_path('storage/media/' . $filename);
+
+            if (file_exists($storageFile)) {
+                @unlink($storageFile);
+            }
+            if (file_exists($publicFile)) {
+                @unlink($publicFile);
+            }
+        }
+
+        return response()->json(['success' => true]);
     }
 }

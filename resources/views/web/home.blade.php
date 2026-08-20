@@ -122,7 +122,7 @@
         </div>
 
         <div class="events-grid-4col" id="eventsContainer">
-            @foreach($events as $event)
+            @forelse($events as $event)
                 <article class="event-card-v6" data-category="{{ $event['category'] }}">
                     <div class="event-card-v6-media">
                         <!-- Holographic Badge Top Right -->
@@ -174,7 +174,13 @@
                         </div>
                     </div>
                 </article>
-            @endforeach
+            @empty
+                <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; background: rgba(255,255,255,0.03); border: 1.5px dashed rgba(255,255,255,0.15); border-radius: 24px;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🎟️</div>
+                    <h3 style="font-size: 1.5rem; font-weight: 800; color: #FFFFFF; margin-bottom: 0.5rem;">No hay eventos disponibles por el momento</h3>
+                    <p style="color: #94A3B8; font-size: 0.95rem;">Pronto publicaremos nuevos conciertos y festivales. ¡Vuelve a consultar!</p>
+                </div>
+            @endforelse
         </div>
     </section>
 
