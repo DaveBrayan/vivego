@@ -184,4 +184,48 @@ class CustomerPortalController extends Controller
             return back()->with('error', 'No se pudo generar el boleto: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Reenviar Boleto Oficial por Correo con PDF compilado de alta definición
+     */
+    public function emailTicketPdf(Request $request, TicketSale $sale)
+    {
+        $customerEmail = session('customer_email');
+        $customerDni = session('customer_dni');
+        $isAdmin = session('admin_logged_in');
+
+        $isAuthorized = false;
+        if ($isAdmin) {
+            $isAuthorized = true;
+        } elseif ($customerDni && $sale->buyer_dni === $customerDni) {
+            $isAuthorized = true;
+        } elseif ($customerEmail && (str_contains($sale->tickets_data ?? '', $customerEmail) || str_contains($sale->buyer_email ?? '', $customerEmail))) {
+            $isAuthorized = true;
+        }
+
+        if (!$isAuthorized) {
+            return response()->json(['success' => false, 'message' => 'Acceso denegado: No autorizado.'], 403);
+        }
+
+        $recipient = $sale->buyer_email ?: $customerEmail;
+        if (empty($recipient) || !filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+            return response()->json(['success' => false, 'message' => 'No hay un correo electrónico válido registrado para este boleto.'], 422);
+        }
+
+        $pdfBase64 = $request->input('ticket_pdf_base64');
+
+        try {
+            \Illuminate\Support\Facades\Mail::to($recipient)->send(new \App\Mail\TicketPurchaseMail($sale, null, false, $pdfBase64));
+            return response()->json([
+                'success' => true,
+                'message' => "¡Boleto oficial enviado exitosamente a {$recipient}!"
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error enviando boleto por correo desde el portal: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al enviar el correo: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

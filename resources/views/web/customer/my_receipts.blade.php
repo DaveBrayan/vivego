@@ -132,6 +132,9 @@
                                                 <button type="button" onclick="downloadClientTicketPdf(this)" data-sale-payload="{{ base64_encode(json_encode($sale)) }}" style="background: linear-gradient(135deg, #FF5500, #E64A00); color: #FFFFFF; border: none; cursor: pointer; padding: 0.5rem 0.95rem; font-size: 0.825rem; font-weight: 900; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 3px 10px rgba(255,85,0,0.3); transition: transform 0.15s;">
                                                     <span>🎟️ Boleto PDF</span>
                                                 </button>
+                                                <button type="button" onclick="emailClientTicketPdf(this)" data-sale-payload="{{ base64_encode(json_encode($sale)) }}" title="Enviar boleto a mi correo" style="background: #F8FAFC; color: #0F172A; border: 1.5px solid #CBD5E1; cursor: pointer; padding: 0.5rem 0.75rem; font-size: 0.825rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                                    <span>📧 Enviar</span>
+                                                </button>
                                             @endif
                                             <a href="{{ route('web.checkout.confirmation', $sale->id) }}" style="background: #FFFFFF; color: #334155; border: 1.5px solid #CBD5E1; text-decoration: none; padding: 0.5rem 0.95rem; font-size: 0.825rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem;">
                                                 🧾 Recibo

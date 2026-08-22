@@ -413,6 +413,204 @@
         `;
     }
 
+    function getFullAssetUrl(urlStr) {
+        if (!urlStr) return null;
+        if (urlStr.startsWith('data:')) return urlStr;
+        if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) {
+            return urlStr;
+        }
+        let clean = urlStr.replace(/^\//, '');
+        if (clean.includes('storage/')) {
+            clean = 'storage/' + clean.split('storage/').pop();
+        } else if (clean.includes('images/')) {
+            clean = 'images/' + clean.split('images/').pop();
+        } else if (clean.startsWith('events/') || clean.startsWith('templates/') || clean.startsWith('media/') || clean.startsWith('uploads/')) {
+            clean = 'storage/' + clean;
+        }
+        return window.location.origin + '/' + clean;
+    }
+
+    async function generateTicketPdfDoc(sale) {
+        const event = sale.event || {};
+        const template = event.template || { id: 1, name: 'Plantilla Oficial', bg_color: '#FFFFFF', positions: {}, elements: [] };
+
+        const eventTitle = event.title || 'CONCIERTO EN VIVO';
+        const eventVenue = event.venue_name || '';
+        const eventAddress = event.address || '';
+        const eventDate = event.event_date ? (typeof event.event_date === 'string' ? event.event_date.substring(0, 10) : '') : '';
+        const eventTime = event.event_time || '';
+        const logoWhite = "{{ asset('images/logo-white.png') }}";
+
+        const bgColor = template.bg_color || '#FFFFFF';
+
+        const bgImgSrc = template.background ? getFullAssetUrl(template.background) : (template.bg_image ? getFullAssetUrl(template.bg_image) : null);
+        const bannerImgSrc = event.banner_image ? getFullAssetUrl(event.banner_image) : '';
+        const boletoSrc = getFullAssetUrl('/images/Boleto.jpg');
+
+        const [bgDataUrl, bannerDataUrl, logoDataUrl, boletoDataUrl] = await Promise.all([
+            bgImgSrc ? preloadPosImageAsDataUrl(bgImgSrc, 'bg') : Promise.resolve(''),
+            bannerImgSrc ? preloadPosImageAsDataUrl(bannerImgSrc, 'banner') : Promise.resolve(''),
+            preloadPosImageAsDataUrl(logoWhite, 'logo'),
+            preloadPosImageAsDataUrl(boletoSrc, 'boleto')
+        ]);
+
+        const assetMap = {
+            bgDataUrl: bgDataUrl,
+            bannerDataUrl: bannerDataUrl,
+            logoDataUrl: logoDataUrl
+        };
+
+        let tplElements = template.elements || [];
+        if ((!Array.isArray(tplElements) || tplElements.length === 0) && template.positions) {
+            let rawPos = typeof template.positions === 'string' ? JSON.parse(template.positions) : template.positions;
+            tplElements = convertPositionsToElements(rawPos);
+        }
+
+        for (let el of tplElements) {
+            if (el.src) {
+                const fullUrl = getFullAssetUrl(el.src);
+                el.src = await preloadPosImageAsDataUrl(fullUrl, 'el_' + el.id);
+            }
+        }
+
+        let ticketsDataParsed = sale.tickets_data;
+        if (typeof ticketsDataParsed === 'string') {
+            try { ticketsDataParsed = JSON.parse(ticketsDataParsed); } catch(e) {}
+        }
+        const rawItems = (ticketsDataParsed && ticketsDataParsed.items) ? ticketsDataParsed.items : (Array.isArray(ticketsDataParsed) ? ticketsDataParsed : []);
+
+        let ticketsList = [];
+        if (rawItems.length > 0) {
+            rawItems.forEach((it, idx) => {
+                const qty = parseInt(it.quantity || 1, 10);
+                for (let q = 0; q < qty; q++) {
+                    ticketsList.push({
+                        ticket_code: `TK-${sale.receipt_number || '00000'}-${ticketsList.length + 1}`,
+                        ticket_number: ticketsList.length + 1,
+                        zone: it.name || sale.zone_name,
+                        price: it.price || sale.unit_price,
+                        validation_hash: null,
+                        qr_payload: null
+                    });
+                }
+            });
+        } else {
+            const qty = parseInt(sale.quantity || 1, 10);
+            for (let q = 0; q < qty; q++) {
+                ticketsList.push({
+                    ticket_code: `TK-${sale.receipt_number || '00000'}-${q + 1}`,
+                    ticket_number: q + 1,
+                    zone: sale.zone_name,
+                    price: sale.unit_price,
+                    validation_hash: null,
+                    qr_payload: null
+                });
+            }
+        }
+
+        const jsPdfObj = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF || null);
+        let pdf = null;
+        if (jsPdfObj) {
+            pdf = new jsPdfObj({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+        }
+
+        for (let i = 0; i < ticketsList.length; i++) {
+            const tItem = ticketsList[i];
+            let numSeq = tItem.ticket_number || (sale.id ? (sale.id + i) : (i + 1));
+            if (typeof numSeq === 'string') {
+                numSeq = parseInt(numSeq.replace(/[^0-9]/g, ''), 10) || (i + 1);
+            }
+            const ticketNumStr = 'N° ' + String(numSeq).padStart(5, '0');
+
+            let hashVal = tItem.validation_hash || sale.validation_hash;
+            if (!hashVal || hashVal.length < 8) {
+                hashVal = 'VG' + Math.random().toString(36).substring(2, 10).toUpperCase();
+                while (hashVal.length < 10) hashVal += 'X';
+            }
+
+            const qrPayload = tItem.qr_payload || sale.qr_payload || `VIVEGO|${sale.receipt_number || 'REC'}|EVT-${sale.event_id || (event.id || 1)}|DNI-${sale.buyer_dni || '00000000'}|TICK-${i + 1}`;
+            const qrDataUrl = generateQrBase64(qrPayload);
+
+            const unitPriceVal = parseFloat(tItem.price || sale.unit_price || sale.total_amount || 0).toFixed(2);
+
+            const dynamicData = {
+                title: eventTitle,
+                venue: eventVenue,
+                city: eventAddress,
+                date: eventDate,
+                time: eventTime,
+                zone: tItem.zone || sale.zone_name || 'GENERAL',
+                price: 'S/ ' + unitPriceVal,
+                buyer_name: sale.buyer_name || 'CLIENTE VARIOS',
+                buyer_dni: sale.buyer_dni || '00000000',
+                ticket_number: ticketNumStr,
+                hash: hashVal,
+                qr_data_url: qrDataUrl
+            };
+
+            const canvasHtml = renderTicketCanvasContent({ ...template, elements: tplElements }, dynamicData, assetMap);
+
+            const pdfContainer = document.createElement('div');
+            pdfContainer.className = 'posPdfSingleCanvas';
+            pdfContainer.style.position = 'fixed';
+            pdfContainer.style.left = '-9999px';
+            pdfContainer.style.top = '0';
+            pdfContainer.style.width = '794px';
+            pdfContainer.style.height = '1123px';
+            pdfContainer.style.zIndex = '999999';
+            pdfContainer.style.backgroundImage = `url('${boletoDataUrl || boletoSrc}')`;
+            pdfContainer.style.backgroundSize = '100% 100%';
+            pdfContainer.style.backgroundPosition = 'center';
+            pdfContainer.style.fontFamily = "'Plus Jakarta Sans', sans-serif";
+            pdfContainer.style.boxSizing = 'border-box';
+            pdfContainer.style.overflow = 'hidden';
+
+            pdfContainer.innerHTML = `
+                <div class="ticket-canvas-inner" style="width: 771px; height: 370px; position: absolute; top: 12px; left: 11.5px; background: ${bgColor}; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; border-radius: 18px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15); box-sizing: border-box;">
+                    ${canvasHtml}
+                </div>
+            `;
+
+            document.body.appendChild(pdfContainer);
+
+            if (document.fonts && document.fonts.ready) {
+                await document.fonts.ready;
+            }
+            await new Promise(r => setTimeout(r, 200));
+
+            const canvas = await html2canvas(pdfContainer, {
+                scale: 2.5,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#FFFFFF',
+                logging: false
+            });
+
+            const imgData = canvas.toDataURL('image/jpeg', 0.95);
+            pdfContainer.remove();
+
+            if (pdf) {
+                if (i > 0) {
+                    pdf.addPage('a4', 'portrait');
+                }
+                pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+            }
+        }
+
+        return { pdf, sale };
+    }
+
+    // Helper global para compilar base64 directamente
+    window.compileTicketPdfBase64 = async function(sale) {
+        const { pdf } = await generateTicketPdfDoc(sale);
+        return pdf ? pdf.output('datauristring') : '';
+    };
+    window.generateTicketPdfDoc = generateTicketPdfDoc;
+
     async function downloadClientTicketPdf(btn) {
         if (!btn) return;
         const payloadEncoded = btn.getAttribute('data-sale-payload');
@@ -426,9 +624,6 @@
             return;
         }
 
-        const event = sale.event || {};
-        const template = event.template || { id: 1, name: 'Plantilla Oficial', bg_color: '#FFFFFF', positions: {}, elements: [] };
-
         Swal.fire({
             title: '🎟️ Generando Boleto Oficial...',
             html: 'Compilando diseño de entrada en formato A4 con alta definición...',
@@ -439,189 +634,7 @@
         });
 
         try {
-            const eventTitle = event.title || 'CONCIERTO EN VIVO';
-            const eventVenue = event.venue_name || '';
-            const eventAddress = event.address || '';
-            const eventDate = event.event_date ? (typeof event.event_date === 'string' ? event.event_date.substring(0, 10) : '') : '';
-            const eventTime = event.event_time || '';
-            const logoWhite = "{{ asset('images/logo-white.png') }}";
-
-            const bgColor = template.bg_color || '#FFFFFF';
-
-            function getFullAssetUrl(urlStr) {
-                if (!urlStr) return null;
-                if (urlStr.startsWith('data:')) return urlStr;
-                if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) {
-                    return urlStr;
-                }
-                let clean = urlStr.replace(/^\//, '');
-                if (clean.includes('storage/')) {
-                    clean = 'storage/' + clean.split('storage/').pop();
-                } else if (clean.includes('images/')) {
-                    clean = 'images/' + clean.split('images/').pop();
-                } else if (clean.startsWith('events/') || clean.startsWith('templates/') || clean.startsWith('media/') || clean.startsWith('uploads/')) {
-                    clean = 'storage/' + clean;
-                }
-                return window.location.origin + '/' + clean;
-            }
-
-            const bgImgSrc = template.background ? getFullAssetUrl(template.background) : (template.bg_image ? getFullAssetUrl(template.bg_image) : null);
-            const bannerImgSrc = event.banner_image ? getFullAssetUrl(event.banner_image) : '';
-            const boletoSrc = getFullAssetUrl('/images/Boleto.jpg');
-
-            const [bgDataUrl, bannerDataUrl, logoDataUrl, boletoDataUrl] = await Promise.all([
-                bgImgSrc ? preloadPosImageAsDataUrl(bgImgSrc, 'bg') : Promise.resolve(''),
-                bannerImgSrc ? preloadPosImageAsDataUrl(bannerImgSrc, 'banner') : Promise.resolve(''),
-                preloadPosImageAsDataUrl(logoWhite, 'logo'),
-                preloadPosImageAsDataUrl(boletoSrc, 'boleto')
-            ]);
-
-            const assetMap = {
-                bgDataUrl: bgDataUrl,
-                bannerDataUrl: bannerDataUrl,
-                logoDataUrl: logoDataUrl
-            };
-
-            let tplElements = template.elements || [];
-            if ((!Array.isArray(tplElements) || tplElements.length === 0) && template.positions) {
-                let rawPos = typeof template.positions === 'string' ? JSON.parse(template.positions) : template.positions;
-                tplElements = convertPositionsToElements(rawPos);
-            }
-
-            for (let el of tplElements) {
-                if (el.src) {
-                    const fullUrl = getFullAssetUrl(el.src);
-                    el.src = await preloadPosImageAsDataUrl(fullUrl, 'el_' + el.id);
-                }
-            }
-
-            let ticketsDataParsed = sale.tickets_data;
-            if (typeof ticketsDataParsed === 'string') {
-                try { ticketsDataParsed = JSON.parse(ticketsDataParsed); } catch(e) {}
-            }
-            const rawItems = (ticketsDataParsed && ticketsDataParsed.items) ? ticketsDataParsed.items : (Array.isArray(ticketsDataParsed) ? ticketsDataParsed : []);
-
-            let ticketsList = [];
-            if (rawItems.length > 0) {
-                rawItems.forEach((it, idx) => {
-                    const qty = parseInt(it.quantity || 1, 10);
-                    for (let q = 0; q < qty; q++) {
-                        ticketsList.push({
-                            ticket_code: `TK-${sale.receipt_number}-${ticketsList.length + 1}`,
-                            ticket_number: ticketsList.length + 1,
-                            zone: it.name || sale.zone_name,
-                            price: it.price || sale.unit_price,
-                            validation_hash: null,
-                            qr_payload: null
-                        });
-                    }
-                });
-            } else {
-                const qty = parseInt(sale.quantity || 1, 10);
-                for (let q = 0; q < qty; q++) {
-                    ticketsList.push({
-                        ticket_code: `TK-${sale.receipt_number}-${q + 1}`,
-                        ticket_number: q + 1,
-                        zone: sale.zone_name,
-                        price: sale.unit_price,
-                        validation_hash: null,
-                        qr_payload: null
-                    });
-                }
-            }
-
-            const jsPdfObj = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF || null);
-            let pdf = null;
-            if (jsPdfObj) {
-                pdf = new jsPdfObj({
-                    orientation: 'portrait',
-                    unit: 'mm',
-                    format: 'a4'
-                });
-            }
-
-            for (let i = 0; i < ticketsList.length; i++) {
-                const tItem = ticketsList[i];
-                let numSeq = tItem.ticket_number || (sale.id ? (sale.id + i) : (i + 1));
-                if (typeof numSeq === 'string') {
-                    numSeq = parseInt(numSeq.replace(/[^0-9]/g, ''), 10) || (i + 1);
-                }
-                const ticketNumStr = 'N° ' + String(numSeq).padStart(5, '0');
-
-                let hashVal = tItem.validation_hash || sale.validation_hash;
-                if (!hashVal || hashVal.length < 8) {
-                    hashVal = 'VG' + Math.random().toString(36).substring(2, 10).toUpperCase();
-                    while (hashVal.length < 10) hashVal += 'X';
-                }
-
-                const qrPayload = tItem.qr_payload || sale.qr_payload || `VIVEGO|${sale.receipt_number}|EVT-${sale.event_id}|DNI-${sale.buyer_dni}|TICK-${i + 1}`;
-                const qrDataUrl = generateQrBase64(qrPayload);
-
-                const unitPriceVal = parseFloat(tItem.price || sale.unit_price || sale.total_amount).toFixed(2);
-
-                const dynamicData = {
-                    title: eventTitle,
-                    venue: eventVenue,
-                    city: eventAddress,
-                    date: eventDate,
-                    time: eventTime,
-                    zone: tItem.zone || sale.zone_name,
-                    price: 'S/ ' + unitPriceVal,
-                    buyer_name: sale.buyer_name || 'CLIENTE VARIOS',
-                    buyer_dni: sale.buyer_dni || '00000000',
-                    ticket_number: ticketNumStr,
-                    hash: hashVal,
-                    qr_data_url: qrDataUrl
-                };
-
-                const canvasHtml = renderTicketCanvasContent({ ...template, elements: tplElements }, dynamicData, assetMap);
-
-                const pdfContainer = document.createElement('div');
-                pdfContainer.className = 'posPdfSingleCanvas';
-                pdfContainer.style.position = 'fixed';
-                pdfContainer.style.left = '-9999px';
-                pdfContainer.style.top = '0';
-                pdfContainer.style.width = '794px';
-                pdfContainer.style.height = '1123px';
-                pdfContainer.style.zIndex = '999999';
-                pdfContainer.style.backgroundImage = `url('${boletoDataUrl || boletoSrc}')`;
-                pdfContainer.style.backgroundSize = '100% 100%';
-                pdfContainer.style.backgroundPosition = 'center';
-                pdfContainer.style.fontFamily = "'Plus Jakarta Sans', sans-serif";
-                pdfContainer.style.boxSizing = 'border-box';
-                pdfContainer.style.overflow = 'hidden';
-
-                pdfContainer.innerHTML = `
-                    <div class="ticket-canvas-inner" style="width: 771px; height: 370px; position: absolute; top: 12px; left: 11.5px; background: ${bgColor}; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; border-radius: 18px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15); box-sizing: border-box;">
-                        ${canvasHtml}
-                    </div>
-                `;
-
-                document.body.appendChild(pdfContainer);
-
-                if (document.fonts && document.fonts.ready) {
-                    await document.fonts.ready;
-                }
-                await new Promise(r => setTimeout(r, 200));
-
-                const canvas = await html2canvas(pdfContainer, {
-                    scale: 2.5,
-                    useCORS: true,
-                    allowTaint: true,
-                    backgroundColor: '#FFFFFF',
-                    logging: false
-                });
-
-                const imgData = canvas.toDataURL('image/jpeg', 0.95);
-                pdfContainer.remove();
-
-                if (pdf) {
-                    if (i > 0) {
-                        pdf.addPage('a4', 'portrait');
-                    }
-                    pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
-                }
-            }
+            const { pdf } = await generateTicketPdfDoc(sale);
 
             if (pdf) {
                 pdf.save(`Boleto_Oficial_${sale.receipt_number || 'ViveGo'}.pdf`);
@@ -641,6 +654,76 @@
                 icon: 'error',
                 title: 'Error al generar boleto',
                 text: 'Ocurrió un inconveniente al compilar el PDF. Por favor intenta nuevamente.',
+                background: '#14141E',
+                color: '#FFFFFF',
+                confirmButtonColor: '#FF5500'
+            });
+        }
+    }
+
+    async function emailClientTicketPdf(btn) {
+        if (!btn) return;
+        const payloadEncoded = btn.getAttribute('data-sale-payload');
+        if (!payloadEncoded) return;
+
+        let sale;
+        try {
+            sale = JSON.parse(decodeURIComponent(escape(atob(payloadEncoded))));
+        } catch (e) {
+            console.error('Error decodificando payload de venta:', e);
+            return;
+        }
+
+        Swal.fire({
+            title: '📧 Enviando a tu Correo...',
+            html: 'Compilando boleto con fondo oficial y enviándolo a tu bandeja de entrada...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); },
+            background: '#14141E',
+            color: '#FFFFFF'
+        });
+
+        try {
+            const { pdf } = await generateTicketPdfDoc(sale);
+            const pdfBase64 = pdf ? pdf.output('datauristring') : '';
+
+            const res = await fetch(`/mi-cuenta/boleto/${sale.id}/enviar-correo`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    ticket_pdf_base64: pdfBase64
+                })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: '✉️ ¡Correo Enviado!',
+                    text: data.message || 'El boleto ha sido enviado a tu correo exitosamente.',
+                    background: '#14141E',
+                    color: '#FFFFFF',
+                    confirmButtonColor: '#FF5500'
+                });
+            } else {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Aviso',
+                    text: data.message || 'No se pudo enviar el correo.',
+                    background: '#14141E',
+                    color: '#FFFFFF',
+                    confirmButtonColor: '#FF5500'
+                });
+            }
+        } catch (err) {
+            console.error('Error enviando boleto por correo:', err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error al enviar',
+                text: 'Ocurrió un error al enviar el boleto a tu correo.',
                 background: '#14141E',
                 color: '#FFFFFF',
                 confirmButtonColor: '#FF5500'

@@ -30,13 +30,13 @@ class CheckoutController extends Controller
 
         $event = null;
         if ($eventId) {
-            $event = Event::find($eventId);
+            $event = Event::with('template')->find($eventId);
         } elseif ($eventSlug) {
-            $event = Event::where('slug', $eventSlug)->first();
+            $event = Event::with('template')->where('slug', $eventSlug)->first();
         }
 
         if (!$event) {
-            $event = Event::latest()->first();
+            $event = Event::with('template')->latest()->first();
         }
 
         // 2. Extraer o armar Carrito de Entradas
@@ -91,6 +91,7 @@ class CheckoutController extends Controller
                 'address' => $event?->address ?: 'Dirección Oficial',
             ],
             'date_selected' => $dateSelected,
+            'template' => $event?->template,
         ];
 
         return view('web.checkout', compact('eventData', 'cartItems', 'grandTotal', 'izipay'));
@@ -353,7 +354,8 @@ class CheckoutController extends Controller
         // 2. Enviar Correo Electrónico Automático con Recibo, Boletos y Credenciales
         if (!empty($buyerEmail) && filter_var($buyerEmail, FILTER_VALIDATE_EMAIL)) {
             try {
-                \Illuminate\Support\Facades\Mail::to($buyerEmail)->send(new \App\Mail\TicketPurchaseMail($sale, $tempPassword, $isNewUser));
+                $customPdfBase64 = $request->input('ticket_pdf_base64');
+                \Illuminate\Support\Facades\Mail::to($buyerEmail)->send(new \App\Mail\TicketPurchaseMail($sale, $tempPassword, $isNewUser, $customPdfBase64));
                 Log::info('Correo de confirmación de compra enviado exitosamente a: ' . $buyerEmail);
             } catch (\Throwable $mailError) {
                 Log::warning('No se pudo enviar el correo de compra (verifique configuración SMTP): ' . $mailError->getMessage());

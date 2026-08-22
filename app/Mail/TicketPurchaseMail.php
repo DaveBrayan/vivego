@@ -20,15 +20,17 @@ class TicketPurchaseMail extends Mailable
     public TicketSale $sale;
     public ?string $tempPassword;
     public bool $isNewUser;
+    public ?string $customPdfBase64;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(TicketSale $sale, ?string $tempPassword = null, bool $isNewUser = false)
+    public function __construct(TicketSale $sale, ?string $tempPassword = null, bool $isNewUser = false, ?string $customPdfBase64 = null)
     {
         $this->sale = $sale;
         $this->tempPassword = $tempPassword;
         $this->isNewUser = $isNewUser;
+        $this->customPdfBase64 = $customPdfBase64;
     }
 
     /**
@@ -66,6 +68,21 @@ class TicketPurchaseMail extends Mailable
         $attachments = [];
 
         try {
+            // Si el cliente envió el PDF compilado en alta resolución directamente desde el navegador
+            if (!empty($this->customPdfBase64)) {
+                $raw = $this->customPdfBase64;
+                if (str_contains($raw, ';base64,')) {
+                    $raw = explode(';base64,', $raw)[1];
+                }
+                $pdfBinary = base64_decode($raw);
+                if ($pdfBinary) {
+                    $attachments[] = Attachment::fromData(fn () => $pdfBinary, "Entrada_Oficial_{$this->sale->receipt_number}.pdf")
+                        ->withMime('application/pdf');
+                    return $attachments;
+                }
+            }
+
+            // Fallback con DomPDF
             $options = new Options();
             $options->set('isHtml5ParserEnabled', true);
             $options->set('isRemoteEnabled', true);

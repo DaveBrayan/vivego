@@ -912,14 +912,14 @@
         }
 
         // Manejador centralizado de finalización de pago en Izipay
-        function handleIzipaySubmit(response) {
+        async function handleIzipaySubmit(response) {
             console.log('[Izipay] Callback de pago recibido:', response);
 
             // Mostrar modal de procesamiento de compra
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
                     title: '🎉 ¡Pago Confirmado!',
-                    html: 'Izipay ha procesado tu transacción con éxito.<br>Estamos generando tus entradas oficiales con código QR y creando tu perfil...',
+                    html: 'Izipay ha procesado tu transacción con éxito.<br>Compilando tus entradas oficiales con código QR y creando tu perfil...',
                     allowOutsideClick: false,
                     didOpen: () => { Swal.showLoading(); },
                     background: '#14141E',
@@ -940,6 +940,36 @@
 
             let hash = response.hash || response['kr-hash'] || response.hashKey || '';
 
+            // Generar el PDF oficial con el motor visual idéntico a Taquilla para adjuntarlo al correo
+            let ticketPdfBase64 = '';
+            try {
+                if (typeof window.generateTicketPdfDoc === 'function') {
+                    const simulatedSale = {
+                        receipt_number: 'REC-PENDING',
+                        buyer_name: document.getElementById('buyerFullName')?.value || 'Cliente ViveGo',
+                        buyer_dni: document.getElementById('buyerDoc')?.value || '00000000',
+                        buyer_email: document.getElementById('buyerEmail')?.value || '',
+                        event: {
+                            id: eventData.id,
+                            title: eventData.title,
+                            venue_name: eventData.venue?.name || '',
+                            address: eventData.venue?.address || eventData.city || '',
+                            event_date: eventData.date_selected || '',
+                            event_time: '20:00',
+                            banner_image: eventData.banner_image || '',
+                            template: eventData.template || null
+                        },
+                        tickets_data: { items: cartItems }
+                    };
+                    const { pdf } = await window.generateTicketPdfDoc(simulatedSale);
+                    if (pdf) {
+                        ticketPdfBase64 = pdf.output('datauristring');
+                    }
+                }
+            } catch (pdfErr) {
+                console.warn('Compilación client-side de PDF omitida:', pdfErr);
+            }
+
             // Enviar respuesta al backend para verificar firma y registrar boletos
             fetch("{{ route('web.checkout.izipay_complete') }}", {
                 method: 'POST',
@@ -956,7 +986,8 @@
                     'customer_email': document.getElementById('buyerEmail')?.value || '',
                     'customer_name': document.getElementById('buyerFullName')?.value || '',
                     'customer_doc': document.getElementById('buyerDoc')?.value || '',
-                    'customer_phone': document.getElementById('buyerPhone')?.value || ''
+                    'customer_phone': document.getElementById('buyerPhone')?.value || '',
+                    'ticket_pdf_base64': ticketPdfBase64
                 })
             })
             .then(res => res.json())
@@ -1077,4 +1108,6 @@
             </form>
         </div>
     </div>
+
+    @include('web.customer.partials.ticket_generator_js')
 @endpush
