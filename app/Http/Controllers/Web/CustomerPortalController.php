@@ -98,7 +98,7 @@ class CustomerPortalController extends Controller
             return redirect()->route('web.login')->with('info', 'Inicia sesión para ver tus boletos.');
         }
 
-        $sales = TicketSale::with('event')
+        $sales = TicketSale::with(['event.template'])
             ->where(function ($query) use ($customerEmail, $customerDni) {
                 if ($customerEmail) {
                     $query->orWhereJsonContains('tickets_data->customer_email', $customerEmail)
@@ -126,7 +126,7 @@ class CustomerPortalController extends Controller
             return redirect()->route('web.login')->with('info', 'Inicia sesión para ver tus recibos.');
         }
 
-        $sales = TicketSale::with('event')
+        $sales = TicketSale::with(['event.template'])
             ->where(function ($query) use ($customerEmail, $customerDni) {
                 if ($customerEmail) {
                     $query->orWhereJsonContains('tickets_data->customer_email', $customerEmail)
@@ -143,10 +143,27 @@ class CustomerPortalController extends Controller
     }
 
     /**
-     * Descargar / Ver Boleto Oficial en PDF (Formato A4 Idéntico a Taquilla)
+     * Descargar / Ver Boleto Oficial en PDF con Autorización Segura
      */
     public function downloadTicketPdf(TicketSale $sale)
     {
+        $customerEmail = session('customer_email');
+        $customerDni = session('customer_dni');
+        $isAdmin = session('admin_logged_in');
+
+        $isAuthorized = false;
+        if ($isAdmin) {
+            $isAuthorized = true;
+        } elseif ($customerDni && $sale->buyer_dni === $customerDni) {
+            $isAuthorized = true;
+        } elseif ($customerEmail && (str_contains($sale->tickets_data ?? '', $customerEmail) || str_contains($sale->buyer_email ?? '', $customerEmail))) {
+            $isAuthorized = true;
+        }
+
+        if (!$isAuthorized) {
+            abort(403, 'Acceso denegado: No tienes autorización para descargar este boleto.');
+        }
+
         try {
             $options = new \Dompdf\Options();
             $options->set('isHtml5ParserEnabled', true);
