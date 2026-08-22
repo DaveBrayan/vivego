@@ -347,26 +347,37 @@
 
         // Modal de Eliminación de Cliente
         function openDeleteCustomerModal(id, name, tickets, spent) {
-            document.getElementById('deleteCustomerId').value = id;
-            document.getElementById('deleteCustomerTickets').value = tickets;
-            document.getElementById('deleteCustomerSpent').value = spent;
-            document.getElementById('deleteCustName').textContent = `"${name}"`;
-            document.getElementById('deleteCustTicketsCount').textContent = `${tickets} boleto(s) (S/ ${parseFloat(spent).toFixed(2)})`;
-            document.getElementById('deleteCustomerModal').style.display = 'flex';
+            const idInput = document.getElementById('deleteCustomerId');
+            const ticketsInput = document.getElementById('deleteCustomerTickets');
+            const spentInput = document.getElementById('deleteCustomerSpent');
+            const nameEl = document.getElementById('deleteCustName');
+            const ticketsCountEl = document.getElementById('deleteCustTicketsCount');
+            const modal = document.getElementById('deleteCustomerModal');
+
+            if (idInput) idInput.value = id;
+            if (ticketsInput) ticketsInput.value = tickets || 0;
+            if (spentInput) spentInput.value = spent || 0;
+            if (nameEl) nameEl.textContent = `"${name}"`;
+            if (ticketsCountEl) ticketsCountEl.textContent = `${tickets || 0} boleto(s) (S/ ${parseFloat(spent || 0).toFixed(2)})`;
+            if (modal) modal.style.display = 'flex';
         }
 
         function closeDeleteCustomerModal() {
-            document.getElementById('deleteCustomerModal').style.display = 'none';
+            const modal = document.getElementById('deleteCustomerModal');
+            if (modal) modal.style.display = 'none';
         }
 
         function executeDeleteCustomer() {
-            const id = document.getElementById('deleteCustomerId').value;
-            const tickets = parseInt(document.getElementById('deleteCustomerTickets').value) || 0;
-            const spent = parseFloat(document.getElementById('deleteCustomerSpent').value) || 0;
+            const id = document.getElementById('deleteCustomerId')?.value;
+            if (!id) return;
+            const tickets = parseInt(document.getElementById('deleteCustomerTickets')?.value) || 0;
+            const spent = parseFloat(document.getElementById('deleteCustomerSpent')?.value) || 0;
             const btn = document.getElementById('btnConfirmDelete');
 
-            btn.disabled = true;
-            btn.innerHTML = '<span>⏳</span><span>Eliminando...</span>';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span>⏳</span><span>Eliminando...</span>';
+            }
 
             fetch(`/admin/clientes/${id}`, {
                 method: 'DELETE',
@@ -377,8 +388,10 @@
             })
             .then(res => res.json())
             .then(data => {
-                btn.disabled = false;
-                btn.innerHTML = '<span>🗑️</span><span>Sí, Eliminar Permanentemente</span>';
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>🗑️</span><span>Sí, Eliminar Permanentemente</span>';
+                }
 
                 if (data.success) {
                     closeDeleteCustomerModal();
@@ -394,14 +407,17 @@
                             // Si ya no quedan clientes, mostrar estado vacío
                             const remainingRows = document.querySelectorAll('#customersTable tbody tr.customer-row');
                             if (remainingRows.length === 0) {
-                                document.querySelector('#customersTable tbody').innerHTML = `
-                                    <tr id="emptyCustomersRow">
-                                        <td colspan="7" style="text-align: center; padding: 3rem 1rem; color: #94A3B8;">
-                                            <span style="font-size: 2.5rem; display: block; margin-bottom: 0.5rem;">👥</span>
-                                            No se han registrado clientes ni compras online aún.
-                                        </td>
-                                    </tr>
-                                `;
+                                const tbody = document.querySelector('#customersTable tbody');
+                                if (tbody) {
+                                    tbody.innerHTML = `
+                                        <tr id="emptyCustomersRow">
+                                            <td colspan="7" style="text-align: center; padding: 3rem 1rem; color: #94A3B8;">
+                                                <span style="font-size: 2.5rem; display: block; margin-bottom: 0.5rem;">👥</span>
+                                                No se han registrado clientes ni compras online aún.
+                                            </td>
+                                        </tr>
+                                    `;
+                                }
                             }
                         }, 400);
                     }
@@ -413,29 +429,17 @@
                         statCust.textContent = Math.max(0, current - 1);
                     }
 
-                    const statTix = document.getElementById('statTotalTickets');
-                    if (statTix) {
-                        const current = parseInt(statTix.textContent) || 0;
-                        statTix.textContent = Math.max(0, current - tickets);
-                    }
-
-                    const statRev = document.getElementById('statTotalRevenue');
-                    if (statRev) {
-                        const currentVal = parseFloat(statRev.getAttribute('data-value')) || 0;
-                        const newVal = Math.max(0, currentVal - spent);
-                        statRev.setAttribute('data-value', newVal);
-                        statRev.textContent = `S/ ${newVal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                    }
-
                     // Notificación tipo toast elegante
-                    showCustomerToast(data.message || 'Cliente y boletos eliminados exitosamente.', 'success');
+                    showCustomerToast(data.message || 'Cliente eliminado exitosamente.', 'success');
                 } else {
                     alert(data.message || 'Error al eliminar el cliente.');
                 }
             })
             .catch(err => {
-                btn.disabled = false;
-                btn.innerHTML = '<span>🗑️</span><span>Sí, Eliminar Permanentemente</span>';
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>🗑️</span><span>Sí, Eliminar Permanentemente</span>';
+                }
                 alert('Ocurrió un error al intentar eliminar el cliente.');
             });
         }
