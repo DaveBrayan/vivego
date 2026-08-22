@@ -96,8 +96,25 @@
 
                 <!-- Botones de Acción + Hamburguesa Móvil -->
                 <div class="nav-actions">
-                    <a href="{{ route('web.dashboard') }}" class="btn btn-secondary btn-sm desktop-only">📊 Mi Panel</a>
-                    <a href="{{ route('web.login') }}" class="btn btn-primary btn-sm desktop-only">Iniciar Sesión</a>
+                    @if(session('customer_logged_in'))
+                        <a href="{{ route('web.customer.tickets') }}" class="btn btn-secondary btn-sm desktop-only" style="background: rgba(255,85,0,0.15); color: #FF5500; border: 1px solid rgba(255,85,0,0.4); font-weight: 800;">
+                            🎟️ Mis Boletos
+                        </a>
+                        <a href="{{ route('web.customer.receipts') }}" class="btn btn-secondary btn-sm desktop-only" style="font-weight: 700;">
+                            🧾 Mis Recibos
+                        </a>
+                        <form action="{{ route('web.customer.logout') }}" method="POST" style="display: inline;" class="desktop-only">
+                            @csrf
+                            <button type="submit" title="Cerrar Sesión" style="background: #FEE2E2; color: #DC2626; border: 1px solid #FCA5A5; padding: 0.45rem 0.85rem; border-radius: 10px; font-weight: 800; font-size: 0.825rem; cursor: pointer;">
+                                🚪 Salir
+                            </button>
+                        </form>
+                    @elseif(session('admin_logged_in'))
+                        <a href="{{ route('web.dashboard') }}" class="btn btn-secondary btn-sm desktop-only">📊 Mi Panel</a>
+                    @else
+                        <a href="{{ route('web.dashboard') }}" class="btn btn-secondary btn-sm desktop-only">📊 Mi Panel</a>
+                        <a href="{{ route('web.login') }}" class="btn btn-primary btn-sm desktop-only">Iniciar Sesión</a>
+                    @endif
 
                     <!-- Botón Hamburguesa Móvil -->
                     <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Abrir Menú">
@@ -111,19 +128,6 @@
             </div>
         </div>
 
-        <!-- Categorías Rápidas (Escritorio) -->
-        <nav class="nav-categories desktop-only">
-            <div class="container">
-                <ul class="category-list">
-                    <li class="category-item active"><a href="#">🔥 Destacados</a></li>
-                    <li class="category-item"><a href="#">🎤 Conciertos</a></li>
-                    <li class="category-item"><a href="#">🎉 Fiestas</a></li>
-                    <li class="category-item"><a href="#">🎭 Teatro & Shows</a></li>
-                    <li class="category-item"><a href="#">⚽ Deportes</a></li>
-                    <li class="category-item"><a href="#">🍔 Gastronomía</a></li>
-                </ul>
-            </div>
-        </nav>
     </header>
     @endunless
 
@@ -165,12 +169,27 @@
 
             <!-- Botones de Acción Móvil -->
             <div class="drawer-actions">
-                <a href="{{ route('web.login') }}" class="btn btn-primary btn-sm" style="width: 100%; text-align: center;">
-                    Iniciar Sesión / Mi Cuenta
-                </a>
-                <a href="{{ route('web.dashboard') }}" class="btn btn-secondary btn-sm" style="width: 100%; text-align: center; margin-top: 0.65rem;">
-                    📊 Mi Panel
-                </a>
+                @if(session('customer_logged_in'))
+                    <a href="{{ route('web.customer.tickets') }}" class="btn btn-primary btn-sm" style="width: 100%; text-align: center;">
+                        🎟️ Mis Boletos Oficiales
+                    </a>
+                    <a href="{{ route('web.customer.receipts') }}" class="btn btn-secondary btn-sm" style="width: 100%; text-align: center; margin-top: 0.65rem;">
+                        🧾 Mis Recibos
+                    </a>
+                    <form action="{{ route('web.customer.logout') }}" method="POST" style="margin-top: 0.65rem;">
+                        @csrf
+                        <button type="submit" class="btn btn-secondary btn-sm" style="width: 100%; color: #DC2626; border-color: #FCA5A5; background: #FEF2F2;">
+                            🚪 Cerrar Sesión
+                        </button>
+                    </form>
+                @else
+                    <a href="{{ route('web.login') }}" class="btn btn-primary btn-sm" style="width: 100%; text-align: center;">
+                        Iniciar Sesión / Mi Cuenta
+                    </a>
+                    <a href="{{ route('web.dashboard') }}" class="btn btn-secondary btn-sm" style="width: 100%; text-align: center; margin-top: 0.65rem;">
+                        📊 Mi Panel
+                    </a>
+                @endif
             </div>
         </div>
     </aside>

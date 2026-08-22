@@ -212,6 +212,7 @@ class EventController extends Controller
             'category_name' => 'nullable|string|max:100',
             'company_name' => 'nullable|string|max:255',
             'banner_image' => 'nullable|string',
+            'reference_image' => 'nullable|string',
             'event_date' => 'nullable|date',
             'event_time' => 'nullable|string|max:20',
             'venue_name' => 'nullable|string|max:255',
@@ -226,6 +227,7 @@ class EventController extends Controller
         ]);
 
         $bannerImage = $this->saveBase64Image($validated['banner_image'] ?? null, 'events', 'event_banner');
+        $referenceImage = $this->saveBase64Image($validated['reference_image'] ?? null, 'events', 'reference_image');
 
         $slug = Str::slug($validated['title']) . '-' . rand(100, 999);
 
@@ -235,6 +237,7 @@ class EventController extends Controller
             'category_name' => $validated['category_name'] ?? 'Conciertos',
             'company_name' => $validated['company_name'] ?? 'Vive Go',
             'banner_image' => $bannerImage,
+            'reference_image' => $referenceImage,
             'event_date' => $validated['event_date'] ?? null,
             'event_time' => $validated['event_time'] ?? '18:00',
             'venue_name' => $validated['venue_name'] ?? 'Complejo San Luis',
@@ -385,6 +388,7 @@ class EventController extends Controller
                 'category_name' => $eventModel->category_name ?? 'Conciertos',
                 'company_name' => $eventModel->company_name ?? 'Vive Go',
                 'banner_image' => $eventModel->banner_image,
+                'reference_image' => $eventModel->reference_image,
                 'event_date' => $dateVal,
                 'event_time' => $eventModel->event_time ?? '18:00',
                 'venue_name' => $eventModel->venue_name ?? '',
@@ -437,6 +441,7 @@ class EventController extends Controller
             'category_name' => 'nullable|string|max:100',
             'company_name' => 'nullable|string|max:255',
             'banner_image' => 'nullable|string',
+            'reference_image' => 'nullable|string',
             'event_date' => 'nullable|date',
             'event_time' => 'nullable|string|max:20',
             'venue_name' => 'nullable|string|max:255',
@@ -455,6 +460,7 @@ class EventController extends Controller
 
         if (!$event) {
             $bannerImage = $this->saveBase64Image($validated['banner_image'] ?? null, 'events', 'event_banner');
+            $referenceImage = $this->saveBase64Image($validated['reference_image'] ?? null, 'events', 'reference_image');
             $slug = Str::slug($validated['title']) . '-' . rand(100, 999);
             $event = Event::create([
                 'title' => $validated['title'],
@@ -462,6 +468,7 @@ class EventController extends Controller
                 'category_name' => $validated['category_name'] ?? 'Conciertos',
                 'company_name' => $validated['company_name'] ?? 'Vive Go',
                 'banner_image' => $bannerImage,
+                'reference_image' => $referenceImage,
                 'event_date' => $validated['event_date'] ?? null,
                 'event_time' => $validated['event_time'] ?? '18:00',
                 'venue_name' => $validated['venue_name'] ?? 'Complejo San Luis',
@@ -477,6 +484,7 @@ class EventController extends Controller
             ]);
         } else {
             $bannerImage = $this->saveBase64Image($validated['banner_image'] ?? $event->banner_image, 'events', 'event_banner');
+            $referenceImage = array_key_exists('reference_image', $validated) ? $this->saveBase64Image($validated['reference_image'], 'events', 'reference_image') : $event->reference_image;
 
             $event->update([
                 'title' => $validated['title'],
@@ -484,6 +492,7 @@ class EventController extends Controller
                 'category_name' => $validated['category_name'] ?? $event->category_name,
                 'company_name' => $validated['company_name'] ?? $event->company_name,
                 'banner_image' => $bannerImage,
+                'reference_image' => $referenceImage,
                 'event_date' => $validated['event_date'] ?? $event->event_date,
                 'event_time' => $validated['event_time'] ?? $event->event_time,
                 'venue_name' => $validated['venue_name'] ?? $event->venue_name,
@@ -594,6 +603,7 @@ class EventController extends Controller
         $slug = Str::slug($newTitle) . '-' . rand(100, 999);
 
         $rawBanner = $event->getRawOriginal('banner_image') ?? $event->banner_image;
+        $rawRefImage = $event->getRawOriginal('reference_image') ?? $event->reference_image;
 
         $newEvent = Event::create([
             'title' => $newTitle,
@@ -601,6 +611,7 @@ class EventController extends Controller
             'category_name' => $event->category_name,
             'company_name' => $event->company_name,
             'banner_image' => $rawBanner,
+            'reference_image' => $rawRefImage,
             'event_date' => $event->event_date,
             'event_time' => $event->event_time,
             'venue_name' => $event->venue_name,

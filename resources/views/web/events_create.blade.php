@@ -553,6 +553,54 @@
                             </div>
                         </div>
 
+                        <!-- SECCIÓN: SUBIR IMAGEN DE REFERENCIA / PLANO DE ZONAS -->
+                        <div style="margin-top: 1.75rem; background: rgba(255, 255, 255, 0.02); border: 1.5px dashed rgba(255, 255, 255, 0.18); border-radius: 18px; padding: 1.5rem;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                    <span style="font-size: 1.3rem;">🗺️</span>
+                                    <div>
+                                        <h4 style="margin: 0; font-size: 1rem; font-weight: 800; color: #FFFFFF;">Imagen de Referencia del Recinto / Mapa de Zonas</h4>
+                                        <p style="margin: 0.15rem 0 0 0; font-size: 0.8rem; color: #94A3B8;">Sube un croquis, plano o imagen de referencia de las zonas para los compradores (se mostrará arriba de los detalles del evento).</p>
+                                    </div>
+                                </div>
+                                <span class="dash-badge-custom badge-blue" style="font-size: 0.75rem; font-weight: 800;">Opcional</span>
+                            </div>
+
+                            <input type="hidden" id="reference_image" value="">
+                            <input type="file" id="referenceFileInput" accept="image/*" style="display: none;" onchange="handleReferenceImageUpload(this)">
+
+                            <!-- Contenedor cuando no hay imagen seleccionada -->
+                            <div id="referencePlaceholderBox" style="border: 1.5px dashed rgba(255, 255, 255, 0.15); background: rgba(15, 23, 42, 0.5); border-radius: 14px; padding: 2rem 1.5rem; text-align: center; cursor: pointer; transition: all 0.2s;" onclick="openMediaManager('reference_image');">
+                                <span style="font-size: 2.2rem; display: block; margin-bottom: 0.5rem;">📐</span>
+                                <strong style="color: #E2E8F0; font-size: 0.95rem; display: block;">Subir Imagen de Referencia o Plano de Zonas</strong>
+                                <p style="color: #94A3B8; font-size: 0.8rem; margin: 0.35rem 0 1rem 0;">Formatos permitidos: PNG, JPG, WEBP o SVG (máx. 10MB)</p>
+                                <div style="display: inline-flex; gap: 0.65rem;" onclick="event.stopPropagation();">
+                                    <button type="button" class="btn btn-primary btn-save-settings" style="font-size: 0.825rem; padding: 0.55rem 1rem;" onclick="openMediaManager('reference_image');">
+                                        🖼️ Seleccionar de la Galería
+                                    </button>
+                                    <button type="button" class="btn btn-cancel-custom" style="font-size: 0.825rem; padding: 0.55rem 1rem;" onclick="document.getElementById('referenceFileInput').click();">
+                                        📁 Subir desde PC
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Contenedor con vista previa cuando hay imagen -->
+                            <div id="referencePreviewContainer" style="display: none; position: relative; border-radius: 14px; overflow: hidden; border: 1.5px solid rgba(255, 255, 255, 0.2); background: #0B0F19; text-align: center; padding: 1rem;">
+                                <img id="referencePreviewImg" src="" alt="Vista Previa de Referencia" style="max-height: 280px; width: auto; max-width: 100%; object-fit: contain; margin: 0 auto; display: block; border-radius: 8px;">
+                                <div style="display: flex; justify-content: center; gap: 0.65rem; margin-top: 1rem;">
+                                    <button type="button" class="btn btn-primary btn-save-settings" style="font-size: 0.8rem; padding: 0.45rem 0.85rem;" onclick="openMediaManager('reference_image');">
+                                        🔄 Cambiar Imagen
+                                    </button>
+                                    <button type="button" class="btn btn-cancel-custom" style="font-size: 0.8rem; padding: 0.45rem 0.85rem;" onclick="document.getElementById('referenceFileInput').click();">
+                                        📁 Subir otra de PC
+                                    </button>
+                                    <button type="button" class="btn btn-danger" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #F87171; font-size: 0.8rem; padding: 0.45rem 0.85rem; border-radius: 8px; cursor: pointer;" onclick="removeReferenceImage()">
+                                        🗑️ Quitar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
                             <button type="button" class="btn btn-cancel-custom" onclick="goToStep(1)">
                                 ← Anterior: Información General
@@ -1004,6 +1052,38 @@
                 };
                 reader.readAsDataURL(input.files[0]);
             }
+        }
+
+        function handleReferenceImageUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('referencePreviewImg');
+                    const hidden = document.getElementById('reference_image');
+                    const placeholder = document.getElementById('referencePlaceholderBox');
+                    const container = document.getElementById('referencePreviewContainer');
+
+                    if (preview) preview.src = e.target.result;
+                    if (hidden) hidden.value = e.target.result;
+                    if (placeholder) placeholder.style.display = 'none';
+                    if (container) container.style.display = 'block';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removeReferenceImage() {
+            const preview = document.getElementById('referencePreviewImg');
+            const hidden = document.getElementById('reference_image');
+            const placeholder = document.getElementById('referencePlaceholderBox');
+            const container = document.getElementById('referencePreviewContainer');
+            const fileInput = document.getElementById('referenceFileInput');
+
+            if (preview) preview.src = '';
+            if (hidden) hidden.value = '';
+            if (fileInput) fileInput.value = '';
+            if (placeholder) placeholder.style.display = 'block';
+            if (container) container.style.display = 'none';
         }
 
         function initLeafletMap() {
@@ -1639,6 +1719,8 @@
                 currentActiveUrl = certState.background;
             } else if (mediaContext === 'event_banner') {
                 currentActiveUrl = document.getElementById('event_banner')?.value || document.getElementById('bannerPreviewImg')?.src;
+            } else if (mediaContext === 'reference_image') {
+                currentActiveUrl = document.getElementById('reference_image')?.value || document.getElementById('referencePreviewImg')?.src;
             } else if (mediaContext === 'selected_element_image') {
                 if (selectedElementId) {
                     const el = certState.elements.find(x => x.id === selectedElementId);
@@ -1676,6 +1758,16 @@
                 const input = document.getElementById('event_banner');
                 if (preview) preview.src = url;
                 if (input) input.value = url;
+            } else if (mediaContext === 'reference_image') {
+                const preview = document.getElementById('referencePreviewImg');
+                const input = document.getElementById('reference_image');
+                const placeholder = document.getElementById('referencePlaceholderBox');
+                const container = document.getElementById('referencePreviewContainer');
+
+                if (preview) preview.src = url;
+                if (input) input.value = url;
+                if (placeholder) placeholder.style.display = 'none';
+                if (container) container.style.display = 'block';
             } else if (mediaContext === 'selected_element_image') {
                 if (selectedElementId) {
                     const el = certState.elements.find(x => x.id === selectedElementId);
@@ -1927,6 +2019,7 @@
                 category_name: document.getElementById('event_category').value,
                 company_name: document.getElementById('event_company').value,
                 banner_image: document.getElementById('event_banner').value,
+                reference_image: document.getElementById('reference_image')?.value || null,
                 event_date: document.getElementById('event_date_picker')?.value || document.getElementById('event_date').value,
                 event_time: document.getElementById('event_time_picker')?.value || document.getElementById('event_time').value,
                 venue_name: document.getElementById('event_venue').value,

@@ -403,6 +403,12 @@
 
         <div class="dash-nav-section-title" style="margin-top: 1.5rem;">INFORMACIÓN EMPRESARIAL</div>
         <ul class="dash-nav-list">
+            <li class="dash-nav-item {{ request()->routeIs('web.customers*') ? 'active' : '' }}">
+                <a href="{{ route('web.customers') }}" class="dash-nav-link">
+                    <span class="dash-nav-icon">👥</span>
+                    <span class="dash-nav-text">Clientes</span>
+                </a>
+            </li>
             <li class="dash-nav-item {{ request()->routeIs('web.companies*') ? 'active' : '' }}">
                 <a href="{{ route('web.companies') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">🏢</span>
@@ -425,6 +431,12 @@
 
         <div class="dash-nav-section-title" style="margin-top: 1.5rem;">ADMINISTRACIÓN</div>
         <ul class="dash-nav-list">
+            <li class="dash-nav-item {{ request()->routeIs('web.payment_methods*') ? 'active' : '' }}">
+                <a href="{{ route('web.payment_methods') }}" class="dash-nav-link">
+                    <span class="dash-nav-icon">💳</span>
+                    <span class="dash-nav-text">Métodos de Pago</span>
+                </a>
+            </li>
             <li class="dash-nav-item {{ request()->routeIs('web.admins*') ? 'active' : '' }}">
                 <a href="{{ route('web.admins') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">🛡️</span>

@@ -15,6 +15,9 @@ use App\Http\Controllers\Web\TemplateController;
 use App\Http\Controllers\Web\BoxOfficeController;
 use App\Http\Controllers\Web\AttendeeController;
 use App\Http\Controllers\Web\AuthController;
+use App\Http\Controllers\Web\CustomerController;
+use App\Http\Controllers\Web\CustomerPortalController;
+use App\Http\Controllers\Web\PaymentGatewayController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -33,9 +36,33 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('web.logout');
 Route::get('/evento/{slug}', [EventDetailController::class, 'show'])->name('web.event.detail');
 Route::get('/scanner/{event}', [AttendeeController::class, 'mobileScanner'])->name('web.scanner.direct');
 
+// Portal del Cliente (Mis Boletos & Mis Recibos)
+Route::get('/cliente/login', [CustomerPortalController::class, 'showLoginForm'])->name('customer.login');
+Route::post('/cliente/login', [CustomerPortalController::class, 'login'])->name('web.customer.login');
+Route::post('/cliente/logout', [CustomerPortalController::class, 'logout'])->name('web.customer.logout');
+Route::post('/cliente/cerrar-sesion', [CustomerPortalController::class, 'logout'])->name('customer.logout');
+Route::get('/mi-cuenta/boletos', [CustomerPortalController::class, 'myTickets'])->name('web.customer.tickets');
+Route::get('/mi-cuenta/mis-boletos', [CustomerPortalController::class, 'myTickets'])->name('customer.my_tickets');
+Route::get('/mi-cuenta/recibos', [CustomerPortalController::class, 'myReceipts'])->name('web.customer.receipts');
+Route::get('/mi-cuenta/mis-recibos', [CustomerPortalController::class, 'myReceipts'])->name('customer.my_receipts');
+Route::get('/mi-cuenta/boleto/{sale}/pdf', [CustomerPortalController::class, 'downloadTicketPdf'])->name('web.customer.ticket_pdf');
+Route::get('/mi-cuenta/boleto/{sale}/descargar', [CustomerPortalController::class, 'downloadTicketPdf'])->name('customer.ticket_pdf');
+
+// Pasarela de Pagos & Carrito de Compras Checkout
+Route::match(['get', 'post'], '/checkout', [CheckoutController::class, 'show'])->name('web.checkout');
+Route::get('/checkout/confirmacion/{sale}', [CheckoutController::class, 'confirmation'])->name('web.checkout.confirmation');
+Route::post('/checkout/izipay/iniciar', [CheckoutController::class, 'initiateIzipay'])->name('web.checkout.izipay_initiate');
+Route::post('/checkout/izipay/completar', [CheckoutController::class, 'completeIzipayPayment'])->name('web.checkout.izipay_complete');
+
 // Rutas Protegidas de Administración y Panel de Control
 Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('web.dashboard');
+
+    // Directorio & Gestión de Clientes
+    Route::get('/admin/clientes', [CustomerController::class, 'index'])->name('web.customers');
+    Route::get('/admin/clientes/{id}/detalle', [CustomerController::class, 'getCustomerDetails'])->name('web.customers.details');
+    Route::post('/admin/clientes/{id}/reset-password', [CustomerController::class, 'resetPassword'])->name('web.customers.reset_password');
+    Route::delete('/admin/clientes/{id}', [CustomerController::class, 'destroy'])->name('web.customers.destroy');
 
     // Catálogo & Gestión de Eventos, Categorías y Plantillas Canva
     Route::get('/admin/eventos', [EventController::class, 'index'])->name('web.events');
@@ -84,6 +111,11 @@ Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group
     // Configuración General del Sistema
     Route::get('/admin/configuracion', [SettingsController::class, 'index'])->name('web.settings');
     Route::post('/admin/configuracion', [SettingsController::class, 'update'])->name('web.settings.update');
+
+    // Métodos de Pago & Pasarelas (Izipay, etc.)
+    Route::get('/admin/metodos-pago', [PaymentGatewayController::class, 'index'])->name('web.payment_methods');
+    Route::post('/admin/metodos-pago/izipay', [PaymentGatewayController::class, 'updateIzipay'])->name('web.payment_methods.update_izipay');
+    Route::post('/admin/metodos-pago/izipay/test', [PaymentGatewayController::class, 'testIzipayConnection'])->name('web.payment_methods.test_izipay');
 
     // Información Empresarial: Compañías
     Route::get('/admin/compania', [CompanyController::class, 'index'])->name('web.companies');

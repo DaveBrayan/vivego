@@ -157,6 +157,7 @@ class EventDetailController extends Controller
                 'city' => $city,
                 'advisory' => 'Apto para todo público',
                 'banner_image' => $bannerImage,
+                'reference_image' => $eventModel->reference_image,
                 'dates' => [
                     ['id' => 1, 'date' => $formattedDate, 'time' => $timeDisplay, 'selected' => true],
                 ],
@@ -177,7 +178,9 @@ class EventDetailController extends Controller
                 'tags' => $tags,
             ];
 
-            return view('web.event_detail', compact('event'));
+            $izipay = \App\Models\PaymentGateway::getIzipay();
+
+            return view('web.event_detail', compact('event', 'izipay'));
         }
 
         // Si no existe en la base de datos (fallback para slugs de demostración)
@@ -268,6 +271,8 @@ class EventDetailController extends Controller
             'tags' => $tags,
         ];
 
-        return view('web.event_detail', compact('event'));
+        $izipay = \App\Models\PaymentGateway::getIzipay();
+
+        return view('web.event_detail', compact('event', 'izipay'));
     }
 }

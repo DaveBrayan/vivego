@@ -533,14 +533,12 @@
                         <table class="dash-table" id="salesHistoryTable">
                             <thead>
                                 <tr>
-                                    <th>N° Recibo</th>
-                                    <th>Fecha / Hora</th>
+                                    <th>N° Recibo / Fecha</th>
                                     <th>Cliente</th>
                                     <th>Zona / Sector</th>
                                     <th style="text-align: center;">Cant.</th>
                                     <th>Total Cobrado</th>
                                     <th>Método de Pago</th>
-                                    <th>Pagó / Vuelto</th>
                                     <th style="text-align: right;">Acciones</th>
                                 </tr>
                             </thead>
@@ -548,14 +546,14 @@
                                 @forelse($sales as $sale)
                                     <tr class="sale-row-item" data-sale-id="{{ $sale->id }}">
                                         <td>
-                                            <span style="font-weight: 800; color: var(--color-primary-orange); font-family: monospace; font-size: 0.95rem;">
-                                                {{ $sale->receipt_number }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span style="color: #94A3B8; font-size: 0.825rem; font-weight: 600;">
-                                                {{ $sale->created_at ? $sale->created_at->format('d/m/Y H:i:s') : 'Hoy' }}
-                                            </span>
+                                            <div>
+                                                <span style="font-weight: 800; color: var(--color-primary-orange); font-family: monospace; font-size: 0.95rem; display: block;">
+                                                    {{ $sale->receipt_number }}
+                                                </span>
+                                                <small style="color: #94A3B8; font-size: 0.775rem; font-weight: 600;">
+                                                    {{ $sale->created_at ? $sale->created_at->format('d/m/Y H:i:s') : 'Hoy' }}
+                                                </small>
+                                            </div>
                                         </td>
                                         <td>
                                             <div>
@@ -585,15 +583,22 @@
                                                 <span class="dash-badge-custom badge-purple" style="font-size: 0.75rem; background: rgba(168, 85, 247, 0.15); color: #A855F7; border: 1px solid rgba(168, 85, 247, 0.3);">📱 Yape</span>
                                             @elseif($sale->payment_method === 'Plin')
                                                 <span class="dash-badge-custom badge-cyan" style="font-size: 0.75rem; color: #00F0FF; background: rgba(0, 240, 255, 0.15); border: 1px solid rgba(0, 240, 255, 0.3);">🟣 Plin</span>
+                                            @elseif(str_starts_with(strtolower($sale->payment_method), 'izipay') || $sale->payment_method === 'izipay_online' || $sale->payment_method === 'Izipay')
+                                                <div style="display: inline-flex; flex-direction: column; align-items: flex-start; gap: 0.15rem;">
+                                                    <span class="dash-badge-custom badge-blue" style="font-size: 0.75rem; font-weight: 800; background: rgba(0, 210, 196, 0.15); color: #00D2C4; border: 1px solid rgba(0, 210, 196, 0.35); padding: 0.2rem 0.55rem; border-radius: 6px;">
+                                                        💳 Izipay
+                                                    </span>
+                                                    <small style="font-size: 0.7rem; color: #94A3B8; font-weight: 600;">
+                                                        @php
+                                                            $tData = is_array($sale->tickets_data) ? $sale->tickets_data : json_decode($sale->tickets_data, true);
+                                                            $subM = $tData['sub_method'] ?? (str_contains(strtolower($sale->payment_method), 'qr') ? 'QR Yape / Plin' : 'Tarjeta');
+                                                        @endphp
+                                                        {{ $subM }}
+                                                    </small>
+                                                </div>
                                             @else
                                                 <span class="dash-badge-custom badge-blue" style="font-size: 0.75rem;">💳 {{ $sale->payment_method }}</span>
                                             @endif
-                                        </td>
-                                        <td>
-                                            <div style="font-size: 0.8rem; color: #94A3B8;">
-                                                <span>Pagó: S/ {{ number_format($sale->amount_paid, 2) }}</span><br>
-                                                <strong style="color: #10B981;">Vuelto: S/ {{ number_format($sale->change_amount, 2) }}</strong>
-                                            </div>
                                         </td>
                                         <td style="text-align: right;">
                                             <div style="display: inline-flex; align-items: center; gap: 0.4rem; justify-content: flex-end;">
@@ -2009,14 +2014,14 @@
 
                         newRow.innerHTML = `
                             <td>
-                                <span style="font-weight: 800; color: var(--color-primary-orange); font-family: monospace; font-size: 0.95rem;">
-                                    ${data.receipt.receipt_number}
-                                </span>
-                            </td>
-                            <td>
-                                <span style="color: #94A3B8; font-size: 0.825rem; font-weight: 600;">
-                                    ${data.receipt.created_at_formatted}
-                                </span>
+                                <div>
+                                    <span style="font-weight: 800; color: var(--color-primary-orange); font-family: monospace; font-size: 0.95rem; display: block;">
+                                        ${data.receipt.receipt_number}
+                                    </span>
+                                    <small style="color: #94A3B8; font-size: 0.775rem; font-weight: 600;">
+                                        ${data.receipt.created_at_formatted}
+                                    </small>
+                                </div>
                             </td>
                             <td>
                                 <div>
@@ -2041,12 +2046,6 @@
                             </td>
                             <td>
                                 ${paymentBadge}
-                            </td>
-                            <td>
-                                <div style="font-size: 0.8rem; color: #94A3B8;">
-                                    <span>Pagó: ${data.receipt.amount_paid_formatted}</span><br>
-                                    <strong style="color: #10B981;">Vuelto: ${data.receipt.change_amount_formatted}</strong>
-                                </div>
                             </td>
                             <td style="text-align: right;">
                                 <div style="display: inline-flex; align-items: center; gap: 0.4rem; justify-content: flex-end;">

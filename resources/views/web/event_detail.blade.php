@@ -60,6 +60,28 @@
 
                 <hr class="event-section-divider detail-order-8">
 
+                @if(!empty($event['reference_image']))
+                    <!-- Sección: Imagen de Referencia / Plano de Zonas y Distribución -->
+                    <section class="event-info-block animate-fade-in detail-order-8" style="margin-bottom: 2rem;">
+                        <div class="info-block-header">
+                            <div class="info-block-icon">🗺️</div>
+                            <h2>Mapa de Zonas y Referencia</h2>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; margin-top: 0.5rem;">
+                            <div style="position: relative; display: inline-block; max-width: 100%; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); border: 1px solid rgba(0, 0, 0, 0.08);">
+                                <img src="{{ $event['reference_image'] }}" alt="Mapa de Zonas y Referencia - {{ $event['title'] }}" style="max-height: 340px; width: auto; max-width: 100%; object-fit: contain; display: block; margin: 0 auto; border-radius: 14px;">
+                                
+                                <a href="{{ $event['reference_image'] }}" target="_blank" style="position: absolute; bottom: 8px; right: 8px; background: rgba(15, 23, 42, 0.8); color: #FFFFFF; font-size: 0.725rem; font-weight: 700; padding: 4px 10px; border-radius: 6px; text-decoration: none; border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(6px); display: inline-flex; align-items: center; gap: 0.3rem;" title="Abrir imagen en tamaño completo">
+                                    <span>🔍</span> Ver completo
+                                </a>
+                            </div>
+                        </div>
+                    </section>
+
+                    <hr class="event-section-divider detail-order-8">
+                @endif
+
                 <!-- Sección: Detalles del Evento (Columna Izquierda Principal) -->
                 <section class="event-info-block animate-fade-in detail-order-9">
                     <div class="info-block-header">
@@ -367,6 +389,15 @@
         </div>
     </div>
 
+    <!-- FORMULARIO OCULTO PARA NAVEGACIÓN DIRECTA A LA PÁGINA DE CHECKOUT -->
+    <form id="formGoToCheckout" action="{{ route('web.checkout') }}" method="POST" style="display: none;">
+        @csrf
+        <input type="hidden" name="event_id" value="{{ $event['id'] ?? '' }}">
+        <input type="hidden" name="event_slug" value="{{ $event['slug'] ?? '' }}">
+        <input type="hidden" name="date_selected" id="hiddenCheckoutDate" value="">
+        <input type="hidden" name="tickets" id="hiddenCheckoutTickets" value="">
+    </form>
+
     <!-- MODAL DE MAPA (UBICACIÓN Y RECINTO) -->
     <div class="auth-modal-overlay" id="mapModal">
         <div class="auth-modal-split-container" style="grid-template-columns: 1fr; max-width: 720px; padding: 2rem;">
@@ -388,13 +419,24 @@
 
 @push('scripts')
     <script>
+        // Variables globales del carrito
+        let currentGrandTotal = 0;
+        let selectedTicketsArray = [];
+        let currentSelectedDate = '';
+
         document.addEventListener('DOMContentLoaded', function () {
             // 1. Selector Dinámico de Fecha y Hora
             const dateCards = document.querySelectorAll('.date-select-card');
+            if (dateCards.length > 0) {
+                dateCards[0].classList.add('selected');
+                currentSelectedDate = dateCards[0].querySelector('.date-select-day')?.textContent || '';
+            }
+
             dateCards.forEach(card => {
                 card.addEventListener('click', function () {
                     dateCards.forEach(c => c.classList.remove('selected'));
                     this.classList.add('selected');
+                    currentSelectedDate = this.querySelector('.date-select-day')?.textContent || '';
                 });
             });
 
@@ -403,15 +445,28 @@
             const totalPriceDisplay = document.getElementById('totalPriceDisplay');
 
             function recalculateTotal() {
-                let grandTotal = 0;
+                currentGrandTotal = 0;
+                selectedTicketsArray = [];
+
                 ticketRows.forEach(row => {
                     const price = parseFloat(row.getAttribute('data-price')) || 0;
+                    const name = row.querySelector('.ticket-name')?.textContent.replace('🎟️', '').trim() || 'Entrada';
                     const countEl = row.querySelector('.ticket-count-val');
                     const qty = parseInt(countEl ? countEl.textContent : 0) || 0;
-                    grandTotal += price * qty;
+
+                    if (qty > 0) {
+                        currentGrandTotal += price * qty;
+                        selectedTicketsArray.push({
+                            name: name,
+                            price: price,
+                            quantity: qty,
+                            subtotal: price * qty
+                        });
+                    }
                 });
+
                 if (totalPriceDisplay) {
-                    totalPriceDisplay.textContent = 'S/ ' + grandTotal.toFixed(2);
+                    totalPriceDisplay.textContent = 'S/ ' + currentGrandTotal.toFixed(2);
                 }
             }
 
@@ -471,134 +526,26 @@
                 });
             }
 
-            // 3. Biblioteca de Países, Ciudades y Códigos Telefónicos Dinámicos
-            const countryData = {
-                'PE': { phoneCode: '+51', cities: ['Cusco, Cusco, Perú', 'Lima, Lima, Perú', 'Arequipa, Arequipa, Perú', 'Trujillo, La Libertad, Perú', 'Chiclayo, Lambayeque, Perú', 'Piura, Piura, Perú', 'Iquitos, Loreto, Perú', 'Huancayo, Junín, Perú', 'Tacna, Tacna, Perú', 'Puno, Puno, Perú'] },
-                'CL': { phoneCode: '+56', cities: ['Santiago, Región Metropolitana', 'Valparaíso, Valparaíso', 'Concepción, Biobío', 'La Serena, Coquimbo', 'Antofagasta, Antofagasta', 'Temuco, Araucanía'] },
-                'CO': { phoneCode: '+57', cities: ['Bogotá, Distrito Capital', 'Medellín, Antioquia', 'Cali, Valle del Cauca', 'Barranquilla, Atlántico', 'Cartagena, Bolívar', 'Bucaramanga, Santander'] },
-                'AR': { phoneCode: '+54', cities: ['Buenos Aires, Capital Federal', 'Córdoba, Córdoba', 'Rosario, Santa Fe', 'Mendoza, Mendoza', 'La Plata, Buenos Aires'] },
-                'MX': { phoneCode: '+52', cities: ['Ciudad de México, CDMX', 'Guadalajara, Jalisco', 'Monterrey, Nuevo León', 'Puebla, Puebla', 'Tijuana, Baja California'] },
-                'EC': { phoneCode: '+593', cities: ['Quito, Pichincha', 'Guayaquil, Guayas', 'Cuenca, Azuay', 'Santo Domingo, Santo Domingo', 'Machala, El Oro'] },
-                'BO': { phoneCode: '+591', cities: ['La Paz, La Paz', 'Santa Cruz de la Sierra, Santa Cruz', 'Cochabamba, Cochabamba', 'Sucre, Chuquisaca'] },
-                'ES': { phoneCode: '+34', cities: ['Madrid, Comunidad de Madrid', 'Barcelona, Cataluña', 'Valencia, Comunidad Valenciana', 'Sevilla, Andalucía'] },
-                'US': { phoneCode: '+1', cities: ['Nueva York, NY', 'Los Ángeles, CA', 'Miami, FL', 'Chicago, IL', 'Houston, TX'] }
-            };
-
-            const selectCountry = document.getElementById('selectCountry');
-            const selectCity = document.getElementById('selectCity');
-            const selectPhoneCode = document.getElementById('selectPhoneCode');
-
-            function updateCountryCitiesAndPhone(countryCode) {
-                const data = countryData[countryCode] || countryData['PE'];
-
-                if (selectPhoneCode) selectPhoneCode.value = data.phoneCode;
-
-                if (selectCity) {
-                    selectCity.innerHTML = '';
-                    data.cities.forEach(city => {
-                        const opt = document.createElement('option');
-                        opt.value = city;
-                        opt.textContent = city;
-                        selectCity.appendChild(opt);
-                    });
-                }
-            }
-
-            if (selectCountry) {
-                updateCountryCitiesAndPhone('PE');
-                selectCountry.addEventListener('change', function () {
-                    updateCountryCitiesAndPhone(this.value);
-                });
-            }
-
-            // 4. Modal Interactivo Auth
-            const authModal = document.getElementById('authModal');
+            // 4. Redirección Directa a la Página de Checkout
             const btnOpenAuthModal = document.getElementById('btnOpenAuthModal');
-            const btnCloseAuthModal = document.getElementById('btnCloseAuthModal');
-            const tabBtnLogin = document.getElementById('tabBtnLogin');
-            const tabBtnRegister = document.getElementById('tabBtnRegister');
-            const formLogin = document.getElementById('formLogin');
-            const formRegister = document.getElementById('formRegister');
-            const authModalTitleText = document.getElementById('authModalTitleText');
-            const authModalSubtitleText = document.getElementById('authModalSubtitleText');
+            const formGoToCheckout = document.getElementById('formGoToCheckout');
 
-            const toggleRegPass = document.getElementById('toggleRegPass');
-            const inputRegPass = document.getElementById('inputRegPass');
-            const toggleLoginPass = document.getElementById('toggleLoginPass');
-            const inputLoginPass = document.getElementById('inputLoginPass');
-
-            if (btnOpenAuthModal && authModal) {
-                btnOpenAuthModal.addEventListener('click', function () {
-                    authModal.classList.add('active');
-                });
-            }
-
-            if (btnCloseAuthModal && authModal) {
-                btnCloseAuthModal.addEventListener('click', function () {
-                    authModal.classList.remove('active');
-                });
-            }
-
-            if (authModal) {
-                authModal.addEventListener('click', function (e) {
-                    if (e.target === authModal) {
-                        authModal.classList.remove('active');
-                    }
-                });
-            }
-
-            if (toggleRegPass && inputRegPass) {
-                toggleRegPass.addEventListener('click', function () {
-                    inputRegPass.type = inputRegPass.type === 'password' ? 'text' : 'password';
-                });
-            }
-
-            if (toggleLoginPass && inputLoginPass) {
-                toggleLoginPass.addEventListener('click', function () {
-                    inputLoginPass.type = inputLoginPass.type === 'password' ? 'text' : 'password';
-                });
-            }
-
-            if (tabBtnLogin && tabBtnRegister) {
-                tabBtnLogin.addEventListener('click', function () {
-                    tabBtnLogin.classList.add('active');
-                    tabBtnRegister.classList.remove('active');
-                    formLogin.classList.add('active');
-                    formRegister.classList.remove('active');
-                    if (authModalTitleText) authModalTitleText.textContent = 'Iniciar Sesión';
-                    if (authModalSubtitleText) authModalSubtitleText.textContent = 'Ingresa con tu cuenta para continuar con tu compra.';
-                });
-
-                tabBtnRegister.addEventListener('click', function () {
-                    tabBtnRegister.classList.add('active');
-                    tabBtnLogin.classList.remove('active');
-                    formRegister.classList.add('active');
-                    formLogin.classList.remove('active');
-                    if (authModalTitleText) authModalTitleText.textContent = 'Regístrate';
-                    if (authModalSubtitleText) authModalSubtitleText.textContent = 'Por favor, ingresa tus datos para crear tu cuenta.';
-                });
-            }
-
-            // 5. Toggle Ver Más / Ver Menos para Detalles del Evento
-            const btnToggleDetails = document.getElementById('btnToggleDetails');
-            const extraParagraphs = document.querySelectorAll('.details-extra-paragraph');
-            const toggleDetailsText = document.getElementById('toggleDetailsText');
-            const toggleDetailsIcon = document.getElementById('toggleDetailsIcon');
-
-            if (btnToggleDetails) {
-                let isExpanded = false;
-                btnToggleDetails.addEventListener('click', function (e) {
+            if (btnOpenAuthModal && formGoToCheckout) {
+                btnOpenAuthModal.addEventListener('click', function (e) {
                     e.preventDefault();
-                    isExpanded = !isExpanded;
-                    extraParagraphs.forEach(p => {
-                        p.style.display = isExpanded ? 'block' : 'none';
-                    });
-                    if (toggleDetailsText) toggleDetailsText.textContent = isExpanded ? 'Ver menos' : 'Ver más';
-                    if (toggleDetailsIcon) toggleDetailsIcon.textContent = isExpanded ? '↑' : '➔';
+
+                    if (currentGrandTotal <= 0 || selectedTicketsArray.length === 0) {
+                        alert('⚠️ Por favor, selecciona al menos una (1) entrada para continuar con la compra.');
+                        return;
+                    }
+
+                    document.getElementById('hiddenCheckoutDate').value = currentSelectedDate || "Fecha Oficial";
+                    document.getElementById('hiddenCheckoutTickets').value = JSON.stringify(selectedTicketsArray);
+                    formGoToCheckout.submit();
                 });
             }
 
-            // 6. Modal de Mapa (Ubicación y Recinto)
+            // 5. Modal de Mapa (Ubicación y Recinto)
             const mapModal = document.getElementById('mapModal');
             const btnOpenMapModal = document.getElementById('btnOpenMapModal');
             const btnCloseMapModal = document.getElementById('btnCloseMapModal');
@@ -621,6 +568,25 @@
                     if (e.target === mapModal) {
                         mapModal.classList.remove('active');
                     }
+                });
+            }
+
+            // 6. Toggle Ver Más / Ver Menos para Detalles del Evento
+            const btnToggleDetails = document.getElementById('btnToggleDetails');
+            const extraParagraphs = document.querySelectorAll('.details-extra-paragraph');
+            const toggleDetailsText = document.getElementById('toggleDetailsText');
+            const toggleDetailsIcon = document.getElementById('toggleDetailsIcon');
+
+            if (btnToggleDetails) {
+                let isExpanded = false;
+                btnToggleDetails.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    isExpanded = !isExpanded;
+                    extraParagraphs.forEach(p => {
+                        p.style.display = isExpanded ? 'block' : 'none';
+                    });
+                    if (toggleDetailsText) toggleDetailsText.textContent = isExpanded ? 'Ver menos' : 'Ver más';
+                    if (toggleDetailsIcon) toggleDetailsIcon.textContent = isExpanded ? '↑' : '➔';
                 });
             }
         });
