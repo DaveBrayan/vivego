@@ -403,8 +403,8 @@
 
         <div class="dash-nav-section-title" style="margin-top: 1.5rem;">INFORMACIÓN EMPRESARIAL</div>
         <ul class="dash-nav-list">
-            <li class="dash-nav-item {{ request()->routeIs('web.customers*') ? 'active' : '' }}">
-                <a href="{{ route('web.customers') }}" class="dash-nav-link">
+            <li class="dash-nav-item {{ (request()->routeIs('web.customers*') || request()->is('admin/clientes*')) ? 'active' : '' }}">
+                <a href="{{ \Illuminate\Support\Facades\Route::has('web.customers') ? route('web.customers') : url('/admin/clientes') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">👥</span>
                     <span class="dash-nav-text">Clientes</span>
                 </a>
