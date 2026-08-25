@@ -923,6 +923,17 @@ class CheckoutController extends Controller
             ]);
         }
 
+        // Enviar Correo Electrónico Automático con Boletos y Recibo
+        if (!empty($buyerEmail) && filter_var($buyerEmail, FILTER_VALIDATE_EMAIL)) {
+            try {
+                $customPdfBase64 = $request->input('ticket_pdf_base64');
+                \Illuminate\Support\Facades\Mail::to($buyerEmail)->send(new \App\Mail\TicketPurchaseMail($sale, $tempPassword, $isNewUser, $customPdfBase64));
+                \Illuminate\Support\Facades\Log::info('Correo de confirmación de cortesía enviado exitosamente a: ' . $buyerEmail);
+            } catch (\Throwable $mailError) {
+                \Illuminate\Support\Facades\Log::warning('No se pudo enviar el correo de cortesía (verifique configuración SMTP): ' . $mailError->getMessage());
+            }
+        }
+
         // Limpiar carrito en sesión
         session()->forget(['checkout_cart_' . $event->id, 'checkout_date_' . $event->id]);
 

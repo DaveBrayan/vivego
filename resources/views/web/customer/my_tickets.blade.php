@@ -221,8 +221,9 @@
                                             <line x1="12" y1="15" x2="12" y2="3"></line>
                                         </svg>
                                     </button>
-                                    <button type="button" onclick="emailClientTicketPdf(this)" data-sale-payload="{{ base64_encode(json_encode($sale)) }}" style="width: 100%; border: 1.5px solid #CBD5E1; cursor: pointer; box-sizing: border-box; background: #F8FAFC; color: #0F172A; text-align: center; padding: 0.65rem 1rem; font-size: 0.85rem; font-weight: 800; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; transition: all 0.15s;">
-                                        <span>📧 Enviar a mi Correo</span>
+                                    <button type="button" disabled style="width: 100%; border: 1.5px dashed #CBD5E1; cursor: not-allowed; box-sizing: border-box; background: #F8FAFC; color: #94A3B8; text-align: center; padding: 0.65rem 1rem; font-size: 0.85rem; font-weight: 800; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; opacity: 0.85;" title="La opción de mejorar entrada / upgrade estará disponible próximamente">
+                                        <span>⭐ Mejorar mi Entrada</span>
+                                        <span style="font-size: 0.65rem; background: #E2E8F0; color: #64748B; padding: 0.15rem 0.45rem; border-radius: 6px; font-weight: 800; text-transform: uppercase;">Bloqueado</span>
                                     </button>
                                 @endif
                             </div>
