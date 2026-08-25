@@ -307,7 +307,7 @@
                             </div>
                         </div>
 
-                        <form class="admin-modal-form" onsubmit="event.preventDefault(); goToStep(2);">
+                        <form class="admin-modal-form" novalidate onsubmit="event.preventDefault(); goToStep(2);">
                             
                             <div style="display: grid; grid-template-columns: 480px 1fr; gap: 1.75rem; align-items: stretch; margin-bottom: 1.75rem;" class="step1-top-grid">
                                 
@@ -629,7 +629,7 @@
                             </button>
                         </div>
 
-                        <form class="admin-modal-form" onsubmit="event.preventDefault(); goToStep(3);">
+                        <form class="admin-modal-form" novalidate onsubmit="event.preventDefault(); goToStep(3);">
                             <div style="background: rgba(255,255,255,0.02); border: 1.5px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 1.25rem; margin-bottom: 1.75rem;">
                                 <table class="admin-table" style="margin: 0; width: 100%;">
                                     <thead>
@@ -696,7 +696,7 @@
                                                         <div class="zone-presale-inputs-grid" style="display: grid; grid-template-columns: 1fr 1.2fr 1.5fr 1.5fr 1.2fr; gap: 0.75rem; opacity: {{ $hasPresale ? '1' : '0.4' }}; pointer-events: {{ $hasPresale ? 'auto' : 'none' }};">
                                                             <div>
                                                                 <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">% DESCUENTO</label>
-                                                                <input type="number" class="form-input-custom zone-presale-discount" value="{{ $pDiscount }}" min="1" max="99" style="font-size: 0.825rem; padding: 0.45rem;" oninput="updateZonePresaleCalc(this)">
+                                                                <input type="number" class="form-input-custom zone-presale-discount" value="{{ $pDiscount }}" min="0" max="99" style="font-size: 0.825rem; padding: 0.45rem;" oninput="updateZonePresaleCalc(this)">
                                                             </div>
                                                             <div>
                                                                 <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">PRECIO PREVENTA (S/)</label>
@@ -712,7 +712,7 @@
                                                             </div>
                                                             <div>
                                                                 <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">STOCK PREVENTA</label>
-                                                                <input type="number" class="form-input-custom zone-presale-stock" value="{{ $pStock }}" min="1" style="font-size: 0.825rem; padding: 0.45rem;" placeholder="Hasta agotar">
+                                                                <input type="number" class="form-input-custom zone-presale-stock" value="{{ $pStock }}" min="0" style="font-size: 0.825rem; padding: 0.45rem;" placeholder="Hasta agotar">
                                                             </div>
                                                         </div>
                                                     </div>
@@ -2460,7 +2460,7 @@
                         <div class="zone-presale-inputs-grid" style="display: grid; grid-template-columns: 1fr 1.2fr 1.5fr 1.5fr 1.2fr; gap: 0.75rem; opacity: 0.4; pointer-events: none;">
                             <div>
                                 <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">% DESCUENTO</label>
-                                <input type="number" class="form-input-custom zone-presale-discount" value="20" min="1" max="99" style="font-size: 0.825rem; padding: 0.45rem;" oninput="updateZonePresaleCalc(this)">
+                                <input type="number" class="form-input-custom zone-presale-discount" value="20" min="0" max="99" style="font-size: 0.825rem; padding: 0.45rem;" oninput="updateZonePresaleCalc(this)">
                             </div>
                             <div>
                                 <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">PRECIO PREVENTA (S/)</label>
@@ -2476,7 +2476,7 @@
                             </div>
                             <div>
                                 <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">STOCK PREVENTA</label>
-                                <input type="number" class="form-input-custom zone-presale-stock" value="50" min="1" style="font-size: 0.825rem; padding: 0.45rem;" placeholder="Hasta agotar">
+                                <input type="number" class="form-input-custom zone-presale-stock" value="50" min="0" style="font-size: 0.825rem; padding: 0.45rem;" placeholder="Hasta agotar">
                             </div>
                         </div>
                     </div>
