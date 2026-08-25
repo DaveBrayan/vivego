@@ -213,6 +213,9 @@ class EventController extends Controller
             'company_name' => 'nullable|string|max:255',
             'banner_image' => 'nullable|string',
             'reference_image' => 'nullable|string',
+            'layout_template' => 'nullable|string|in:template_1,template_2',
+            'background_image' => 'nullable|string',
+            'artist_image' => 'nullable|string',
             'event_date' => 'nullable|date',
             'event_time' => 'nullable|string|max:20',
             'venue_name' => 'nullable|string|max:255',
@@ -228,6 +231,8 @@ class EventController extends Controller
 
         $bannerImage = $this->saveBase64Image($validated['banner_image'] ?? null, 'events', 'event_banner');
         $referenceImage = $this->saveBase64Image($validated['reference_image'] ?? null, 'events', 'reference_image');
+        $backgroundImage = $this->saveBase64Image($validated['background_image'] ?? null, 'events', 'bg_immersive');
+        $artistImage = $this->saveBase64Image($validated['artist_image'] ?? null, 'events', 'artist_cutout');
 
         $slug = Str::slug($validated['title']) . '-' . rand(100, 999);
 
@@ -238,6 +243,9 @@ class EventController extends Controller
             'company_name' => $validated['company_name'] ?? 'Vive Go',
             'banner_image' => $bannerImage,
             'reference_image' => $referenceImage,
+            'layout_template' => $validated['layout_template'] ?? 'template_1',
+            'background_image' => $backgroundImage,
+            'artist_image' => $artistImage,
             'event_date' => $validated['event_date'] ?? null,
             'event_time' => $validated['event_time'] ?? '18:00',
             'venue_name' => $validated['venue_name'] ?? 'Complejo San Luis',
@@ -335,6 +343,10 @@ class EventController extends Controller
                 'category_name' => 'Conciertos',
                 'company_name' => 'PRODUCCIONES VIVE GO S.A.C.',
                 'banner_image' => 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=600&q=80',
+                'reference_image' => null,
+                'layout_template' => 'template_1',
+                'background_image' => null,
+                'artist_image' => null,
                 'event_date' => '2026-11-15',
                 'event_time' => '20:00',
                 'venue_name' => 'Estadio Nacional de Lima',
@@ -389,6 +401,9 @@ class EventController extends Controller
                 'company_name' => $eventModel->company_name ?? 'Vive Go',
                 'banner_image' => $eventModel->banner_image,
                 'reference_image' => $eventModel->reference_image,
+                'layout_template' => $eventModel->layout_template ?? 'template_1',
+                'background_image' => $eventModel->background_image,
+                'artist_image' => $eventModel->artist_image,
                 'event_date' => $dateVal,
                 'event_time' => $eventModel->event_time ?? '18:00',
                 'venue_name' => $eventModel->venue_name ?? '',
@@ -442,6 +457,9 @@ class EventController extends Controller
             'company_name' => 'nullable|string|max:255',
             'banner_image' => 'nullable|string',
             'reference_image' => 'nullable|string',
+            'layout_template' => 'nullable|string|in:template_1,template_2',
+            'background_image' => 'nullable|string',
+            'artist_image' => 'nullable|string',
             'event_date' => 'nullable|date',
             'event_time' => 'nullable|string|max:20',
             'venue_name' => 'nullable|string|max:255',
@@ -461,6 +479,8 @@ class EventController extends Controller
         if (!$event) {
             $bannerImage = $this->saveBase64Image($validated['banner_image'] ?? null, 'events', 'event_banner');
             $referenceImage = $this->saveBase64Image($validated['reference_image'] ?? null, 'events', 'reference_image');
+            $backgroundImage = $this->saveBase64Image($validated['background_image'] ?? null, 'events', 'bg_immersive');
+            $artistImage = $this->saveBase64Image($validated['artist_image'] ?? null, 'events', 'artist_cutout');
             $slug = Str::slug($validated['title']) . '-' . rand(100, 999);
             $event = Event::create([
                 'title' => $validated['title'],
@@ -469,6 +489,9 @@ class EventController extends Controller
                 'company_name' => $validated['company_name'] ?? 'Vive Go',
                 'banner_image' => $bannerImage,
                 'reference_image' => $referenceImage,
+                'layout_template' => $validated['layout_template'] ?? 'template_1',
+                'background_image' => $backgroundImage,
+                'artist_image' => $artistImage,
                 'event_date' => $validated['event_date'] ?? null,
                 'event_time' => $validated['event_time'] ?? '18:00',
                 'venue_name' => $validated['venue_name'] ?? 'Complejo San Luis',
@@ -485,6 +508,8 @@ class EventController extends Controller
         } else {
             $bannerImage = $this->saveBase64Image($validated['banner_image'] ?? $event->banner_image, 'events', 'event_banner');
             $referenceImage = array_key_exists('reference_image', $validated) ? $this->saveBase64Image($validated['reference_image'], 'events', 'reference_image') : $event->reference_image;
+            $backgroundImage = array_key_exists('background_image', $validated) ? $this->saveBase64Image($validated['background_image'], 'events', 'bg_immersive') : $event->background_image;
+            $artistImage = array_key_exists('artist_image', $validated) ? $this->saveBase64Image($validated['artist_image'], 'events', 'artist_cutout') : $event->artist_image;
 
             $event->update([
                 'title' => $validated['title'],
@@ -493,6 +518,9 @@ class EventController extends Controller
                 'company_name' => $validated['company_name'] ?? $event->company_name,
                 'banner_image' => $bannerImage,
                 'reference_image' => $referenceImage,
+                'layout_template' => $validated['layout_template'] ?? $event->layout_template ?? 'template_1',
+                'background_image' => $backgroundImage,
+                'artist_image' => $artistImage,
                 'event_date' => $validated['event_date'] ?? $event->event_date,
                 'event_time' => $validated['event_time'] ?? $event->event_time,
                 'venue_name' => $validated['venue_name'] ?? $event->venue_name,

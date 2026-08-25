@@ -158,6 +158,9 @@ class EventDetailController extends Controller
                 'advisory' => 'Apto para todo público',
                 'banner_image' => $bannerImage,
                 'reference_image' => $eventModel->reference_image,
+                'layout_template' => $eventModel->layout_template ?? 'template_1',
+                'background_image' => $eventModel->background_image,
+                'artist_image' => $eventModel->artist_image,
                 'dates' => [
                     ['id' => 1, 'date' => $formattedDate, 'time' => $timeDisplay, 'selected' => true],
                 ],

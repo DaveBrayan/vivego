@@ -427,6 +427,127 @@
                                 </div>
                             </div>
 
+                            <!-- SELECCIÓN DE PLANTILLA DE PRESENTACIÓN WEB (LANDING PAGE DEL EVENTO) -->
+                            @php
+                                $currentLayout = $eventData['layout_template'] ?? 'template_1';
+                                $isTpl2 = $currentLayout === 'template_2';
+                            @endphp
+                            <div class="form-group-custom" style="margin-bottom: 1.75rem; background: rgba(255,255,255,0.02); border: 1.5px solid rgba(255,255,255,0.12); padding: 1.35rem; border-radius: 18px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                                    <div>
+                                        <label class="form-label-custom" style="margin: 0; font-size: 1.05rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
+                                            <span>🎨</span> Plantilla de Presentación Web (Detalle del Evento) <span class="required-star">*</span>
+                                        </label>
+                                        <p style="margin: 0.2rem 0 0 0; font-size: 0.8rem; color: #94A3B8;">
+                                            Elige cómo se visualizará la página pública del evento para los compradores.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;" id="layoutTemplateGrid">
+                                    <!-- Plantilla 1 -->
+                                    <label id="labelTemplate1" style="border: 2px solid {{ !$isTpl2 ? 'var(--color-primary-orange)' : 'rgba(255,255,255,0.12)' }}; background: {{ !$isTpl2 ? 'rgba(255, 85, 0, 0.08)' : 'rgba(255,255,255,0.02)' }}; padding: 1.25rem; border-radius: 16px; cursor: pointer; transition: all 0.25s ease; display: flex; flex-direction: column; gap: 0.75rem;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                                            <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                                <input type="radio" name="layout_template" id="tplOption1" value="template_1" {{ !$isTpl2 ? 'checked' : '' }} style="accent-color: #FF5500; width: 20px; height: 20px;" onchange="toggleLayoutTemplateFields()">
+                                                <strong style="font-size: 1rem; color: #FFFFFF;">Plantilla 1: Estándar</strong>
+                                            </div>
+                                            <span class="dash-badge-custom badge-green" style="font-size: 0.75rem;">Clásica</span>
+                                        </div>
+                                        <p style="font-size: 0.8rem; color: #94A3B8; margin: 0; line-height: 1.4;">
+                                            Diseño estándar con Banner 16:9, ubicación, mapa de zonas y tabla de compra lateral.
+                                        </p>
+                                    </label>
+
+                                    <!-- Plantilla 2 -->
+                                    <label id="labelTemplate2" style="border: 2px solid {{ $isTpl2 ? 'var(--color-primary-orange)' : 'rgba(255,255,255,0.12)' }}; background: {{ $isTpl2 ? 'rgba(255, 85, 0, 0.08)' : 'rgba(255,255,255,0.02)' }}; padding: 1.25rem; border-radius: 16px; cursor: pointer; transition: all 0.25s ease; display: flex; flex-direction: column; gap: 0.75rem;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                                            <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                                <input type="radio" name="layout_template" id="tplOption2" value="template_2" {{ $isTpl2 ? 'checked' : '' }} style="accent-color: #FF5500; width: 20px; height: 20px;" onchange="toggleLayoutTemplateFields()">
+                                                <strong style="font-size: 1rem; color: #FFFFFF;">Plantilla 2: Inmersiva (Artista & Fondo Fijo)</strong>
+                                            </div>
+                                            <span class="dash-badge-custom badge-blue" style="font-size: 0.75rem;">✨ Parallax Pro</span>
+                                        </div>
+                                        <p style="font-size: 0.8rem; color: #94A3B8; margin: 0; line-height: 1.4;">
+                                            Fondo de pantalla completo estático + Artista en hero que baja con el scroll + Mapa de recinto y compra directa.
+                                        </p>
+                                    </label>
+                                </div>
+
+                                <!-- CAMPOS ADICIONALES EXCLUSIVOS DE PLANTILLA 2 -->
+                                <div id="template2ExtraFields" style="display: {{ $isTpl2 ? 'block' : 'none' }}; margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px dashed rgba(255,255,255,0.15);">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                                        
+                                        <!-- 1. Imagen de Fondo Estático / Fullscreen -->
+                                        <div style="background: rgba(15,23,42,0.6); border: 1.5px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 1.25rem;">
+                                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.65rem;">
+                                                <label class="form-label-custom" style="margin: 0; font-size: 0.9rem; font-weight: 800; color: #FFFFFF;">
+                                                    🌌 Imagen de Fondo Fijo (Background)
+                                                </label>
+                                                <span class="dash-badge-custom badge-blue" style="font-size: 0.725rem;">1920 x 1080 px</span>
+                                            </div>
+                                            <p style="font-size: 0.775rem; color: #94A3B8; margin: 0 0 0.85rem 0;">
+                                                Esta imagen se mantendrá estática en todo el fondo de la pantalla al hacer scroll.
+                                            </p>
+
+                                            <input type="hidden" id="background_image" value="{{ $eventData['background_image'] ?? '' }}">
+                                            <input type="file" id="bgFileInput" accept="image/*" style="display: none;" onchange="handleBgImageUpload(this)">
+
+                                            <div id="bgPlaceholderBox" style="border: 1.5px dashed rgba(255,255,255,0.15); background: rgba(0,0,0,0.4); border-radius: 12px; padding: 1.5rem 1rem; text-align: center; cursor: pointer; display: {{ !empty($eventData['background_image']) ? 'none' : 'block' }};" onclick="openMediaManager('background_image');">
+                                                <span style="font-size: 1.8rem; display: block; margin-bottom: 0.35rem;">🖼️</span>
+                                                <strong style="color: #E2E8F0; font-size: 0.85rem; display: block;">Subir Fondo de Pantalla</strong>
+                                                <div style="display: inline-flex; gap: 0.5rem; margin-top: 0.65rem;" onclick="event.stopPropagation();">
+                                                    <button type="button" class="btn btn-primary btn-save-settings" style="font-size: 0.75rem; padding: 0.45rem 0.75rem;" onclick="openMediaManager('background_image');">Galería</button>
+                                                    <button type="button" class="btn btn-cancel-custom" style="font-size: 0.75rem; padding: 0.45rem 0.75rem;" onclick="document.getElementById('bgFileInput').click();">Subir PC</button>
+                                                </div>
+                                            </div>
+
+                                            <div id="bgPreviewContainer" style="display: {{ !empty($eventData['background_image']) ? 'block' : 'none' }}; position: relative; border-radius: 12px; overflow: hidden; border: 1.5px solid rgba(255,255,255,0.2); background: #000; text-align: center; padding: 0.75rem;">
+                                                <img id="bgPreviewImg" src="{{ $eventData['background_image'] ?? '' }}" alt="Fondo" style="max-height: 160px; width: 100%; object-fit: cover; border-radius: 8px;">
+                                                <div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 0.65rem;">
+                                                    <button type="button" class="btn btn-primary btn-save-settings" style="font-size: 0.75rem; padding: 0.35rem 0.65rem;" onclick="openMediaManager('background_image');">Cambiar</button>
+                                                    <button type="button" class="btn btn-danger" style="background: rgba(239,68,68,0.2); border: 1px solid #EF4444; color: #FCA5A5; font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px;" onclick="removeBgImage()">Quitar</button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- 2. Imagen del Artista / Personaje (Silueta / PNG) -->
+                                        <div style="background: rgba(15,23,42,0.6); border: 1.5px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 1.25rem;">
+                                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.65rem;">
+                                                <label class="form-label-custom" style="margin: 0; font-size: 0.9rem; font-weight: 800; color: #FFFFFF;">
+                                                    🎤 Imagen del Artista (Recorte / PNG)
+                                                </label>
+                                                <span class="dash-badge-custom badge-green" style="font-size: 0.725rem;">PNG Transparente</span>
+                                            </div>
+                                            <p style="font-size: 0.775rem; color: #94A3B8; margin: 0 0 0.85rem 0;">
+                                                Se mostrará destacada en la cabecera y bajará dinámicamente con el scroll.
+                                            </p>
+
+                                            <input type="hidden" id="artist_image" value="{{ $eventData['artist_image'] ?? '' }}">
+                                            <input type="file" id="artistFileInput" accept="image/*" style="display: none;" onchange="handleArtistImageUpload(this)">
+
+                                            <div id="artistPlaceholderBox" style="border: 1.5px dashed rgba(255,255,255,0.15); background: rgba(0,0,0,0.4); border-radius: 12px; padding: 1.5rem 1rem; text-align: center; cursor: pointer; display: {{ !empty($eventData['artist_image']) ? 'none' : 'block' }};" onclick="openMediaManager('artist_image');">
+                                                <span style="font-size: 1.8rem; display: block; margin-bottom: 0.35rem;">👤</span>
+                                                <strong style="color: #E2E8F0; font-size: 0.85rem; display: block;">Subir Imagen de Artista</strong>
+                                                <div style="display: inline-flex; gap: 0.5rem; margin-top: 0.65rem;" onclick="event.stopPropagation();">
+                                                    <button type="button" class="btn btn-primary btn-save-settings" style="font-size: 0.75rem; padding: 0.45rem 0.75rem;" onclick="openMediaManager('artist_image');">Galería</button>
+                                                    <button type="button" class="btn btn-cancel-custom" style="font-size: 0.75rem; padding: 0.45rem 0.75rem;" onclick="document.getElementById('artistFileInput').click();">Subir PC</button>
+                                                </div>
+                                            </div>
+
+                                            <div id="artistPreviewContainer" style="display: {{ !empty($eventData['artist_image']) ? 'block' : 'none' }}; position: relative; border-radius: 12px; overflow: hidden; border: 1.5px solid rgba(255,255,255,0.2); background: #000; text-align: center; padding: 0.75rem;">
+                                                <img id="artistPreviewImg" src="{{ $eventData['artist_image'] ?? '' }}" alt="Artista" style="max-height: 160px; width: auto; max-width: 100%; object-fit: contain; border-radius: 8px;">
+                                                <div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 0.65rem;">
+                                                    <button type="button" class="btn btn-primary btn-save-settings" style="font-size: 0.75rem; padding: 0.35rem 0.65rem;" onclick="openMediaManager('artist_image');">Cambiar</button>
+                                                    <button type="button" class="btn btn-danger" style="background: rgba(239,68,68,0.2); border: 1px solid #EF4444; color: #FCA5A5; font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px;" onclick="removeArtistImage()">Quitar</button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+
                             <div style="margin-bottom: 1.75rem;">
                                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
                                     <label class="form-label-custom" style="margin: 0; font-size: 1rem; font-weight: 800;">
@@ -1057,6 +1178,99 @@
             const placeholder = document.getElementById('referencePlaceholderBox');
             const container = document.getElementById('referencePreviewContainer');
             const fileInput = document.getElementById('referenceFileInput');
+
+            if (preview) preview.src = '';
+            if (hidden) hidden.value = '';
+            if (fileInput) fileInput.value = '';
+            if (placeholder) placeholder.style.display = 'block';
+            if (container) container.style.display = 'none';
+        }
+
+        function toggleLayoutTemplateFields() {
+            const isTpl2 = document.getElementById('tplOption2')?.checked;
+            const extraFields = document.getElementById('template2ExtraFields');
+            const label1 = document.getElementById('labelTemplate1');
+            const label2 = document.getElementById('labelTemplate2');
+
+            if (isTpl2) {
+                if (extraFields) extraFields.style.display = 'block';
+                if (label2) {
+                    label2.style.borderColor = 'var(--color-primary-orange)';
+                    label2.style.background = 'rgba(255, 85, 0, 0.08)';
+                }
+                if (label1) {
+                    label1.style.borderColor = 'rgba(255,255,255,0.12)';
+                    label1.style.background = 'rgba(255,255,255,0.02)';
+                }
+            } else {
+                if (extraFields) extraFields.style.display = 'none';
+                if (label1) {
+                    label1.style.borderColor = 'var(--color-primary-orange)';
+                    label1.style.background = 'rgba(255, 85, 0, 0.08)';
+                }
+                if (label2) {
+                    label2.style.borderColor = 'rgba(255,255,255,0.12)';
+                    label2.style.background = 'rgba(255,255,255,0.02)';
+                }
+            }
+        }
+
+        function handleBgImageUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('bgPreviewImg');
+                    const hidden = document.getElementById('background_image');
+                    const placeholder = document.getElementById('bgPlaceholderBox');
+                    const container = document.getElementById('bgPreviewContainer');
+
+                    if (preview) preview.src = e.target.result;
+                    if (hidden) hidden.value = e.target.result;
+                    if (placeholder) placeholder.style.display = 'none';
+                    if (container) container.style.display = 'block';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removeBgImage() {
+            const preview = document.getElementById('bgPreviewImg');
+            const hidden = document.getElementById('background_image');
+            const placeholder = document.getElementById('bgPlaceholderBox');
+            const container = document.getElementById('bgPreviewContainer');
+            const fileInput = document.getElementById('bgFileInput');
+
+            if (preview) preview.src = '';
+            if (hidden) hidden.value = '';
+            if (fileInput) fileInput.value = '';
+            if (placeholder) placeholder.style.display = 'block';
+            if (container) container.style.display = 'none';
+        }
+
+        function handleArtistImageUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('artistPreviewImg');
+                    const hidden = document.getElementById('artist_image');
+                    const placeholder = document.getElementById('artistPlaceholderBox');
+                    const container = document.getElementById('artistPreviewContainer');
+
+                    if (preview) preview.src = e.target.result;
+                    if (hidden) hidden.value = e.target.result;
+                    if (placeholder) placeholder.style.display = 'none';
+                    if (container) container.style.display = 'block';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removeArtistImage() {
+            const preview = document.getElementById('artistPreviewImg');
+            const hidden = document.getElementById('artist_image');
+            const placeholder = document.getElementById('artistPlaceholderBox');
+            const container = document.getElementById('artistPreviewContainer');
+            const fileInput = document.getElementById('artistFileInput');
 
             if (preview) preview.src = '';
             if (hidden) hidden.value = '';
@@ -1743,6 +1957,10 @@
                 currentActiveUrl = document.getElementById('event_banner')?.value || document.getElementById('bannerPreviewImg')?.src;
             } else if (mediaContext === 'reference_image') {
                 currentActiveUrl = document.getElementById('reference_image')?.value || document.getElementById('referencePreviewImg')?.src;
+            } else if (mediaContext === 'background_image') {
+                currentActiveUrl = document.getElementById('background_image')?.value || document.getElementById('bgPreviewImg')?.src;
+            } else if (mediaContext === 'artist_image') {
+                currentActiveUrl = document.getElementById('artist_image')?.value || document.getElementById('artistPreviewImg')?.src;
             } else if (mediaContext === 'selected_element_image') {
                 if (selectedElementId) {
                     const el = certState.elements.find(x => x.id === selectedElementId);
@@ -1785,6 +2003,26 @@
                 const input = document.getElementById('reference_image');
                 const placeholder = document.getElementById('referencePlaceholderBox');
                 const container = document.getElementById('referencePreviewContainer');
+
+                if (preview) preview.src = url;
+                if (input) input.value = url;
+                if (placeholder) placeholder.style.display = 'none';
+                if (container) container.style.display = 'block';
+            } else if (mediaContext === 'background_image') {
+                const preview = document.getElementById('bgPreviewImg');
+                const input = document.getElementById('background_image');
+                const placeholder = document.getElementById('bgPlaceholderBox');
+                const container = document.getElementById('bgPreviewContainer');
+
+                if (preview) preview.src = url;
+                if (input) input.value = url;
+                if (placeholder) placeholder.style.display = 'none';
+                if (container) container.style.display = 'block';
+            } else if (mediaContext === 'artist_image') {
+                const preview = document.getElementById('artistPreviewImg');
+                const input = document.getElementById('artist_image');
+                const placeholder = document.getElementById('artistPlaceholderBox');
+                const container = document.getElementById('artistPreviewContainer');
 
                 if (preview) preview.src = url;
                 if (input) input.value = url;
@@ -2015,6 +2253,9 @@
                 company_name: document.getElementById('event_company').value,
                 banner_image: document.getElementById('event_banner').value,
                 reference_image: document.getElementById('reference_image')?.value || null,
+                layout_template: document.querySelector('input[name="layout_template"]:checked')?.value || 'template_1',
+                background_image: document.getElementById('background_image')?.value || null,
+                artist_image: document.getElementById('artist_image')?.value || null,
                 event_date: document.getElementById('event_date').value,
                 event_time: document.getElementById('event_time').value,
                 venue_name: document.getElementById('event_venue').value,
