@@ -70,6 +70,38 @@ class PaymentGateway extends Model
     }
 
     /**
+     * Obtener pasarela Culqi
+     */
+    public static function getCulqi(): self
+    {
+        return Cache::remember('payment_gateway_culqi', 3600, function () {
+            return static::firstOrCreate(
+                ['code' => 'culqi'],
+                [
+                    'name' => 'Culqi Perú',
+                    'description' => 'Pasarela oficial Culqi con soporte para Pagos con QR, Billeteras Móviles (Yape, Plin), Tarjetas de Crédito/Débito y PagoEfectivo.',
+                    'is_active' => false,
+                    'mode' => 'sandbox',
+                    'credentials' => [
+                        'public_key' => env('CULQI_PUBLIC_KEY', ''),
+                        'secret_key' => env('CULQI_SECRET_KEY', ''),
+                        'rsa_public_key' => env('CULQI_RSA_PUBLIC_KEY', ''),
+                        'rsa_id' => env('CULQI_RSA_ID', ''),
+                    ],
+                    'settings' => [
+                        'enable_cards' => true,
+                        'enable_qr_billeteras' => true,
+                        'enable_yape' => true,
+                        'enable_pagoefectivo' => true,
+                        'enable_cuotealo' => false,
+                        'currency' => 'PEN',
+                    ],
+                ]
+            );
+        });
+    }
+
+    /**
      * Obtiene el valor de una credencial específica
      */
     public function getCredential(string $key, mixed $default = null): mixed

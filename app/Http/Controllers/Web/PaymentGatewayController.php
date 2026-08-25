@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\PaymentGateway;
 use App\Models\Setting;
+use App\Services\CulqiService;
 use App\Services\IzipayService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -20,12 +21,14 @@ class PaymentGatewayController extends Controller
     {
         $settings = Setting::current();
         $izipay = PaymentGateway::getIzipay();
-        $otherGateways = PaymentGateway::where('code', '!=', 'izipay')->get();
+        $culqi = PaymentGateway::getCulqi();
+        $otherGateways = PaymentGateway::whereNotIn('code', ['izipay', 'culqi'])->get();
 
-        // Webhook URL calculada dinámicamente
+        // Webhook URLs calculadas dinámicamente
         $ipnUrl = url('/api/izipay/ipn');
+        $culqiWebhookUrl = url('/api/culqi/webhook');
 
-        return view('web.payment_methods', compact('settings', 'izipay', 'otherGateways', 'ipnUrl'));
+        return view('web.payment_methods', compact('settings', 'izipay', 'culqi', 'otherGateways', 'ipnUrl', 'culqiWebhookUrl'));
     }
 
     /**
@@ -74,8 +77,57 @@ class PaymentGatewayController extends Controller
 
         $izipay->save();
 
-        return redirect()->route('web.payment_methods')
+        return redirect()->route('web.payment_methods', ['tab' => 'izipay'])
             ->with('success', '¡La configuración de Izipay se ha guardado exitosamente en la base de datos!');
+    }
+
+    /**
+     * Actualiza la configuración de Culqi en la base de datos.
+     */
+    public function updateCulqi(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'is_active' => 'nullable|boolean',
+            'mode' => 'required|in:sandbox,production',
+            'public_key' => 'nullable|string|max:255',
+            'secret_key' => 'nullable|string|max:255',
+            'rsa_public_key' => 'nullable|string|max:1000',
+            'rsa_id' => 'nullable|string|max:255',
+            'enable_cards' => 'nullable|boolean',
+            'enable_qr_billeteras' => 'nullable|boolean',
+            'enable_yape' => 'nullable|boolean',
+            'enable_pagoefectivo' => 'nullable|boolean',
+            'enable_cuotealo' => 'nullable|boolean',
+        ]);
+
+        $culqi = PaymentGateway::getCulqi();
+
+        // Si la clave secreta viene vacía y ya teníamos una guardada, conservamos la anterior
+        $currentCreds = $culqi->credentials ?? [];
+        $secretKey = !empty($validated['secret_key']) ? $validated['secret_key'] : ($currentCreds['secret_key'] ?? '');
+
+        $culqi->is_active = $request->has('is_active');
+        $culqi->mode = $validated['mode'];
+        $culqi->credentials = [
+            'public_key' => trim($validated['public_key'] ?? ''),
+            'secret_key' => trim($secretKey),
+            'rsa_public_key' => trim($validated['rsa_public_key'] ?? ''),
+            'rsa_id' => trim($validated['rsa_id'] ?? ''),
+        ];
+
+        $culqi->settings = [
+            'enable_cards' => $request->has('enable_cards'),
+            'enable_qr_billeteras' => $request->has('enable_qr_billeteras'),
+            'enable_yape' => $request->has('enable_yape'),
+            'enable_pagoefectivo' => $request->has('enable_pagoefectivo'),
+            'enable_cuotealo' => $request->has('enable_cuotealo'),
+            'currency' => 'PEN',
+        ];
+
+        $culqi->save();
+
+        return redirect()->route('web.payment_methods', ['tab' => 'culqi'])
+            ->with('success', '¡La configuración de Culqi (QR & Tarjetas) se ha guardado exitosamente!');
     }
 
     /**
@@ -88,6 +140,19 @@ class PaymentGatewayController extends Controller
         $endpoint = $request->input('client_endpoint');
 
         $result = $izipayService->testConnection($username, $password, $endpoint);
+
+        return response()->json($result);
+    }
+
+    /**
+     * Prueba de conexión con la API de Culqi vía AJAX.
+     */
+    public function testCulqiConnection(Request $request, CulqiService $culqiService): JsonResponse
+    {
+        $secretKey = $request->input('secret_key');
+        $publicKey = $request->input('public_key');
+
+        $result = $culqiService->testConnection($secretKey, $publicKey);
 
         return response()->json($result);
     }

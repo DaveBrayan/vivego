@@ -54,6 +54,10 @@ Route::match(['get', 'post'], '/checkout', [CheckoutController::class, 'show'])-
 Route::get('/checkout/confirmacion/{sale}', [CheckoutController::class, 'confirmation'])->name('web.checkout.confirmation');
 Route::post('/checkout/izipay/iniciar', [CheckoutController::class, 'initiateIzipay'])->name('web.checkout.izipay_initiate');
 Route::post('/checkout/izipay/completar', [CheckoutController::class, 'completeIzipayPayment'])->name('web.checkout.izipay_complete');
+Route::post('/checkout/culqi/iniciar', [CheckoutController::class, 'initiateCulqi'])->name('web.checkout.culqi_initiate');
+Route::post('/checkout/culqi/completar', [CheckoutController::class, 'completeCulqiPayment'])->name('web.checkout.culqi_complete');
+Route::post('/checkout/culqi/consultar-orden', [CheckoutController::class, 'checkCulqiOrderStatus'])->name('web.checkout.culqi_order_status');
+Route::post('/api/culqi/webhook', [CheckoutController::class, 'culqiWebhook'])->name('api.culqi.webhook');
 
 // Rutas Protegidas de Administración y Panel de Control
 Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group(function () {
@@ -113,10 +117,12 @@ Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group
     Route::get('/admin/configuracion', [SettingsController::class, 'index'])->name('web.settings');
     Route::post('/admin/configuracion', [SettingsController::class, 'update'])->name('web.settings.update');
 
-    // Métodos de Pago & Pasarelas (Izipay, etc.)
+    // Métodos de Pago & Pasarelas (Izipay, Culqi, etc.)
     Route::get('/admin/metodos-pago', [PaymentGatewayController::class, 'index'])->name('web.payment_methods');
     Route::post('/admin/metodos-pago/izipay', [PaymentGatewayController::class, 'updateIzipay'])->name('web.payment_methods.update_izipay');
     Route::post('/admin/metodos-pago/izipay/test', [PaymentGatewayController::class, 'testIzipayConnection'])->name('web.payment_methods.test_izipay');
+    Route::post('/admin/metodos-pago/culqi', [PaymentGatewayController::class, 'updateCulqi'])->name('web.payment_methods.update_culqi');
+    Route::post('/admin/metodos-pago/culqi/test', [PaymentGatewayController::class, 'testCulqiConnection'])->name('web.payment_methods.test_culqi');
 
     // Información Empresarial: Compañías
     Route::get('/admin/compania', [CompanyController::class, 'index'])->name('web.companies');
@@ -140,36 +146,78 @@ Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group
 });
 
 // ==========================================================================
-// RUTAS DE OPTIMIZACIÓN WEB DIRECTA PARA SERVIDORES SIN ACCESO SSH / CPANEL
+// RUTAS DE OPTIMIZACIÓN Y MIGRACIONES WEB PARA SERVIDORES SIN SSH / CPANEL
 // ==========================================================================
 Route::get('/optimizar-sistema', function () {
     try {
         \Illuminate\Support\Facades\Artisan::call('optimize:clear');
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        $migrateOutput = \Illuminate\Support\Facades\Artisan::output();
+
         \Illuminate\Support\Facades\Artisan::call('config:cache');
         \Illuminate\Support\Facades\Artisan::call('route:cache');
         \Illuminate\Support\Facades\Artisan::call('view:cache');
 
         return response('
             <div style="font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; background: #0A0A10; display: flex; align-items: center; justify-content: center; padding: 1.5rem; color: #FFFFFF;">
-                <div style="background: #14141E; border: 1px solid rgba(255,85,0,0.3); padding: 2.5rem; border-radius: 20px; max-width: 520px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.6); text-align: center;">
+                <div style="background: #14141E; border: 1px solid rgba(255,85,0,0.3); padding: 2.5rem; border-radius: 20px; max-width: 600px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.6); text-align: center;">
                     <div style="font-size: 3rem; margin-bottom: 0.5rem;">⚡</div>
-                    <h2 style="color: #FF5500; font-size: 1.6rem; font-weight: 900; margin: 0 0 0.5rem 0;">¡Sistema ViveGo Optimizado!</h2>
-                    <p style="color: #94A3B8; font-size: 0.95rem; margin-bottom: 1.5rem;">Todos los cachés de producción han sido generados exitosamente.</p>
-                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1rem; text-align: left; font-size: 0.9rem; color: #10B981; line-height: 1.8; margin-bottom: 1.5rem;">
+                    <h2 style="color: #FF5500; font-size: 1.6rem; font-weight: 900; margin: 0 0 0.5rem 0;">¡Sistema ViveGo Optimizado & Migrado!</h2>
+                    <p style="color: #94A3B8; font-size: 0.95rem; margin-bottom: 1.5rem;">Las migraciones de base de datos y todos los cachés han sido procesados con éxito.</p>
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1.25rem; text-align: left; font-size: 0.9rem; color: #10B981; line-height: 1.8; margin-bottom: 1.5rem;">
+                        <div>✔ Migraciones de Base de Datos ejecutadas (migrate --force)</div>
                         <div>✔ Caché de Configuración (.env) activada</div>
                         <div>✔ Caché de Rutas compilada</div>
                         <div>✔ Caché de Plantillas Blade compilada</div>
                         <div>✔ Caché de Optimización lista</div>
                     </div>
-                    <a href="' . route('web.home') . '" style="display: inline-block; background: linear-gradient(135deg, #FF5500, #E04B00); color: #FFFFFF; font-weight: 800; text-decoration: none; padding: 0.85rem 1.8rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(255,85,0,0.4);">
-                        Ir a la Página Principal
-                    </a>
+                    ' . (!empty(trim($migrateOutput)) ? '<div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 0.75rem 1rem; text-align: left; font-family: monospace; font-size: 0.8rem; color: #CBD5E1; max-height: 140px; overflow-y: auto; margin-bottom: 1.5rem; white-space: pre-wrap;">' . htmlspecialchars($migrateOutput) . '</div>' : '') . '
+                    <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+                        <a href="' . route('web.home') . '" style="display: inline-block; background: linear-gradient(135deg, #FF5500, #E04B00); color: #FFFFFF; font-weight: 800; text-decoration: none; padding: 0.85rem 1.8rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(255,85,0,0.4);">
+                            Ir a la Página Principal
+                        </a>
+                        <a href="' . route('web.payment_methods') . '" style="display: inline-block; background: #1E1E2E; border: 1px solid rgba(255,255,255,0.15); color: #FFFFFF; font-weight: 700; text-decoration: none; padding: 0.85rem 1.4rem; border-radius: 12px;">
+                            Configurar Pasarelas
+                        </a>
+                    </div>
                 </div>
             </div>
         ', 200)->header('Content-Type', 'text/html');
     } catch (\Exception $e) {
-        return response('<h3 style="color:red;">Error al optimizar:</h3><pre>' . $e->getMessage() . '</pre>', 500);
+        return response('<div style="font-family: sans-serif; padding: 2rem; background: #14141E; color: #EF4444;"><h3 style="color:#EF4444;">Error al optimizar y migrar:</h3><pre style="background: #000; padding: 1rem; border-radius: 8px; color: #FCA5A5;">' . htmlspecialchars($e->getMessage()) . '</pre></div>', 500);
     }
+});
+
+Route::get('/ejecutar-migraciones', function () {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        $output = \Illuminate\Support\Facades\Artisan::output();
+
+        return response('
+            <div style="font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; background: #0A0A10; display: flex; align-items: center; justify-content: center; padding: 1.5rem; color: #FFFFFF;">
+                <div style="background: #14141E; border: 1px solid rgba(16,185,129,0.3); padding: 2.5rem; border-radius: 20px; max-width: 600px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.6); text-align: center;">
+                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">🗄️</div>
+                    <h2 style="color: #10B981; font-size: 1.6rem; font-weight: 900; margin: 0 0 0.5rem 0;">¡Migraciones Ejecutadas con Éxito!</h2>
+                    <p style="color: #94A3B8; font-size: 0.95rem; margin-bottom: 1.5rem;">Todas las tablas de la base de datos están al día.</p>
+                    <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 1rem; text-align: left; font-family: monospace; font-size: 0.85rem; color: #10B981; max-height: 200px; overflow-y: auto; margin-bottom: 1.5rem; white-space: pre-wrap;">' . htmlspecialchars($output ?: 'Nothing to migrate. Database is already up to date.') . '</div>
+                    <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+                        <a href="' . route('web.home') . '" style="display: inline-block; background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; font-weight: 800; text-decoration: none; padding: 0.85rem 1.8rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(16,185,129,0.4);">
+                            Ir al Inicio
+                        </a>
+                        <a href="/optimizar-sistema" style="display: inline-block; background: #FF5500; color: #FFFFFF; font-weight: 800; text-decoration: none; padding: 0.85rem 1.4rem; border-radius: 12px;">
+                            ⚡ Optimizar Todo el Sistema
+                        </a>
+                    </div>
+                </div>
+            </div>
+        ', 200)->header('Content-Type', 'text/html');
+    } catch (\Exception $e) {
+        return response('<div style="font-family: sans-serif; padding: 2rem; background: #14141E; color: #EF4444;"><h3 style="color:#EF4444;">Error en migraciones:</h3><pre style="background: #000; padding: 1rem; border-radius: 8px; color: #FCA5A5;">' . htmlspecialchars($e->getMessage()) . '</pre></div>', 500);
+    }
+});
+
+Route::get('/migrar-sistema', function () {
+    return redirect('/ejecutar-migraciones');
 });
 
 Route::get('/limpiar-cache', function () {

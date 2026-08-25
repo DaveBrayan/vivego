@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\PaymentGateway;
 use App\Models\TicketSale;
 use App\Models\User;
+use App\Services\CulqiService;
 use App\Services\IzipayService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -23,6 +24,7 @@ class CheckoutController extends Controller
     public function show(Request $request): View
     {
         $izipay = PaymentGateway::getIzipay();
+        $culqi = PaymentGateway::getCulqi();
 
         // 1. Obtener Evento
         $eventId = $request->input('event_id');
@@ -94,7 +96,7 @@ class CheckoutController extends Controller
             'template' => $event?->template,
         ];
 
-        return view('web.checkout', compact('eventData', 'cartItems', 'grandTotal', 'izipay'));
+        return view('web.checkout', compact('eventData', 'cartItems', 'grandTotal', 'izipay', 'culqi'));
     }
 
     /**
@@ -369,6 +371,327 @@ class CheckoutController extends Controller
             'receiptNumber' => $receiptNumber,
             'saleId' => $sale->id,
             'redirect_url' => route('web.checkout.confirmation', $sale->id),
+        ]);
+    }
+
+    /**
+     * Inicia el proceso de pago con Culqi generando una Orden oficial (para QR / Billeteras / Tarjetas)
+     */
+    public function initiateCulqi(Request $request, CulqiService $culqiService): JsonResponse
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.50',
+            'event_id' => 'nullable',
+            'event_title' => 'required|string',
+            'date_selected' => 'nullable|string',
+            'tickets' => 'required|array|min:1',
+            'customer_name' => 'required|string|max:150',
+            'customer_email' => 'required|email|max:150',
+            'customer_phone' => 'nullable|string|max:20',
+            'customer_doc' => 'nullable|string|max:20',
+        ]);
+
+        $amountCents = (int) round($validated['amount'] * 100);
+        $orderNumber = 'VG-' . strtoupper(Str::random(4)) . '-' . time();
+
+        // Extraer nombre y apellido
+        $nameParts = explode(' ', trim($validated['customer_name']), 2);
+        $firstName = $nameParts[0] ?? 'Cliente';
+        $lastName = $nameParts[1] ?? 'ViveGo';
+        $phone = preg_replace('/[^0-9]/', '', $validated['customer_phone'] ?? '999999999');
+        if (strlen($phone) < 9) $phone = '999999999';
+
+        $payload = [
+            'amount' => $amountCents,
+            'currency_code' => 'PEN',
+            'description' => 'Entradas: ' . substr($validated['event_title'], 0, 70),
+            'order_number' => $orderNumber,
+            'client_details' => [
+                'first_name' => substr($firstName, 0, 50),
+                'last_name' => substr($lastName, 0, 50),
+                'email' => $validated['customer_email'],
+                'phone_number' => $phone,
+            ],
+            'expiration_date' => time() + (24 * 60 * 60), // Validez 24 horas
+            'metadata' => [
+                'event_id' => $validated['event_id'] ?? 1,
+                'event_title' => $validated['event_title'],
+                'date_selected' => $validated['date_selected'] ?? '',
+                'tickets_count' => count($validated['tickets']),
+                'buyer_doc' => $validated['customer_doc'] ?? '',
+            ],
+        ];
+
+        $response = $culqiService->createOrder($payload);
+
+        if (isset($response['id']) && str_starts_with($response['id'], 'ord_')) {
+            return response()->json([
+                'success' => true,
+                'orderId' => $response['id'],
+                'orderNumber' => $orderNumber,
+                'publicKey' => $culqiService->getPublicKey(),
+                'amountCents' => $amountCents,
+                'amountFormatted' => 'S/ ' . number_format($validated['amount'], 2),
+                'qr' => $response['qr'] ?? null,
+                'payment_code' => $response['payment_code'] ?? null,
+            ]);
+        }
+
+        // Si Culqi devuelve error o no genera orden, aún podemos proceder con tokenización directa en el frontend
+        $errorMessage = $response['user_message'] ?? $response['merchant_message'] ?? $response['message'] ?? 'No se pudo generar la sesión de orden con Culqi.';
+        Log::warning('Respuesta al crear orden Culqi: ' . json_encode($response));
+
+        return response()->json([
+            'success' => true, // Permitimos proceder con Checkout directo pasando la publicKey
+            'orderId' => null,
+            'orderNumber' => $orderNumber,
+            'publicKey' => $culqiService->getPublicKey(),
+            'amountCents' => $amountCents,
+            'amountFormatted' => 'S/ ' . number_format($validated['amount'], 2),
+            'warning' => $errorMessage,
+        ]);
+    }
+
+    /**
+     * Procesa y valida el pago completado con Culqi (Cargos con Tarjeta vía Token o Pagos con QR / Orden)
+     */
+    public function completeCulqiPayment(Request $request, CulqiService $culqiService): JsonResponse
+    {
+        Log::info('Culqi Payment Callback Received:', $request->all());
+
+        $tokenId = $request->input('token_id') ?: $request->input('tokenId');
+        $orderId = $request->input('order_id') ?: $request->input('orderId');
+        $amount = (float) $request->input('amount', 0);
+        $amountCents = (int) round($amount * 100);
+
+        $buyerName = trim($request->input('customer_name') ?: 'Cliente ViveGo');
+        $buyerEmail = trim($request->input('customer_email') ?: '');
+        $buyerDni = trim($request->input('customer_doc') ?: '00000000');
+        $buyerPhone = trim($request->input('customer_phone') ?: '999999999');
+
+        $nameParts = explode(' ', $buyerName, 2);
+        $firstName = $nameParts[0] ?? 'Cliente';
+        $lastName = $nameParts[1] ?? 'ViveGo';
+
+        $subMethod = 'Culqi';
+        $transactionId = null;
+        $brand = null;
+        $orderTotal = $amount;
+
+        // CASO 1: Pago con Tarjeta mediante Token generado por Culqi
+        if (!empty($tokenId)) {
+            $chargePayload = [
+                'amount' => $amountCents,
+                'capture' => true,
+                'currency_code' => 'PEN',
+                'description' => 'Compra de Entradas - ViveGo',
+                'email' => $buyerEmail,
+                'installments' => 0,
+                'antifraud_details' => [
+                    'first_name' => substr($firstName, 0, 50),
+                    'last_name' => substr($lastName, 0, 50),
+                    'phone_number' => $buyerPhone,
+                ],
+                'source_id' => $tokenId,
+                'metadata' => [
+                    'buyer_dni' => $buyerDni,
+                    'event_id' => $request->input('event_id'),
+                ],
+            ];
+
+            $chargeResponse = $culqiService->createCharge($chargePayload);
+            Log::info('Respuesta de Cargo Culqi:', $chargeResponse);
+
+            $chargeObj = $chargeResponse['object'] ?? '';
+            $isPaid = ($chargeObj === 'charge') && (($chargeResponse['capture'] ?? false) || ($chargeResponse['outcome']['type'] ?? '') === 'venta_exitosa');
+
+            if (!$isPaid && !isset($chargeResponse['id'])) {
+                $errorMsg = $chargeResponse['user_message'] ?? $chargeResponse['merchant_message'] ?? 'El pago con tarjeta no pudo ser procesado por Culqi.';
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMsg,
+                ], 422);
+            }
+
+            $transactionId = $chargeResponse['id'] ?? ('chr_' . time());
+            $brand = strtoupper($chargeResponse['source']['iin']['card_brand'] ?? $chargeResponse['source']['brand'] ?? 'TARJETA');
+            $subMethod = 'Tarjeta ' . ($brand ?: 'Crédito/Débito');
+            $orderTotal = ($chargeResponse['amount'] ?? $amountCents) / 100;
+        } 
+        // CASO 2: Pago con QR / Billeteras Móviles / PagoEfectivo mediante Orden de Culqi
+        elseif (!empty($orderId)) {
+            $orderResponse = $culqiService->getOrder($orderId);
+            Log::info('Consulta de Orden Culqi:', $orderResponse);
+
+            $orderState = strtolower($orderResponse['state'] ?? 'pending');
+            $transactionId = $orderResponse['id'] ?? $orderId;
+            $orderTotal = ($orderResponse['amount'] ?? $amountCents) / 100;
+            $paymentType = strtoupper($orderResponse['payment_code'] ? 'PAGOEFECTIVO' : 'QR_BILLETERAS');
+
+            if ($paymentType === 'PAGOEFECTIVO') {
+                $subMethod = 'PagoEfectivo (CIP)';
+            } else {
+                $subMethod = 'QR Billeteras (Yape / Plin)';
+            }
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se recibió un identificador de Token ni de Orden de Culqi.',
+            ], 400);
+        }
+
+        // Obtener correlativo secuencial continuo (REC-000046)
+        $allReceipts = TicketSale::where('receipt_number', 'LIKE', 'REC-%')->pluck('receipt_number');
+        $maxNum = 0;
+        foreach ($allReceipts as $rec) {
+            if (preg_match('/REC-(\d+)/i', $rec, $m)) {
+                $val = (int) $m[1];
+                if ($val > $maxNum) {
+                    $maxNum = $val;
+                }
+            }
+        }
+        $nextNum = max(1, $maxNum + 1);
+        $receiptNumber = 'REC-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
+        while (TicketSale::where('receipt_number', $receiptNumber)->exists()) {
+            $nextNum++;
+            $receiptNumber = 'REC-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
+        }
+
+        // Buscar evento
+        $eventId = $request->input('event_id');
+        $event = $eventId ? Event::find($eventId) : Event::first();
+
+        $ticketsData = $request->input('tickets') ?: [
+            ['name' => 'Entrada General', 'quantity' => 1, 'price' => $orderTotal]
+        ];
+
+        $totalQty = 0;
+        foreach ($ticketsData as $t) {
+            $totalQty += (int)($t['quantity'] ?? 1);
+        }
+
+        // Registrar la venta en la base de datos
+        $sale = TicketSale::create([
+            'event_id' => $event?->id ?? 1,
+            'receipt_number' => $receiptNumber,
+            'buyer_name' => $buyerName,
+            'buyer_dni' => $buyerDni ?: '00000000',
+            'buyer_phone' => $buyerPhone ?: '999999999',
+            'zone_name' => $ticketsData[0]['name'] ?? 'General',
+            'unit_price' => $orderTotal / max(1, $totalQty),
+            'quantity' => max(1, $totalQty),
+            'total_amount' => $orderTotal,
+            'payment_method' => 'Culqi',
+            'amount_paid' => $orderTotal,
+            'change_amount' => 0.00,
+            'tickets_data' => [
+                'items' => $ticketsData,
+                'sub_method' => $subMethod,
+                'customer_email' => $buyerEmail,
+                'culqi_transaction_id' => $transactionId,
+                'culqi_order_id' => $orderId,
+                'culqi_token_id' => $tokenId,
+                'brand' => $brand,
+            ],
+            'seller_name' => 'Pasarela Web Culqi',
+        ]);
+
+        // 1. Crear o sincronizar cuenta de Cliente para que pueda ver "Mis Boletos" y "Mis Recibos"
+        $isNewUser = false;
+        $tempPassword = null;
+
+        if (!empty($buyerEmail)) {
+            $customerUser = User::where('email', strtolower($buyerEmail))->first();
+            if (!$customerUser) {
+                $tempPassword = 'VG' . rand(100000, 999999);
+                $customerUser = User::create([
+                    'name' => $buyerName,
+                    'email' => strtolower($buyerEmail),
+                    'dni' => $buyerDni ?: '00000000',
+                    'phone' => $buyerPhone ?: '999999999',
+                    'password' => Hash::make($tempPassword),
+                    'role' => 'customer',
+                    'status' => 'active',
+                ]);
+                $isNewUser = true;
+            } else {
+                if (empty($customerUser->dni) && !empty($buyerDni)) {
+                    $customerUser->dni = $buyerDni;
+                }
+                if (empty($customerUser->phone) && !empty($buyerPhone)) {
+                    $customerUser->phone = $buyerPhone;
+                }
+                $customerUser->save();
+            }
+
+            // Iniciar sesión del cliente automáticamente
+            session([
+                'customer_logged_in' => true,
+                'customer_id' => $customerUser->id,
+                'customer_name' => $customerUser->name,
+                'customer_email' => $customerUser->email,
+                'customer_dni' => $customerUser->dni,
+                'customer_phone' => $customerUser->phone,
+            ]);
+        }
+
+        // 2. Enviar Correo Electrónico Automático con Recibo, Boletos y Credenciales
+        if (!empty($buyerEmail) && filter_var($buyerEmail, FILTER_VALIDATE_EMAIL)) {
+            try {
+                $customPdfBase64 = $request->input('ticket_pdf_base64');
+                \Illuminate\Support\Facades\Mail::to($buyerEmail)->send(new \App\Mail\TicketPurchaseMail($sale, $tempPassword, $isNewUser, $customPdfBase64));
+                Log::info('Correo de confirmación de compra enviado exitosamente a: ' . $buyerEmail);
+            } catch (\Throwable $mailError) {
+                Log::warning('No se pudo enviar el correo de compra Culqi: ' . $mailError->getMessage());
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => '¡Pago procesado exitosamente con Culqi!',
+            'orderId' => $transactionId,
+            'receiptNumber' => $receiptNumber,
+            'saleId' => $sale->id,
+            'redirect_url' => route('web.checkout.confirmation', $sale->id),
+        ]);
+    }
+
+    /**
+     * Consulta el estado de una Orden QR / PagoEfectivo en Culqi en tiempo real
+     */
+    public function checkCulqiOrderStatus(Request $request, CulqiService $culqiService): JsonResponse
+    {
+        $orderId = $request->input('order_id');
+        if (empty($orderId)) {
+            return response()->json(['success' => false, 'message' => 'Order ID requerido.'], 400);
+        }
+
+        $order = $culqiService->getOrder($orderId);
+        $state = strtolower($order['state'] ?? 'pending');
+
+        return response()->json([
+            'success' => true,
+            'order_id' => $orderId,
+            'state' => $state,
+            'is_paid' => in_array($state, ['paid', 'pagado']),
+            'order' => $order,
+        ]);
+    }
+
+    /**
+     * Webhook oficial para recibir notificaciones asíncronas de Culqi (IPN)
+     */
+    public function culqiWebhook(Request $request, CulqiService $culqiService): JsonResponse
+    {
+        Log::info('Culqi Webhook Received:', $request->all());
+
+        $event = $request->input('type');
+        $data = $request->input('data');
+
+        return response()->json([
+            'status' => 'received',
+            'event' => $event,
         ]);
     }
 

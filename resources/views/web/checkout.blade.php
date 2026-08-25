@@ -31,10 +31,20 @@
 
                 <!-- Badges de Confianza -->
                 <div class="trust-badges-group">
-                    <div class="izipay-verified-pill">
-                        <span class="izipay-logo-txt">izi<span>pay</span></span>
-                        <span class="verified-dot">● Pasarela Oficial</span>
-                    </div>
+                    @if($izipay->is_active)
+                        <div class="izipay-verified-pill">
+                            <span class="izipay-logo-txt">izi<span>pay</span></span>
+                            <span class="verified-dot">● Oficial</span>
+                        </div>
+                    @endif
+
+                    @if($culqi->is_active)
+                        <div class="culqi-verified-pill">
+                            <span class="culqi-logo-txt">culqi</span>
+                            <span class="verified-dot">● QR & Yape</span>
+                        </div>
+                    @endif
+
                     <div class="ssl-pill">
                         🛡️ PCI-DSS Nivel 1
                     </div>
@@ -45,7 +55,7 @@
         <!-- GRID PRINCIPAL DE 2 COLUMNAS -->
         <div class="checkout-grid-layout">
             
-            <!-- COLUMNA IZQUIERDA: CARRITO, DATOS Y PASARELA IZIPAY -->
+            <!-- COLUMNA IZQUIERDA: CARRITO, DATOS Y PASARELA DE PAGO -->
             <div class="checkout-steps-column">
                 
                 <!-- PASO 1: CARRITO DE ENTRADAS -->
@@ -113,7 +123,7 @@
                         </div>
                     @endif
 
-                    <form id="checkoutCustomerForm" class="customer-fields-grid" onsubmit="event.preventDefault(); loadIzipayGateway();">
+                    <form id="checkoutCustomerForm" class="customer-fields-grid" onsubmit="event.preventDefault(); proceedSelectedPayment();">
                         <div class="form-fields-2col">
                             <div class="form-field-box">
                                 <label class="field-dark-label">Nombres y Apellidos Completos <span class="req">*</span></label>
@@ -145,57 +155,129 @@
                     </form>
                 </div>
 
-                <!-- PASO 3: PASARELA OFICIAL IZIPAY -->
+                <!-- PASO 3: PASARELAS DE PAGO DISPONIBLES (IZIPAY / CULQI) -->
+                @php
+                    $izipayActive = (bool) ($izipay->is_active ?? false);
+                    $culqiActive = (bool) ($culqi->is_active ?? false);
+                    $defaultGateway = ($culqiActive && !$izipayActive) ? 'culqi' : 'izipay';
+                @endphp
+
                 <div class="checkout-white-card" style="margin-top: 1.5rem;">
                     <div class="card-step-header">
                         <div class="step-num-badge">3</div>
                         <div>
-                            <h2 class="card-step-title">Método de Pago Seguro (Izipay)</h2>
-                            <p class="card-step-subtitle">Paga con Tarjetas de Crédito/Débito, QR Yape, Plin o PagoEfectivo.</p>
+                            <h2 class="card-step-title">Método de Pago Seguro</h2>
+                            <p class="card-step-subtitle">Selecciona tu pasarela preferida para pagar con Tarjetas, QR Yape / Plin o PagoEfectivo.</p>
                         </div>
                     </div>
 
-                    <!-- Métodos soportados Pills -->
-                    <div class="payment-tabs-preview">
-                        <div class="pay-method-pill active">
-                            <span class="method-icon">💳</span> Tarjetas Crédito/Débito
-                        </div>
-                        <div class="pay-method-pill">
-                            <span class="method-icon">📱</span> Yape QR & Plin
-                        </div>
-                        <div class="pay-method-pill">
-                            <span class="method-icon">💵</span> PagoEfectivo
-                        </div>
+                    <!-- SELECTOR DE PESTAÑAS DE PASARELA EN EL CHECKOUT -->
+                    <div class="gateway-checkout-tabs">
+                        @if($izipayActive || (!$izipayActive && !$culqiActive))
+                            <button type="button" class="btn-checkout-gateway-tab {{ $defaultGateway === 'izipay' ? 'active' : '' }}" onclick="selectCheckoutGateway('izipay', this)">
+                                <span class="gtw-tab-ico">💳</span>
+                                <div>
+                                    <strong class="gtw-tab-title">Izipay Perú</strong>
+                                    <span class="gtw-tab-sub">Tarjetas, QR & Efectivo</span>
+                                </div>
+                            </button>
+                        @endif
+
+                        @if($culqiActive || (!$izipayActive && !$culqiActive))
+                            <button type="button" class="btn-checkout-gateway-tab {{ $defaultGateway === 'culqi' ? 'active' : '' }}" onclick="selectCheckoutGateway('culqi', this)">
+                                <span class="gtw-tab-ico">🟧</span>
+                                <div>
+                                    <strong class="gtw-tab-title">Culqi Perú</strong>
+                                    <span class="gtw-tab-sub">Pago con QR, Yape & Tarjetas</span>
+                                </div>
+                                <span class="gtw-tab-tag">📱 QR Yape/Plin</span>
+                            </button>
+                        @endif
                     </div>
 
                     <!-- Error Alert Box -->
                     <div id="checkoutFormError" style="display: none; background: #FEF2F2; border: 1.5px solid #FCA5A5; color: #991B1B; padding: 0.85rem 1.15rem; border-radius: 12px; font-size: 0.875rem; font-weight: 600; margin-bottom: 1.25rem;"></div>
 
-                    <!-- Botón Inicial de Carga de Pasarela -->
-                    <div id="initPaymentSection" style="text-align: center; padding: 1.5rem 0 0.5rem 0;">
-                        <button type="button" class="btn-pay-orange" id="btnInitIzipay" onclick="loadIzipayGateway()">
-                            <span>💳 Pagar <span id="btnPayAmountDisplay">S/ {{ number_format($grandTotal, 2) }}</span> con Izipay</span>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                                <polyline points="12 5 19 12 12 19"></polyline>
-                            </svg>
-                        </button>
-                        <p style="font-size: 0.825rem; color: #64748B; margin-top: 0.85rem;">
-                            🔒 Tus datos viajan cifrados bajo los estándares oficiales de seguridad de Izipay Perú.
-                        </p>
+                    <!-- CONTENIDO DE PASARELA: IZIPAY -->
+                    <div id="checkout-gateway-izipay" class="checkout-gateway-panel {{ $defaultGateway === 'izipay' ? 'active' : '' }}">
+                        <div class="payment-tabs-preview">
+                            <div class="pay-method-pill active">
+                                <span class="method-icon">💳</span> Tarjetas Crédito/Débito
+                            </div>
+                            <div class="pay-method-pill">
+                                <span class="method-icon">📱</span> Yape QR & Plin
+                            </div>
+                            <div class="pay-method-pill">
+                                <span class="method-icon">💵</span> PagoEfectivo
+                            </div>
+                        </div>
+
+                        <!-- Botón Inicial de Carga de Izipay -->
+                        <div id="initPaymentSection" style="text-align: center; padding: 1.5rem 0 0.5rem 0;">
+                            <button type="button" class="btn-pay-orange" id="btnInitIzipay" onclick="loadIzipayGateway()">
+                                <span>💳 Pagar <span id="btnPayAmountDisplay">S/ {{ number_format($grandTotal, 2) }}</span> con Izipay</span>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    <polyline points="12 5 19 12 12 19"></polyline>
+                                </svg>
+                            </button>
+                            <p style="font-size: 0.825rem; color: #64748B; margin-top: 0.85rem;">
+                                🔒 Tus datos viajan cifrados bajo los estándares oficiales de seguridad de Izipay Perú.
+                            </p>
+                        </div>
+
+                        <!-- Loader Izipay -->
+                        <div id="izipayLoaderBox" style="display: none; text-align: center; padding: 2.5rem 1rem;">
+                            <div class="preloader-ring" style="width: 44px; height: 44px; margin: 0 auto 0.85rem auto; border-width: 3.5px; border-color: #FF5500; border-top-color: transparent;"></div>
+                            <p style="font-size: 0.95rem; color: #1E293B; font-weight: 700; margin: 0;">Conectando con la pasarela segura de Izipay...</p>
+                            <span style="font-size: 0.8rem; color: #64748B;">Generando sesión cifrada de pago</span>
+                        </div>
+
+                        <!-- Contenedor Oficial Krypton Form -->
+                        <div id="izipayEmbeddedContainer" style="display: none; margin-top: 1.5rem; min-height: 280px;">
+                            <div class="kr-embedded"></div>
+                        </div>
                     </div>
 
-                    <!-- Loader mientras se genera el token -->
-                    <div id="izipayLoaderBox" style="display: none; text-align: center; padding: 2.5rem 1rem;">
-                        <div class="preloader-ring" style="width: 44px; height: 44px; margin: 0 auto 0.85rem auto; border-width: 3.5px; border-color: #FF5500; border-top-color: transparent;"></div>
-                        <p style="font-size: 0.95rem; color: #1E293B; font-weight: 700; margin: 0;">Conectando con la pasarela segura de Izipay...</p>
-                        <span style="font-size: 0.8rem; color: #64748B;">Generando sesión cifrada de pago</span>
+                    <!-- CONTENIDO DE PASARELA: CULQI -->
+                    <div id="checkout-gateway-culqi" class="checkout-gateway-panel {{ $defaultGateway === 'culqi' ? 'active' : '' }}">
+                        <div class="payment-tabs-preview">
+                            <div class="pay-method-pill active" style="background: #FFF7ED; border-color: #FF5500; color: #EA580C;">
+                                <span class="method-icon">📱</span> Pago con QR (Yape / Plin)
+                            </div>
+                            <div class="pay-method-pill">
+                                <span class="method-icon">💳</span> Tarjetas Débito / Crédito
+                            </div>
+                            <div class="pay-method-pill">
+                                <span class="method-icon">⚡</span> Yape Directo
+                            </div>
+                            <div class="pay-method-pill">
+                                <span class="method-icon">💵</span> PagoEfectivo
+                            </div>
+                        </div>
+
+                        <!-- Botón Inicial de Carga de Culqi -->
+                        <div id="initCulqiPaymentSection" style="text-align: center; padding: 1.5rem 0 0.5rem 0;">
+                            <button type="button" class="btn-pay-orange" id="btnInitCulqi" onclick="loadCulqiGateway()" style="background: linear-gradient(135deg, #FF5500, #E64A00);">
+                                <span>🟧 Pagar <span id="btnPayAmountDisplayCulqi">S/ {{ number_format($grandTotal, 2) }}</span> con Culqi</span>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    <polyline points="12 5 19 12 12 19"></polyline>
+                                </svg>
+                            </button>
+                            <p style="font-size: 0.825rem; color: #64748B; margin-top: 0.85rem;">
+                                🔒 Pagos instantáneos con <strong>Código QR, Yape, Plin y Tarjetas</strong> respaldados por Culqi Perú.
+                            </p>
+                        </div>
+
+                        <!-- Loader Culqi -->
+                        <div id="culqiLoaderBox" style="display: none; text-align: center; padding: 2.5rem 1rem;">
+                            <div class="preloader-ring" style="width: 44px; height: 44px; margin: 0 auto 0.85rem auto; border-width: 3.5px; border-color: #FF5500; border-top-color: transparent;"></div>
+                            <p style="font-size: 0.95rem; color: #1E293B; font-weight: 700; margin: 0;">Iniciando pasarela de pagos Culqi...</p>
+                            <span style="font-size: 0.8rem; color: #64748B;">Abriendo formulario seguro y código QR</span>
+                        </div>
                     </div>
 
-                    <!-- CONTENEDOR OFICIAL DE IZIPAY KRYPTON EMBEDDED -->
-                    <div id="izipayEmbeddedContainer" style="display: none; margin-top: 1.5rem; min-height: 280px;">
-                        <div class="kr-embedded"></div>
-                    </div>
                 </div>
 
             </div>
@@ -344,6 +426,7 @@
         display: flex;
         align-items: center;
         gap: 0.75rem;
+        flex-wrap: wrap;
     }
 
     .izipay-verified-pill {
@@ -368,6 +451,24 @@
         color: #00D2C4;
     }
 
+    .culqi-verified-pill {
+        background: #FFFFFF;
+        border: 1.5px solid #E2E8F0;
+        padding: 0.4rem 0.9rem;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .culqi-logo-txt {
+        font-size: 1.2rem;
+        font-weight: 900;
+        color: #FF5500;
+        letter-spacing: -0.5px;
+    }
+
     .verified-dot {
         font-size: 0.75rem;
         font-weight: 800;
@@ -382,6 +483,82 @@
         font-weight: 800;
         padding: 0.45rem 0.85rem;
         border-radius: 12px;
+    }
+
+    /* TABS SELECTORAS DE PASARELA EN CHECKOUT */
+    .gateway-checkout-tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.85rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .btn-checkout-gateway-tab {
+        background: #F8FAFC;
+        border: 2px solid #E2E8F0;
+        border-radius: 14px;
+        padding: 0.85rem 1.15rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: left;
+        position: relative;
+    }
+
+    .btn-checkout-gateway-tab:hover {
+        border-color: #FF5500;
+        background: #FFF7ED;
+    }
+
+    .btn-checkout-gateway-tab.active {
+        background: #FFFFFF;
+        border-color: #FF5500;
+        box-shadow: 0 4px 15px rgba(255, 85, 0, 0.15);
+    }
+
+    .gtw-tab-ico {
+        font-size: 1.6rem;
+    }
+
+    .gtw-tab-title {
+        font-size: 0.95rem;
+        color: #0F172A;
+        display: block;
+    }
+
+    .gtw-tab-sub {
+        font-size: 0.75rem;
+        color: #64748B;
+        display: block;
+    }
+
+    .gtw-tab-tag {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: #ECFDF5;
+        color: #059669;
+        font-size: 0.675rem;
+        font-weight: 800;
+        padding: 0.15rem 0.45rem;
+        border-radius: 6px;
+        border: 1px solid #A7F3D0;
+    }
+
+    .checkout-gateway-panel {
+        display: none;
+    }
+
+    .checkout-gateway-panel.active {
+        display: block;
+        animation: fadeInGtw 0.2s ease-in-out;
+    }
+
+    @keyframes fadeInGtw {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 
     /* GRID LAYOUT */
@@ -784,35 +961,65 @@
         .form-fields-2col {
             grid-template-columns: 1fr;
         }
+        .gateway-checkout-tabs {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 @endpush
 
 @push('scripts')
     @php
-        $publicKey = $izipay->getCredential('public_key') ?: env('IZIPAY_PUBLIC_KEY', '');
-        $clientEndpoint = $izipay->getCredential('client_endpoint', 'https://api.micuentaweb.pe');
+        $izipayPublicKey = $izipay->getCredential('public_key') ?: env('IZIPAY_PUBLIC_KEY', '');
+        $izipayClientEndpoint = $izipay->getCredential('client_endpoint', 'https://api.micuentaweb.pe');
+        $culqiPublicKey = $culqi->getCredential('public_key') ?: env('CULQI_PUBLIC_KEY', '');
     @endphp
 
     <!-- Librería Oficial de Izipay (Krypton Form) -->
     <script 
-        src="{{ rtrim($clientEndpoint, '/') }}/static/js/krypton-client/V4.0/stable/kr-payment-form.min.js"
-        kr-public-key="{{ $publicKey }}"
+        src="{{ rtrim($izipayClientEndpoint, '/') }}/static/js/krypton-client/V4.0/stable/kr-payment-form.min.js"
+        kr-public-key="{{ $izipayPublicKey }}"
         kr-language="es">
     </script>
-    <link rel="stylesheet" href="{{ rtrim($clientEndpoint, '/') }}/static/js/krypton-client/V4.0/ext/classic-reset.css">
-    <script src="{{ rtrim($clientEndpoint, '/') }}/static/js/krypton-client/V4.0/ext/classic.js"></script>
+    <link rel="stylesheet" href="{{ rtrim($izipayClientEndpoint, '/') }}/static/js/krypton-client/V4.0/ext/classic-reset.css">
+    <script src="{{ rtrim($izipayClientEndpoint, '/') }}/static/js/krypton-client/V4.0/ext/classic.js"></script>
+
+    <!-- Librería Oficial de Culqi Checkout v4 -->
+    <script src="https://checkout.culqi.com/js/v4"></script>
 
     <script>
         let cartItems = @json($cartItems);
         let eventData = @json($eventData);
         let currentGrandTotal = {{ $grandTotal }};
+        let currentSelectedGateway = '{{ $defaultGateway }}';
         let isIzipayInitialized = false;
+        let isCulqiInitialized = false;
+        let currentCulqiOrderId = null;
+        let culqiPollingInterval = null;
+
+        // Cambiar Pasarela Seleccionada en Checkout
+        function selectCheckoutGateway(gatewayKey, btn) {
+            currentSelectedGateway = gatewayKey;
+            document.querySelectorAll('.btn-checkout-gateway-tab').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.checkout-gateway-panel').forEach(p => p.classList.remove('active'));
+
+            if (btn) btn.classList.add('active');
+            const panel = document.getElementById('checkout-gateway-' + gatewayKey);
+            if (panel) panel.classList.add('active');
+        }
+
+        function proceedSelectedPayment() {
+            if (currentSelectedGateway === 'culqi') {
+                loadCulqiGateway();
+            } else {
+                loadIzipayGateway();
+            }
+        }
 
         // Actualizar cantidades en el carrito
         function updateItemQuantity(index, delta) {
-            if (isIzipayInitialized) {
-                alert('⚠️ Ya generaste la sesión de pago. Si deseas modificar tus entradas, por favor recarga la página.');
+            if (isIzipayInitialized || isCulqiInitialized) {
+                alert('⚠️ Ya generaste una sesión de pago. Si deseas modificar tus entradas, por favor recarga la página.');
                 return;
             }
 
@@ -834,19 +1041,25 @@
                 currentGrandTotal += item.subtotal;
             });
 
-            document.getElementById('btnPayAmountDisplay').textContent = 'S/ ' + currentGrandTotal.toFixed(2);
+            if (document.getElementById('btnPayAmountDisplay')) {
+                document.getElementById('btnPayAmountDisplay').textContent = 'S/ ' + currentGrandTotal.toFixed(2);
+            }
+            if (document.getElementById('btnPayAmountDisplayCulqi')) {
+                document.getElementById('btnPayAmountDisplayCulqi').textContent = 'S/ ' + currentGrandTotal.toFixed(2);
+            }
             document.getElementById('summarySubtotalDisplay').textContent = 'S/ ' + currentGrandTotal.toFixed(2);
             document.getElementById('summaryTotalDisplay').textContent = 'S/ ' + currentGrandTotal.toFixed(2);
         }
 
-        // Cargar Pasarela Oficial de Izipay
+        // =========================================================================
+        // 1. INTEGRACIÓN IZIPAY PERÚ
+        // =========================================================================
         function loadIzipayGateway() {
             const name = document.getElementById('buyerFullName').value.trim();
             const doc = document.getElementById('buyerDoc').value.trim();
             const email = document.getElementById('buyerEmail').value.trim();
             const phone = document.getElementById('buyerPhone').value.trim();
             const errorBox = document.getElementById('checkoutFormError');
-            const btnInit = document.getElementById('btnInitIzipay');
 
             if (!name || !doc || !email || !phone) {
                 errorBox.textContent = '⚠️ Por favor completa todos los campos del Paso 2 (Datos del Comprador) antes de proceder al pago.';
@@ -883,13 +1096,10 @@
                 if (data.success && data.formToken) {
                     isIzipayInitialized = true;
 
-                    // Inicializar Krypton Form de Izipay
                     if (typeof KR !== 'undefined') {
                         KR.setFormToken(data.formToken).then(function() {
                             document.getElementById('izipayLoaderBox').style.display = 'none';
                             document.getElementById('izipayEmbeddedContainer').style.display = 'block';
-
-                            // Vincular el manejador de éxito directamente
                             KR.onSubmit(handleIzipaySubmit);
                         }).catch(function(err) {
                             console.error('Error al renderizar Izipay:', err);
@@ -911,11 +1121,9 @@
             });
         }
 
-        // Manejador centralizado de finalización de pago en Izipay
         async function handleIzipaySubmit(response) {
             console.log('[Izipay] Callback de pago recibido:', response);
 
-            // Mostrar modal de procesamiento de compra
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
                     title: '🎉 ¡Pago Confirmado!',
@@ -940,7 +1148,6 @@
 
             let hash = response.hash || response['kr-hash'] || response.hashKey || '';
 
-            // Generar el PDF oficial con el motor visual idéntico a Taquilla para adjuntarlo al correo
             let ticketPdfBase64 = '';
             try {
                 if (typeof window.generateTicketPdfDoc === 'function') {
@@ -962,15 +1169,12 @@
                         tickets_data: { items: cartItems }
                     };
                     const { pdf } = await window.generateTicketPdfDoc(simulatedSale);
-                    if (pdf) {
-                        ticketPdfBase64 = pdf.output('datauristring');
-                    }
+                    if (pdf) ticketPdfBase64 = pdf.output('datauristring');
                 }
             } catch (pdfErr) {
-                console.warn('Compilación client-side de PDF omitida:', pdfErr);
+                console.warn('Compilación de PDF omitida:', pdfErr);
             }
 
-            // Enviar respuesta al backend para verificar firma y registrar boletos
             fetch("{{ route('web.checkout.izipay_complete') }}", {
                 method: 'POST',
                 headers: {
@@ -993,7 +1197,6 @@
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.redirect_url) {
-                    // Redirigir a la página de confirmación con los boletos generados
                     window.location.href = data.redirect_url;
                 } else {
                     if (typeof Swal !== 'undefined') {
@@ -1013,7 +1216,253 @@
                 window.location.href = "{{ route('customer.my_tickets') }}";
             });
 
-            return false; // Previene redirección por defecto para que nosotros manejemos la navegación
+            return false;
+        }
+
+        // =========================================================================
+        // 2. INTEGRACIÓN CULQI PERÚ (QR, YAPE, TARJETAS & PAGOEFECTIVO)
+        // =========================================================================
+        function loadCulqiGateway() {
+            const name = document.getElementById('buyerFullName').value.trim();
+            const doc = document.getElementById('buyerDoc').value.trim();
+            const email = document.getElementById('buyerEmail').value.trim();
+            const phone = document.getElementById('buyerPhone').value.trim();
+            const errorBox = document.getElementById('checkoutFormError');
+
+            if (!name || !doc || !email || !phone) {
+                errorBox.textContent = '⚠️ Por favor completa todos los campos del Paso 2 (Datos del Comprador) antes de proceder al pago con Culqi.';
+                errorBox.style.display = 'block';
+                document.getElementById('buyerFullName').focus();
+                return;
+            }
+
+            errorBox.style.display = 'none';
+            document.getElementById('initCulqiPaymentSection').style.display = 'none';
+            document.getElementById('culqiLoaderBox').style.display = 'block';
+
+            // Llamada al backend para generar Orden en Culqi
+            fetch("{{ route('web.checkout.culqi_initiate') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    amount: currentGrandTotal,
+                    event_id: eventData.id,
+                    event_title: eventData.title,
+                    date_selected: eventData.date_selected,
+                    tickets: cartItems,
+                    customer_name: name,
+                    customer_email: email,
+                    customer_phone: phone,
+                    customer_doc: doc
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('initCulqiPaymentSection').style.display = 'block';
+                document.getElementById('culqiLoaderBox').style.display = 'none';
+
+                if (data.success && typeof Culqi !== 'undefined') {
+                    isCulqiInitialized = true;
+                    currentCulqiOrderId = data.orderId || null;
+
+                    Culqi.publicKey = data.publicKey || '{{ $culqiPublicKey }}';
+
+                    const culqiSettings = {
+                        title: 'ViveGo - ' + (eventData.title || 'Entradas'),
+                        currency: 'PEN',
+                        amount: data.amountCents || Math.round(currentGrandTotal * 100),
+                    };
+
+                    if (data.orderId) {
+                        culqiSettings.order = data.orderId;
+                    }
+
+                    Culqi.settings(culqiSettings);
+
+                    Culqi.options({
+                        lang: 'es',
+                        installments: false,
+                        paymentMethods: {
+                            tarjeta: true,
+                            yape: true,
+                            billetera: true, // QR Billeteras (Yape, Plin)
+                            pagoefectivo: true,
+                            cuotealo: false
+                        },
+                        style: {
+                            logo: '{{ asset("images/logo-icon.png") }}',
+                            maincolor: '#FF5500',
+                            buttontext: '#ffffff',
+                            maintext: '#0F172A',
+                            desctext: '#64748B'
+                        }
+                    });
+
+                    // Abrir Checkout v4 de Culqi
+                    Culqi.open();
+                } else {
+                    errorBox.textContent = '⚠️ ' + (data.warning || data.message || 'No se pudo abrir el checkout de Culqi.');
+                    errorBox.style.display = 'block';
+                }
+            })
+            .catch(err => {
+                document.getElementById('initCulqiPaymentSection').style.display = 'block';
+                document.getElementById('culqiLoaderBox').style.display = 'none';
+                errorBox.textContent = '⚠️ Error de comunicación: ' + err.message;
+                errorBox.style.display = 'block';
+            });
+        }
+
+        // Manejador Global de Callback de Culqi Checkout v4
+        window.culqi = async function () {
+            console.log('[Culqi] Evento recibido:', { token: Culqi.token, order: Culqi.order, close: Culqi.close });
+
+            if (Culqi.token) {
+                // CASO A: Pago con Tarjeta completado con Token
+                let tokenId = Culqi.token.id;
+                Culqi.close();
+                await processCulqiComplete({ token_id: tokenId });
+            } else if (Culqi.order) {
+                // CASO B: Pago con QR / Billeteras Móviles / PagoEfectivo generado
+                let orderId = Culqi.order.id || currentCulqiOrderId;
+                let orderState = Culqi.order.state || 'pending';
+
+                if (orderState === 'paid') {
+                    Culqi.close();
+                    await processCulqiComplete({ order_id: orderId });
+                } else {
+                    // Iniciar polling en vivo para verificar cuando el cliente escanee y pague el QR
+                    startCulqiOrderPolling(orderId);
+                }
+            } else if (Culqi.close) {
+                console.log('[Culqi] Modal de pago cerrado por el usuario.');
+            } else if (Culqi.error) {
+                console.error('[Culqi] Error:', Culqi.error);
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Aviso Culqi',
+                        text: Culqi.error.user_message || Culqi.error.merchant_message || 'Hubo un inconveniente al procesar tu solicitud.',
+                        icon: 'warning',
+                        confirmButtonColor: '#FF5500'
+                    });
+                } else {
+                    alert('⚠️ ' + (Culqi.error.user_message || 'Error en pasarela Culqi'));
+                }
+            }
+        };
+
+        // Polling en tiempo real para verificar pagos QR
+        function startCulqiOrderPolling(orderId) {
+            if (!orderId) return;
+
+            if (culqiPollingInterval) clearInterval(culqiPollingInterval);
+
+            culqiPollingInterval = setInterval(() => {
+                fetch("{{ route('web.checkout.culqi_order_status') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ order_id: orderId })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.is_paid) {
+                        clearInterval(culqiPollingInterval);
+                        if (typeof Culqi !== 'undefined' && Culqi.close) Culqi.close();
+                        processCulqiComplete({ order_id: orderId });
+                    }
+                })
+                .catch(err => console.warn('[Culqi] Polling status:', err));
+            }, 3000);
+        }
+
+        // Finalizar y registrar la compra con Culqi
+        async function processCulqiComplete(payload) {
+            if (culqiPollingInterval) clearInterval(culqiPollingInterval);
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: '🎉 ¡Pago Aprobado con Culqi!',
+                    html: 'Tu transacción ha sido validada con éxito.<br>Generando tus entradas oficiales con código QR y creando tu cuenta...',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading(); },
+                    background: '#14141E',
+                    color: '#FFFFFF'
+                });
+            }
+
+            let ticketPdfBase64 = '';
+            try {
+                if (typeof window.generateTicketPdfDoc === 'function') {
+                    const simulatedSale = {
+                        receipt_number: 'REC-PENDING',
+                        buyer_name: document.getElementById('buyerFullName')?.value || 'Cliente ViveGo',
+                        buyer_dni: document.getElementById('buyerDoc')?.value || '00000000',
+                        buyer_email: document.getElementById('buyerEmail')?.value || '',
+                        event: {
+                            id: eventData.id,
+                            title: eventData.title,
+                            venue_name: eventData.venue?.name || '',
+                            address: eventData.venue?.address || eventData.city || '',
+                            event_date: eventData.date_selected || '',
+                            event_time: '20:00',
+                            banner_image: eventData.banner_image || '',
+                            template: eventData.template || null
+                        },
+                        tickets_data: { items: cartItems }
+                    };
+                    const { pdf } = await window.generateTicketPdfDoc(simulatedSale);
+                    if (pdf) ticketPdfBase64 = pdf.output('datauristring');
+                }
+            } catch (pdfErr) {
+                console.warn('Compilación client-side de PDF omitida:', pdfErr);
+            }
+
+            fetch("{{ route('web.checkout.culqi_complete') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    token_id: payload.token_id || null,
+                    order_id: payload.order_id || currentCulqiOrderId,
+                    amount: currentGrandTotal,
+                    event_id: eventData.id,
+                    tickets: cartItems,
+                    customer_email: document.getElementById('buyerEmail')?.value || '',
+                    customer_name: document.getElementById('buyerFullName')?.value || '',
+                    customer_doc: document.getElementById('buyerDoc')?.value || '',
+                    customer_phone: document.getElementById('buyerPhone')?.value || '',
+                    ticket_pdf_base64: ticketPdfBase64
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'Aviso de Pago',
+                            text: data.message || 'Error al validar el pago en Culqi.',
+                            icon: 'warning',
+                            confirmButtonColor: '#FF5500'
+                        });
+                    } else {
+                        alert('⚠️ ' + (data.message || 'Error al validar el pago en Culqi.'));
+                    }
+                }
+            })
+            .catch(err => {
+                console.error('Error completando pago Culqi:', err);
+                window.location.href = "{{ route('customer.my_tickets') }}";
+            });
         }
 
         // Listener de seguridad si KR ya está listo
@@ -1058,7 +1507,6 @@
                 btn.disabled = false;
                 btn.textContent = 'Ingresar a mi Cuenta';
                 if (data.success) {
-                    // Autocompletar datos del comprador
                     if (data.user) {
                         document.getElementById('buyerFullName').value = data.user.name || '';
                         document.getElementById('buyerEmail').value = data.user.email || '';
