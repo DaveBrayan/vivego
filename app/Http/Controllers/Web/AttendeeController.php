@@ -156,27 +156,34 @@ class AttendeeController extends Controller
                 ->first();
         }
 
-        // 3. Fallback: Buscar en ticket_sales si el boleto fue emitido en POS
+        // 3. Fallback: Buscar en ticket_sales si el boleto fue emitido en POS o Web
         if (!$ticket) {
             $sales = TicketSale::where('event_id', $event->id)->get();
             foreach ($sales as $sale) {
-                $tData = is_array($sale->tickets_data) ? $sale->tickets_data : [];
-                foreach ($tData as $idx => $t) {
+                $tData = is_array($sale->tickets_data) ? $sale->tickets_data : (json_decode($sale->tickets_data ?? '[]', true) ?? []);
+                $items = $tData['items'] ?? (is_array($tData) ? $tData : []);
+                if (!is_array($items)) continue;
+
+                $numIndex = 0;
+                foreach ($items as $t) {
+                    if (!is_array($t)) continue;
+                    $numIndex++;
                     if (($t['qr_payload'] ?? '') === $rawInput || ($t['ticket_code'] ?? '') === $rawInput || ($t['validation_hash'] ?? '') === $rawInput) {
                         // Crear el registro en event_tickets
                         $ticket = EventTicket::create([
                             'event_id' => $event->id,
                             'ticket_sale_id' => $sale->id,
-                            'ticket_code' => $t['ticket_code'] ?? 'TK-' . ($idx + 1),
-                            'ticket_number' => $idx + 1,
-                            'zone_name' => $t['zone'] ?? $sale->zone_name,
+                            'ticket_code' => $t['ticket_code'] ?? "TK-{$sale->receipt_number}-{$numIndex}",
+                            'ticket_number' => $numIndex,
+                            'zone_name' => $t['zone'] ?? ($t['name'] ?? $sale->zone_name),
                             'unit_price' => $t['price'] ?? $sale->unit_price,
                             'qr_payload' => $t['qr_payload'] ?? $rawInput,
-                            'validation_hash' => $t['validation_hash'] ?? null,
+                            'validation_hash' => $t['validation_hash'] ?? ('VG' . strtoupper(substr(md5($sale->receipt_number . $numIndex), 0, 8))),
                             'buyer_name' => $t['buyer_name'] ?? $sale->buyer_name,
                             'buyer_dni' => $t['buyer_dni'] ?? $sale->buyer_dni,
-                            'source' => 'pos_sale',
+                            'source' => $sale->seller_name ?: 'pos_sale',
                             'is_used' => false,
+                            'status' => 'valid',
                         ]);
                         break 2;
                     }
@@ -372,15 +379,47 @@ class AttendeeController extends Controller
     }
 
     /**
-     * Sincroniza ventas de Taquilla existentes con la tabla event_tickets.
+     * Sincroniza ventas de Taquilla y Web existentes con la tabla event_tickets.
      */
     private function syncLegacySalesTickets(Event $event): void
     {
         $sales = TicketSale::where('event_id', $event->id)->get();
         foreach ($sales as $sale) {
-            $tData = is_array($sale->tickets_data) ? $sale->tickets_data : [];
-            foreach ($tData as $idx => $t) {
-                $payload = $t['qr_payload'] ?? "VIVEGO|EVT-{$event->id}|REC-{$sale->receipt_number}|TICK-" . ($idx + 1);
+            $tData = is_array($sale->tickets_data) ? $sale->tickets_data : (json_decode($sale->tickets_data ?? '[]', true) ?? []);
+            $items = $tData['items'] ?? (is_array($tData) ? $tData : []);
+            if (!is_array($items) || empty($items)) {
+                // Si no hay items desglose, crear por la cantidad de la venta
+                $qty = max(1, (int)$sale->quantity);
+                for ($idx = 1; $idx <= $qty; $idx++) {
+                    $payload = "VIVEGO|EVT-{$event->id}|REC-{$sale->receipt_number}|TICK-{$idx}";
+                    EventTicket::firstOrCreate(
+                        [
+                            'event_id' => $event->id,
+                            'qr_payload' => $payload,
+                        ],
+                        [
+                            'ticket_sale_id' => $sale->id,
+                            'ticket_code' => "TK-{$sale->receipt_number}-{$idx}",
+                            'ticket_number' => $idx,
+                            'zone_name' => $sale->zone_name,
+                            'unit_price' => $sale->unit_price,
+                            'validation_hash' => 'VG' . strtoupper(substr(md5($sale->receipt_number . $idx), 0, 8)),
+                            'buyer_name' => $sale->buyer_name,
+                            'buyer_dni' => $sale->buyer_dni,
+                            'source' => $sale->seller_name ?: 'pos_sale',
+                            'is_used' => false,
+                            'status' => 'valid',
+                        ]
+                    );
+                }
+                continue;
+            }
+
+            $numIndex = 0;
+            foreach ($items as $t) {
+                if (!is_array($t)) continue;
+                $numIndex++;
+                $payload = $t['qr_payload'] ?? "VIVEGO|EVT-{$event->id}|REC-{$sale->receipt_number}|TICK-{$numIndex}";
                 EventTicket::firstOrCreate(
                     [
                         'event_id' => $event->id,
@@ -388,15 +427,16 @@ class AttendeeController extends Controller
                     ],
                     [
                         'ticket_sale_id' => $sale->id,
-                        'ticket_code' => $t['ticket_code'] ?? "TK-{$sale->receipt_number}-" . ($idx + 1),
-                        'ticket_number' => $idx + 1,
-                        'zone_name' => $t['zone'] ?? $sale->zone_name,
+                        'ticket_code' => $t['ticket_code'] ?? "TK-{$sale->receipt_number}-{$numIndex}",
+                        'ticket_number' => $numIndex,
+                        'zone_name' => $t['zone'] ?? ($t['name'] ?? $sale->zone_name),
                         'unit_price' => $t['price'] ?? $sale->unit_price,
-                        'validation_hash' => $t['validation_hash'] ?? null,
+                        'validation_hash' => $t['validation_hash'] ?? ('VG' . strtoupper(substr(md5($sale->receipt_number . $numIndex), 0, 8))),
                         'buyer_name' => $t['buyer_name'] ?? $sale->buyer_name,
                         'buyer_dni' => $t['buyer_dni'] ?? $sale->buyer_dni,
-                        'source' => 'pos_sale',
+                        'source' => $sale->seller_name ?: 'pos_sale',
                         'is_used' => false,
+                        'status' => 'valid',
                     ]
                 );
             }
