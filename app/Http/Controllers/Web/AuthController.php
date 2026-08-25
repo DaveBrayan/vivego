@@ -13,12 +13,16 @@ use Illuminate\View\View;
 class AuthController extends Controller
 {
     /**
-     * Muestra el formulario de inicio de sesión.
+     * Muestra el formulario de inicio de sesión de administradores.
      */
-    public function showLoginForm()
+    public function showLoginForm(): View|RedirectResponse
     {
-        if (session()->has('admin_logged_in') && session('admin_logged_in')) {
-            return redirect()->route('web.dashboard');
+        if (session('admin_logged_in') && session('admin_id')) {
+            $admin = Administrator::find(session('admin_id'));
+            if ($admin && $admin->status === 'Activo') {
+                return redirect()->route('web.dashboard');
+            }
+            session()->forget(['admin_logged_in', 'admin_id', 'admin_name', 'admin_email', 'admin_role', 'admin_avatar']);
         }
 
         $settings = Setting::current();
@@ -26,7 +30,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Procesa el intento de inicio de sesión de administradores.
+     * Procesa el intento de inicio de sesión de administradores con validación criptográfica estricta.
      */
     public function login(Request $request): RedirectResponse
     {
@@ -38,16 +42,17 @@ class AuthController extends Controller
         $loginInput = trim(strtolower($credentials['login']));
         $password = $credentials['password'];
 
-        // Buscar administrador por correo o por nombre de usuario
-        $admin = Administrator::where('email', $loginInput)
-            ->orWhere('username', $loginInput)
-            ->first();
+        // Buscar administrador en la base de datos por correo electrónico o nombre de usuario
+        $admin = Administrator::where(function ($query) use ($loginInput) {
+            $query->where('email', $loginInput)
+                  ->orWhere('username', $loginInput);
+        })->first();
 
-        $targetUrl = session()->pull('url.intended', route('web.dashboard'));
+        // Validar que el administrador exista, esté Activo y la contraseña coincida con el hash
+        if ($admin && $admin->status === 'Activo' && Hash::check($password, $admin->password)) {
+            $request->session()->regenerate();
 
-        // Si existe en BD y la contraseña es válida (o fallback de desarrollo)
-        if ($admin && (Hash::check($password, $admin->password) || $password === 'admin123' || $password === '12345678')) {
-            $isTempPassword = str_starts_with($password, 'VG') || $password === 'admin123';
+            $isTempPassword = str_starts_with($password, 'VG');
 
             session([
                 'admin_logged_in' => true,
@@ -59,28 +64,26 @@ class AuthController extends Controller
                 'must_change_password' => $isTempPassword,
             ]);
 
-            return redirect()->route('web.dashboard')
-                ->with('success', "¡Bienvenido de nuevo, {$admin->full_name}! Has iniciado sesión correctamente.");
+            $targetUrl = session()->pull('url.intended', route('web.dashboard'));
+
+            // Asegurarse de que el targetUrl sea una ruta interna segura
+            if (!str_contains($targetUrl, '/dashboard') && !str_contains($targetUrl, '/admin')) {
+                $targetUrl = route('web.dashboard');
+            }
+
+            return redirect($targetUrl)
+                ->with('success', "¡Bienvenido de nuevo, {$admin->full_name}! Has ingresado al Panel de Control.");
         }
 
-        // Si no hay administradores en BD o credencial por defecto
-        if (!$admin && ($loginInput === 'admin@vivego.pe' || $loginInput === 'admin') && ($password === 'admin123' || $password === '12345678')) {
-            session([
-                'admin_logged_in' => true,
-                'admin_id' => 1,
-                'admin_name' => 'Christian Gómez',
-                'admin_email' => 'admin@vivego.pe',
-                'admin_role' => 'Administrador Principal',
-                'must_change_password' => false,
-            ]);
-
-            return redirect()->route('web.dashboard')
-                ->with('success', '¡Bienvenido de nuevo al Panel de Administración Vive Go!');
+        if ($admin && $admin->status !== 'Activo') {
+            return redirect()->back()
+                ->withInput($request->only('login'))
+                ->withErrors(['login' => 'Tu cuenta de administrador se encuentra inactiva o suspendida.']);
         }
 
         return redirect()->back()
             ->withInput($request->only('login'))
-            ->withErrors(['login' => 'Las credenciales ingresadas son incorrectas. Verifica tu usuario y contraseña.']);
+            ->withErrors(['login' => 'Credenciales incorrectas. Verifica tu usuario/correo y contraseña.']);
     }
 
     /**
@@ -96,14 +99,17 @@ class AuthController extends Controller
         $adminId = session('admin_id');
         $admin = $adminId ? Administrator::find($adminId) : null;
 
-        if ($admin) {
-            if (!Hash::check($validated['current_password'], $admin->password) && $validated['current_password'] !== 'admin123') {
-                return redirect()->back()->withErrors(['current_password' => 'La contraseña actual ingresada es incorrecta.']);
-            }
-
-            $admin->password = Hash::make($validated['new_password']);
-            $admin->save();
+        if (!$admin) {
+            return redirect()->route('web.login')
+                ->with('error', 'Debes iniciar sesión para realizar esta acción.');
         }
+
+        if (!Hash::check($validated['current_password'], $admin->password)) {
+            return redirect()->back()->withErrors(['current_password' => 'La contraseña actual ingresada es incorrecta.']);
+        }
+
+        $admin->password = Hash::make($validated['new_password']);
+        $admin->save();
 
         session()->forget('must_change_password');
 
@@ -111,15 +117,24 @@ class AuthController extends Controller
     }
 
     /**
-     * Cierra la sesión activa del administrador.
+     * Cierra la sesión activa del administrador de forma segura.
      */
     public function logout(Request $request): RedirectResponse
     {
-        $request->session()->forget(['admin_logged_in', 'admin_id', 'admin_name', 'admin_email', 'admin_role', 'admin_avatar']);
+        $request->session()->forget([
+            'admin_logged_in',
+            'admin_id',
+            'admin_name',
+            'admin_email',
+            'admin_role',
+            'admin_avatar',
+            'must_change_password',
+        ]);
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
         return redirect()->route('web.login')
-            ->with('success', 'Has cerrado sesión correctamente. ¡Hasta pronto!');
+            ->with('success', 'Has cerrado sesión del Panel de Administración correctamente.');
     }
 }
+

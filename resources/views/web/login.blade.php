@@ -335,44 +335,6 @@
             transform: translateY(0);
         }
 
-        /* Demo Helper Card */
-        .demo-credentials-box {
-            margin-top: 2rem;
-            padding: 1rem 1.25rem;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px dashed rgba(255, 255, 255, 0.15);
-            border-radius: 14px;
-            text-align: center;
-        }
-
-        .demo-title {
-            font-size: 0.75rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #06B6D4;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.35rem;
-        }
-
-        .demo-credentials {
-            font-size: 0.825rem;
-            color: #94A3B8;
-            font-family: monospace;
-            cursor: pointer;
-            padding: 0.35rem;
-            border-radius: 6px;
-            transition: background 0.2s ease;
-        }
-
-        .demo-credentials:hover {
-            background: rgba(255, 255, 255, 0.08);
-            color: #FFFFFF;
-        }
-
         /* Footer */
         .login-footer {
             position: relative;
@@ -406,7 +368,14 @@
     <main class="login-main">
         <div class="login-card">
             <h1 class="login-title">Iniciar Sesión</h1>
-            <p class="login-subtitle">Ingresa tus credenciales para acceder al Panel de Administración y Taquilla POS.</p>
+            <p class="login-subtitle">Ingresa tus credenciales autorizadas para acceder al Panel de Administración.</p>
+
+            @if(session('error'))
+                <div class="alert alert-danger">
+                    <span>⛔</span>
+                    <div>{{ session('error') }}</div>
+                </div>
+            @endif
 
             @if(session('warning'))
                 <div class="alert alert-warning">

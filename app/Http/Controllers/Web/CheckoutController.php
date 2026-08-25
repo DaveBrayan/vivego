@@ -342,6 +342,16 @@ class CheckoutController extends Controller
                 $customerUser->save();
             }
 
+            // Limpiar cualquier residuo de sesión administrativa
+            session()->forget([
+                'admin_logged_in',
+                'admin_id',
+                'admin_name',
+                'admin_email',
+                'admin_role',
+                'admin_avatar',
+            ]);
+
             // Iniciar sesión del cliente automáticamente
             session([
                 'customer_logged_in' => true,
@@ -624,6 +634,16 @@ class CheckoutController extends Controller
                 }
                 $customerUser->save();
             }
+
+            // Limpiar cualquier residuo de sesión administrativa
+            session()->forget([
+                'admin_logged_in',
+                'admin_id',
+                'admin_name',
+                'admin_email',
+                'admin_role',
+                'admin_avatar',
+            ]);
 
             // Iniciar sesión del cliente automáticamente
             session([

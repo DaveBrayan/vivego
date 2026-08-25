@@ -110,10 +110,17 @@
                             </button>
                         </form>
                     @elseif(session('admin_logged_in'))
-                        <a href="{{ route('web.dashboard') }}" class="btn btn-secondary btn-sm desktop-only">📊 Mi Panel</a>
+                        <a href="{{ route('web.dashboard') }}" class="btn btn-secondary btn-sm desktop-only">📊 Panel Admin</a>
+                        <form action="{{ route('web.logout') }}" method="POST" style="display: inline;" class="desktop-only">
+                            @csrf
+                            <button type="submit" title="Cerrar Sesión Admin" style="background: #FEE2E2; color: #DC2626; border: 1px solid #FCA5A5; padding: 0.45rem 0.85rem; border-radius: 10px; font-weight: 800; font-size: 0.825rem; cursor: pointer;">
+                                🚪 Salir Admin
+                            </button>
+                        </form>
                     @else
-                        <a href="{{ route('web.dashboard') }}" class="btn btn-secondary btn-sm desktop-only">📊 Mi Panel</a>
-                        <a href="{{ route('web.login') }}" class="btn btn-primary btn-sm desktop-only">Iniciar Sesión</a>
+                        <a href="{{ route('customer.login') }}" class="btn btn-primary btn-sm desktop-only" style="font-weight: 800;">
+                            🎟️ Mis Boletos / Iniciar Sesión
+                        </a>
                     @endif
 
                     <!-- Botón Hamburguesa Móvil -->
@@ -182,12 +189,19 @@
                             🚪 Cerrar Sesión
                         </button>
                     </form>
-                @else
-                    <a href="{{ route('web.login') }}" class="btn btn-primary btn-sm" style="width: 100%; text-align: center;">
-                        Iniciar Sesión / Mi Cuenta
+                @elseif(session('admin_logged_in'))
+                    <a href="{{ route('web.dashboard') }}" class="btn btn-primary btn-sm" style="width: 100%; text-align: center;">
+                        📊 Panel Admin
                     </a>
-                    <a href="{{ route('web.dashboard') }}" class="btn btn-secondary btn-sm" style="width: 100%; text-align: center; margin-top: 0.65rem;">
-                        📊 Mi Panel
+                    <form action="{{ route('web.logout') }}" method="POST" style="margin-top: 0.65rem;">
+                        @csrf
+                        <button type="submit" class="btn btn-secondary btn-sm" style="width: 100%; color: #DC2626; border-color: #FCA5A5; background: #FEF2F2;">
+                            🚪 Cerrar Sesión Admin
+                        </button>
+                    </form>
+                @else
+                    <a href="{{ route('customer.login') }}" class="btn btn-primary btn-sm" style="width: 100%; text-align: center;">
+                        🎟️ Mis Boletos / Iniciar Sesión
                     </a>
                 @endif
             </div>

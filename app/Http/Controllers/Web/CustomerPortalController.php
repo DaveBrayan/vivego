@@ -40,7 +40,20 @@ class CustomerPortalController extends Controller
         $email = trim(strtolower($validated['email']));
         $user = User::where('email', $email)->first();
 
-        if ($user && (Hash::check($validated['password'], $user->password) || $validated['password'] === '12345678')) {
+        // Validar contraseña únicamente contra el hash seguro en BD
+        if ($user && Hash::check($validated['password'], $user->password)) {
+            $request->session()->regenerate();
+
+            // Limpiar cualquier residuo de sesión administrativa
+            session()->forget([
+                'admin_logged_in',
+                'admin_id',
+                'admin_name',
+                'admin_email',
+                'admin_role',
+                'admin_avatar',
+            ]);
+
             session([
                 'customer_logged_in' => true,
                 'customer_id' => $user->id,
@@ -72,9 +85,9 @@ class CustomerPortalController extends Controller
     /**
      * Cerrar sesión de Cliente
      */
-    public function logout(): RedirectResponse
+    public function logout(Request $request): RedirectResponse
     {
-        session()->forget([
+        $request->session()->forget([
             'customer_logged_in',
             'customer_id',
             'customer_name',
@@ -83,7 +96,8 @@ class CustomerPortalController extends Controller
             'customer_phone',
         ]);
 
-        return redirect()->route('web.home');
+        return redirect()->route('web.home')
+            ->with('success', 'Has cerrado sesión del Portal de Clientes correctamente.');
     }
 
     /**
@@ -95,7 +109,7 @@ class CustomerPortalController extends Controller
         $customerDni = session('customer_dni');
 
         if (!session('customer_logged_in') && empty($customerEmail)) {
-            return redirect()->route('web.login')->with('info', 'Inicia sesión para ver tus boletos.');
+            return redirect()->route('customer.login')->with('info', 'Inicia sesión para ver tus boletos.');
         }
 
         $sales = TicketSale::with(['event.template'])
@@ -123,7 +137,7 @@ class CustomerPortalController extends Controller
         $customerDni = session('customer_dni');
 
         if (!session('customer_logged_in') && empty($customerEmail)) {
-            return redirect()->route('web.login')->with('info', 'Inicia sesión para ver tus recibos.');
+            return redirect()->route('customer.login')->with('info', 'Inicia sesión para ver tus recibos.');
         }
 
         $sales = TicketSale::with(['event.template'])

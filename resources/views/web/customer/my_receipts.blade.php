@@ -42,6 +42,27 @@
             </div>
         </div>
 
+        @if(session('error'))
+            <div style="background: #FEF2F2; border: 1.5px solid #FCA5A5; color: #991B1B; padding: 1rem 1.25rem; border-radius: 16px; margin-bottom: 1.5rem; font-weight: 700; display: flex; align-items: center; gap: 0.75rem; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.08);">
+                <span style="font-size: 1.4rem;">⛔</span>
+                <div>{{ session('error') }}</div>
+            </div>
+        @endif
+
+        @if(session('warning'))
+            <div style="background: #FFFBEB; border: 1.5px solid #FDE68A; color: #92400E; padding: 1rem 1.25rem; border-radius: 16px; margin-bottom: 1.5rem; font-weight: 700; display: flex; align-items: center; gap: 0.75rem;">
+                <span style="font-size: 1.4rem;">⚠️</span>
+                <div>{{ session('warning') }}</div>
+            </div>
+        @endif
+
+        @if(session('success'))
+            <div style="background: #ECFDF5; border: 1.5px solid #A7F3D0; color: #065F46; padding: 1rem 1.25rem; border-radius: 16px; margin-bottom: 1.5rem; font-weight: 700; display: flex; align-items: center; gap: 0.75rem;">
+                <span style="font-size: 1.4rem;">✨</span>
+                <div>{{ session('success') }}</div>
+            </div>
+        @endif
+
         @if($sales->isEmpty())
             <div style="background: #FFFFFF; border: 1.5px solid #E2E8F0; border-radius: 24px; padding: 4rem 2rem; text-align: center; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.05);">
                 <div style="width: 80px; height: 80px; border-radius: 50%; background: #EFF6FF; border: 2px solid #DBEAFE; color: #2563EB; font-size: 2.5rem; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem auto;">
