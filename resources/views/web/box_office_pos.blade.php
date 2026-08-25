@@ -579,6 +579,8 @@
                                         <td>
                                             @if($sale->payment_method === 'Efectivo')
                                                 <span class="dash-badge-custom badge-green" style="font-size: 0.75rem;">💵 Efectivo</span>
+                                            @elseif($sale->payment_method === 'Cortesía' || $sale->payment_method === 'cortesia')
+                                                <span class="dash-badge-custom badge-green" style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 800;">🎁 Cortesía</span>
                                             @elseif($sale->payment_method === 'Yape')
                                                 <span class="dash-badge-custom badge-purple" style="font-size: 0.75rem; background: rgba(168, 85, 247, 0.15); color: #A855F7; border: 1px solid rgba(168, 85, 247, 0.3);">📱 Yape</span>
                                             @elseif($sale->payment_method === 'Plin')
@@ -777,6 +779,9 @@
                                 </div>
                                 <div class="payment-method-pill" onclick="selectPaymentMethod('Transferencia', this)">
                                     <span>🏦</span> <span>Transf.</span>
+                                </div>
+                                <div class="payment-method-pill" onclick="selectPaymentMethod('Cortesía', this)" style="border-color: rgba(16, 185, 129, 0.4);">
+                                    <span>🎁</span> <span style="color: #10B981; font-weight: 800;">Cortesía</span>
                                 </div>
                             </div>
                             <input type="hidden" id="pos_payment_method" value="Efectivo">
@@ -1035,9 +1040,23 @@
                 cashBox.style.display = (method === 'Efectivo') ? 'block' : 'none';
             }
 
-            if (method !== 'Efectivo') {
-                const paidInput = document.getElementById('pos_amount_paid');
-                if (paidInput) paidInput.value = currentTotalToPay.toFixed(2);
+            const paidInput = document.getElementById('pos_amount_paid');
+            const totalDisplay = document.getElementById('posTotalToPayDisplay');
+
+            if (method === 'Cortesía') {
+                if (paidInput) paidInput.value = '0.00';
+                if (totalDisplay) {
+                    totalDisplay.textContent = 'S/ 0.00 (Cortesía)';
+                    totalDisplay.style.color = '#10B981';
+                }
+            } else {
+                if (totalDisplay) {
+                    totalDisplay.textContent = 'S/ ' + currentTotalToPay.toFixed(2);
+                    totalDisplay.style.color = '#FF5500';
+                }
+                if (method !== 'Efectivo' && paidInput) {
+                    paidInput.value = currentTotalToPay.toFixed(2);
+                }
             }
             calculateChange();
         }
@@ -2002,7 +2021,9 @@
                         newRow.setAttribute('data-sale-id', data.sale.id);
                         
                         let paymentBadge = `<span class="dash-badge-custom badge-green" style="font-size: 0.75rem;">💵 Efectivo</span>`;
-                        if (data.sale.payment_method === 'Yape') {
+                        if (data.sale.payment_method === 'Cortesía' || data.sale.payment_method === 'cortesia') {
+                            paymentBadge = `<span class="dash-badge-custom badge-green" style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 800;">🎁 Cortesía</span>`;
+                        } else if (data.sale.payment_method === 'Yape') {
                             paymentBadge = `<span class="dash-badge-custom badge-purple" style="font-size: 0.75rem; background: rgba(168, 85, 247, 0.15); color: #A855F7; border: 1px solid rgba(168, 85, 247, 0.3);">📱 Yape</span>`;
                         } else if (data.sale.payment_method === 'Plin') {
                             paymentBadge = `<span class="dash-badge-custom badge-cyan" style="font-size: 0.75rem; color: #00F0FF; background: rgba(0, 240, 255, 0.15); border: 1px solid rgba(0, 240, 255, 0.3);">🟣 Plin</span>`;

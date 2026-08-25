@@ -476,70 +476,103 @@
 
                                 <!-- CAMPOS ADICIONALES EXCLUSIVOS DE PLANTILLA 2 -->
                                 <div id="template2ExtraFields" style="display: {{ $isTpl2 ? 'block' : 'none' }}; margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px dashed rgba(255,255,255,0.15);">
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem;" id="template2UploadersGrid">
                                         
-                                        <!-- 1. Imagen de Fondo Estático / Fullscreen -->
-                                        <div style="background: rgba(15,23,42,0.6); border: 1.5px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 1.25rem;">
-                                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.65rem;">
-                                                <label class="form-label-custom" style="margin: 0; font-size: 0.9rem; font-weight: 800; color: #FFFFFF;">
-                                                    🌌 Imagen de Fondo Fijo (Background)
+                                        <!-- 1. Imagen de Fondo Escritorio (16:9) -->
+                                        <div style="background: rgba(15,23,42,0.6); border: 1.5px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 1.15rem;">
+                                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                                                <label class="form-label-custom" style="margin: 0; font-size: 0.85rem; font-weight: 800; color: #FFFFFF;">
+                                                    🌌 Fondo PC (16:9)
                                                 </label>
-                                                <span class="dash-badge-custom badge-blue" style="font-size: 0.725rem;">1920 x 1080 px</span>
+                                                <span class="dash-badge-custom badge-blue" style="font-size: 0.7rem;">1920x1080 px</span>
                                             </div>
-                                            <p style="font-size: 0.775rem; color: #94A3B8; margin: 0 0 0.85rem 0;">
-                                                Esta imagen se mantendrá estática en todo el fondo de la pantalla al hacer scroll.
+                                            <p style="font-size: 0.75rem; color: #94A3B8; margin: 0 0 0.75rem 0;">
+                                                Fondo para computadoras y pantallas horizontales.
                                             </p>
 
                                             <input type="hidden" id="background_image" value="{{ $eventData['background_image'] ?? '' }}">
                                             <input type="file" id="bgFileInput" accept="image/*" style="display: none;" onchange="handleBgImageUpload(this)">
 
-                                            <div id="bgPlaceholderBox" style="border: 1.5px dashed rgba(255,255,255,0.15); background: rgba(0,0,0,0.4); border-radius: 12px; padding: 1.5rem 1rem; text-align: center; cursor: pointer; display: {{ !empty($eventData['background_image']) ? 'none' : 'block' }};" onclick="openMediaManager('background_image');">
-                                                <span style="font-size: 1.8rem; display: block; margin-bottom: 0.35rem;">🖼️</span>
-                                                <strong style="color: #E2E8F0; font-size: 0.85rem; display: block;">Subir Fondo de Pantalla</strong>
-                                                <div style="display: inline-flex; gap: 0.5rem; margin-top: 0.65rem;" onclick="event.stopPropagation();">
-                                                    <button type="button" class="btn btn-primary btn-save-settings" style="font-size: 0.75rem; padding: 0.45rem 0.75rem;" onclick="openMediaManager('background_image');">Galería</button>
-                                                    <button type="button" class="btn btn-cancel-custom" style="font-size: 0.75rem; padding: 0.45rem 0.75rem;" onclick="document.getElementById('bgFileInput').click();">Subir PC</button>
+                                            <div id="bgPlaceholderBox" style="border: 1.5px dashed rgba(255,255,255,0.15); background: rgba(0,0,0,0.4); border-radius: 12px; padding: 1.25rem 0.75rem; text-align: center; cursor: pointer; display: {{ !empty($eventData['background_image']) ? 'none' : 'block' }};" onclick="openMediaManager('background_image');">
+                                                <span style="font-size: 1.6rem; display: block; margin-bottom: 0.25rem;">💻</span>
+                                                <strong style="color: #E2E8F0; font-size: 0.8rem; display: block;">Subir Fondo PC</strong>
+                                                <div style="display: inline-flex; gap: 0.4rem; margin-top: 0.5rem;" onclick="event.stopPropagation();">
+                                                    <button type="button" class="btn btn-primary btn-save-settings" style="font-size: 0.7rem; padding: 0.35rem 0.65rem;" onclick="openMediaManager('background_image');">Galería</button>
+                                                    <button type="button" class="btn btn-cancel-custom" style="font-size: 0.7rem; padding: 0.35rem 0.65rem;" onclick="document.getElementById('bgFileInput').click();">Subir PC</button>
                                                 </div>
                                             </div>
 
-                                            <div id="bgPreviewContainer" style="display: {{ !empty($eventData['background_image']) ? 'block' : 'none' }}; position: relative; border-radius: 12px; overflow: hidden; border: 1.5px solid rgba(255,255,255,0.2); background: #000; text-align: center; padding: 0.75rem;">
-                                                <img id="bgPreviewImg" src="{{ $eventData['background_image'] ?? '' }}" alt="Fondo" style="max-height: 160px; width: 100%; object-fit: cover; border-radius: 8px;">
-                                                <div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 0.65rem;">
-                                                    <button type="button" class="btn btn-primary btn-save-settings" style="font-size: 0.75rem; padding: 0.35rem 0.65rem;" onclick="openMediaManager('background_image');">Cambiar</button>
-                                                    <button type="button" class="btn btn-danger" style="background: rgba(239,68,68,0.2); border: 1px solid #EF4444; color: #FCA5A5; font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px;" onclick="removeBgImage()">Quitar</button>
+                                            <div id="bgPreviewContainer" style="display: {{ !empty($eventData['background_image']) ? 'block' : 'none' }}; position: relative; border-radius: 12px; overflow: hidden; border: 1.5px solid rgba(255,255,255,0.2); background: #000; text-align: center; padding: 0.5rem;">
+                                                <img id="bgPreviewImg" src="{{ $eventData['background_image'] ?? '' }}" alt="Fondo PC" style="max-height: 120px; width: 100%; object-fit: cover; border-radius: 6px;">
+                                                <div style="display: flex; justify-content: center; gap: 0.4rem; margin-top: 0.5rem;">
+                                                    <button type="button" class="btn btn-primary btn-save-settings" style="font-size: 0.7rem; padding: 0.3rem 0.55rem;" onclick="openMediaManager('background_image');">Cambiar</button>
+                                                    <button type="button" class="btn btn-danger" style="background: rgba(239,68,68,0.2); border: 1px solid #EF4444; color: #FCA5A5; font-size: 0.7rem; padding: 0.3rem 0.55rem; border-radius: 6px;" onclick="removeBgImage()">Quitar</button>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <!-- 2. Imagen del Artista / Personaje (Silueta / PNG) -->
-                                        <div style="background: rgba(15,23,42,0.6); border: 1.5px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 1.25rem;">
-                                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.65rem;">
-                                                <label class="form-label-custom" style="margin: 0; font-size: 0.9rem; font-weight: 800; color: #FFFFFF;">
-                                                    🎤 Imagen del Artista (Recorte / PNG)
+                                        <!-- 2. Imagen de Fondo Móvil (9:16) -->
+                                        <div style="background: rgba(15,23,42,0.6); border: 1.5px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 1.15rem;">
+                                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                                                <label class="form-label-custom" style="margin: 0; font-size: 0.85rem; font-weight: 800; color: #FFFFFF;">
+                                                    📱 Fondo Móvil (9:16)
                                                 </label>
-                                                <span class="dash-badge-custom badge-green" style="font-size: 0.725rem;">PNG Transparente</span>
+                                                <span class="dash-badge-custom badge-orange" style="font-size: 0.7rem;">1080x1920 px</span>
                                             </div>
-                                            <p style="font-size: 0.775rem; color: #94A3B8; margin: 0 0 0.85rem 0;">
-                                                Se mostrará destacada en la cabecera y bajará dinámicamente con el scroll.
+                                            <p style="font-size: 0.75rem; color: #94A3B8; margin: 0 0 0.75rem 0;">
+                                                Fondo para celulares y dispositivos verticales.
+                                            </p>
+
+                                            <input type="hidden" id="background_mobile_image" value="{{ $eventData['background_mobile_image'] ?? '' }}">
+                                            <input type="file" id="bgMobileFileInput" accept="image/*" style="display: none;" onchange="handleBgMobileImageUpload(this)">
+
+                                            <div id="bgMobilePlaceholderBox" style="border: 1.5px dashed rgba(255,255,255,0.15); background: rgba(0,0,0,0.4); border-radius: 12px; padding: 1.25rem 0.75rem; text-align: center; cursor: pointer; display: {{ !empty($eventData['background_mobile_image']) ? 'none' : 'block' }};" onclick="openMediaManager('background_mobile_image');">
+                                                <span style="font-size: 1.6rem; display: block; margin-bottom: 0.25rem;">📱</span>
+                                                <strong style="color: #E2E8F0; font-size: 0.8rem; display: block;">Subir Fondo Móvil</strong>
+                                                <div style="display: inline-flex; gap: 0.4rem; margin-top: 0.5rem;" onclick="event.stopPropagation();">
+                                                    <button type="button" class="btn btn-primary btn-save-settings" style="font-size: 0.7rem; padding: 0.35rem 0.65rem;" onclick="openMediaManager('background_mobile_image');">Galería</button>
+                                                    <button type="button" class="btn btn-cancel-custom" style="font-size: 0.7rem; padding: 0.35rem 0.65rem;" onclick="document.getElementById('bgMobileFileInput').click();">Subir PC</button>
+                                                </div>
+                                            </div>
+
+                                            <div id="bgMobilePreviewContainer" style="display: {{ !empty($eventData['background_mobile_image']) ? 'block' : 'none' }}; position: relative; border-radius: 12px; overflow: hidden; border: 1.5px solid rgba(255,255,255,0.2); background: #000; text-align: center; padding: 0.5rem;">
+                                                <img id="bgMobilePreviewImg" src="{{ $eventData['background_mobile_image'] ?? '' }}" alt="Fondo Móvil" style="max-height: 120px; width: auto; max-width: 100%; object-fit: contain; border-radius: 6px;">
+                                                <div style="display: flex; justify-content: center; gap: 0.4rem; margin-top: 0.5rem;">
+                                                    <button type="button" class="btn btn-primary btn-save-settings" style="font-size: 0.7rem; padding: 0.3rem 0.55rem;" onclick="openMediaManager('background_mobile_image');">Cambiar</button>
+                                                    <button type="button" class="btn btn-danger" style="background: rgba(239,68,68,0.2); border: 1px solid #EF4444; color: #FCA5A5; font-size: 0.7rem; padding: 0.3rem 0.55rem; border-radius: 6px;" onclick="removeBgMobileImage()">Quitar</button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- 3. Imagen del Artista / Personaje (Silueta / PNG) -->
+                                        <div style="background: rgba(15,23,42,0.6); border: 1.5px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 1.15rem;">
+                                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                                                <label class="form-label-custom" style="margin: 0; font-size: 0.85rem; font-weight: 800; color: #FFFFFF;">
+                                                    🎤 Imagen del Artista
+                                                </label>
+                                                <span class="dash-badge-custom badge-green" style="font-size: 0.7rem;">PNG Transparente</span>
+                                            </div>
+                                            <p style="font-size: 0.75rem; color: #94A3B8; margin: 0 0 0.75rem 0;">
+                                                Silueta o banner del artista en la cabecera.
                                             </p>
 
                                             <input type="hidden" id="artist_image" value="{{ $eventData['artist_image'] ?? '' }}">
                                             <input type="file" id="artistFileInput" accept="image/*" style="display: none;" onchange="handleArtistImageUpload(this)">
 
-                                            <div id="artistPlaceholderBox" style="border: 1.5px dashed rgba(255,255,255,0.15); background: rgba(0,0,0,0.4); border-radius: 12px; padding: 1.5rem 1rem; text-align: center; cursor: pointer; display: {{ !empty($eventData['artist_image']) ? 'none' : 'block' }};" onclick="openMediaManager('artist_image');">
-                                                <span style="font-size: 1.8rem; display: block; margin-bottom: 0.35rem;">👤</span>
-                                                <strong style="color: #E2E8F0; font-size: 0.85rem; display: block;">Subir Imagen de Artista</strong>
-                                                <div style="display: inline-flex; gap: 0.5rem; margin-top: 0.65rem;" onclick="event.stopPropagation();">
-                                                    <button type="button" class="btn btn-primary btn-save-settings" style="font-size: 0.75rem; padding: 0.45rem 0.75rem;" onclick="openMediaManager('artist_image');">Galería</button>
-                                                    <button type="button" class="btn btn-cancel-custom" style="font-size: 0.75rem; padding: 0.45rem 0.75rem;" onclick="document.getElementById('artistFileInput').click();">Subir PC</button>
+                                            <div id="artistPlaceholderBox" style="border: 1.5px dashed rgba(255,255,255,0.15); background: rgba(0,0,0,0.4); border-radius: 12px; padding: 1.25rem 0.75rem; text-align: center; cursor: pointer; display: {{ !empty($eventData['artist_image']) ? 'none' : 'block' }};" onclick="openMediaManager('artist_image');">
+                                                <span style="font-size: 1.6rem; display: block; margin-bottom: 0.25rem;">👤</span>
+                                                <strong style="color: #E2E8F0; font-size: 0.8rem; display: block;">Subir Artista</strong>
+                                                <div style="display: inline-flex; gap: 0.4rem; margin-top: 0.5rem;" onclick="event.stopPropagation();">
+                                                    <button type="button" class="btn btn-primary btn-save-settings" style="font-size: 0.7rem; padding: 0.35rem 0.65rem;" onclick="openMediaManager('artist_image');">Galería</button>
+                                                    <button type="button" class="btn btn-cancel-custom" style="font-size: 0.7rem; padding: 0.35rem 0.65rem;" onclick="document.getElementById('artistFileInput').click();">Subir PC</button>
                                                 </div>
                                             </div>
 
-                                            <div id="artistPreviewContainer" style="display: {{ !empty($eventData['artist_image']) ? 'block' : 'none' }}; position: relative; border-radius: 12px; overflow: hidden; border: 1.5px solid rgba(255,255,255,0.2); background: #000; text-align: center; padding: 0.75rem;">
-                                                <img id="artistPreviewImg" src="{{ $eventData['artist_image'] ?? '' }}" alt="Artista" style="max-height: 160px; width: auto; max-width: 100%; object-fit: contain; border-radius: 8px;">
-                                                <div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 0.65rem;">
-                                                    <button type="button" class="btn btn-primary btn-save-settings" style="font-size: 0.75rem; padding: 0.35rem 0.65rem;" onclick="openMediaManager('artist_image');">Cambiar</button>
-                                                    <button type="button" class="btn btn-danger" style="background: rgba(239,68,68,0.2); border: 1px solid #EF4444; color: #FCA5A5; font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px;" onclick="removeArtistImage()">Quitar</button>
+                                            <div id="artistPreviewContainer" style="display: {{ !empty($eventData['artist_image']) ? 'block' : 'none' }}; position: relative; border-radius: 12px; overflow: hidden; border: 1.5px solid rgba(255,255,255,0.2); background: #000; text-align: center; padding: 0.5rem;">
+                                                <img id="artistPreviewImg" src="{{ $eventData['artist_image'] ?? '' }}" alt="Artista" style="max-height: 120px; width: auto; max-width: 100%; object-fit: contain; border-radius: 6px;">
+                                                <div style="display: flex; justify-content: center; gap: 0.4rem; margin-top: 0.5rem;">
+                                                    <button type="button" class="btn btn-primary btn-save-settings" style="font-size: 0.7rem; padding: 0.3rem 0.55rem;" onclick="openMediaManager('artist_image');">Cambiar</button>
+                                                    <button type="button" class="btn btn-danger" style="background: rgba(239,68,68,0.2); border: 1px solid #EF4444; color: #FCA5A5; font-size: 0.7rem; padding: 0.3rem 0.55rem; border-radius: 6px;" onclick="removeArtistImage()">Quitar</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -601,15 +634,25 @@
                                 <table class="admin-table" style="margin: 0; width: 100%;">
                                     <thead>
                                         <tr>
-                                            <th style="width: 25%;">Tipo de Aforo</th>
-                                            <th style="width: 30%;">Nombre de la Zona</th>
-                                            <th style="width: 20%;">Aforo (Stock)</th>
-                                            <th style="width: 20%;">Precio Unitario (S/)</th>
-                                            <th style="width: 5%; text-align: center;">Acciones</th>
+                                            <th style="width: 22%;">Tipo de Aforo</th>
+                                            <th style="width: 24%;">Nombre de la Zona</th>
+                                            <th style="width: 15%;">Aforo (Stock)</th>
+                                            <th style="width: 16%;">Precio Regular (S/)</th>
+                                            <th style="width: 16%;">Preventa</th>
+                                            <th style="width: 7%; text-align: center;">Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody id="zonesTableBody">
                                         @foreach($eventData['zones'] as $zone)
+                                            @php
+                                                $hasPresale = !empty($zone['has_presale']) || (!empty($zone['presale_discount']) && (float)$zone['presale_discount'] > 0);
+                                                $pDiscount = $zone['presale_discount'] ?? 20;
+                                                $regPrice = (float)($zone['price'] ?? 50);
+                                                $pPrice = !empty($zone['presale_price']) ? (float)$zone['presale_price'] : round($regPrice * (1 - ($pDiscount / 100)), 2);
+                                                $pStart = $zone['presale_start_date'] ?? date('Y-m-d');
+                                                $pEnd = $zone['presale_end_date'] ?? date('Y-m-d', strtotime('+15 days'));
+                                                $pStock = $zone['presale_stock'] ?? '';
+                                            @endphp
                                             <tr class="zone-row">
                                                 <td>
                                                     <select class="form-select-custom zone-capacity-type" style="font-size: 0.85rem; padding: 0.55rem;">
@@ -627,10 +670,52 @@
                                                     <input type="number" class="form-input-custom zone-capacity-input" value="{{ $zone['capacity'] ?? 100 }}" min="1" style="font-size: 0.85rem; padding: 0.55rem;" oninput="recalculateTotalCapacity()">
                                                 </td>
                                                 <td>
-                                                    <input type="number" step="0.50" class="form-input-custom zone-price-input" value="{{ number_format($zone['price'] ?? 50, 2, '.', '') }}" min="0" style="font-size: 0.85rem; padding: 0.55rem; color: #10B981; font-weight: 800;">
+                                                    <input type="number" step="0.50" class="form-input-custom zone-price-input" value="{{ number_format($regPrice, 2, '.', '') }}" min="0" style="font-size: 0.85rem; padding: 0.55rem; color: #10B981; font-weight: 800;" oninput="updateZonePresaleCalc(this); recalculateTotalCapacity();">
+                                                </td>
+                                                <td>
+                                                    <button type="button" class="btn btn-sm btn-toggle-presale" style="background: {{ $hasPresale ? 'var(--color-primary-orange)' : 'rgba(255,85,0,0.15)' }}; border: 1.5px solid #FF5500; color: {{ $hasPresale ? '#FFFFFF' : '#FF5500' }}; font-size: 0.775rem; font-weight: 800; padding: 0.45rem 0.65rem; border-radius: 8px; width: 100%; text-align: center;" onclick="toggleZonePresaleBox(this)">
+                                                        🔥 {{ $hasPresale ? 'Preventa Activa' : 'Configurar' }}
+                                                    </button>
                                                 </td>
                                                 <td style="text-align: center;">
                                                     <button type="button" class="dash-btn-icon-action btn-delete-action" onclick="removeZoneRow(this)" title="Eliminar Zona">🗑️</button>
+                                                </td>
+                                            </tr>
+                                            <tr class="zone-presale-row" style="display: {{ $hasPresale ? 'table-row' : 'none' }}; background: rgba(255, 85, 0, 0.03);">
+                                                <td colspan="6" style="padding: 0.85rem 1.25rem; border-bottom: 1.5px solid rgba(255,85,0,0.25);">
+                                                    <div style="background: rgba(15,23,42,0.8); border: 1.5px dashed rgba(255,85,0,0.4); border-radius: 12px; padding: 1rem 1.25rem;">
+                                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                                                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin: 0;">
+                                                                <input type="checkbox" class="zone-presale-enabled" {{ $hasPresale ? 'checked' : '' }} onchange="togglePresaleInputs(this)" style="accent-color: #FF5500; width: 18px; height: 18px;">
+                                                                <strong style="color: #FF5500; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px;">🔥 Activar Preventa para esta Zona</strong>
+                                                            </label>
+                                                            <span class="presale-preview-badge" style="font-size: 0.75rem; font-weight: 800; color: {{ $hasPresale ? '#FFFFFF' : '#94A3B8' }}; background: {{ $hasPresale ? 'linear-gradient(135deg, #FF5500, #FF1E3C)' : 'rgba(255,255,255,0.08)' }}; padding: 3px 10px; border-radius: 6px;">
+                                                                {{ $hasPresale ? "🔥 Precio Preventa: S/ " . number_format($pPrice, 2) . " (-{$pDiscount}%)" : "Preventa Inactiva" }}
+                                                            </span>
+                                                        </div>
+                                                        <div class="zone-presale-inputs-grid" style="display: grid; grid-template-columns: 1fr 1.2fr 1.5fr 1.5fr 1.2fr; gap: 0.75rem; opacity: {{ $hasPresale ? '1' : '0.4' }}; pointer-events: {{ $hasPresale ? 'auto' : 'none' }};">
+                                                            <div>
+                                                                <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">% DESCUENTO</label>
+                                                                <input type="number" class="form-input-custom zone-presale-discount" value="{{ $pDiscount }}" min="1" max="99" style="font-size: 0.825rem; padding: 0.45rem;" oninput="updateZonePresaleCalc(this)">
+                                                            </div>
+                                                            <div>
+                                                                <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">PRECIO PREVENTA (S/)</label>
+                                                                <input type="number" step="0.50" class="form-input-custom zone-presale-price" value="{{ number_format($pPrice, 2, '.', '') }}" min="0" style="font-size: 0.825rem; padding: 0.45rem; color: #38BDF8; font-weight: 800;" readonly>
+                                                            </div>
+                                                            <div>
+                                                                <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">FECHA INICIO</label>
+                                                                <input type="date" class="form-input-custom zone-presale-start" value="{{ $pStart }}" style="font-size: 0.825rem; padding: 0.45rem;">
+                                                            </div>
+                                                            <div>
+                                                                <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">FECHA FIN (LÍMITE)</label>
+                                                                <input type="date" class="form-input-custom zone-presale-end" value="{{ $pEnd }}" style="font-size: 0.825rem; padding: 0.45rem;">
+                                                            </div>
+                                                            <div>
+                                                                <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">STOCK PREVENTA</label>
+                                                                <input type="number" class="form-input-custom zone-presale-stock" value="{{ $pStock }}" min="1" style="font-size: 0.825rem; padding: 0.45rem;" placeholder="Hasta agotar">
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -649,6 +734,70 @@
                                 <div style="text-align: right;">
                                     <span id="calculatedTotalCapacity" style="font-size: 1.8rem; font-weight: 900; color: #10B981;">0</span>
                                     <span style="display: block; font-size: 0.75rem; color: #A7F3D0; font-weight: 700;">Entradas Disponibles</span>
+                                </div>
+                            </div>
+
+                            @php
+                                $cSettings = $eventData['courtesy_settings'] ?? [];
+                                $cEnabled = !empty($cSettings['enabled']);
+                                $cForUsers = !isset($cSettings['for_users']) || !empty($cSettings['for_users']);
+                                $cForAdmins = !isset($cSettings['for_admins']) || !empty($cSettings['for_admins']);
+                                $cName = $cSettings['name'] ?? 'Entrada de Cortesía (Free)';
+                                $cUserMax = $cSettings['user_max_quantity'] ?? 2;
+                                $cStock = $cSettings['stock'] ?? '';
+                            @endphp
+
+                            <!-- SECCIÓN: CONFIGURACIÓN DE ENTRADAS DE CORTESÍA -->
+                            <div style="margin-bottom: 1.75rem; background: rgba(16, 185, 129, 0.03); border: 1.5px solid rgba(16, 185, 129, 0.25); border-radius: 18px; padding: 1.5rem;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.75rem;">
+                                    <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                        <span style="font-size: 1.4rem;">🎁</span>
+                                        <div>
+                                            <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #10B981;">Generar Entradas de Cortesía (Pases Free / Gratuitos)</h4>
+                                            <p style="margin: 0.15rem 0 0 0; font-size: 0.825rem; color: #94A3B8;">Habilita la emisión de entradas a costo S/ 0.00 para clientes web o emisión desde el panel / taquilla.</p>
+                                        </div>
+                                    </div>
+                                    <label style="display: inline-flex; align-items: center; gap: 0.65rem; cursor: pointer; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.45rem 0.85rem; border-radius: 10px;">
+                                        <input type="checkbox" id="courtesy_enabled" class="orange-checkbox" {{ $cEnabled ? 'checked' : '' }} onchange="toggleCourtesySection(this.checked)">
+                                        <span style="font-size: 0.85rem; font-weight: 800; color: #E2E8F0;">Activar Cortesías</span>
+                                    </label>
+                                </div>
+
+                                <div id="courtesyOptionsBox" style="display: {{ $cEnabled ? 'block' : 'none' }}; padding-top: 1rem; border-top: 1px dashed rgba(16, 185, 129, 0.2); margin-top: 0.85rem;">
+                                    <span style="font-size: 0.825rem; font-weight: 700; color: #E2E8F0; display: block; margin-bottom: 0.75rem;">¿Quiénes pueden generar u obtener entradas de cortesía?</span>
+                                    
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+                                        <label style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem; display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer;">
+                                            <input type="checkbox" id="courtesy_for_users" class="orange-checkbox" style="margin-top: 3px;" {{ $cForUsers ? 'checked' : '' }}>
+                                            <div>
+                                                <strong style="color: #FFFFFF; font-size: 0.9rem; display: block;">👥 Usuarios / Clientes Web</strong>
+                                                <span style="color: #94A3B8; font-size: 0.775rem; display: block; margin-top: 2px;">Los compradores podrán seleccionar cortesías en la web. <strong style="color: #FF5500;">(Límite estricto configurable por usuario)</strong>.</span>
+                                            </div>
+                                        </label>
+
+                                        <label style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem; display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer;">
+                                            <input type="checkbox" id="courtesy_for_admins" class="orange-checkbox" style="margin-top: 3px;" {{ $cForAdmins ? 'checked' : '' }}>
+                                            <div>
+                                                <strong style="color: #FFFFFF; font-size: 0.9rem; display: block;">🛡️ Administradores (Taquilla / Panel)</strong>
+                                                <span style="color: #94A3B8; font-size: 0.775rem; display: block; margin-top: 2px;">El administrador podrá emitir pases de cortesía desde Taquilla POS sin costo y <strong style="color: #10B981;">sin límite de cantidad</strong>.</span>
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                                        <div>
+                                            <label style="font-size: 0.775rem; font-weight: 700; color: #CBD5E1; display: block; margin-bottom: 0.35rem;">NOMBRE DE LA ENTRADA DE CORTESÍA</label>
+                                            <input type="text" id="courtesy_ticket_name" class="form-input-custom" value="{{ $cName }}" placeholder="Ej: Pase VIP de Cortesía" style="font-size: 0.85rem;">
+                                        </div>
+                                        <div>
+                                            <label style="font-size: 0.775rem; font-weight: 700; color: #CBD5E1; display: block; margin-bottom: 0.35rem;">MÁXIMO POR USUARIO (WEB)</label>
+                                            <input type="number" id="courtesy_user_max" class="form-input-custom" value="{{ $cUserMax }}" min="1" max="100" style="font-size: 0.85rem; font-weight: 800; color: #10B981;" placeholder="Por defecto 2">
+                                        </div>
+                                        <div>
+                                            <label style="font-size: 0.775rem; font-weight: 700; color: #CBD5E1; display: block; margin-bottom: 0.35rem;">STOCK TOTAL CORTESÍAS (OPCIONAL)</label>
+                                            <input type="number" id="courtesy_stock" class="form-input-custom" value="{{ $cStock }}" placeholder="Ilimitado / según aforo" min="1" style="font-size: 0.85rem;">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1959,6 +2108,8 @@
                 currentActiveUrl = document.getElementById('reference_image')?.value || document.getElementById('referencePreviewImg')?.src;
             } else if (mediaContext === 'background_image') {
                 currentActiveUrl = document.getElementById('background_image')?.value || document.getElementById('bgPreviewImg')?.src;
+            } else if (mediaContext === 'background_mobile_image') {
+                currentActiveUrl = document.getElementById('background_mobile_image')?.value || document.getElementById('bgMobilePreviewImg')?.src;
             } else if (mediaContext === 'artist_image') {
                 currentActiveUrl = document.getElementById('artist_image')?.value || document.getElementById('artistPreviewImg')?.src;
             } else if (mediaContext === 'selected_element_image') {
@@ -2013,6 +2164,16 @@
                 const input = document.getElementById('background_image');
                 const placeholder = document.getElementById('bgPlaceholderBox');
                 const container = document.getElementById('bgPreviewContainer');
+
+                if (preview) preview.src = url;
+                if (input) input.value = url;
+                if (placeholder) placeholder.style.display = 'none';
+                if (container) container.style.display = 'block';
+            } else if (mediaContext === 'background_mobile_image') {
+                const preview = document.getElementById('bgMobilePreviewImg');
+                const input = document.getElementById('background_mobile_image');
+                const placeholder = document.getElementById('bgMobilePlaceholderBox');
+                const container = document.getElementById('bgMobilePreviewContainer');
 
                 if (preview) preview.src = url;
                 if (input) input.value = url;
@@ -2168,8 +2329,84 @@
             }
         }
 
-        function addNewZoneRow() {
+        // ==========================================
+        // GESTIÓN DE ZONAS Y PREVENTAS
+        // ==========================================
+        function toggleZonePresaleBox(btn) {
+            const row = btn.closest('tr');
+            const presaleRow = row.nextElementSibling;
+            if (presaleRow && presaleRow.classList.contains('zone-presale-row')) {
+                const isHidden = presaleRow.style.display === 'none' || !presaleRow.style.display;
+                presaleRow.style.display = isHidden ? 'table-row' : 'none';
+                btn.style.background = isHidden ? 'var(--color-primary-orange)' : 'rgba(255,85,0,0.15)';
+                btn.style.color = isHidden ? '#FFFFFF' : '#FF5500';
+            }
+        }
+
+        function togglePresaleInputs(checkbox) {
+            const presaleRow = checkbox.closest('.zone-presale-row');
+            if (!presaleRow) return;
+            const grid = presaleRow.querySelector('.zone-presale-inputs-grid');
+            const badge = presaleRow.querySelector('.presale-preview-badge');
+            
+            if (checkbox.checked) {
+                grid.style.opacity = '1';
+                grid.style.pointerEvents = 'auto';
+                updateZonePresaleCalc(checkbox);
+            } else {
+                grid.style.opacity = '0.4';
+                grid.style.pointerEvents = 'none';
+                if (badge) {
+                    badge.style.background = 'rgba(255,255,255,0.08)';
+                    badge.style.color = '#94A3B8';
+                    badge.innerText = 'Preventa Inactiva';
+                }
+            }
+        }
+
+        function updateZonePresaleCalc(el) {
+            let row = el.closest('.zone-row');
+            let presaleRow;
+            if (row) {
+                presaleRow = row.nextElementSibling;
+            } else {
+                presaleRow = el.closest('.zone-presale-row');
+                if (presaleRow) {
+                    row = presaleRow.previousElementSibling;
+                }
+            }
+            if (!row || !presaleRow) return;
+
+            const regularPrice = parseFloat(row.querySelector('.zone-price-input')?.value) || 0;
+            const discountInput = presaleRow.querySelector('.zone-presale-discount');
+            const priceInput = presaleRow.querySelector('.zone-presale-price');
+            const badge = presaleRow.querySelector('.presale-preview-badge');
+            const checkbox = presaleRow.querySelector('.zone-presale-enabled');
+
+            let discount = parseFloat(discountInput?.value) || 0;
+            if (discount < 0) discount = 0;
+            if (discount > 100) discount = 100;
+
+            const presalePrice = Math.max(0, regularPrice * (1 - (discount / 100)));
+            if (priceInput) priceInput.value = presalePrice.toFixed(2);
+
+            if (checkbox && checkbox.checked && badge) {
+                badge.style.background = 'linear-gradient(135deg, #FF5500, #FF1E3C)';
+                badge.style.color = '#FFFFFF';
+                badge.innerText = `🔥 Precio Preventa: S/ ${presalePrice.toFixed(2)} (-${discount}%)`;
+            }
+        }
+
+        function toggleCourtesySection(enabled) {
+            const box = document.getElementById('courtesyOptionsBox');
+            if (box) {
+                box.style.display = enabled ? 'block' : 'none';
+            }
+        }
+
+        function addDynamicZoneRow() {
             const tbody = document.getElementById('zonesTableBody');
+            
             const row = document.createElement('tr');
             row.className = 'zone-row';
             row.innerHTML = `
@@ -2187,19 +2424,77 @@
                     <input type="number" class="form-input-custom zone-capacity-input" value="100" min="1" style="font-size: 0.85rem; padding: 0.55rem;" oninput="recalculateTotalCapacity()">
                 </td>
                 <td>
-                    <input type="number" step="0.50" class="form-input-custom zone-price-input" value="50.00" min="0" style="font-size: 0.85rem; padding: 0.55rem; color: #10B981; font-weight: 800;">
+                    <input type="number" step="0.50" class="form-input-custom zone-price-input" value="50.00" min="0" style="font-size: 0.85rem; padding: 0.55rem; color: #10B981; font-weight: 800;" oninput="updateZonePresaleCalc(this); recalculateTotalCapacity();">
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-toggle-presale" style="background: rgba(255,85,0,0.15); border: 1.5px solid #FF5500; color: #FF5500; font-size: 0.775rem; font-weight: 800; padding: 0.45rem 0.65rem; border-radius: 8px; width: 100%; text-align: center;" onclick="toggleZonePresaleBox(this)">
+                        🔥 Configurar
+                    </button>
                 </td>
                 <td style="text-align: center;">
                     <button type="button" class="dash-btn-icon-action btn-delete-action" onclick="removeZoneRow(this)" title="Eliminar Zona">🗑️</button>
                 </td>
             `;
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            const futureDate = new Date();
+            futureDate.setDate(futureDate.getDate() + 15);
+            const futureStr = futureDate.toISOString().split('T')[0];
+
+            const presaleRow = document.createElement('tr');
+            presaleRow.className = 'zone-presale-row';
+            presaleRow.style.display = 'none';
+            presaleRow.style.background = 'rgba(255, 85, 0, 0.03)';
+            presaleRow.innerHTML = `
+                <td colspan="6" style="padding: 0.85rem 1.25rem; border-bottom: 1.5px solid rgba(255,85,0,0.25);">
+                    <div style="background: rgba(15,23,42,0.8); border: 1.5px dashed rgba(255,85,0,0.4); border-radius: 12px; padding: 1rem 1.25rem;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin: 0;">
+                                <input type="checkbox" class="zone-presale-enabled" onchange="togglePresaleInputs(this)" style="accent-color: #FF5500; width: 18px; height: 18px;">
+                                <strong style="color: #FF5500; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px;">🔥 Activar Preventa para esta Zona</strong>
+                            </label>
+                            <span class="presale-preview-badge" style="font-size: 0.75rem; font-weight: 800; color: #94A3B8; background: rgba(255,255,255,0.08); padding: 3px 10px; border-radius: 6px;">
+                                Preventa Inactiva
+                            </span>
+                        </div>
+                        <div class="zone-presale-inputs-grid" style="display: grid; grid-template-columns: 1fr 1.2fr 1.5fr 1.5fr 1.2fr; gap: 0.75rem; opacity: 0.4; pointer-events: none;">
+                            <div>
+                                <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">% DESCUENTO</label>
+                                <input type="number" class="form-input-custom zone-presale-discount" value="20" min="1" max="99" style="font-size: 0.825rem; padding: 0.45rem;" oninput="updateZonePresaleCalc(this)">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">PRECIO PREVENTA (S/)</label>
+                                <input type="number" step="0.50" class="form-input-custom zone-presale-price" value="40.00" min="0" style="font-size: 0.825rem; padding: 0.45rem; color: #38BDF8; font-weight: 800;" readonly>
+                            </div>
+                            <div>
+                                <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">FECHA INICIO</label>
+                                <input type="date" class="form-input-custom zone-presale-start" value="${todayStr}" style="font-size: 0.825rem; padding: 0.45rem;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">FECHA FIN (LÍMITE)</label>
+                                <input type="date" class="form-input-custom zone-presale-end" value="${futureStr}" style="font-size: 0.825rem; padding: 0.45rem;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">STOCK PREVENTA</label>
+                                <input type="number" class="form-input-custom zone-presale-stock" value="50" min="1" style="font-size: 0.825rem; padding: 0.45rem;" placeholder="Hasta agotar">
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            `;
+
             tbody.appendChild(row);
+            tbody.appendChild(presaleRow);
             recalculateTotalCapacity();
         }
 
         function removeZoneRow(btn) {
             const row = btn.closest('tr');
+            const presaleRow = row.nextElementSibling;
             if (document.querySelectorAll('#zonesTableBody .zone-row').length > 1) {
+                if (presaleRow && presaleRow.classList.contains('zone-presale-row')) {
+                    presaleRow.remove();
+                }
                 row.remove();
                 recalculateTotalCapacity();
             } else {
@@ -2223,6 +2518,93 @@
             if (capEl) capEl.innerText = total.toLocaleString();
         }
 
+        // ==========================================
+        // GESTIÓN DE PLANTILLAS Y FONDOS EXCLUSIVOS
+        // ==========================================
+        function toggleLayoutTemplateFields() {
+            const isTpl2 = document.getElementById('tplOption2')?.checked;
+            const extraFields = document.getElementById('template2ExtraFields');
+            const label1 = document.getElementById('labelTemplate1');
+            const label2 = document.getElementById('labelTemplate2');
+
+            if (extraFields) {
+                extraFields.style.display = isTpl2 ? 'block' : 'none';
+            }
+            if (label1 && label2) {
+                if (isTpl2) {
+                    label2.style.borderColor = 'var(--color-primary-orange)';
+                    label2.style.background = 'rgba(255, 85, 0, 0.08)';
+                    label1.style.borderColor = 'rgba(255,255,255,0.12)';
+                    label1.style.background = 'rgba(255,255,255,0.02)';
+                } else {
+                    label1.style.borderColor = 'var(--color-primary-orange)';
+                    label1.style.background = 'rgba(255, 85, 0, 0.08)';
+                    label2.style.borderColor = 'rgba(255,255,255,0.12)';
+                    label2.style.background = 'rgba(255,255,255,0.02)';
+                }
+            }
+        }
+
+        function handleBgImageUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('background_image').value = e.target.result;
+                    document.getElementById('bgPreviewImg').src = e.target.result;
+                    document.getElementById('bgPlaceholderBox').style.display = 'none';
+                    document.getElementById('bgPreviewContainer').style.display = 'block';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removeBgImage() {
+            document.getElementById('background_image').value = '';
+            document.getElementById('bgPreviewImg').src = '';
+            document.getElementById('bgPlaceholderBox').style.display = 'block';
+            document.getElementById('bgPreviewContainer').style.display = 'none';
+        }
+
+        function handleBgMobileImageUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('background_mobile_image').value = e.target.result;
+                    document.getElementById('bgMobilePreviewImg').src = e.target.result;
+                    document.getElementById('bgMobilePlaceholderBox').style.display = 'none';
+                    document.getElementById('bgMobilePreviewContainer').style.display = 'block';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removeBgMobileImage() {
+            document.getElementById('background_mobile_image').value = '';
+            document.getElementById('bgMobilePreviewImg').src = '';
+            document.getElementById('bgMobilePlaceholderBox').style.display = 'block';
+            document.getElementById('bgMobilePreviewContainer').style.display = 'none';
+        }
+
+        function handleArtistImageUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('artist_image').value = e.target.result;
+                    document.getElementById('artistPreviewImg').src = e.target.result;
+                    document.getElementById('artistPlaceholderBox').style.display = 'none';
+                    document.getElementById('artistPreviewContainer').style.display = 'block';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removeArtistImage() {
+            document.getElementById('artist_image').value = '';
+            document.getElementById('artistPreviewImg').src = '';
+            document.getElementById('artistPlaceholderBox').style.display = 'block';
+            document.getElementById('artistPreviewContainer').style.display = 'none';
+        }
+
         function updateMainEventForm() {
             const title = document.getElementById('event_title').value;
             if (!title) {
@@ -2232,12 +2614,35 @@
             }
 
             const zones = [];
-            document.querySelectorAll('.zone-row').forEach(row => {
+            document.querySelectorAll('#zonesTableBody .zone-row').forEach(row => {
+                const presaleRow = row.nextElementSibling;
+                let isPresaleEnabled = false;
+                let presaleDiscount = 0;
+                let presalePrice = null;
+                let presaleStart = null;
+                let presaleEnd = null;
+                let presaleStock = null;
+
+                if (presaleRow && presaleRow.classList.contains('zone-presale-row')) {
+                    isPresaleEnabled = presaleRow.querySelector('.zone-presale-enabled')?.checked || false;
+                    presaleDiscount = parseFloat(presaleRow.querySelector('.zone-presale-discount')?.value) || 0;
+                    presalePrice = parseFloat(presaleRow.querySelector('.zone-presale-price')?.value) || null;
+                    presaleStart = presaleRow.querySelector('.zone-presale-start')?.value || null;
+                    presaleEnd = presaleRow.querySelector('.zone-presale-end')?.value || null;
+                    presaleStock = parseInt(presaleRow.querySelector('.zone-presale-stock')?.value) || null;
+                }
+
                 zones.push({
                     capacity_type: row.querySelector('.zone-capacity-type').value,
                     name: row.querySelector('.zone-name-input').value,
                     capacity: parseInt(row.querySelector('.zone-capacity-input').value) || 0,
-                    price: parseFloat(row.querySelector('.zone-price-input').value) || 0
+                    price: parseFloat(row.querySelector('.zone-price-input').value) || 0,
+                    has_presale: isPresaleEnabled && presaleDiscount > 0,
+                    presale_discount: isPresaleEnabled ? presaleDiscount : 0,
+                    presale_price: isPresaleEnabled ? presalePrice : null,
+                    presale_start_date: isPresaleEnabled ? presaleStart : null,
+                    presale_end_date: isPresaleEnabled ? presaleEnd : null,
+                    presale_stock: isPresaleEnabled ? presaleStock : null
                 });
             });
 
@@ -2247,6 +2652,16 @@
             const position = leafletMarker ? leafletMarker.getLatLng() : { lat: initialLat, lng: initialLng };
             const salesType = document.querySelector('input[name="event_sales_type"]:checked')?.value || 'fisica';
 
+            const courtesyEnabled = document.getElementById('courtesy_enabled')?.checked || false;
+            const courtesySettings = {
+                enabled: courtesyEnabled,
+                for_users: courtesyEnabled ? (document.getElementById('courtesy_for_users')?.checked || false) : false,
+                for_admins: courtesyEnabled ? (document.getElementById('courtesy_for_admins')?.checked || false) : false,
+                name: document.getElementById('courtesy_ticket_name')?.value || 'Entrada de Cortesía (Free)',
+                user_max_quantity: parseInt(document.getElementById('courtesy_user_max')?.value) || 2,
+                stock: parseInt(document.getElementById('courtesy_stock')?.value) || null
+            };
+
             const payload = {
                 title: title,
                 category_name: document.getElementById('event_category').value,
@@ -2255,6 +2670,7 @@
                 reference_image: document.getElementById('reference_image')?.value || null,
                 layout_template: document.querySelector('input[name="layout_template"]:checked')?.value || 'template_1',
                 background_image: document.getElementById('background_image')?.value || null,
+                background_mobile_image: document.getElementById('background_mobile_image')?.value || null,
                 artist_image: document.getElementById('artist_image')?.value || null,
                 event_date: document.getElementById('event_date').value,
                 event_time: document.getElementById('event_time').value,
@@ -2265,6 +2681,7 @@
                 description: document.getElementById('event_details').value,
                 tags: tags,
                 zones: zones,
+                courtesy_settings: courtesySettings,
                 sales_type: salesType,
                 custom_ticket: certState
             };

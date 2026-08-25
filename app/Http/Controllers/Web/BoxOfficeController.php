@@ -241,8 +241,8 @@ class BoxOfficeController extends Controller
             'buyer_dni' => 'nullable|string|max:20',
             'buyer_phone' => 'nullable|string|max:30',
             'zone_name' => 'required|string|max:100',
-            'quantity' => 'required|integer|min:1|max:50',
-            'payment_method' => 'required|string|in:Efectivo,Yape,Plin,Tarjeta,Transferencia',
+            'quantity' => 'required|integer|min:1',
+            'payment_method' => 'required|string|in:Efectivo,Yape,Plin,Tarjeta,Transferencia,Cortesía,cortesia',
             'amount_paid' => 'required|numeric|min:0',
         ]);
 
@@ -282,23 +282,31 @@ class BoxOfficeController extends Controller
             ], 422);
         }
 
-        $totalAmount = round($unitPrice * $validated['quantity'], 2);
-        $amountPaid = round((float) $validated['amount_paid'], 2);
+        $isCourtesy = ($validated['payment_method'] === 'Cortesía' || $validated['payment_method'] === 'cortesia');
 
-        // Si el método es Efectivo, validar que el monto pagado sea mayor o igual al total
-        if ($validated['payment_method'] === 'Efectivo' && $amountPaid < $totalAmount) {
-            return response()->json([
-                'success' => false,
-                'message' => "El monto entregado (S/ " . number_format($amountPaid, 2) . ") es menor al total a pagar (S/ " . number_format($totalAmount, 2) . ").",
-            ], 422);
+        if ($isCourtesy) {
+            $totalAmount = 0.00;
+            $amountPaid = 0.00;
+            $changeAmount = 0.00;
+        } else {
+            $totalAmount = round($unitPrice * $validated['quantity'], 2);
+            $amountPaid = round((float) $validated['amount_paid'], 2);
+
+            // Si el método es Efectivo, validar que el monto pagado sea mayor o igual al total
+            if ($validated['payment_method'] === 'Efectivo' && $amountPaid < $totalAmount) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "El monto entregado (S/ " . number_format($amountPaid, 2) . ") es menor al total a pagar (S/ " . number_format($totalAmount, 2) . ").",
+                ], 422);
+            }
+
+            // Si no es efectivo, el monto recibido se asume igual al total
+            if ($validated['payment_method'] !== 'Efectivo') {
+                $amountPaid = $totalAmount;
+            }
+
+            $changeAmount = max(0, round($amountPaid - $totalAmount, 2));
         }
-
-        // Si no es efectivo, el monto recibido se asume igual al total
-        if ($validated['payment_method'] !== 'Efectivo') {
-            $amountPaid = $totalAmount;
-        }
-
-        $changeAmount = max(0, round($amountPaid - $totalAmount, 2));
 
         // Descontar stock de la zona y actualizar evento
         $zones[$targetZoneIndex]['capacity'] = max(0, $currentCapacity - $validated['quantity']);
@@ -325,6 +333,8 @@ class BoxOfficeController extends Controller
             $encryptedToken = strtoupper(substr(hash_hmac('sha256', "VIVEGO_ENC_{$event->id}_{$receiptNumber}_{$validationHash}_{$i}", config('app.key', 'ViveGoSecretKey2026')), 0, 24));
             $qrPayload = "VGENC:{$encryptedToken}";
 
+            $effectiveTicketPrice = $isCourtesy ? 0.00 : $unitPrice;
+
             $ticketsData[] = [
                 'ticket_code' => $ticketCode,
                 'ticket_number' => $currentSeq,
@@ -332,9 +342,10 @@ class BoxOfficeController extends Controller
                 'validation_hash' => $validationHash,
                 'qr_payload' => $qrPayload,
                 'zone' => $validated['zone_name'],
-                'price' => $unitPrice,
+                'price' => $effectiveTicketPrice,
                 'buyer_name' => $buyerName,
                 'buyer_dni' => $buyerDni,
+                'is_courtesy' => $isCourtesy,
             ];
         }
 
@@ -346,7 +357,7 @@ class BoxOfficeController extends Controller
             'buyer_dni' => $buyerDni,
             'buyer_phone' => $buyerPhone,
             'zone_name' => $validated['zone_name'],
-            'unit_price' => $unitPrice,
+            'unit_price' => $isCourtesy ? 0.00 : $unitPrice,
             'quantity' => $validated['quantity'],
             'total_amount' => $totalAmount,
             'payment_method' => $validated['payment_method'],

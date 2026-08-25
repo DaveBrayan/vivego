@@ -57,30 +57,146 @@ class EventDetailController extends Controller
                 $timeDisplay .= ' HRS';
             }
 
-            // Zonas y Tipos de Entrada
+            // Zonas y Tipos de Entrada con Soporte de Preventa Activa y Control de Stock
             $zones = is_array($eventModel->zones) ? $eventModel->zones : (is_string($eventModel->zones) ? json_decode($eventModel->zones, true) : []);
             $tickets = [];
+            $today = date('Y-m-d');
 
             if (!empty($zones)) {
                 foreach ($zones as $idx => $zone) {
                     $zoneName = $zone['name'] ?? $zone['capacity_type'] ?? ('Zona ' . ($idx + 1));
-                    $priceVal = isset($zone['price']) ? (float)$zone['price'] : 50.00;
+                    $regularPrice = isset($zone['price']) ? (float)$zone['price'] : 50.00;
                     $capacityVal = isset($zone['capacity']) ? (int)$zone['capacity'] : 100;
+
+                    // Calcular ventas registradas si existe la tabla
+                    $soldCount = 0;
+                    try {
+                        if (\Illuminate\Support\Facades\Schema::hasTable('ticket_sales')) {
+                            $soldCount = (int) \Illuminate\Support\Facades\DB::table('ticket_sales')
+                                ->where('event_id', $eventModel->id)
+                                ->where(function($q) use ($zoneName) {
+                                    $q->where('zone_name', $zoneName)
+                                      ->orWhere('ticket_type', $zoneName);
+                                })
+                                ->whereIn('payment_status', ['paid', 'approved', 'completed', 'CONFIRMED'])
+                                ->sum('quantity');
+                        }
+                    } catch (\Exception $e) {
+                        $soldCount = 0;
+                    }
+
+                    $remainingCapacity = max(0, $capacityVal - $soldCount);
+                    $isAvailable = $capacityVal > 0 && $remainingCapacity > 0;
+
+                    // Datos de Preventa
+                    $hasPresale = !empty($zone['has_presale']) || (!empty($zone['presale_discount']) && (float)$zone['presale_discount'] > 0);
+                    $discountPercent = isset($zone['presale_discount']) ? (float)$zone['presale_discount'] : 0;
+                    $presaleStart = !empty($zone['presale_start_date']) ? $zone['presale_start_date'] : null;
+                    $presaleEnd = !empty($zone['presale_end_date']) ? $zone['presale_end_date'] : null;
+                    $presaleStock = isset($zone['presale_stock']) && $zone['presale_stock'] !== '' ? (int)$zone['presale_stock'] : null;
+
+                    $isPresaleActive = false;
+                    if ($isAvailable && $hasPresale && $discountPercent > 0) {
+                        $dateValid = true;
+                        if ($presaleStart && $today < $presaleStart) {
+                            $dateValid = false; // Preventa aún no inicia
+                        }
+                        if ($presaleEnd && $today > $presaleEnd) {
+                            $dateValid = false; // Preventa ya expiró
+                        }
+                        // Si el stock específico de preventa se configuró en 0 o se agotó
+                        if ($presaleStock !== null && $presaleStock <= 0) {
+                            $dateValid = false;
+                        }
+
+                        if ($dateValid) {
+                            $isPresaleActive = true;
+                        }
+                    }
+
+                    $presalePrice = $regularPrice;
+                    if ($isPresaleActive) {
+                        if (isset($zone['presale_price']) && (float)$zone['presale_price'] > 0) {
+                            $presalePrice = (float)$zone['presale_price'];
+                        } else {
+                            $presalePrice = round($regularPrice * (1 - ($discountPercent / 100)), 2);
+                        }
+                        $effectivePrice = $presalePrice;
+                    } else {
+                        $effectivePrice = $regularPrice;
+                    }
 
                     $tickets[] = [
                         'id' => $idx + 1,
                         'name' => $zoneName,
-                        'price' => number_format($priceVal, 2, '.', ''),
-                        'capacity' => $capacityVal,
-                        'available' => true,
+                        'price' => number_format($effectivePrice, 2, '.', ''),
+                        'regular_price' => number_format($regularPrice, 2, '.', ''),
+                        'presale_price' => number_format($presalePrice, 2, '.', ''),
+                        'is_presale_active' => $isPresaleActive,
+                        'presale_discount' => $discountPercent,
+                        'presale_start_date' => $presaleStart,
+                        'presale_end_date' => $presaleEnd,
+                        'presale_stock' => $presaleStock,
+                        'capacity' => $remainingCapacity,
+                        'total_capacity' => $capacityVal,
+                        'available' => $isAvailable,
                     ];
                 }
             } else {
                 $tickets = [
-                    ['id' => 1, 'name' => 'General Preventa', 'price' => '50.00', 'capacity' => 200, 'available' => true],
-                    ['id' => 2, 'name' => 'VIP Preferencial', 'price' => '90.00', 'capacity' => 100, 'available' => true],
+                    ['id' => 1, 'name' => 'General Preventa', 'price' => '50.00', 'regular_price' => '50.00', 'presale_price' => '50.00', 'is_presale_active' => false, 'presale_discount' => 0, 'capacity' => 200, 'total_capacity' => 200, 'available' => true],
+                    ['id' => 2, 'name' => 'VIP Preferencial', 'price' => '90.00', 'regular_price' => '90.00', 'presale_price' => '90.00', 'is_presale_active' => false, 'presale_discount' => 0, 'capacity' => 100, 'total_capacity' => 100, 'available' => true],
                 ];
             }
+
+            // Comprobar si las entradas de cortesía están activadas para los usuarios
+            $courtesySettings = is_array($eventModel->courtesy_settings) 
+                ? $eventModel->courtesy_settings 
+                : (json_decode($eventModel->courtesy_settings ?? '[]', true) ?? []);
+
+            $courtesyForUsers = !empty($courtesySettings['enabled']) && !empty($courtesySettings['for_users']);
+
+            if ($courtesyForUsers) {
+                $courtesyStock = isset($courtesySettings['stock']) && $courtesySettings['stock'] !== '' ? (int)$courtesySettings['stock'] : 9999;
+                
+                // Calcular si hay stock de cortesía disponible
+                $courtesySoldCount = 0;
+                try {
+                    if (class_exists('\App\Models\TicketSale')) {
+                        $courtesySoldCount = \App\Models\TicketSale::where('event_id', $eventModel->id)
+                            ->where(function($q) {
+                                $q->where('payment_method', 'Cortesía')
+                                  ->orWhere('payment_method', 'cortesia');
+                            })
+                            ->sum('quantity');
+                    }
+                } catch (\Exception $e) {
+                    $courtesySoldCount = 0;
+                }
+
+                $courtesyRemaining = max(0, $courtesyStock - $courtesySoldCount);
+                $isCourtesyAvail = $courtesyRemaining > 0;
+                $userMax = isset($courtesySettings['user_max_quantity']) && (int)$courtesySettings['user_max_quantity'] > 0 
+                    ? (int)$courtesySettings['user_max_quantity'] 
+                    : 2;
+
+                $tickets[] = [
+                    'id' => 'courtesy',
+                    'name' => $courtesySettings['name'] ?? 'Entrada de Cortesía (Free)',
+                    'price' => '0.00',
+                    'regular_price' => '0.00',
+                    'presale_price' => '0.00',
+                    'is_presale_active' => false,
+                    'presale_discount' => 0,
+                    'is_courtesy' => true,
+                    'max_quantity' => $userMax,
+                    'capacity' => $courtesyRemaining,
+                    'total_capacity' => $courtesyStock,
+                    'available' => $isCourtesyAvail,
+                ];
+            }
+
+            $allSoldOut = !empty($tickets) && collect($tickets)->every(fn($t) => empty($t['available']));
 
             // Detalles y Descripción
             $details = [];
@@ -160,6 +276,7 @@ class EventDetailController extends Controller
                 'reference_image' => $eventModel->reference_image,
                 'layout_template' => $eventModel->layout_template ?? 'template_1',
                 'background_image' => $eventModel->background_image,
+                'background_mobile_image' => $eventModel->background_mobile_image,
                 'artist_image' => $eventModel->artist_image,
                 'dates' => [
                     ['id' => 1, 'date' => $formattedDate, 'time' => $timeDisplay, 'selected' => true],
@@ -173,6 +290,7 @@ class EventDetailController extends Controller
                     'map_embed' => $mapEmbed,
                 ],
                 'details' => $details,
+                'all_sold_out' => $allSoldOut,
                 'organizer' => [
                     'name' => $organizerName,
                     'ruc' => $organizerRuc,

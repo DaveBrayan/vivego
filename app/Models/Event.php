@@ -28,16 +28,19 @@ class Event extends Model
         'tags',
         'template_id',
         'zones',
+        'courtesy_settings',
         'status',
         'sales_type',
         'layout_template',
         'background_image',
+        'background_mobile_image',
         'artist_image',
     ];
 
     protected $casts = [
         'tags' => 'array',
         'zones' => 'array',
+        'courtesy_settings' => 'array',
     ];
 
     public function getBannerImageAttribute($value): ?string
@@ -85,6 +88,28 @@ class Event extends Model
     }
 
     public function getBackgroundImageAttribute($value): ?string
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        if (str_starts_with($value, 'data:image') || str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            return $value;
+        }
+
+        $clean = ltrim($value, '/');
+        if (preg_match('/(?:storage\/)+(.+)/i', $clean, $matches)) {
+            $clean = 'storage/' . ltrim($matches[1], '/');
+        } elseif (preg_match('/(?:images\/)+(.+)/i', $clean, $matches)) {
+            $clean = 'images/' . ltrim($matches[1], '/');
+        } elseif (str_starts_with($clean, 'events/') || str_starts_with($clean, 'templates/') || str_starts_with($clean, 'uploads/')) {
+            $clean = 'storage/' . $clean;
+        }
+
+        return asset($clean);
+    }
+
+    public function getBackgroundMobileImageAttribute($value): ?string
     {
         if (empty($value)) {
             return null;

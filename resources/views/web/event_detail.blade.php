@@ -3,305 +3,209 @@
 @section('title', $event['title'] . ' | Vive Go Eventos')
 
 @section('content')
-    <style>
-        @media (max-width: 991px) {
-            .template2-hero-grid {
-                grid-template-columns: 1fr !important;
-                gap: 2rem !important;
-            }
-            .template2-hero-card {
-                padding: 1.75rem 1.5rem !important;
-            }
-            .template2-hero-grid h1 {
-                font-size: 2rem !important;
-            }
-            .template2-booking-grid {
-                grid-template-columns: 1fr !important;
-            }
-            .template2-bottom-grid {
-                grid-template-columns: 1fr !important;
-            }
-            .artist-hero-container {
-                min-height: 280px !important;
-            }
-            #artistHeroImg {
-                max-height: 320px !important;
-            }
-        }
-        @media (max-width: 576px) {
-            .template2-booking-card {
-                padding: 1.5rem 1rem !important;
-            }
-        }
-    </style>
-
     @if(($event['layout_template'] ?? 'template_1') === 'template_2')
         <!-- =========================================================
-             PLANTILLA 2: INMERSIVA (ARTISTA & FONDO FIJO CON PARALLAX)
+             PLANTILLA 2: ESTILO INMERSIVO (FONDO DUAL: PC 16:9 Y MÓVIL 9:16 + ARTISTA MAX + ZONAS SIN SOMBRA + CARDS BLANCAS)
              ========================================================= -->
-        <!-- Fondo Fijo de Pantalla Completa (Estático en scroll) -->
-        <div class="template2-backdrop" style="position: fixed; inset: 0; background-image: url('{{ $event['background_image'] ?: $event['banner_image'] }}'); background-size: cover; background-position: center top; background-attachment: fixed; z-index: -2;"></div>
-        <div class="template2-overlay" style="position: fixed; inset: 0; background: linear-gradient(180deg, rgba(8, 12, 22, 0.82) 0%, rgba(10, 14, 26, 0.94) 55%, rgba(10, 14, 26, 0.98) 100%); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: -1;"></div>
+        <style>
+            body {
+                background-color: #0A0E1A !important;
+            }
+            .main-content {
+                background: transparent !important;
+                padding-top: 0 !important;
+            }
+            .template2-backdrop {
+                position: fixed;
+                inset: 0;
+                background-image: url('{{ $event['background_image'] ?: $event['banner_image'] }}');
+                background-size: 100% auto;
+                background-position: center top;
+                background-repeat: repeat-y;
+                background-attachment: fixed;
+                z-index: -2;
+            }
+            /* Dispositivos Móviles y Tablets: Activa el Fondo 9:16 (1080x1920 px) */
+            @media (max-width: 768px) {
+                .template2-backdrop {
+                    background-image: url('{{ $event['background_mobile_image'] ?: ($event['background_image'] ?: $event['banner_image']) }}') !important;
+                    background-size: cover !important;
+                    background-position: center top !important;
+                    background-repeat: no-repeat !important;
+                }
+                .template2-main-container {
+                    padding-left: 0.75rem !important;
+                    padding-right: 0.75rem !important;
+                }
+                .template2-booking-card {
+                    padding: 1.25rem 1rem !important;
+                }
+            }
+        </style>
 
-        <div class="event-detail-wrapper container" style="position: relative; z-index: 1; padding-top: 1.5rem; max-width: 1200px;">
-            <!-- Breadcrumbs Navigation -->
-            <nav class="detail-breadcrumbs" style="margin-bottom: 1.25rem;">
-                <a href="{{ route('web.home') }}" style="color: var(--color-primary-orange);">Inicio</a> &nbsp; / &nbsp;
-                <span style="color: #94A3B8;">{{ $event['category'] }}</span> &nbsp; / &nbsp;
-                <span style="color: #FFFFFF; font-weight: 700;">{{ $event['title'] }}</span>
-            </nav>
+        <!-- Fondo Fijo Dual: 16:9 en PC y 9:16 en Móviles -->
+        <div class="template2-backdrop"></div>
 
-            <!-- 1. HERO INMERSIVO CON IMAGEN DEL ARTISTA (SCROLL DINÁMICO/PARALLAX) -->
-            <section class="template2-hero-card" style="position: relative; border-radius: 28px; background: rgba(255, 255, 255, 0.04); border: 1.5px solid rgba(255, 255, 255, 0.12); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); overflow: hidden; margin-bottom: 2.5rem; padding: 2.75rem 3rem;">
-                <div style="display: grid; grid-template-columns: 1fr 440px; gap: 2.5rem; align-items: center;" class="template2-hero-grid">
-                    
-                    <!-- Lado Izquierdo: Títulos, Fechas, Ubicación -->
-                    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
-                        <div style="display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center;">
-                            <span class="dash-badge-custom badge-orange" style="font-size: 0.85rem; font-weight: 800; padding: 0.4rem 0.95rem; border-radius: 999px; letter-spacing: 0.5px;">
-                                🔥 {{ $event['category'] }}
-                            </span>
-                            <span class="dash-badge-custom badge-blue" style="font-size: 0.85rem; font-weight: 800; padding: 0.4rem 0.95rem; border-radius: 999px;">
-                                📍 {{ $event['city'] }}
-                            </span>
-                            <span style="background: rgba(255,255,255,0.1); color: #E2E8F0; font-size: 0.8rem; font-weight: 700; padding: 0.4rem 0.85rem; border-radius: 999px; border: 1px solid rgba(255,255,255,0.15);">
-                                🛡️ {{ $event['advisory'] }}
-                            </span>
-                        </div>
+        <div class="template2-main-container" style="position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 2rem 1rem 5rem 1rem; display: flex; flex-direction: column; align-items: center; gap: 2.5rem;">
+            
+            <!-- 1. IMAGEN DEL ARTISTA EXTRA GRANDE (SIN TEXTOS NI INTERFERENCIAS) -->
+            @php
+                $artistImgSrc = $event['artist_image'] ?: $event['banner_image'];
+            @endphp
+            <div id="artistHeroWrapper" style="width: 100%; text-align: center; display: flex; justify-content: center; margin-bottom: 0.5rem;">
+                <img id="artistHeroImg" src="{{ $artistImgSrc }}" alt="{{ $event['title'] }}" style="width: 100%; max-width: 860px; height: auto; object-fit: contain; display: block; margin: 0 auto; filter: drop-shadow(0 15px 35px rgba(0,0,0,0.7));">
+            </div>
 
-                        <h1 style="font-size: 2.75rem; font-weight: 900; line-height: 1.15; color: #FFFFFF; text-shadow: 0 4px 25px rgba(0,0,0,0.7); margin: 0; letter-spacing: -0.5px;">
-                            {{ $event['title'] }}
-                        </h1>
-
-                        <p style="font-size: 1.1rem; color: #CBD5E1; line-height: 1.5; margin: 0;">
-                            {{ $event['subtitle'] }}
-                        </p>
-
-                        <!-- Píldoras de Fecha y Lugar -->
-                        <div style="display: flex; flex-wrap: wrap; gap: 0.85rem; margin-top: 0.5rem;">
-                            <div style="background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.15); padding: 0.75rem 1.15rem; border-radius: 16px; display: flex; align-items: center; gap: 0.75rem;">
-                                <span style="font-size: 1.4rem;">📅</span>
-                                <div>
-                                    <span style="display: block; font-size: 0.725rem; color: #94A3B8; text-transform: uppercase; font-weight: 800;">Fecha</span>
-                                    <strong style="color: #FFFFFF; font-size: 0.925rem;">{{ $event['dates'][0]['date'] ?? 'Próximamente' }}</strong>
-                                </div>
-                            </div>
-
-                            <div style="background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.15); padding: 0.75rem 1.15rem; border-radius: 16px; display: flex; align-items: center; gap: 0.75rem;">
-                                <span style="font-size: 1.4rem;">🕒</span>
-                                <div>
-                                    <span style="display: block; font-size: 0.725rem; color: #94A3B8; text-transform: uppercase; font-weight: 800;">Hora</span>
-                                    <strong style="color: #FFFFFF; font-size: 0.925rem;">{{ $event['dates'][0]['time'] ?? '18:00' }}</strong>
-                                </div>
-                            </div>
-
-                            <div style="background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.15); padding: 0.75rem 1.15rem; border-radius: 16px; display: flex; align-items: center; gap: 0.75rem;">
-                                <span style="font-size: 1.4rem;">📍</span>
-                                <div>
-                                    <span style="display: block; font-size: 0.725rem; color: #94A3B8; text-transform: uppercase; font-weight: 800;">Recinto</span>
-                                    <strong style="color: #FFFFFF; font-size: 0.925rem;">{{ $event['venue']['name'] }}</strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style="margin-top: 0.5rem;">
-                            <a href="#sectionTicketsTemplate2" class="btn btn-primary btn-save-settings" style="display: inline-flex; align-items: center; gap: 0.65rem; padding: 0.95rem 2.2rem; font-size: 1.05rem; font-weight: 800; border-radius: 16px; box-shadow: 0 10px 25px rgba(255, 85, 0, 0.45); text-decoration: none;">
-                                <span>🎟️ Comprar Entradas</span>
-                                <span>➔</span>
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Lado Derecho: Imagen del Artista con Efecto Scroll Parallax -->
-                    <div style="position: relative; display: flex; align-items: center; justify-content: center; min-height: 380px;" class="artist-hero-container">
-                        @php
-                            $artistImgSrc = $event['artist_image'] ?: $event['banner_image'];
-                        @endphp
-                        <div id="artistHeroWrapper" style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; transition: transform 0.12s ease-out; will-change: transform;">
-                            <img id="artistHeroImg" src="{{ $artistImgSrc }}" alt="{{ $event['title'] }} - Artista" style="max-height: 430px; width: auto; max-width: 100%; object-fit: contain; filter: drop-shadow(0 20px 35px rgba(0,0,0,0.85)); border-radius: 20px;">
-                        </div>
-                    </div>
-
-                </div>
-            </section>
-
-            <!-- 2. SECCIÓN DEBAJO DEL ARTISTA: IMAGEN REFERENCIAL DEL RECINTO / MAPA DE ZONAS -->
+            <!-- 2. IMAGEN DE ZONAS / RECINTO DIRECTA CON SEPARACIÓN LIMPIA (SIN SOMBRA NI BORDES) -->
             @if(!empty($event['reference_image']))
-                <section class="event-info-block animate-fade-in" style="margin-bottom: 2.5rem; background: rgba(255, 255, 255, 0.03); border: 1.5px solid rgba(255, 255, 255, 0.12); border-radius: 24px; padding: 2rem;">
-                    <div class="info-block-header" style="margin-bottom: 1.25rem;">
-                        <div class="info-block-icon" style="background: rgba(0, 240, 255, 0.15); color: var(--color-neon-cyan);">🗺️</div>
-                        <h2 style="font-size: 1.4rem; color: #FFFFFF;">Mapa de Zonas y Distribución del Recinto</h2>
-                    </div>
-
-                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%;">
-                        <div style="position: relative; display: inline-block; max-width: 100%; border-radius: 18px; overflow: hidden; box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5); border: 1.5px solid rgba(255, 255, 255, 0.15); background: #000000;">
-                            <img src="{{ $event['reference_image'] }}" alt="Plano de Zonas - {{ $event['title'] }}" style="max-height: 440px; width: auto; max-width: 100%; object-fit: contain; display: block; margin: 0 auto; border-radius: 18px;">
-                            
-                            <a href="{{ $event['reference_image'] }}" target="_blank" style="position: absolute; bottom: 12px; right: 12px; background: rgba(15, 23, 42, 0.85); color: #FFFFFF; font-size: 0.8rem; font-weight: 800; padding: 6px 14px; border-radius: 10px; text-decoration: none; border: 1px solid rgba(255, 255, 255, 0.25); backdrop-filter: blur(8px); display: inline-flex; align-items: center; gap: 0.4rem;" title="Abrir imagen en alta definición">
-                                <span>🔍</span> Ver plano en pantalla completa
-                            </a>
-                        </div>
-                    </div>
-                </section>
+                <div style="width: 100%; text-align: center; display: flex; justify-content: center; margin-top: 0.5rem;">
+                    <img src="{{ $event['reference_image'] }}" alt="Zonas del Evento" style="width: 100%; max-width: 860px; height: auto; object-fit: contain; display: block; margin: 0 auto; box-shadow: none !important; border: none !important; border-radius: 0 !important; filter: none !important;">
+                </div>
             @endif
 
-            <!-- 3. SECCIÓN DEBAJO DEL RECINTO: PRECIOS, ZONAS Y SELECCIÓN DE ENTRADAS -->
-            <section id="sectionTicketsTemplate2" class="template2-booking-card" style="background: rgba(15, 23, 42, 0.88); border: 1.5px solid rgba(255, 85, 0, 0.4); border-radius: 28px; padding: 2.25rem 2.5rem; margin-bottom: 2.5rem; box-shadow: 0 20px 50px rgba(0,0,0,0.6); backdrop-filter: blur(16px);">
+            <!-- 3. SELECCIÓN DE ENTRADAS Y COMPRA (TEMA BLANCO) -->
+            <div class="template2-booking-card" style="width: 100%; max-width: 860px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 1.75rem 1.5rem; box-shadow: 0 15px 40px rgba(0,0,0,0.18);">
                 
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                        <div style="background: rgba(255, 85, 0, 0.15); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
-                            🎟️
-                        </div>
-                        <div>
-                            <h2 style="font-size: 1.5rem; font-weight: 800; color: #FFFFFF; margin: 0;">Selección de Entradas & Tarifas</h2>
-                            <p style="margin: 0.2rem 0 0 0; font-size: 0.85rem; color: #94A3B8;">Elige tu fecha y la cantidad de boletos que deseas adquirir</p>
-                        </div>
-                    </div>
-
-                    <span class="dash-badge-custom badge-green" style="font-size: 0.8rem; font-weight: 800;">
-                        🔒 Compra 100% Segura
-                    </span>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 340px 1fr; gap: 2.25rem;" class="template2-booking-grid">
-                    
-                    <!-- Columna Izquierda: Fecha, Cupón y Total -->
-                    <div style="display: flex; flex-direction: column; gap: 1rem;">
-                        <h3 class="sidebar-section-title" style="color: #FFFFFF; font-size: 1.1rem; margin: 0;">1. Selecciona Fecha y Hora</h3>
-                        
-                        <div class="dates-selector-group" style="display: flex; flex-direction: column; gap: 0.75rem;">
-                            @foreach($event['dates'] as $dateItem)
-                                <div class="date-select-card" data-date-id="{{ $dateItem['id'] }}" style="background: rgba(255,255,255,0.04); border: 1.5px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 1rem 1.25rem;">
-                                    <div class="date-select-info">
-                                        <span class="date-select-day" style="font-size: 0.95rem; font-weight: 800; color: #FFFFFF;">📅 {{ $dateItem['date'] }}</span>
-                                        <span class="date-select-time" style="font-size: 0.85rem; color: #94A3B8;">🕒 {{ $dateItem['time'] }}</span>
-                                    </div>
-                                    <div class="date-select-checkmark-orange">✓</div>
+                @if(count($event['dates']) > 1)
+                    <!-- Selector de Fecha si hay múltiples -->
+                    <div class="dates-selector-group" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.25rem;">
+                        @foreach($event['dates'] as $dateItem)
+                            <div class="date-select-card" data-date-id="{{ $dateItem['id'] }}" style="background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 0.85rem 1.15rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
+                                <div class="date-select-info">
+                                    <span class="date-select-day" style="font-size: 0.95rem; font-weight: 800; color: #0F172A;">📅 {{ $dateItem['date'] }}</span>
+                                    <span class="date-select-time" style="font-size: 0.825rem; color: #64748B;">🕒 {{ $dateItem['time'] }}</span>
                                 </div>
-                            @endforeach
-                        </div>
-
-                        <!-- Resumen y Cupón Promocional -->
-                        <div style="background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.1); border-radius: 18px; padding: 1.25rem; margin-top: auto;">
-                            <div style="margin-bottom: 1rem;">
-                                <a href="javascript:void(0)" class="promo-code-link-orange" id="btnTogglePromoCode" style="font-size: 0.85rem; font-weight: 800;">¿Tienes un código de descuento?</a>
-                                <div class="promo-code-input-box" id="promoCodeInputBox" style="display: none; margin-top: 0.65rem;">
-                                    <div style="display: flex; gap: 0.5rem;">
-                                        <input type="text" id="inputPromoCode" placeholder="Código..." style="flex: 1; padding: 0.5rem 0.75rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: #FFFFFF; font-size: 0.825rem; font-weight: 700;">
-                                        <button type="button" id="btnApplyPromoCode" class="btn btn-primary btn-sm" style="padding: 0.5rem 0.85rem; border-radius: 10px; font-size: 0.8rem;">Aplicar</button>
-                                    </div>
-                                    <div id="promoCodeMsg" style="font-size: 0.775rem; margin-top: 0.35rem; font-weight: 700; display: none;"></div>
-                                </div>
+                                <div class="date-select-checkmark-orange" style="color: var(--color-primary-orange); font-weight: 900;">✓</div>
                             </div>
-
-                            <div class="total-summary-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                                <span class="total-label" style="font-size: 1rem; color: #CBD5E1; font-weight: 700;">Total a Pagar:</span>
-                                <span class="total-price-value" id="totalPriceDisplay" style="font-size: 1.6rem; font-weight: 900; color: var(--color-primary-orange);">S/ 0.00</span>
-                            </div>
-
-                            <button class="btn btn-primary btn-checkout-sticky" id="btnOpenAuthModal" style="width: 100%; padding: 1rem; font-size: 1.05rem; font-weight: 800; border-radius: 14px; box-shadow: 0 8px 25px rgba(255, 85, 0, 0.4);">
-                                <span>Comprar Entradas ➔</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Columna Derecha: Lista de Entradas y Zonas con Contador -->
-                    <div style="display: flex; flex-direction: column; gap: 1rem;">
-                        <h3 class="sidebar-section-title" style="color: #FFFFFF; font-size: 1.1rem; margin: 0;">2. Selecciona las Zonas</h3>
-                        
-                        <div class="tickets-list-box" style="display: flex; flex-direction: column; gap: 0.85rem;">
-                            @foreach($event['tickets'] as $ticket)
-                                <div class="ticket-type-row" data-price="{{ $ticket['price'] }}" style="background: rgba(255,255,255,0.04); border: 1.5px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s ease;">
-                                    <div class="ticket-type-info" style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                        <div style="display: flex; align-items: center; gap: 0.65rem;">
-                                            <span class="ticket-name" style="font-size: 1.1rem; font-weight: 800; color: #FFFFFF;">🎟️ {{ $ticket['name'] }}</span>
-                                            <span class="dash-badge-custom badge-green" style="font-size: 0.725rem;">Disponible</span>
-                                        </div>
-                                        <span class="ticket-price" style="font-size: 1.25rem; font-weight: 900; color: var(--color-primary-orange);">S/ {{ number_format($ticket['price'], 2) }}</span>
-                                    </div>
-                                    <div class="ticket-quantity-counter" style="display: flex; align-items: center; gap: 0.85rem; background: rgba(0,0,0,0.5); padding: 0.35rem 0.65rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15);">
-                                        <button type="button" class="counter-btn minus btn-ticket-minus" style="width: 32px; height: 32px; border-radius: 8px; border: none; background: rgba(255,255,255,0.1); color: #FFFFFF; font-size: 1.1rem; font-weight: 800; cursor: pointer;">-</button>
-                                        <span class="counter-value ticket-count-val" style="font-size: 1.1rem; font-weight: 800; color: #FFFFFF; min-width: 24px; text-align: center;">0</span>
-                                        <button type="button" class="counter-btn plus btn-ticket-plus" style="width: 32px; height: 32px; border-radius: 8px; border: none; background: var(--color-primary-orange); color: #FFFFFF; font-size: 1.1rem; font-weight: 800; cursor: pointer;">+</button>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-
-                </div>
-            </section>
-
-            <!-- 4. SECCIÓN DE DETALLES, UBICACIÓN, ORGANIZADOR Y TAGS -->
-            <div style="display: grid; grid-template-columns: 1fr 380px; gap: 2rem; margin-bottom: 3rem;" class="template2-bottom-grid">
-                
-                <!-- Columna Izquierda: Descripción y Detalles -->
-                <div style="background: rgba(255, 255, 255, 0.03); border: 1.5px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 2rem;">
-                    <div class="info-block-header" style="margin-bottom: 1.25rem;">
-                        <div class="info-block-icon" style="background: rgba(255, 85, 0, 0.15); color: var(--color-primary-orange);">📋</div>
-                        <h2 style="font-size: 1.35rem; color: #FFFFFF;">Detalles del Espectáculo</h2>
-                    </div>
-
-                    <div class="details-content-box" style="color: #CBD5E1; line-height: 1.7; font-size: 0.95rem;">
-                        @foreach($event['details'] as $index => $paragraph)
-                            <p class="details-paragraph {{ $index >= 2 ? 'details-extra-paragraph' : '' }}" style="{{ $index >= 2 ? 'display: none;' : '' }}; margin-bottom: 1rem;">
-                                {{ $paragraph }}
-                            </p>
                         @endforeach
+                    </div>
+                @else
+                    <div style="display: none;">
+                        @foreach($event['dates'] as $dateItem)
+                            <div class="date-select-card selected" data-date-id="{{ $dateItem['id'] }}">
+                                <span class="date-select-day">{{ $dateItem['date'] }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
 
-                        @if(count($event['details']) > 2)
-                            <button type="button" id="btnToggleDetails" class="btn-toggle-details-orange" style="margin-top: 0.5rem;">
-                                <span id="toggleDetailsText">Ver más información</span>
-                                <span id="toggleDetailsIcon">➔</span>
-                            </button>
-                        @endif
+                <!-- Lista de Zonas / Boletos en Blanco -->
+                <div class="tickets-list-box" style="display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 1.25rem;">
+                    @foreach($event['tickets'] as $ticket)
+                        @php
+                            $isAvail = !empty($ticket['available']);
+                        @endphp
+                        <div class="ticket-type-row" 
+                             data-price="{{ $ticket['price'] }}"
+                             data-regular-price="{{ $ticket['regular_price'] }}"
+                             data-is-presale="{{ $ticket['is_presale_active'] ? 'true' : 'false' }}"
+                             data-presale-discount="{{ $ticket['presale_discount'] }}"
+                             data-available="{{ $isAvail ? 'true' : 'false' }}"
+                             style="background: {{ $isAvail ? '#F8FAFC' : '#F1F5F9' }}; border: 1.5px solid {{ $isAvail ? ($ticket['is_presale_active'] ? 'rgba(255, 85, 0, 0.4)' : '#E2E8F0') : '#CBD5E1' }}; border-radius: 14px; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; {{ !$isAvail ? 'opacity: 0.65;' : '' }}">
+                            
+                            <div class="ticket-type-info" style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                    <span class="ticket-name" style="font-size: 1.05rem; font-weight: 800; color: {{ $isAvail ? '#0F172A' : '#64748B' }};">{{ $ticket['name'] }}</span>
+                                    
+                                    @if(!$isAvail)
+                                        <span style="background: #EF4444; color: #FFFFFF; font-size: 0.7rem; font-weight: 900; padding: 2px 8px; border-radius: 6px; text-transform: uppercase;">
+                                            🚫 AGOTADO
+                                        </span>
+                                    @elseif($ticket['is_presale_active'])
+                                        <span style="background: linear-gradient(135deg, #FF5500, #FF1E3C); color: #FFFFFF; font-size: 0.725rem; font-weight: 900; padding: 2px 8px; border-radius: 6px; box-shadow: 0 2px 6px rgba(255,85,0,0.3); text-transform: uppercase; letter-spacing: 0.5px;">
+                                            🔥 PREVENTA -{{ $ticket['presale_discount'] }}%
+                                        </span>
+                                    @endif
+                                </div>
+                                
+                                @if(!$isAvail)
+                                    <span style="font-size: 0.8rem; color: #EF4444; font-weight: 700; display: block; margin-top: 0.2rem;">Entradas agotadas</span>
+                                @elseif($ticket['is_presale_active'])
+                                    <div style="font-size: 0.775rem; color: #E11D48; font-weight: 700; margin-top: 0.25rem; display: flex; align-items: center; gap: 0.35rem;">
+                                        <span>⏳ Válido {{ !empty($ticket['presale_end_date']) ? 'hasta el ' . \Carbon\Carbon::parse($ticket['presale_end_date'])->format('d/m/Y') : '' }} o hasta agotar stock{{ !empty($ticket['presale_stock']) ? ' (' . $ticket['presale_stock'] . ' cupos)' : '' }}</span>
+                                    </div>
+                                    <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-top: 0.25rem;">
+                                        <span class="ticket-price" style="font-size: 1.25rem; font-weight: 900; color: var(--color-primary-orange);">S/ {{ number_format($ticket['price'], 2) }}</span>
+                                        <span style="font-size: 0.9rem; color: #94A3B8; text-decoration: line-through; font-weight: 600;">S/ {{ number_format($ticket['regular_price'], 2) }}</span>
+                                    </div>
+                                @else
+                                    <span class="ticket-price" style="font-size: 1.2rem; font-weight: 900; color: var(--color-primary-orange); margin-top: 0.2rem; display: block;">S/ {{ number_format($ticket['price'], 2) }}</span>
+                                @endif
+                            </div>
+
+                            <div class="ticket-quantity-counter" style="display: flex; align-items: center; gap: 0.65rem; background: #EDF2F7; padding: 0.35rem 0.65rem; border-radius: 10px; border: 1px solid #CBD5E1; {{ !$isAvail ? 'opacity: 0.35; pointer-events: none;' : '' }}">
+                                <button type="button" class="counter-btn minus btn-ticket-minus" {{ !$isAvail ? 'disabled' : '' }} style="width: 32px; height: 32px; border-radius: 6px; border: none; background: #E2E8F0; color: #0F172A; font-size: 1.15rem; font-weight: 800; cursor: pointer;">-</button>
+                                <span class="counter-value ticket-count-val" style="font-size: 1.1rem; font-weight: 800; color: #0F172A; min-width: 24px; text-align: center;">0</span>
+                                <button type="button" class="counter-btn plus btn-ticket-plus" {{ !$isAvail ? 'disabled' : '' }} style="width: 32px; height: 32px; border-radius: 6px; border: none; background: var(--color-primary-orange); color: #FFFFFF; font-size: 1.15rem; font-weight: 800; cursor: pointer;">+</button>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                <!-- Cupón de Descuento y Total en Blanco -->
+                <div style="background: #F1F5F9; border: 1px solid #E2E8F0; border-radius: 14px; padding: 1.1rem; margin-bottom: 1.25rem;">
+                    <div style="margin-bottom: 0.75rem;">
+                        <a href="javascript:void(0)" class="promo-code-link-orange" id="btnTogglePromoCode" style="font-size: 0.85rem; font-weight: 800; color: var(--color-primary-orange); text-decoration: none;">¿Tienes un código de descuento?</a>
+                        <div class="promo-code-input-box" id="promoCodeInputBox" style="display: none; margin-top: 0.5rem;">
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="text" id="inputPromoCode" placeholder="Ingresa tu código..." style="flex: 1; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1.5px solid #CBD5E1; background: #FFFFFF; color: #0F172A; font-size: 0.85rem; font-weight: 700;">
+                                <button type="button" id="btnApplyPromoCode" class="btn btn-primary btn-sm" style="padding: 0.55rem 0.95rem; border-radius: 8px; font-size: 0.85rem; font-weight: 800;">Aplicar</button>
+                            </div>
+                            <div id="promoCodeMsg" style="font-size: 0.775rem; margin-top: 0.4rem; font-weight: 700; display: none;"></div>
+                        </div>
+                    </div>
+
+                    <div class="total-summary-row" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="total-label" style="font-size: 1rem; color: #475569; font-weight: 700;">Total a Pagar:</span>
+                        <span class="total-price-value" id="totalPriceDisplay" style="font-size: 1.65rem; font-weight: 900; color: var(--color-primary-orange);">S/ 0.00</span>
                     </div>
                 </div>
 
-                <!-- Columna Derecha: Recinto GPS, Organiza y Tags -->
-                <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                    
-                    <!-- Ubicación Recinto -->
-                    <div style="background: rgba(255, 255, 255, 0.03); border: 1.5px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 1.75rem;">
-                        <div class="info-block-header" style="margin-bottom: 0.85rem;">
-                            <div class="info-block-icon">📍</div>
-                            <h2 style="font-size: 1.2rem; color: #FFFFFF;">Ubicación del Recinto</h2>
+                <!-- Botón de Compra -->
+                @if(!empty($event['all_sold_out']))
+                    <button class="btn btn-secondary btn-checkout-sticky" style="width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 800; border-radius: 12px; background: #64748B; color: #FFFFFF; cursor: not-allowed; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: none;" disabled>
+                        <span>🚫 ENTRADAS AGOTADAS</span>
+                    </button>
+                @else
+                    <button class="btn btn-primary btn-checkout-sticky" id="btnOpenAuthModal" style="width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 800; border-radius: 12px; box-shadow: 0 8px 25px rgba(255, 85, 0, 0.4); text-transform: uppercase; letter-spacing: 0.5px;">
+                        <span>COMPRAR ENTRADAS ➔</span>
+                    </button>
+                @endif
+
+            </div>
+
+            <!-- Información Adicional Desplegable (Ubicación / Detalles) (TEMA BLANCO) -->
+            <div style="width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 0.85rem; margin-top: 0.25rem;">
+                
+                <!-- Recinto / Local Blanco -->
+                <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 1.15rem 1.35rem; box-shadow: 0 10px 30px rgba(0,0,0,0.12);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                        <div>
+                            <span style="font-size: 0.75rem; color: #64748B; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">📍 Local / Recinto:</span>
+                            <strong style="display: block; font-size: 1.05rem; color: #0F172A; margin-top: 0.2rem;">{{ $event['venue']['name'] }}</strong>
+                            <span style="font-size: 0.85rem; color: #475569;">{{ $event['venue']['address'] }}</span>
                         </div>
-                        <h3 style="font-size: 1.05rem; font-weight: 800; color: #FFFFFF; margin: 0 0 0.25rem 0;">{{ $event['venue']['name'] }}</h3>
-                        <p style="font-size: 0.85rem; color: #94A3B8; margin: 0 0 1rem 0;">{{ $event['venue']['address'] }}</p>
-                        
-                        <button type="button" class="btn btn-secondary btn-sm btn-map-modal-trigger" id="btnOpenMapModal" style="width: 100%; justify-content: center; padding: 0.65rem 1rem; border-radius: 12px;">
-                            <span>📍 Ver ubicación en Google Maps</span>
+                        <button type="button" class="btn btn-secondary btn-sm btn-map-modal-trigger" id="btnOpenMapModal" style="padding: 0.55rem 0.95rem; font-size: 0.8rem; font-weight: 700; border-radius: 8px; background: #F1F5F9; color: #0F172A; border: 1px solid #CBD5E1; white-space: nowrap;">
+                            <span>Ver Mapa</span>
                         </button>
                     </div>
+                </div>
 
-                    <!-- Organiza -->
-                    <div style="background: rgba(255, 255, 255, 0.03); border: 1.5px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 1.75rem;">
-                        <div class="info-block-header" style="margin-bottom: 0.85rem;">
-                            <div class="info-block-icon">🏢</div>
-                            <h2 style="font-size: 1.2rem; color: #FFFFFF;">Organizador</h2>
-                        </div>
-                        <h3 style="font-size: 1.05rem; font-weight: 800; color: #FFFFFF; margin: 0 0 0.25rem 0;">{{ $event['organizer']['name'] }}</h3>
-                        <p style="font-size: 0.85rem; color: #94A3B8; margin: 0;">RUC: {{ $event['organizer']['ruc'] }}</p>
-                    </div>
-
-                    <!-- Tags -->
-                    @if(!empty($event['tags']))
-                        <div style="background: rgba(255, 255, 255, 0.03); border: 1.5px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 1.75rem;">
-                            <div class="info-block-header" style="margin-bottom: 0.85rem;">
-                                <div class="info-block-icon">🏷️</div>
-                                <h2 style="font-size: 1.2rem; color: #FFFFFF;">Etiquetas</h2>
-                            </div>
-                            <div class="tags-cloud-container">
-                                @foreach($event['tags'] as $tag)
-                                    <span class="tag-pill-item">#{{ $tag }}</span>
+                <!-- Detalles / Descripción Blanco -->
+                @if(!empty($event['details']) && count($event['details']) > 0)
+                    <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 1.15rem 1.35rem; box-shadow: 0 10px 30px rgba(0,0,0,0.12);">
+                        <details style="cursor: pointer;">
+                            <summary style="font-size: 0.95rem; font-weight: 800; color: #0F172A; outline: none;">
+                                📋 Ver detalles y descripción del evento
+                            </summary>
+                            <div class="details-content-box" style="color: #334155; font-size: 0.875rem; line-height: 1.65; margin-top: 0.85rem;">
+                                @foreach($event['details'] as $paragraph)
+                                    <p style="margin-bottom: 0.5rem;">{{ $paragraph }}</p>
                                 @endforeach
                             </div>
-                        </div>
-                    @endif
-
-                </div>
+                        </details>
+                    </div>
+                @endif
 
             </div>
 
@@ -443,15 +347,68 @@
 
                             <div class="tickets-list-box">
                                 @foreach($event['tickets'] as $ticket)
-                                    <div class="ticket-type-row" data-price="{{ $ticket['price'] }}">
-                                        <div class="ticket-type-info">
-                                            <span class="ticket-name">🎟️ {{ $ticket['name'] }}</span>
-                                            <span class="ticket-price">S/ {{ $ticket['price'] }}</span>
+                                    @php
+                                        $isAvail = !empty($ticket['available']);
+                                        $isCourtesy = !empty($ticket['is_courtesy']);
+                                        $maxQty = !empty($ticket['max_quantity']) ? $ticket['max_quantity'] : 99;
+                                    @endphp
+                                    <div class="ticket-type-row" 
+                                         data-price="{{ $ticket['price'] }}"
+                                         data-regular-price="{{ $ticket['regular_price'] }}"
+                                         data-is-presale="{{ $ticket['is_presale_active'] ? 'true' : 'false' }}"
+                                         data-presale-discount="{{ $ticket['presale_discount'] }}"
+                                         data-is-courtesy="{{ $isCourtesy ? 'true' : 'false' }}"
+                                         data-max-quantity="{{ $maxQty }}"
+                                         data-available="{{ $isAvail ? 'true' : 'false' }}"
+                                         style="{{ $isCourtesy ? 'border: 1.5px solid #10B981; background: rgba(16,185,129,0.04);' : ($ticket['is_presale_active'] && $isAvail ? 'border-color: rgba(255, 85, 0, 0.4);' : '') }} {{ !$isAvail ? 'opacity: 0.6; background: rgba(255,255,255,0.02);' : '' }}">
+                                        
+                                        <div class="ticket-type-info" style="flex: 1;">
+                                            <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+                                                <span class="ticket-name" style="{{ $isCourtesy ? 'color: #065F46; font-weight: 800;' : '' }}">
+                                                    {{ $isCourtesy ? '🎁' : '🎟️' }} {{ $ticket['name'] }}
+                                                </span>
+                                                @if(!$isAvail)
+                                                    <span style="background: #EF4444; color: #FFFFFF; font-size: 0.65rem; font-weight: 900; padding: 1px 6px; border-radius: 5px; text-transform: uppercase;">
+                                                        🚫 AGOTADO
+                                                    </span>
+                                                @elseif($isCourtesy)
+                                                    <span style="background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; font-size: 0.675rem; font-weight: 900; padding: 1px 6px; border-radius: 5px; text-transform: uppercase; box-shadow: 0 2px 4px rgba(16,185,129,0.3);">
+                                                        ✨ GRATIS / FREE
+                                                    </span>
+                                                @elseif($ticket['is_presale_active'])
+                                                    <span style="background: linear-gradient(135deg, #FF5500, #FF1E3C); color: #FFFFFF; font-size: 0.675rem; font-weight: 900; padding: 1px 6px; border-radius: 5px; box-shadow: 0 2px 4px rgba(255,85,0,0.3); text-transform: uppercase;">
+                                                        🔥 PREVENTA -{{ $ticket['presale_discount'] }}%
+                                                    </span>
+                                                @endif
+                                            </div>
+                                            
+                                            @if(!$isAvail)
+                                                <div style="font-size: 0.725rem; color: #EF4444; font-weight: 700; margin-top: 0.15rem;">
+                                                    Entradas agotadas
+                                                </div>
+                                            @elseif($isCourtesy)
+                                                <div style="font-size: 0.725rem; color: #047857; font-weight: 700; margin-top: 0.15rem;">
+                                                    🎁 Entrada de cortesía (Máximo 2 por usuario)
+                                                </div>
+                                                <div style="margin-top: 0.2rem;">
+                                                    <span class="ticket-price" style="color: #10B981; font-weight: 900; font-size: 1.15rem;">S/ 0.00 <span style="font-size: 0.75rem; color: #059669; font-weight: 700;">(GRATIS)</span></span>
+                                                </div>
+                                            @elseif($ticket['is_presale_active'])
+                                                <div style="font-size: 0.725rem; color: #FF5500; font-weight: 700; margin-top: 0.15rem;">
+                                                    ⏳ Válido {{ !empty($ticket['presale_end_date']) ? 'hasta el ' . \Carbon\Carbon::parse($ticket['presale_end_date'])->format('d/m/Y') : '' }} o agotar stock
+                                                </div>
+                                                <div style="display: flex; align-items: baseline; gap: 0.45rem; margin-top: 0.2rem;">
+                                                    <span class="ticket-price" style="font-size: 1.15rem; font-weight: 900; color: var(--color-primary-orange);">S/ {{ number_format($ticket['price'], 2) }}</span>
+                                                    <span style="font-size: 0.85rem; color: #94A3B8; text-decoration: line-through;">S/ {{ number_format($ticket['regular_price'], 2) }}</span>
+                                                </div>
+                                            @else
+                                                <span class="ticket-price">S/ {{ number_format($ticket['price'], 2) }}</span>
+                                            @endif
                                         </div>
-                                        <div class="ticket-quantity-counter">
-                                            <button type="button" class="counter-btn minus btn-ticket-minus">-</button>
+                                        <div class="ticket-quantity-counter" style="{{ !$isAvail ? 'opacity: 0.35; pointer-events: none;' : '' }}">
+                                            <button type="button" class="counter-btn minus btn-ticket-minus" {{ !$isAvail ? 'disabled' : '' }}>-</button>
                                             <span class="counter-value ticket-count-val">0</span>
-                                            <button type="button" class="counter-btn plus btn-ticket-plus">+</button>
+                                            <button type="button" class="counter-btn plus btn-ticket-plus" {{ !$isAvail ? 'disabled' : '' }}>+</button>
                                         </div>
                                     </div>
                                 @endforeach
@@ -477,14 +434,20 @@
                                 <span class="total-price-value" id="totalPriceDisplay">S/ 0.00</span>
                             </div>
 
-                            <button class="btn btn-primary btn-checkout-sticky" id="btnOpenAuthModal">
-                                <span>Comprar Entradas</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                                    <polyline points="12 5 19 12 12 19"></polyline>
-                                </svg>
-                            </button>
+                            @if(!empty($event['all_sold_out']))
+                                <button class="btn btn-secondary btn-checkout-sticky" style="background: #64748B; color: #FFFFFF; cursor: not-allowed; opacity: 0.75; width: 100%; justify-content: center;" disabled>
+                                    <span>🚫 Entradas Agotadas</span>
+                                </button>
+                            @else
+                                <button class="btn btn-primary btn-checkout-sticky" id="btnOpenAuthModal">
+                                    <span>Comprar Entradas</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        <polyline points="12 5 19 12 12 19"></polyline>
+                                    </svg>
+                                </button>
+                            @endif
                         </div>
                     </div>
 
@@ -726,6 +689,8 @@
 @endsection
 
 @push('scripts')
+    <!-- SweetAlert2 Oficial -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         // Variables globales del carrito
         let currentGrandTotal = 0;
@@ -757,8 +722,15 @@
                 selectedTicketsArray = [];
 
                 ticketRows.forEach(row => {
+                    const isAvailable = row.getAttribute('data-available') !== 'false';
+                    if (!isAvailable) return;
+
                     const price = parseFloat(row.getAttribute('data-price')) || 0;
-                    const name = row.querySelector('.ticket-name')?.textContent.replace('🎟️', '').trim() || 'Entrada';
+                    const regularPrice = parseFloat(row.getAttribute('data-regular-price')) || price;
+                    const isPresale = row.getAttribute('data-is-presale') === 'true';
+                    const presaleDiscount = parseFloat(row.getAttribute('data-presale-discount')) || 0;
+                    const name = row.querySelector('.ticket-name')?.textContent.replace('🎟️', '').replace('🎁', '').trim() || 'Entrada';
+                    const isCourtesy = row.getAttribute('data-is-courtesy') === 'true';
                     const countEl = row.querySelector('.ticket-count-val');
                     const qty = parseInt(countEl ? countEl.textContent : 0) || 0;
 
@@ -767,6 +739,10 @@
                         selectedTicketsArray.push({
                             name: name,
                             price: price,
+                            regular_price: regularPrice,
+                            is_presale: isPresale,
+                            presale_discount: presaleDiscount,
+                            is_courtesy: isCourtesy,
                             quantity: qty,
                             subtotal: price * qty
                         });
@@ -779,6 +755,12 @@
             }
 
             ticketRows.forEach(row => {
+                const isAvailable = row.getAttribute('data-available') !== 'false';
+                if (!isAvailable) return;
+
+                const isCourtesy = row.getAttribute('data-is-courtesy') === 'true';
+                const maxQty = parseInt(row.getAttribute('data-max-quantity')) || 99;
+
                 const btnMinus = row.querySelector('.btn-ticket-minus');
                 const btnPlus = row.querySelector('.btn-ticket-plus');
                 const countEl = row.querySelector('.ticket-count-val');
@@ -797,6 +779,18 @@
                     btnPlus.addEventListener('click', function (e) {
                         e.preventDefault();
                         let currentQuantity = parseInt(countEl.textContent) || 0;
+                        if (currentQuantity >= maxQty) {
+                            if (isCourtesy && typeof Swal !== 'undefined') {
+                                Swal.fire({
+                                    title: 'Límite de Cortesías',
+                                    text: 'Solo se permite un máximo de 2 entradas de cortesía por usuario.',
+                                    icon: 'info',
+                                    confirmButtonColor: '#10B981',
+                                    confirmButtonText: 'Entendido'
+                                });
+                            }
+                            return;
+                        }
                         currentQuantity++;
                         countEl.textContent = currentQuantity;
                         recalculateTotal();
@@ -834,22 +828,42 @@
                 });
             }
 
-            // 4. Redirección Directa a la Página de Checkout
-            const btnOpenAuthModal = document.getElementById('btnOpenAuthModal');
+            // 4. Redirección Directa a la Página de Checkout (Compatible con todos los botones de compra)
             const formGoToCheckout = document.getElementById('formGoToCheckout');
+            const buyButtons = document.querySelectorAll('#btnOpenAuthModal, .btn-checkout-sticky');
 
-            if (btnOpenAuthModal && formGoToCheckout) {
-                btnOpenAuthModal.addEventListener('click', function (e) {
-                    e.preventDefault();
+            if (buyButtons.length > 0 && formGoToCheckout) {
+                buyButtons.forEach(btn => {
+                    btn.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        if (this.disabled) return;
 
-                    if (currentGrandTotal <= 0 || selectedTicketsArray.length === 0) {
-                        alert('⚠️ Por favor, selecciona al menos una (1) entrada para continuar con la compra.');
-                        return;
-                    }
+                        recalculateTotal();
 
-                    document.getElementById('hiddenCheckoutDate').value = currentSelectedDate || "Fecha Oficial";
-                    document.getElementById('hiddenCheckoutTickets').value = JSON.stringify(selectedTicketsArray);
-                    formGoToCheckout.submit();
+                        let totalSelectedQty = 0;
+                        selectedTicketsArray.forEach(item => {
+                            totalSelectedQty += (item.quantity || 0);
+                        });
+
+                        if (totalSelectedQty === 0 || selectedTicketsArray.length === 0) {
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({
+                                    title: 'Selecciona tus Entradas',
+                                    text: 'Por favor, selecciona al menos una (1) entrada o pase de cortesía para continuar con la compra.',
+                                    icon: 'warning',
+                                    confirmButtonColor: '#FF5500',
+                                    confirmButtonText: 'Entendido'
+                                });
+                            } else {
+                                alert('⚠️ Por favor, selecciona al menos una (1) entrada para continuar con la compra.');
+                            }
+                            return;
+                        }
+
+                        document.getElementById('hiddenCheckoutDate').value = currentSelectedDate || "Fecha Oficial";
+                        document.getElementById('hiddenCheckoutTickets').value = JSON.stringify(selectedTicketsArray);
+                        formGoToCheckout.submit();
+                    });
                 });
             }
 
@@ -896,24 +910,6 @@
                     if (toggleDetailsText) toggleDetailsText.textContent = isExpanded ? 'Ver menos' : 'Ver más';
                     if (toggleDetailsIcon) toggleDetailsIcon.textContent = isExpanded ? '↑' : '➔';
                 });
-            }
-
-            // 7. Efecto Parallax / Scroll Dinámico para Imagen de Artista en Plantilla 2
-            const artistHero = document.getElementById('artistHeroWrapper');
-            if (artistHero) {
-                let ticking = false;
-                window.addEventListener('scroll', function () {
-                    if (!ticking) {
-                        window.requestAnimationFrame(function () {
-                            const scrollY = window.scrollY;
-                            // Desplaza suavemente hacia abajo la imagen del artista con el scroll
-                            const translateVal = Math.min(scrollY * 0.18, 140);
-                            artistHero.style.transform = `translateY(${translateVal}px)`;
-                            ticking = false;
-                        });
-                        ticking = true;
-                    }
-                }, { passive: true });
             }
         });
     </script>

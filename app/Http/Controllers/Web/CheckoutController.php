@@ -41,44 +41,97 @@ class CheckoutController extends Controller
             $event = Event::with('template')->latest()->first();
         }
 
-        // 2. Extraer o armar Carrito de Entradas
+        // 2. Extraer o armar Carrito de Entradas con Persistencia de Sesión
         $ticketsRaw = $request->input('tickets');
         $cartItems = [];
         $grandTotal = 0;
 
         if (is_string($ticketsRaw)) {
             $decoded = json_decode($ticketsRaw, true);
-            if (is_array($decoded)) {
+            if (is_array($decoded) && !empty($decoded)) {
                 $cartItems = $decoded;
+                session(['checkout_cart_' . ($event?->id ?? 'default') => $cartItems]);
             }
-        } elseif (is_array($ticketsRaw)) {
+        } elseif (is_array($ticketsRaw) && !empty($ticketsRaw)) {
             $cartItems = $ticketsRaw;
+            session(['checkout_cart_' . ($event?->id ?? 'default') => $cartItems]);
         }
 
-        // Si no vienen entradas (acceso directo a /checkout), crear una entrada por defecto
+        // Si no viene en el request actual, intentar restaurar de la sesión
+        if (empty($cartItems) && $event && session()->has('checkout_cart_' . $event->id)) {
+            $cartItems = session('checkout_cart_' . $event->id, []);
+        }
+
+        // Si aún está vacío, cargar las zonas reales del evento
         if (empty($cartItems)) {
-            $firstPrice = 100.00;
+            $today = date('Y-m-d');
             if ($event && !empty($event->zones)) {
                 $zones = is_array($event->zones) ? $event->zones : json_decode($event->zones, true);
-                if (!empty($zones[0]['price'])) {
-                    $firstPrice = (float) $zones[0]['price'];
+                if (!empty($zones)) {
+                    foreach ($zones as $z) {
+                        $regularPrice = (float)($z['price'] ?? 100.00);
+                        $effectivePrice = $regularPrice;
+                        $hasPresale = !empty($z['has_presale']) || (!empty($z['presale_discount']) && (float)$z['presale_discount'] > 0);
+                        $discountPercent = (float)($z['presale_discount'] ?? 0);
+                        $presaleStart = $z['presale_start_date'] ?? null;
+                        $presaleEnd = $z['presale_end_date'] ?? null;
+                        $isPresale = false;
+
+                        if ($hasPresale && $discountPercent > 0) {
+                            $dateValid = true;
+                            if ($presaleStart && $today < $presaleStart) $dateValid = false;
+                            if ($presaleEnd && $today > $presaleEnd) $dateValid = false;
+                            if ($dateValid) {
+                                $isPresale = true;
+                                if (isset($z['presale_price']) && (float)$z['presale_price'] > 0) {
+                                    $effectivePrice = (float)$z['presale_price'];
+                                } else {
+                                    $effectivePrice = round($regularPrice * (1 - ($discountPercent / 100)), 2);
+                                }
+                            }
+                        }
+
+                        $cartItems[] = [
+                            'name' => $z['name'] ?? $z['capacity_type'] ?? 'Entrada',
+                            'price' => $effectivePrice,
+                            'regular_price' => $regularPrice,
+                            'is_presale' => $isPresale,
+                            'presale_discount' => $discountPercent,
+                            'quantity' => 1,
+                            'subtotal' => $effectivePrice
+                        ];
+                        break; // Tomar la primera zona disponible como fallback
+                    }
                 }
             }
-            $cartItems = [
-                [
-                    'name' => 'Entrada General',
-                    'price' => $firstPrice,
-                    'quantity' => 1,
-                    'subtotal' => $firstPrice
-                ]
-            ];
+
+            if (empty($cartItems)) {
+                $cartItems = [
+                    [
+                        'name' => 'Entrada General',
+                        'price' => 100.00,
+                        'regular_price' => 100.00,
+                        'is_presale' => false,
+                        'presale_discount' => 0,
+                        'quantity' => 1,
+                        'subtotal' => 100.00
+                    ]
+                ];
+            }
         }
 
         foreach ($cartItems as $item) {
             $grandTotal += (float) ($item['subtotal'] ?? (($item['price'] ?? 0) * ($item['quantity'] ?? 1)));
         }
 
-        $dateSelected = $request->input('date_selected') ?: ($event ? ($event->event_date . ' • ' . ($event->event_time ?: '20:00 HRS')) : "Sáb 15 Nov '26 • 20:00 HRS");
+        $dateSelected = $request->input('date_selected');
+        if ($dateSelected) {
+            session(['checkout_date_' . ($event?->id ?? 'default') => $dateSelected]);
+        } elseif ($event && session()->has('checkout_date_' . $event->id)) {
+            $dateSelected = session('checkout_date_' . $event->id);
+        } else {
+            $dateSelected = ($event ? ($event->event_date . ' • ' . ($event->event_time ?: '20:00 HRS')) : "Sáb 15 Nov '26 • 20:00 HRS");
+        }
 
         // Datos del evento estructurados
         $eventData = [
@@ -114,6 +167,8 @@ class CheckoutController extends Controller
             'customer_email' => 'required|email|max:150',
             'customer_phone' => 'nullable|string|max:20',
             'customer_doc' => 'nullable|string|max:20',
+            'customer_country' => 'nullable|string|max:100',
+            'customer_city' => 'nullable|string|max:100',
         ]);
 
         $amountCents = (int) round($validated['amount'] * 100);
@@ -399,6 +454,8 @@ class CheckoutController extends Controller
             'customer_email' => 'required|email|max:150',
             'customer_phone' => 'nullable|string|max:20',
             'customer_doc' => 'nullable|string|max:20',
+            'customer_country' => 'nullable|string|max:100',
+            'customer_city' => 'nullable|string|max:100',
         ]);
 
         $amountCents = (int) round($validated['amount'] * 100);
@@ -712,6 +769,171 @@ class CheckoutController extends Controller
         return response()->json([
             'status' => 'received',
             'event' => $event,
+        ]);
+    }
+
+    /**
+     * Procesa y completa una orden de Entradas de Cortesía (Free / S/ 0.00)
+     */
+    public function completeCourtesyOrder(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'event_id' => 'required|integer',
+            'customer_name' => 'required|string|max:255',
+            'customer_email' => 'required|email|max:255',
+            'customer_phone' => 'required|string|max:30',
+            'customer_doc_number' => 'required|string|max:30',
+            'customer_country' => 'nullable|string|max:100',
+            'customer_city' => 'nullable|string|max:100',
+            'tickets' => 'required|array|min:1',
+        ]);
+
+        $eventId = (int) $validated['event_id'];
+        $event = Event::findOrFail($eventId);
+
+        $courtesySettings = is_array($event->courtesy_settings) 
+            ? $event->courtesy_settings 
+            : (json_decode($event->courtesy_settings ?? '[]', true) ?? []);
+
+        if (empty($courtesySettings['enabled']) || empty($courtesySettings['for_users'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Las entradas de cortesía no están habilitadas para los usuarios en este evento.',
+            ], 422);
+        }
+
+        $ticketsData = $validated['tickets'];
+        $totalQty = 0;
+        $totalAmount = 0.00;
+
+        foreach ($ticketsData as $t) {
+            $qty = (int)($t['quantity'] ?? 1);
+            $totalQty += $qty;
+            $price = (float)($t['price'] ?? 0);
+            $totalAmount += ($price * $qty);
+        }
+
+        $userMax = isset($courtesySettings['user_max_quantity']) && (int)$courtesySettings['user_max_quantity'] > 0 
+            ? (int)$courtesySettings['user_max_quantity'] 
+            : 2;
+
+        // Límite configurable de entradas de cortesía por usuario
+        if ($totalQty > $userMax) {
+            return response()->json([
+                'success' => false,
+                'message' => "Solo se permite un máximo de {$userMax} entradas de cortesía por usuario.",
+            ], 422);
+        }
+
+        // Obtener correlativo secuencial continuo sin colisiones (REC-000046)
+        $allReceipts = TicketSale::where('receipt_number', 'LIKE', 'REC-%')->pluck('receipt_number');
+        $maxNum = 0;
+        foreach ($allReceipts as $rec) {
+            if (preg_match('/REC-(\d+)/i', $rec, $m)) {
+                $val = (int) $m[1];
+                if ($val > $maxNum) {
+                    $maxNum = $val;
+                }
+            }
+        }
+        $nextNum = max(1, $maxNum + 1);
+        $receiptNumber = 'REC-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
+        while (TicketSale::where('receipt_number', $receiptNumber)->exists()) {
+            $nextNum++;
+            $receiptNumber = 'REC-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
+        }
+
+        $buyerName = $validated['customer_name'];
+        $buyerEmail = strtolower($validated['customer_email']);
+        $buyerPhone = $validated['customer_phone'];
+        $buyerDni = $validated['customer_doc_number'];
+        $buyerCountry = $validated['customer_country'] ?? 'Perú';
+        $buyerCity = $validated['customer_city'] ?? 'Lima';
+
+        $sale = TicketSale::create([
+            'event_id' => $event->id,
+            'receipt_number' => $receiptNumber,
+            'buyer_name' => $buyerName,
+            'buyer_dni' => $buyerDni,
+            'buyer_phone' => $buyerPhone,
+            'zone_name' => $ticketsData[0]['name'] ?? ($courtesySettings['name'] ?? 'Entrada de Cortesía (Free)'),
+            'unit_price' => 0.00,
+            'quantity' => $totalQty,
+            'total_amount' => 0.00,
+            'payment_method' => 'Cortesía',
+            'amount_paid' => 0.00,
+            'change_amount' => 0.00,
+            'tickets_data' => [
+                'items' => $ticketsData,
+                'sub_method' => 'Cortesía Web (Gratis)',
+                'customer_email' => $buyerEmail,
+                'customer_country' => $buyerCountry,
+                'customer_city' => $buyerCity,
+                'is_courtesy' => true,
+            ],
+            'seller_name' => 'Web Cortesía ViveGo',
+        ]);
+
+        // Crear o sincronizar cuenta de Cliente para que pueda ver "Mis Boletos" y "Mis Recibos"
+        $isNewUser = false;
+        $tempPassword = null;
+
+        if (!empty($buyerEmail)) {
+            $customerUser = User::where('email', $buyerEmail)->first();
+            if (!$customerUser) {
+                $tempPassword = 'VG' . rand(100000, 999999);
+                $customerUser = User::create([
+                    'name' => $buyerName,
+                    'email' => $buyerEmail,
+                    'dni' => $buyerDni,
+                    'phone' => $buyerPhone,
+                    'password' => Hash::make($tempPassword),
+                    'role' => 'customer',
+                    'status' => 'active',
+                ]);
+                $isNewUser = true;
+            } else {
+                if (empty($customerUser->dni) && !empty($buyerDni)) {
+                    $customerUser->dni = $buyerDni;
+                }
+                if (empty($customerUser->phone) && !empty($buyerPhone)) {
+                    $customerUser->phone = $buyerPhone;
+                }
+                $customerUser->save();
+            }
+
+            // Limpiar cualquier residuo de sesión administrativa
+            session()->forget([
+                'admin_logged_in',
+                'admin_id',
+                'admin_name',
+                'admin_email',
+                'admin_role',
+                'admin_avatar',
+            ]);
+
+            // Iniciar sesión del cliente automáticamente
+            session([
+                'customer_logged_in' => true,
+                'customer_id' => $customerUser->id,
+                'customer_name' => $customerUser->name,
+                'customer_email' => $customerUser->email,
+                'customer_dni' => $customerUser->dni,
+                'customer_phone' => $customerUser->phone,
+            ]);
+        }
+
+        // Limpiar carrito en sesión
+        session()->forget(['checkout_cart_' . $event->id, 'checkout_date_' . $event->id]);
+
+        return response()->json([
+            'success' => true,
+            'message' => '¡Entradas de cortesía emitidas con éxito!',
+            'sale_id' => $sale->id,
+            'receipt_number' => $sale->receipt_number,
+            'redirect_url' => route('web.checkout.confirmation', $sale->id),
+            'is_new_user' => $isNewUser,
+            'temp_password' => $tempPassword,
         ]);
     }
 

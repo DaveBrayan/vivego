@@ -215,6 +215,7 @@ class EventController extends Controller
             'reference_image' => 'nullable|string',
             'layout_template' => 'nullable|string|in:template_1,template_2',
             'background_image' => 'nullable|string',
+            'background_mobile_image' => 'nullable|string',
             'artist_image' => 'nullable|string',
             'event_date' => 'nullable|date',
             'event_time' => 'nullable|string|max:20',
@@ -226,12 +227,14 @@ class EventController extends Controller
             'tags' => 'nullable|array',
             'template_id' => 'nullable|integer',
             'zones' => 'nullable|array',
+            'courtesy_settings' => 'nullable|array',
             'sales_type' => 'nullable|string|in:fisica,virtual',
         ]);
 
         $bannerImage = $this->saveBase64Image($validated['banner_image'] ?? null, 'events', 'event_banner');
         $referenceImage = $this->saveBase64Image($validated['reference_image'] ?? null, 'events', 'reference_image');
         $backgroundImage = $this->saveBase64Image($validated['background_image'] ?? null, 'events', 'bg_immersive');
+        $backgroundMobileImage = $this->saveBase64Image($validated['background_mobile_image'] ?? null, 'events', 'bg_mobile');
         $artistImage = $this->saveBase64Image($validated['artist_image'] ?? null, 'events', 'artist_cutout');
 
         $slug = Str::slug($validated['title']) . '-' . rand(100, 999);
@@ -245,6 +248,7 @@ class EventController extends Controller
             'reference_image' => $referenceImage,
             'layout_template' => $validated['layout_template'] ?? 'template_1',
             'background_image' => $backgroundImage,
+            'background_mobile_image' => $backgroundMobileImage,
             'artist_image' => $artistImage,
             'event_date' => $validated['event_date'] ?? null,
             'event_time' => $validated['event_time'] ?? '18:00',
@@ -256,6 +260,7 @@ class EventController extends Controller
             'tags' => $validated['tags'] ?? [],
             'template_id' => $validated['template_id'] ?? null,
             'zones' => $validated['zones'] ?? [],
+            'courtesy_settings' => $request->input('courtesy_settings') ?? [],
             'status' => 'Publicado',
             'sales_type' => $validated['sales_type'] ?? 'fisica',
         ]);
@@ -308,6 +313,7 @@ class EventController extends Controller
             'success' => true,
             'message' => '¡Evento publicado y guardado en MySQL con éxito!',
             'event' => $event,
+            'redirect' => route('events.index')
         ]);
     }
 
@@ -346,6 +352,7 @@ class EventController extends Controller
                 'reference_image' => null,
                 'layout_template' => 'template_1',
                 'background_image' => null,
+                'background_mobile_image' => null,
                 'artist_image' => null,
                 'event_date' => '2026-11-15',
                 'event_time' => '20:00',
@@ -403,6 +410,7 @@ class EventController extends Controller
                 'reference_image' => $eventModel->reference_image,
                 'layout_template' => $eventModel->layout_template ?? 'template_1',
                 'background_image' => $eventModel->background_image,
+                'background_mobile_image' => $eventModel->background_mobile_image,
                 'artist_image' => $eventModel->artist_image,
                 'event_date' => $dateVal,
                 'event_time' => $eventModel->event_time ?? '18:00',
@@ -415,6 +423,7 @@ class EventController extends Controller
                 'template_id' => $eventModel->template_id ?? ($templateModel ? $templateModel->id : 1),
                 'template' => $templateData,
                 'zones' => is_array($eventModel->zones) ? $eventModel->zones : [],
+                'courtesy_settings' => is_array($eventModel->courtesy_settings) ? $eventModel->courtesy_settings : (json_decode($eventModel->courtesy_settings, true) ?? []),
                 'status' => $eventModel->status ?? 'Publicado',
                 'sales_type' => $eventModel->sales_type ?? 'fisica',
             ];
@@ -459,6 +468,7 @@ class EventController extends Controller
             'reference_image' => 'nullable|string',
             'layout_template' => 'nullable|string|in:template_1,template_2',
             'background_image' => 'nullable|string',
+            'background_mobile_image' => 'nullable|string',
             'artist_image' => 'nullable|string',
             'event_date' => 'nullable|date',
             'event_time' => 'nullable|string|max:20',
@@ -470,6 +480,7 @@ class EventController extends Controller
             'tags' => 'nullable|array',
             'template_id' => 'nullable|integer',
             'zones' => 'nullable|array',
+            'courtesy_settings' => 'nullable|array',
             'status' => 'nullable|string',
             'sales_type' => 'nullable|string|in:fisica,virtual',
         ]);
@@ -480,6 +491,7 @@ class EventController extends Controller
             $bannerImage = $this->saveBase64Image($validated['banner_image'] ?? null, 'events', 'event_banner');
             $referenceImage = $this->saveBase64Image($validated['reference_image'] ?? null, 'events', 'reference_image');
             $backgroundImage = $this->saveBase64Image($validated['background_image'] ?? null, 'events', 'bg_immersive');
+            $backgroundMobileImage = $this->saveBase64Image($validated['background_mobile_image'] ?? null, 'events', 'bg_mobile');
             $artistImage = $this->saveBase64Image($validated['artist_image'] ?? null, 'events', 'artist_cutout');
             $slug = Str::slug($validated['title']) . '-' . rand(100, 999);
             $event = Event::create([
@@ -491,6 +503,7 @@ class EventController extends Controller
                 'reference_image' => $referenceImage,
                 'layout_template' => $validated['layout_template'] ?? 'template_1',
                 'background_image' => $backgroundImage,
+                'background_mobile_image' => $backgroundMobileImage,
                 'artist_image' => $artistImage,
                 'event_date' => $validated['event_date'] ?? null,
                 'event_time' => $validated['event_time'] ?? '18:00',
@@ -502,6 +515,7 @@ class EventController extends Controller
                 'tags' => $validated['tags'] ?? [],
                 'template_id' => $validated['template_id'] ?? null,
                 'zones' => $validated['zones'] ?? [],
+                'courtesy_settings' => $request->input('courtesy_settings') ?? [],
                 'status' => $validated['status'] ?? 'Publicado',
                 'sales_type' => $validated['sales_type'] ?? 'fisica',
             ]);
@@ -509,6 +523,7 @@ class EventController extends Controller
             $bannerImage = $this->saveBase64Image($validated['banner_image'] ?? $event->banner_image, 'events', 'event_banner');
             $referenceImage = array_key_exists('reference_image', $validated) ? $this->saveBase64Image($validated['reference_image'], 'events', 'reference_image') : $event->reference_image;
             $backgroundImage = array_key_exists('background_image', $validated) ? $this->saveBase64Image($validated['background_image'], 'events', 'bg_immersive') : $event->background_image;
+            $backgroundMobileImage = array_key_exists('background_mobile_image', $validated) ? $this->saveBase64Image($validated['background_mobile_image'], 'events', 'bg_mobile') : $event->background_mobile_image;
             $artistImage = array_key_exists('artist_image', $validated) ? $this->saveBase64Image($validated['artist_image'], 'events', 'artist_cutout') : $event->artist_image;
 
             $event->update([
@@ -520,6 +535,7 @@ class EventController extends Controller
                 'reference_image' => $referenceImage,
                 'layout_template' => $validated['layout_template'] ?? $event->layout_template ?? 'template_1',
                 'background_image' => $backgroundImage,
+                'background_mobile_image' => $backgroundMobileImage,
                 'artist_image' => $artistImage,
                 'event_date' => $validated['event_date'] ?? $event->event_date,
                 'event_time' => $validated['event_time'] ?? $event->event_time,
@@ -531,6 +547,7 @@ class EventController extends Controller
                 'tags' => $validated['tags'] ?? $event->tags,
                 'template_id' => $validated['template_id'] ?? $event->template_id,
                 'zones' => $validated['zones'] ?? $event->zones,
+                'courtesy_settings' => $request->input('courtesy_settings') ?? [],
                 'status' => $validated['status'] ?? $event->status ?? 'Publicado',
                 'sales_type' => $validated['sales_type'] ?? $event->sales_type ?? 'fisica',
             ]);

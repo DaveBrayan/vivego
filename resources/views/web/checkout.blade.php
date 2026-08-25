@@ -58,6 +58,22 @@
             <!-- COLUMNA IZQUIERDA: CARRITO, DATOS Y PASARELA DE PAGO -->
             <div class="checkout-steps-column">
                 
+                <!-- RESUMEN COMPACTO DEL EVENTO (EXCLUSIVO PARA MÓVIL) -->
+                <div class="mobile-event-mini-header" style="background: #FFFFFF; border: 1.5px solid #E2E8F0; border-radius: 16px; padding: 0.85rem 1rem; margin-bottom: 1rem; align-items: center; gap: 0.85rem; box-shadow: 0 4px 15px rgba(0,0,0,0.04);">
+                    <img src="{{ $eventData['banner_image'] }}" alt="{{ $eventData['title'] }}" style="width: 64px; height: 64px; border-radius: 12px; object-fit: cover; flex-shrink: 0; border: 1px solid #E2E8F0;">
+                    <div style="flex: 1; min-width: 0;">
+                        <span style="font-size: 0.7rem; font-weight: 900; color: var(--color-primary-orange); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 2px;">
+                            {{ $eventData['category'] }}
+                        </span>
+                        <h3 style="font-size: 0.95rem; font-weight: 800; color: #0F172A; margin: 0 0 3px 0; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                            {{ $eventData['title'] }}
+                        </h3>
+                        <span style="font-size: 0.775rem; color: #64748B; font-weight: 700; display: flex; align-items: center; gap: 0.3rem;">
+                            <span>📅</span> {{ $eventData['date_selected'] }}
+                        </span>
+                    </div>
+                </div>
+
                 <!-- PASO 1: CARRITO DE ENTRADAS -->
                 <div class="checkout-white-card">
                     <div class="card-step-header">
@@ -70,12 +86,34 @@
 
                     <div class="cart-items-list">
                         @foreach($cartItems as $index => $item)
-                            <div class="cart-row-item" data-price="{{ $item['price'] }}">
+                            @php
+                                $isPresale = !empty($item['is_presale']) || (!empty($item['presale_discount']) && (float)$item['presale_discount'] > 0);
+                                $regPrice = !empty($item['regular_price']) ? (float)$item['regular_price'] : (float)$item['price'];
+                                $curPrice = (float)$item['price'];
+                                $discountVal = $item['presale_discount'] ?? 0;
+                            @endphp
+                            <div class="cart-row-item" data-price="{{ $item['price'] }}" style="{{ $isPresale ? 'border: 1.5px solid rgba(255, 85, 0, 0.35); background: #FFFBF8;' : '' }}">
                                 <div class="cart-row-main">
                                     <span class="cart-item-emoji">🎟️</span>
                                     <div>
-                                        <h4 class="cart-item-title">{{ $item['name'] }}</h4>
-                                        <span class="cart-item-unit-cost">Precio: <strong>S/ {{ number_format($item['price'], 2) }}</strong> c/u</span>
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                            <h4 class="cart-item-title" style="margin: 0;">{{ $item['name'] }}</h4>
+                                            @if($isPresale)
+                                                <span style="background: linear-gradient(135deg, #FF5500, #FF1E3C); color: #FFFFFF; font-size: 0.675rem; font-weight: 900; padding: 2px 7px; border-radius: 6px; box-shadow: 0 2px 5px rgba(255,85,0,0.3); text-transform: uppercase; letter-spacing: 0.5px;">
+                                                    🔥 PREVENTA {{ $discountVal > 0 ? '-' . $discountVal . '%' : '' }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
+                                            <span class="cart-item-unit-cost" style="font-size: 0.85rem; color: #475569;">
+                                                Precio: <strong style="color: var(--color-primary-orange); font-size: 0.95rem;">S/ {{ number_format($curPrice, 2) }}</strong> c/u
+                                            </span>
+                                            @if($isPresale && $regPrice > $curPrice)
+                                                <span style="font-size: 0.825rem; color: #94A3B8; text-decoration: line-through; font-weight: 600;">
+                                                    S/ {{ number_format($regPrice, 2) }}
+                                                </span>
+                                            @endif
+                                        </div>
                                     </div>
                                 </div>
 
@@ -86,11 +124,17 @@
                                         <button type="button" class="btn-lgt-qty" onclick="updateItemQuantity({{ $index }}, 1)">+</button>
                                     </div>
                                     <span class="cart-row-subtotal-price" id="subtotal-val-{{ $index }}">
-                                        S/ {{ number_format(($item['price'] * $item['quantity']), 2) }}
+                                        S/ {{ number_format(($curPrice * $item['quantity']), 2) }}
                                     </span>
                                 </div>
                             </div>
                         @endforeach
+                    </div>
+
+                    <!-- Total en Paso 1 -->
+                    <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1.5px dashed #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 1rem; font-weight: 800; color: #475569;">Total a Pagar:</span>
+                        <strong id="cartSummaryTotalStep1" style="font-size: 1.55rem; font-weight: 900; color: #059669;">S/ {{ number_format($grandTotal, 2) }}</strong>
                     </div>
                 </div>
 
@@ -146,6 +190,21 @@
                             </div>
                         </div>
 
+                        <div class="form-fields-2col" style="margin-top: 1rem;">
+                            <div class="form-field-box">
+                                <label class="field-dark-label">País de Residencia <span class="req">*</span></label>
+                                <select id="buyerCountry" class="input-dark-text" style="background-color: #FFFFFF; font-weight: 700; cursor: pointer;" required>
+                                    <!-- Países cargados dinámicamente -->
+                                </select>
+                            </div>
+                            <div class="form-field-box">
+                                <label class="field-dark-label">Ciudad / Departamento <span class="req">*</span></label>
+                                <select id="buyerCity" class="input-dark-text" style="background-color: #FFFFFF; font-weight: 700; cursor: pointer;" required>
+                                    <!-- Ciudades cargadas dinámicamente -->
+                                </select>
+                            </div>
+                        </div>
+
                         <div style="margin-top: 1.25rem; background: #ECFDF5; border: 1.5px solid #A7F3D0; border-radius: 12px; padding: 0.9rem 1.15rem; display: flex; align-items: center; gap: 0.75rem;">
                             <span style="font-size: 1.25rem;">🎟️</span>
                             <span style="font-size: 0.85rem; color: #065F46; font-weight: 700; line-height: 1.4;">
@@ -155,14 +214,45 @@
                     </form>
                 </div>
 
-                <!-- PASO 3: PASARELAS DE PAGO DISPONIBLES (IZIPAY / CULQI) -->
+                <!-- PASO 3: PASARELAS DE PAGO DISPONIBLES (IZIPAY / CULQI) O CONFIRMACIÓN DE CORTESÍA -->
                 @php
                     $izipayActive = (bool) ($izipay->is_active ?? false);
                     $culqiActive = (bool) ($culqi->is_active ?? false);
                     $defaultGateway = ($culqiActive && !$izipayActive) ? 'culqi' : 'izipay';
+                    $isCourtesyCart = ($grandTotal <= 0.00) || (!empty($cartItems) && collect($cartItems)->every(fn($item) => !empty($item['is_courtesy']) || (float)$item['price'] == 0));
                 @endphp
 
-                <div class="checkout-white-card" style="margin-top: 1.5rem;">
+                <!-- TARJETA DE CONFIRMACIÓN PARA CORTESÍAS (GRATIS / FREE) -->
+                <div class="checkout-white-card" id="courtesyStepCard" style="margin-top: 1.5rem; display: {{ $isCourtesyCart ? 'block' : 'none' }}; border: 2px solid #10B981;">
+                    <div class="card-step-header">
+                        <div class="step-num-badge" style="background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF;">🎁</div>
+                        <div>
+                            <h2 class="card-step-title" style="color: #065F46;">Entradas de Cortesía Gratuitas</h2>
+                            <p class="card-step-subtitle" style="color: #047857;">Tus entradas seleccionadas son 100% libres de costo. No se requiere ningún método de pago.</p>
+                        </div>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(5, 150, 105, 0.04)); border: 2px dashed #10B981; border-radius: 16px; padding: 1.75rem 1.25rem; text-align: center; margin-top: 1rem;">
+                        <div style="font-size: 2.75rem; margin-bottom: 0.5rem;">🎉</div>
+                        <h3 style="font-size: 1.25rem; font-weight: 900; color: #065F46; margin: 0 0 0.4rem 0;">¡Pase de Cortesía Confirmado!</h3>
+                        <p style="font-size: 0.875rem; color: #047857; margin: 0 auto 1.5rem auto; max-width: 480px; line-height: 1.45;">
+                            Tus entradas oficiales con código QR se emitirán automáticamente sin costo alguno. Por favor verifica que tus datos del <strong>Paso 2</strong> sean correctos.
+                        </p>
+
+                        <!-- Error Alert Box Cortesía -->
+                        <div id="courtesyFormError" style="display: none; background: #FEF2F2; border: 1.5px solid #FCA5A5; color: #991B1B; padding: 0.85rem 1.15rem; border-radius: 12px; font-size: 0.875rem; font-weight: 600; margin-bottom: 1.25rem; text-align: left;"></div>
+
+                        <button type="button" class="btn-pay-orange" id="btnConfirmCourtesy" onclick="completeCourtesyCheckout()" style="background: linear-gradient(135deg, #10B981, #059669); box-shadow: 0 6px 20px rgba(16,185,129,0.35); font-size: 1.05rem; padding: 1rem 2rem; width: 100%; max-width: 460px; margin: 0 auto; justify-content: center;">
+                            <span>🎁 Confirmar Entradas de Cortesía Gratis</span>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TARJETA REGULAR DE PASARELAS (IZIPAY / CULQI) -->
+                <div class="checkout-white-card" id="regularPaymentStepCard" style="margin-top: 1.5rem; display: {{ $isCourtesyCart ? 'none' : 'block' }};">
                     <div class="card-step-header">
                         <div class="step-num-badge">3</div>
                         <div>
@@ -950,13 +1040,22 @@
         color: #0F172A;
     }
 
+    .mobile-event-mini-header {
+        display: none;
+    }
+
     @media (max-width: 950px) {
+        .mobile-event-mini-header {
+            display: flex !important;
+        }
         .checkout-grid-layout {
             grid-template-columns: 1fr;
         }
+        .checkout-summary-column {
+            display: none !important;
+        }
         .order-summary-light-card {
-            position: relative;
-            top: 0;
+            display: none !important;
         }
         .form-fields-2col {
             grid-template-columns: 1fr;
@@ -1028,6 +1127,19 @@
             let newQty = (cartItems[index].quantity || 1) + delta;
             if (newQty < 1) newQty = 1;
 
+            // Restricción de máximo 2 para entradas de cortesía en web
+            if (cartItems[index].is_courtesy && newQty > 2) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Límite de Cortesías',
+                        text: 'Solo se permite un máximo de 2 entradas de cortesía por usuario.',
+                        icon: 'info',
+                        confirmButtonColor: '#10B981'
+                    });
+                }
+                return;
+            }
+
             cartItems[index].quantity = newQty;
             cartItems[index].subtotal = cartItems[index].price * newQty;
 
@@ -1041,14 +1153,100 @@
                 currentGrandTotal += item.subtotal;
             });
 
+            if (document.getElementById('cartSummaryTotalStep1')) {
+                document.getElementById('cartSummaryTotalStep1').textContent = 'S/ ' + currentGrandTotal.toFixed(2);
+            }
             if (document.getElementById('btnPayAmountDisplay')) {
                 document.getElementById('btnPayAmountDisplay').textContent = 'S/ ' + currentGrandTotal.toFixed(2);
             }
             if (document.getElementById('btnPayAmountDisplayCulqi')) {
                 document.getElementById('btnPayAmountDisplayCulqi').textContent = 'S/ ' + currentGrandTotal.toFixed(2);
             }
-            document.getElementById('summarySubtotalDisplay').textContent = 'S/ ' + currentGrandTotal.toFixed(2);
-            document.getElementById('summaryTotalDisplay').textContent = 'S/ ' + currentGrandTotal.toFixed(2);
+            if (document.getElementById('summarySubtotalDisplay')) {
+                document.getElementById('summarySubtotalDisplay').textContent = 'S/ ' + currentGrandTotal.toFixed(2);
+            }
+            if (document.getElementById('summaryTotalDisplay')) {
+                document.getElementById('summaryTotalDisplay').textContent = 'S/ ' + currentGrandTotal.toFixed(2);
+            }
+
+            // Alternar vista de cortesía o pasarela regular
+            const isCourtesy = currentGrandTotal <= 0 || cartItems.every(i => i.is_courtesy || i.price === 0);
+            const courtesyCard = document.getElementById('courtesyStepCard');
+            const regularCard = document.getElementById('regularPaymentStepCard');
+            if (courtesyCard && regularCard) {
+                courtesyCard.style.display = isCourtesy ? 'block' : 'none';
+                regularCard.style.display = isCourtesy ? 'none' : 'block';
+            }
+        }
+
+        // =========================================================================
+        // 0. CONFIRMACIÓN Y EMISIÓN DE ENTRADAS DE CORTESÍA GRATIS
+        // =========================================================================
+        async function completeCourtesyCheckout() {
+            const errBox = document.getElementById('courtesyFormError');
+            const btn = document.getElementById('btnConfirmCourtesy');
+
+            if (errBox) errBox.style.display = 'none';
+
+            const name = document.getElementById('buyerFullName').value.trim();
+            const doc = document.getElementById('buyerDoc').value.trim();
+            const email = document.getElementById('buyerEmail').value.trim();
+            const phone = document.getElementById('buyerPhone').value.trim();
+            const country = document.getElementById('buyerCountry')?.options[document.getElementById('buyerCountry').selectedIndex]?.text || 'Perú 🇵🇪';
+            const city = document.getElementById('buyerCity')?.value || 'Lima';
+
+            if (!name || !doc || !email || !phone || !city) {
+                if (errBox) {
+                    errBox.textContent = '⚠️ Por favor completa todos los campos del Paso 2 (Datos del Comprador: Nombre, Documento, Correo, Teléfono, País y Ciudad).';
+                    errBox.style.display = 'block';
+                }
+                document.getElementById('buyerFullName').focus();
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = `<span>⏳ Generando tus Boletos de Cortesía...</span>`;
+
+            try {
+                const response = await fetch("{{ route('web.checkout.courtesy_complete') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        event_id: {{ $eventData['id'] ?? 1 }},
+                        customer_name: name,
+                        customer_email: email,
+                        customer_phone: phone,
+                        customer_doc_number: doc,
+                        customer_country: country,
+                        customer_city: city,
+                        tickets: cartItems
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = `<span>🎁 Confirmar Entradas de Cortesía Gratis</span>`;
+                    if (errBox) {
+                        errBox.textContent = '⚠️ ' + (data.message || 'No se pudieron emitir las entradas de cortesía.');
+                        errBox.style.display = 'block';
+                    }
+                }
+            } catch (err) {
+                btn.disabled = false;
+                btn.innerHTML = `<span>🎁 Confirmar Entradas de Cortesía Gratis</span>`;
+                if (errBox) {
+                    errBox.textContent = '⚠️ Ocurrió un error al procesar tu solicitud. Intenta nuevamente.';
+                    errBox.style.display = 'block';
+                }
+            }
         }
 
         // =========================================================================
@@ -1059,10 +1257,12 @@
             const doc = document.getElementById('buyerDoc').value.trim();
             const email = document.getElementById('buyerEmail').value.trim();
             const phone = document.getElementById('buyerPhone').value.trim();
+            const country = document.getElementById('buyerCountry')?.value || 'PE';
+            const city = document.getElementById('buyerCity')?.value || 'Lima';
             const errorBox = document.getElementById('checkoutFormError');
 
-            if (!name || !doc || !email || !phone) {
-                errorBox.textContent = '⚠️ Por favor completa todos los campos del Paso 2 (Datos del Comprador) antes de proceder al pago.';
+            if (!name || !doc || !email || !phone || !country || !city) {
+                errorBox.textContent = '⚠️ Por favor completa todos los campos del Paso 2 (Datos del Comprador: Nombre, Documento, Correo, Teléfono, País y Ciudad) antes de proceder al pago.';
                 errorBox.style.display = 'block';
                 document.getElementById('buyerFullName').focus();
                 return;
@@ -1088,7 +1288,9 @@
                     customer_name: name,
                     customer_email: email,
                     customer_phone: phone,
-                    customer_doc: doc
+                    customer_doc: doc,
+                    customer_country: country,
+                    customer_city: city
                 })
             })
             .then(res => res.json())
@@ -1227,10 +1429,12 @@
             const doc = document.getElementById('buyerDoc').value.trim();
             const email = document.getElementById('buyerEmail').value.trim();
             const phone = document.getElementById('buyerPhone').value.trim();
+            const country = document.getElementById('buyerCountry')?.value || 'PE';
+            const city = document.getElementById('buyerCity')?.value || 'Lima';
             const errorBox = document.getElementById('checkoutFormError');
 
-            if (!name || !doc || !email || !phone) {
-                errorBox.textContent = '⚠️ Por favor completa todos los campos del Paso 2 (Datos del Comprador) antes de proceder al pago con Culqi.';
+            if (!name || !doc || !email || !phone || !country || !city) {
+                errorBox.textContent = '⚠️ Por favor completa todos los campos del Paso 2 (Datos del Comprador: Nombre, Documento, Correo, Teléfono, País y Ciudad) antes de proceder al pago con Culqi.';
                 errorBox.style.display = 'block';
                 document.getElementById('buyerFullName').focus();
                 return;
@@ -1256,7 +1460,9 @@
                     customer_name: name,
                     customer_email: email,
                     customer_phone: phone,
-                    customer_doc: doc
+                    customer_doc: doc,
+                    customer_country: country,
+                    customer_city: city
                 })
             })
             .then(res => res.json())
@@ -1465,8 +1671,219 @@
             });
         }
 
-        // Listener de seguridad si KR ya está listo
+        // =========================================================================
+        // 3. SELECTOR DINÁMICO DE PAÍSES Y CIUDADES (25 REGIONES DE PERÚ + MUNDO)
+        // =========================================================================
+        const worldCountriesData = [
+            {
+                code: 'PE',
+                name: 'Perú 🇵🇪',
+                cities: [
+                    'Lima (Lima Metropolitana)',
+                    'Amazonas (Chachapoyas / Bagua)',
+                    'Áncash (Huaraz / Chimbote)',
+                    'Apurímac (Abancay / Andahuaylas)',
+                    'Arequipa',
+                    'Ayacucho (Huamanga / Huanta)',
+                    'Cajamarca (Jaén / Chota)',
+                    'Callao',
+                    'Cusco (Urubamba / Quillabamba)',
+                    'Huancavelica',
+                    'Huánuco (Tingo María)',
+                    'Ica (Chincha / Pisco / Nazca)',
+                    'Junín (Huancayo / Tarma / Jauja / Satipo)',
+                    'La Libertad (Trujillo / Chepén)',
+                    'Lambayeque (Chiclayo / Ferreñafe)',
+                    'Loreto (Iquitos / Yurimaguas)',
+                    'Madre de Dios (Puerto Maldonado)',
+                    'Moquegua (Ilo)',
+                    'Pasco (Cerro de Pasco / Oxapampa)',
+                    'Piura (Sullana / Talara / Paita)',
+                    'Puno (Juliaca / Puno)',
+                    'San Martín (Tarapoto / Moyobamba)',
+                    'Tacna',
+                    'Tumbes (Zorritos)',
+                    'Ucayali (Pucallpa)'
+                ]
+            },
+            {
+                code: 'AR',
+                name: 'Argentina 🇦🇷',
+                cities: ['Buenos Aires', 'Córdoba', 'Rosario', 'Mendoza', 'La Plata', 'San Miguel de Tucumán', 'Salta', 'Santa Fe', 'San Juan', 'Mar del Plata', 'Neuquén', 'Bariloche']
+            },
+            {
+                code: 'BO',
+                name: 'Bolivia 🇧🇴',
+                cities: ['La Paz', 'Santa Cruz de la Sierra', 'Cochabamba', 'Sucre', 'Oruro', 'Tarija', 'Potosí', 'Trinidad', 'Cobija', 'El Alto']
+            },
+            {
+                code: 'BR',
+                name: 'Brasil 🇧🇷',
+                cities: ['São Paulo', 'Rio de Janeiro', 'Brasília', 'Salvador', 'Fortaleza', 'Belo Horizonte', 'Manaus', 'Curitiba', 'Recife', 'Porto Alegre']
+            },
+            {
+                code: 'CL',
+                name: 'Chile 🇨🇱',
+                cities: ['Santiago', 'Valparaíso', 'Concepción', 'Viña del Mar', 'Antofagasta', 'Temuco', 'La Serena', 'Iquique', 'Puerto Montt', 'Rancagua', 'Arica', 'Talca']
+            },
+            {
+                code: 'CO',
+                name: 'Colombia 🇨🇴',
+                cities: ['Bogotá', 'Medellín', 'Cali', 'Barranquilla', 'Cartagena', 'Cúcuta', 'Bucaramanga', 'Pereira', 'Santa Marta', 'Ibagué', 'Manizales', 'Pasto', 'Villavicencio']
+            },
+            {
+                code: 'CR',
+                name: 'Costa Rica 🇨🇷',
+                cities: ['San José', 'Alajuela', 'Cartago', 'Heredia', 'Puntarenas', 'Liberia', 'Limón', 'Pérez Zeledón']
+            },
+            {
+                code: 'EC',
+                name: 'Ecuador 🇪🇨',
+                cities: ['Quito', 'Guayaquil', 'Cuenca', 'Santo Domingo', 'Machala', 'Durán', 'Manta', 'Portoviejo', 'Loja', 'Ambato', 'Esmeraldas', 'Riobamba']
+            },
+            {
+                code: 'SV',
+                name: 'El Salvador 🇸🇻',
+                cities: ['San Salvador', 'Santa Ana', 'San Miguel', 'Soyapango', 'Santa Tecla', 'Apopa', 'Delgado']
+            },
+            {
+                code: 'ES',
+                name: 'España 🇪🇸',
+                cities: ['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Zaragoza', 'Málaga', 'Murcia', 'Palma de Mallorca', 'Las Palmas', 'Bilbao', 'Alicante', 'Córdoba', 'Valladolid']
+            },
+            {
+                code: 'US',
+                name: 'Estados Unidos 🇺🇸',
+                cities: ['Miami', 'Nueva York', 'Los Ángeles', 'Chicago', 'Houston', 'Dallas', 'San Francisco', 'Orlando', 'Atlanta', 'Washington D.C.', 'Boston', 'Seattle', 'Las Vegas']
+            },
+            {
+                code: 'GT',
+                name: 'Guatemala 🇬🇹',
+                cities: ['Ciudad de Guatemala', 'Mixco', 'Villa Nueva', 'Quetzaltenango', 'Escuintla', 'San Juan Sacatepéquez']
+            },
+            {
+                code: 'HN',
+                name: 'Honduras 🇭🇳',
+                cities: ['Tegucigalpa', 'San Pedro Sula', 'Choloma', 'La Ceiba', 'El Progreso', 'Comayagua']
+            },
+            {
+                code: 'MX',
+                name: 'México 🇲🇽',
+                cities: ['Ciudad de México', 'Guadalajara', 'Monterrey', 'Puebla', 'Tijuana', 'León', 'Ciudad Juárez', 'Cancún', 'Querétaro', 'Mérida', 'Zapopan', 'Toluca', 'Acapulco']
+            },
+            {
+                code: 'NI',
+                name: 'Nicaragua 🇳🇮',
+                cities: ['Managua', 'León', 'Masaya', 'Matagalpa', 'Chinandega', 'Granada', 'Estelí']
+            },
+            {
+                code: 'PA',
+                name: 'Panamá 🇵🇦',
+                cities: ['Ciudad de Panamá', 'San Miguelito', 'Tocumen', 'David', 'Colón', 'La Chorrera', 'Santiago']
+            },
+            {
+                code: 'PY',
+                name: 'Paraguay 🇵🇾',
+                cities: ['Asunción', 'Ciudad del Este', 'San Lorenzo', 'Luque', 'Capiatá', 'Lambaré', 'Encarnación']
+            },
+            {
+                code: 'DO',
+                name: 'República Dominicana 🇩🇴',
+                cities: ['Santo Domingo', 'Santiago de los Caballeros', 'Santo Domingo Este', 'Santo Domingo Norte', 'Puerto Plata', 'La Romana', 'San Pedro de Macorís', 'Punta Cana']
+            },
+            {
+                code: 'UY',
+                name: 'Uruguay 🇺🇾',
+                cities: ['Montevideo', 'Salto', 'Ciudad de la Costa', 'Paysandú', 'Las Piedras', 'Maldonado', 'Rivera', 'Punta del Este']
+            },
+            {
+                code: 'VE',
+                name: 'Venezuela 🇻🇪',
+                cities: ['Caracas', 'Maracaibo', 'Valencia', 'Barquisimeto', 'Maracay', 'Ciudad Guayana', 'San Cristóbal', 'Barcelona', 'Maturín', 'Puerto La Cruz']
+            },
+            {
+                code: 'DE',
+                name: 'Alemania 🇩🇪',
+                cities: ['Berlín', 'Múnich', 'Hamburgo', 'Fráncfort', 'Colonia', 'Stuttgart', 'Düsseldorf', 'Dortmund']
+            },
+            {
+                code: 'CA',
+                name: 'Canadá 🇨🇦',
+                cities: ['Toronto', 'Montreal', 'Vancouver', 'Calgary', 'Edmonton', 'Ottawa', 'Quebec', 'Winnipeg']
+            },
+            {
+                code: 'FR',
+                name: 'Francia 🇫🇷',
+                cities: ['París', 'Marsella', 'Lyon', 'Toulouse', 'Niza', 'Nantes', 'Estrasburgo', 'Burdeos', 'Lille']
+            },
+            {
+                code: 'IT',
+                name: 'Italia 🇮🇹',
+                cities: ['Roma', 'Milán', 'Nápoles', 'Turín', 'Palermo', 'Génova', 'Bolonia', 'Florencia', 'Venecia']
+            },
+            {
+                code: 'GB',
+                name: 'Reino Unido 🇬🇧',
+                cities: ['Londres', 'Mánchester', 'Birmingham', 'Edimburgo', 'Glasgow', 'Liverpool', 'Bristol', 'Leeds']
+            },
+            {
+                code: 'JP',
+                name: 'Japón 🇯🇵',
+                cities: ['Tokio', 'Yokohama', 'Osaka', 'Nagoya', 'Sapporo', 'Fukuoka', 'Kioto', 'Kobe']
+            },
+            {
+                code: 'AU',
+                name: 'Australia 🇦🇺',
+                cities: ['Sídney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaida', 'Canberra', 'Gold Coast']
+            },
+            {
+                code: 'OTHER',
+                name: 'Otro País 🌍',
+                cities: ['Ciudad Principal', 'Capital', 'Otra Ciudad']
+            }
+        ];
+
+        function initCountryAndCitySelectors() {
+            const countrySelect = document.getElementById('buyerCountry');
+            const citySelect = document.getElementById('buyerCity');
+            if (!countrySelect || !citySelect) return;
+
+            // Limpiar y poblar selector de países
+            countrySelect.innerHTML = '';
+            worldCountriesData.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.code;
+                opt.textContent = c.name;
+                if (c.code === 'PE') opt.selected = true;
+                countrySelect.appendChild(opt);
+            });
+
+            function populateCities(countryCode, defaultCity = null) {
+                const country = worldCountriesData.find(c => c.code === countryCode) || worldCountriesData[0];
+                citySelect.innerHTML = '';
+                country.cities.forEach(cityName => {
+                    const opt = document.createElement('option');
+                    opt.value = cityName;
+                    opt.textContent = cityName;
+                    if (defaultCity && cityName.toLowerCase().includes(defaultCity.toLowerCase())) {
+                        opt.selected = true;
+                    }
+                    citySelect.appendChild(opt);
+                });
+            }
+
+            // Inicializar por defecto con las 25 ciudades/regiones de Perú
+            populateCities('PE');
+
+            countrySelect.addEventListener('change', function () {
+                populateCities(this.value);
+            });
+        }
+
+        // Listener de seguridad si KR ya está listo e inicialización general
         document.addEventListener('DOMContentLoaded', function () {
+            initCountryAndCitySelectors();
+
             if (typeof KR !== 'undefined' && typeof KR.onFormReady === 'function') {
                 KR.onFormReady(function () {
                     KR.onSubmit(handleIzipaySubmit);

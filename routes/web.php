@@ -57,6 +57,7 @@ Route::post('/checkout/izipay/completar', [CheckoutController::class, 'completeI
 Route::post('/checkout/culqi/iniciar', [CheckoutController::class, 'initiateCulqi'])->name('web.checkout.culqi_initiate');
 Route::post('/checkout/culqi/completar', [CheckoutController::class, 'completeCulqiPayment'])->name('web.checkout.culqi_complete');
 Route::post('/checkout/culqi/consultar-orden', [CheckoutController::class, 'checkCulqiOrderStatus'])->name('web.checkout.culqi_order_status');
+Route::post('/checkout/cortesia/completar', [CheckoutController::class, 'completeCourtesyOrder'])->name('web.checkout.courtesy_complete');
 Route::post('/api/culqi/webhook', [CheckoutController::class, 'culqiWebhook'])->name('api.culqi.webhook');
 
 // Rutas Protegidas de Administración y Panel de Control
