@@ -14,7 +14,7 @@
                     <!-- HEADER BRANDING -->
                     <tr>
                         <td style="background: linear-gradient(135deg, #1E1B4B, #0F172A); padding: 30px; text-align: center;">
-                            @if(file_exists(public_path('images/logo-white.png')))
+                            @if(isset($message) && file_exists(public_path('images/logo-white.png')))
                                 <img src="{{ $message->embed(public_path('images/logo-white.png')) }}" alt="ViveGo" style="max-height: 48px; width: auto; margin-bottom: 8px; display: inline-block;">
                             @else
                                 <span style="font-size: 28px; font-weight: 900; color: #FFFFFF; letter-spacing: -0.5px;">
@@ -32,21 +32,49 @@
                         <td style="height: 4px; background: linear-gradient(90deg, #FF5500, #FF0055, #00D2C4);"></td>
                     </tr>
 
+                    @php
+                        $pm = strtolower($sale->payment_method ?? '');
+                        $isCourtesy = ($pm === 'cortesía' || $pm === 'cortesia' || (float)$sale->total_amount == 0);
+                        $isCulqi = str_contains($pm, 'culqi');
+                        $isIzipay = str_contains($pm, 'izipay');
+                    @endphp
+
+                    <!-- EVENT BANNER IMAGE (SI EXISTE) -->
+                    @if(!empty($sale->event?->banner_image))
+                        <tr>
+                            <td style="padding: 20px 30px 0 30px; text-align: center;">
+                                <img src="{{ $sale->event->banner_image }}" alt="{{ $sale->event?->title ?? 'Evento' }}" style="width: 100%; max-width: 540px; max-height: 220px; object-fit: cover; border-radius: 12px; display: block; border: 1.5px solid #E2E8F0; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+                            </td>
+                        </tr>
+                    @endif
+
                     <!-- SUCCESS GREETING -->
                     <tr>
-                        <td style="padding: 35px 30px 20px 30px; text-align: center;">
+                        <td style="padding: 25px 30px 20px 30px; text-align: center;">
                             <div style="width: 56px; height: 56px; border-radius: 50%; background-color: #ECFDF5; border: 2px solid #10B981; color: #059669; font-size: 28px; line-height: 56px; margin: 0 auto 15px auto;">
                                 ✓
                             </div>
-                            <span style="background-color: #ECFDF5; color: #065F46; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid #A7F3D0;">
-                                PAGO CONFIRMADO & VALIDADO
-                            </span>
-                            <h1 style="font-size: 24px; font-weight: 900; color: #0F172A; margin: 15px 0 5px 0;">
-                                ¡Gracias por tu compra, {{ $sale->buyer_name }}!
-                            </h1>
-                            <p style="font-size: 14px; color: #64748B; margin: 0; line-height: 1.5;">
-                                Tu orden ha sido procesada exitosamente mediante Izipay. A continuación encontrarás el recibo oficial, las credenciales de tu cuenta y el acceso a tus boletos.
-                            </p>
+                            @if($isCourtesy)
+                                <span style="background-color: #ECFDF5; color: #065F46; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid #A7F3D0;">
+                                    🎁 ENTRADA DE CORTESÍA CONFIRMADA
+                                </span>
+                                <h1 style="font-size: 24px; font-weight: 900; color: #0F172A; margin: 15px 0 5px 0;">
+                                    ¡Tus Entradas de Cortesía están Listas, {{ $sale->buyer_name }}!
+                                </h1>
+                                <p style="font-size: 14px; color: #64748B; margin: 0; line-height: 1.5;">
+                                    Tus entradas de cortesía han sido emitidas exitosamente sin costo. A continuación encontrarás el recibo oficial, las credenciales de tu cuenta y tus boletos oficiales adjuntos.
+                                </p>
+                            @else
+                                <span style="background-color: #ECFDF5; color: #065F46; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid #A7F3D0;">
+                                    PAGO CONFIRMADO & VALIDADO
+                                </span>
+                                <h1 style="font-size: 24px; font-weight: 900; color: #0F172A; margin: 15px 0 5px 0;">
+                                    ¡Gracias por tu compra, {{ $sale->buyer_name }}!
+                                </h1>
+                                <p style="font-size: 14px; color: #64748B; margin: 0; line-height: 1.5;">
+                                    Tu orden ha sido procesada exitosamente. A continuación encontrarás el recibo oficial, las credenciales de tu cuenta y el acceso a tus boletos.
+                                </p>
+                            @endif
                         </td>
                     </tr>
 
@@ -88,7 +116,15 @@
                                             </tr>
                                             <tr>
                                                 <td style="font-size: 13px; color: #64748B; font-weight: 700;">Método de Pago:</td>
-                                                <td style="font-size: 13px; color: #059669; font-weight: 800;">💳 Pasarela Izipay Online</td>
+                                                @if($isCourtesy)
+                                                    <td style="font-size: 13px; color: #10B981; font-weight: 800;">🎁 Entrada de Cortesía (Gratis / Free)</td>
+                                                @elseif($isCulqi)
+                                                    <td style="font-size: 13px; color: #9333EA; font-weight: 800;">🟣 Pasarela Culqi (Tarjeta / Yape / Plin)</td>
+                                                @elseif($isIzipay)
+                                                    <td style="font-size: 13px; color: #00D2C4; font-weight: 800;">💳 Pasarela Izipay Online</td>
+                                                @else
+                                                    <td style="font-size: 13px; color: #059669; font-weight: 800;">💳 {{ $sale->payment_method }}</td>
+                                                @endif
                                             </tr>
                                         </table>
                                     </td>

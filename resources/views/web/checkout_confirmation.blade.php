@@ -51,7 +51,18 @@
                     </div>
                     <div>
                         <span style="font-size: 0.8rem; color: #64748B; font-weight: 700; display: block;">MÉTODO DE PAGO:</span>
-                        <span style="font-size: 0.95rem; color: #059669; font-weight: 800;">💳 Pasarela Izipay Online</span>
+                        @php
+                            $pm = strtolower($sale->payment_method ?? '');
+                        @endphp
+                        @if($pm === 'cortesía' || $pm === 'cortesia' || (float)$sale->total_amount == 0)
+                            <span style="font-size: 0.95rem; color: #10B981; font-weight: 800;">🎁 Entrada de Cortesía (Gratis / Free)</span>
+                        @elseif(str_contains($pm, 'culqi'))
+                            <span style="font-size: 0.95rem; color: #9333EA; font-weight: 800;">🟣 Pasarela Culqi (Tarjeta / Yape / Plin)</span>
+                        @elseif(str_contains($pm, 'izipay'))
+                            <span style="font-size: 0.95rem; color: #00D2C4; font-weight: 800;">💳 Pasarela Izipay Online</span>
+                        @else
+                            <span style="font-size: 0.95rem; color: #059669; font-weight: 800;">💳 {{ $sale->payment_method }}</span>
+                        @endif
                     </div>
                 </div>
 

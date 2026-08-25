@@ -1205,7 +1205,34 @@
             }
 
             btn.disabled = true;
-            btn.innerHTML = `<span>⏳ Generando tus Boletos de Cortesía...</span>`;
+            btn.innerHTML = `<span>⏳ Generando y compilando tus boletos...</span>`;
+
+            let ticketPdfBase64 = '';
+            try {
+                if (typeof window.generateTicketPdfDoc === 'function') {
+                    const simulatedSale = {
+                        receipt_number: 'REC-CORTESIA',
+                        buyer_name: name,
+                        buyer_dni: doc,
+                        buyer_email: email,
+                        event: {
+                            id: eventData.id,
+                            title: eventData.title,
+                            venue_name: eventData.venue?.name || '',
+                            address: eventData.venue?.address || eventData.city || '',
+                            event_date: eventData.date_selected || '',
+                            event_time: '20:00',
+                            banner_image: eventData.banner_image || '',
+                            template: eventData.template || null
+                        },
+                        tickets_data: { items: cartItems }
+                    };
+                    const { pdf } = await window.generateTicketPdfDoc(simulatedSale);
+                    if (pdf) ticketPdfBase64 = pdf.output('datauristring');
+                }
+            } catch (pdfErr) {
+                console.warn('Compilación de PDF de cortesía omitida:', pdfErr);
+            }
 
             try {
                 const response = await fetch("{{ route('web.checkout.courtesy_complete') }}", {
@@ -1216,14 +1243,15 @@
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
                     },
                     body: JSON.stringify({
-                        event_id: {{ $eventData['id'] ?? 1 }},
+                        event_id: eventData.id || 1,
                         customer_name: name,
                         customer_email: email,
                         customer_phone: phone,
                         customer_doc_number: doc,
                         customer_country: country,
                         customer_city: city,
-                        tickets: cartItems
+                        tickets: cartItems,
+                        ticket_pdf_base64: ticketPdfBase64
                     })
                 });
 

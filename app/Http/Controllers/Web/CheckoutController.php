@@ -874,6 +874,33 @@ class CheckoutController extends Controller
             'seller_name' => 'Web Cortesía ViveGo',
         ]);
 
+        // Registrar boletos individuales en la tabla event_tickets
+        $lastTicket = \App\Models\EventTicket::where('event_id', $event->id)->orderBy('id', 'desc')->first();
+        $startSeq = $lastTicket ? ((int) preg_replace('/[^0-9]/', '', $lastTicket->ticket_number) + 1) : 1;
+
+        for ($i = 1; $i <= $totalQty; $i++) {
+            $currentSeq = $startSeq + ($i - 1);
+            $ticketCode = 'TK-' . strtoupper(substr(\Illuminate\Support\Str::slug($event->title), 0, 3)) . '-' . str_pad($currentSeq, 5, '0', STR_PAD_LEFT);
+            $validationHash = 'VG' . strtoupper(substr(md5($sale->receipt_number . $i . $sale->id), 0, 8));
+            $qrPayload = "VIVEGO|{$sale->receipt_number}|EVT-{$sale->event_id}|DNI-{$sale->buyer_dni}|TICK-{$currentSeq}|{$validationHash}";
+
+            \App\Models\EventTicket::create([
+                'event_id' => $event->id,
+                'ticket_sale_id' => $sale->id,
+                'ticket_code' => $ticketCode,
+                'ticket_number' => $currentSeq,
+                'zone_name' => $sale->zone_name,
+                'unit_price' => 0.00,
+                'qr_payload' => $qrPayload,
+                'validation_hash' => $validationHash,
+                'buyer_name' => $buyerName,
+                'buyer_dni' => $buyerDni,
+                'source' => 'web_courtesy',
+                'is_used' => false,
+                'status' => 'valid',
+            ]);
+        }
+
         // Crear o sincronizar cuenta de Cliente para que pueda ver "Mis Boletos" y "Mis Recibos"
         $isNewUser = false;
         $tempPassword = null;
