@@ -230,12 +230,12 @@
                                 <p class="card-header-subtitle">Feed de entradas validadas con hora exacta y punto de control.</p>
                             </div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
-                            <button type="button" class="btn btn-secondary btn-sm" id="btnManualRefresh" onclick="manualRefreshFeed()" style="font-weight: 800; font-size: 0.85rem; padding: 0.55rem 1.1rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer;">
-                                <span id="refreshIcon">🔄</span>
+                        <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+                            <button type="button" id="btnManualRefresh" onclick="manualRefreshFeed()" style="background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; font-weight: 900; font-size: 0.85rem; padding: 0.6rem 1.3rem; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.5rem; border: none; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); cursor: pointer; transition: all 0.2s ease;">
+                                <span id="refreshIcon" style="font-size: 1.05rem;">🔄</span>
                                 <span>Actualizar Asistencias</span>
                             </button>
-                            <button type="button" class="btn btn-sm" onclick="openScannerDevicesModal()" style="background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; font-weight: 900; font-size: 0.85rem; padding: 0.55rem 1.25rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.45rem; border: none; box-shadow: 0 4px 15px rgba(0, 240, 255, 0.35); cursor: pointer; transition: all 0.2s ease;">
+                            <button type="button" class="btn btn-sm" onclick="openScannerDevicesModal()" style="background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; font-weight: 900; font-size: 0.85rem; padding: 0.6rem 1.3rem; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.5rem; border: none; box-shadow: 0 4px 15px rgba(0, 240, 255, 0.35); cursor: pointer; transition: all 0.2s ease;">
                                 <span>📱</span>
                                 <span>+ Agregar Scanner</span>
                             </button>
@@ -991,7 +991,6 @@
         }
 
         // Sincronización automática y a demanda en tiempo real
-        let latestCheckinId = {{ $recentCheckins->first() ? $recentCheckins->first()->id : 0 }};
         let isSyncing = false;
 
         function syncFeedData(isManual = false) {
@@ -1004,26 +1003,34 @@
                 icon.style.animation = 'spin 0.8s linear infinite';
             }
 
-            const sinceParam = isManual ? 0 : latestCheckinId;
-
-            fetch(`/admin/asistentes/${eventId}/checkins-feed?since_id=${sinceParam}`, {
+            fetch(`/admin/asistentes/${eventId}/checkins-feed`, {
                 headers: { 'Accept': 'application/json' }
             })
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
+                    const tbody = document.getElementById('checkinsTableBody');
+                    const emptyRow = document.getElementById('emptyCheckinsRow');
+
                     if (data.new_checkins && data.new_checkins.length > 0) {
-                        if (isManual) {
-                            const tbody = document.getElementById('checkinsTableBody');
-                            if (tbody) tbody.innerHTML = '';
+                        if (emptyRow) emptyRow.remove();
+
+                        if (isManual && tbody) {
+                            tbody.innerHTML = '';
                         }
 
-                        data.new_checkins.forEach(t => {
-                            if (t.id > latestCheckinId) {
-                                latestCheckinId = t.id;
+                        // Iterar en reversa (del más antiguo al más reciente del lote) para que al insertar al tope queden en orden cronológico descendente
+                        const checkinsToProcess = isManual ? data.new_checkins : [...data.new_checkins].reverse();
+
+                        checkinsToProcess.forEach(t => {
+                            const existingRow = document.getElementById(`checkinRow_${t.id}`);
+                            if (!existingRow) {
                                 appendCheckinRow(t);
-                            } else if (isManual) {
-                                appendCheckinRow(t);
+                            } else {
+                                const scannedCell = existingRow.querySelector('td:nth-child(7)');
+                                if (scannedCell && t.scanned_by) {
+                                    scannedCell.innerHTML = `<span style="color: #E2E8F0; font-size: 0.85rem;">${t.scanned_by}</span>`;
+                                }
                             }
                         });
                     }
@@ -1038,6 +1045,18 @@
                                 r.remove();
                             }
                         });
+
+                        if (data.active_checkin_ids.length === 0 && tbody && !document.getElementById('emptyCheckinsRow')) {
+                            tbody.innerHTML = `
+                                <tr id="emptyCheckinsRow">
+                                    <td colspan="9" style="text-align: center; padding: 2.5rem; color: #94A3B8;">
+                                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎫</div>
+                                        <strong>Aún no se han registrado ingresos para este evento.</strong>
+                                        <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem;">Escanea el primer código QR o ingresa un número de boleto para comenzar.</p>
+                                    </td>
+                                </tr>
+                            `;
+                        }
                     }
 
                     if (data.metrics) {
@@ -1081,9 +1100,9 @@
                 if (isManual && icon) {
                     setTimeout(() => { icon.style.animation = 'none'; }, 400);
                 }
-                // Programar la siguiente sincronización automática en 3 segundos solo si la pestaña está activa
+                // Programar la siguiente sincronización automática cada 1.5 segundos
                 if (!isManual) {
-                    setTimeout(scheduleAutoSync, 3000);
+                    setTimeout(scheduleAutoSync, 1500);
                 }
             });
         }
@@ -1096,12 +1115,12 @@
             if (!document.hidden) {
                 syncFeedData(false);
             } else {
-                setTimeout(scheduleAutoSync, 3000);
+                setTimeout(scheduleAutoSync, 2000);
             }
         }
 
-        // Iniciar sincronización automática en vivo
-        setTimeout(scheduleAutoSync, 3000);
+        // Iniciar sincronización automática en vivo de inmediato
+        setTimeout(scheduleAutoSync, 1000);
 
         document.addEventListener('DOMContentLoaded', function () {
             // Theme Toggle

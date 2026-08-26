@@ -323,17 +323,10 @@ class AttendeeController extends Controller
      */
     public function checkinsFeed(Request $request, Event $event): JsonResponse
     {
-        $sinceId = (int) $request->query('since_id', 0);
-
-        $newCheckinsQuery = EventTicket::where('event_id', $event->id)
-            ->where('is_used', true);
-
-        if ($sinceId > 0) {
-            $newCheckinsQuery->where('id', '>', $sinceId);
-        }
-
-        $newCheckins = $newCheckinsQuery->orderBy('checked_in_at', 'desc')
-            ->take(25)
+        $newCheckins = EventTicket::where('event_id', $event->id)
+            ->where('is_used', true)
+            ->orderBy('checked_in_at', 'desc')
+            ->take(50)
             ->get()
             ->map(function ($ticket) {
                 $hash = $ticket->validation_hash ?: ('VG' . strtoupper(substr(md5($ticket->id), 0, 8)));

@@ -565,7 +565,7 @@
         }
 
         function syncMobileRealtimeFeed() {
-            const feedUrl = `{{ route('web.scanner.checkins_feed', $event->id) }}?since_id=${lastFeedId}`;
+            const feedUrl = `{{ route('web.scanner.checkins_feed', $event->id) }}`;
             fetch(feedUrl, {
                 headers: { 'Accept': 'application/json' }
             })
@@ -583,10 +583,8 @@
                     }
 
                     if (data.new_checkins && data.new_checkins.length > 0) {
-                        data.new_checkins.forEach(chk => {
-                            if (chk.id > lastFeedId) {
-                                lastFeedId = chk.id;
-                            }
+                        // Iterar en reversa para agregar al inicio respetando orden descendente
+                        [...data.new_checkins].reverse().forEach(chk => {
                             appendMobileFeed(chk);
                         });
                     }
