@@ -22,6 +22,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'api/*',
             'api/culqi/webhook',
             'api/izipay/ipn',
+            'scanner/*',
+            'scanner/*/validar-qr',
+            'scanner/*/anular-escaneo/*',
+            'admin/asistentes/*/validar-qr',
+            'admin/asistentes/*/anular-escaneo/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

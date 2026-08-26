@@ -34,7 +34,14 @@ Route::get('/login', [AuthController::class, 'showLoginForm'])->name('web.login'
 Route::post('/login', [AuthController::class, 'login'])->name('web.login.submit');
 Route::post('/logout', [AuthController::class, 'logout'])->name('web.logout');
 Route::get('/evento/{slug}', [EventDetailController::class, 'show'])->name('web.event.detail');
+
+// Terminal Móvil de Control de Acceso & Scanner QR
 Route::get('/scanner/{event}', [AttendeeController::class, 'mobileScanner'])->name('web.scanner.direct');
+Route::post('/scanner/{event}/validar-qr', [AttendeeController::class, 'verifyQr'])->name('web.scanner.verify_qr');
+Route::post('/scanner/{event}/anular-escaneo/{ticket}', [AttendeeController::class, 'resetCheckin'])->name('web.scanner.reset_checkin');
+Route::delete('/scanner/{event}/anular-escaneo/{ticket}', [AttendeeController::class, 'resetCheckin'])->name('web.scanner.destroy_checkin');
+Route::get('/scanner/{event}/checkins-feed', [AttendeeController::class, 'checkinsFeed'])->name('web.scanner.checkins_feed');
+Route::get('/scanner/{event}/feed', [AttendeeController::class, 'checkinsFeed'])->name('web.scanner.feed');
 
 // Portal del Cliente (Mis Boletos & Mis Recibos)
 Route::get('/cliente/login', [CustomerPortalController::class, 'showLoginForm'])->name('customer.login');

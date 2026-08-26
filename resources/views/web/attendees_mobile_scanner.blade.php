@@ -417,7 +417,7 @@
 
     <script>
         const eventId = {{ $event->id }};
-        const verifyUrl = "{{ route('web.attendees.verify_qr', $event->id) }}";
+        const verifyUrl = "{{ route('web.scanner.verify_qr', $event->id) }}";
         const csrfToken = "{{ csrf_token() }}";
 
         let html5QrScannerMobile = null;
@@ -564,7 +564,7 @@
                 color: '#FFFFFF'
             }).then((res) => {
                 if (res.isConfirmed) {
-                    fetch(`/admin/asistentes/${eventId}/anular-escaneo/${ticketId}`, {
+                    fetch(`/scanner/${eventId}/anular-escaneo/${ticketId}`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -599,7 +599,7 @@
         }
 
         function syncMobileRealtimeFeed() {
-            const feedUrl = `{{ route('web.attendees.checkins_feed', $event->id) }}?since_id=${lastFeedId}`;
+            const feedUrl = `{{ route('web.scanner.checkins_feed', $event->id) }}?since_id=${lastFeedId}`;
             fetch(feedUrl, {
                 headers: { 'Accept': 'application/json' }
             })
@@ -725,17 +725,28 @@
                     device_name: dev
                 })
             })
-            .then(res => res.json().then(data => ({ status: res.status, body: data })))
-            .then(({ status, body }) => {
-                renderMobileScanResult(body);
+            .then(async (res) => {
+                const text = await res.text();
+                try {
+                    const data = JSON.parse(text);
+                    renderMobileScanResult(data);
+                } catch(e) {
+                    console.error('[Scanner Response JSON Parse Error]', text);
+                    renderMobileScanResult({
+                        success: false,
+                        status: 'invalid',
+                        title: '❌ ERROR DEL SERVIDOR',
+                        message: 'Error en la respuesta del servidor.'
+                    });
+                }
             })
             .catch(err => {
-                console.error(err);
+                console.error('[Scanner Fetch Error]', err);
                 renderMobileScanResult({
                     success: false,
                     status: 'invalid',
                     title: '❌ ERROR DE CONEXIÓN',
-                    message: 'Revisa tu conexión a internet.'
+                    message: 'No se pudo conectar con el servidor.'
                 });
             })
             .finally(() => {
