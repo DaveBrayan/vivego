@@ -15,6 +15,8 @@ use App\Http\Controllers\Web\TemplateController;
 use App\Http\Controllers\Web\BoxOfficeController;
 use App\Http\Controllers\Web\AttendeeController;
 use App\Http\Controllers\Web\AuthController;
+use App\Http\Controllers\Web\CampaignController;
+use App\Http\Controllers\Web\CouponController;
 use App\Http\Controllers\Web\CustomerController;
 use App\Http\Controllers\Web\CustomerPortalController;
 use App\Http\Controllers\Web\PaymentGatewayController;
@@ -58,6 +60,7 @@ Route::post('/mi-cuenta/boleto/{sale}/enviar-correo', [CustomerPortalController:
 
 // Pasarela de Pagos & Carrito de Compras Checkout
 Route::match(['get', 'post'], '/checkout', [CheckoutController::class, 'show'])->name('web.checkout');
+Route::post('/checkout/validar-cupon', [CheckoutController::class, 'validateCoupon'])->name('web.checkout.validate_coupon');
 Route::get('/checkout/confirmacion/{sale}', [CheckoutController::class, 'confirmation'])->name('web.checkout.confirmation');
 Route::post('/checkout/izipay/iniciar', [CheckoutController::class, 'initiateIzipay'])->name('web.checkout.izipay_initiate');
 Route::post('/checkout/izipay/completar', [CheckoutController::class, 'completeIzipayPayment'])->name('web.checkout.izipay_complete');
@@ -111,6 +114,19 @@ Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group
     Route::post('/admin/categorias', [CategoryController::class, 'store'])->name('web.categories.store');
     Route::put('/admin/categorias/{category}', [CategoryController::class, 'update'])->name('web.categories.update');
     Route::delete('/admin/categorias/{category}', [CategoryController::class, 'destroy'])->name('web.categories.destroy');
+
+    // Módulos de Marketing: Campañas Promocionales & Cupones de Descuento
+    Route::get('/admin/campanas', [CampaignController::class, 'index'])->name('web.campaigns');
+    Route::post('/admin/campanas', [CampaignController::class, 'store'])->name('web.campaigns.store');
+    Route::put('/admin/campanas/{campaign}', [CampaignController::class, 'update'])->name('web.campaigns.update');
+    Route::post('/admin/campanas/{campaign}/toggle', [CampaignController::class, 'toggleStatus'])->name('web.campaigns.toggle');
+    Route::delete('/admin/campanas/{campaign}', [CampaignController::class, 'destroy'])->name('web.campaigns.destroy');
+
+    Route::get('/admin/cupones', [CouponController::class, 'index'])->name('web.coupons');
+    Route::post('/admin/cupones', [CouponController::class, 'store'])->name('web.coupons.store');
+    Route::put('/admin/cupones/{coupon}', [CouponController::class, 'update'])->name('web.coupons.update');
+    Route::post('/admin/cupones/{coupon}/toggle', [CouponController::class, 'toggleStatus'])->name('web.coupons.toggle');
+    Route::delete('/admin/cupones/{coupon}', [CouponController::class, 'destroy'])->name('web.coupons.destroy');
 
     Route::get('/admin/plantillas', [TemplateController::class, 'index'])->name('web.templates');
     Route::post('/admin/plantillas', [TemplateController::class, 'store'])->name('web.templates.store');

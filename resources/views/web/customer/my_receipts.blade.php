@@ -139,9 +139,14 @@
                                         </span>
                                     </td>
                                     <td style="padding: 1.2rem 1.25rem; text-align: right;">
-                                        <strong style="color: #059669; font-size: 1.1rem; font-weight: 900;">
+                                        <strong style="color: #059669; font-size: 1.1rem; font-weight: 900; display: block;">
                                             S/ {{ number_format($sale->total_amount, 2) }}
                                         </strong>
+                                        @if((float)($sale->discount_amount ?? 0) > 0)
+                                            <small style="display: inline-block; font-size: 0.725rem; color: #EA580C; font-weight: 800; background: #FFF7ED; padding: 2px 6px; border-radius: 6px; border: 1px solid #FFEDD5; margin-top: 3px;">
+                                                Ahorro: S/ {{ number_format($sale->discount_amount, 2) }}
+                                            </small>
+                                        @endif
                                     </td>
                                     <td style="padding: 1.2rem 1.25rem; text-align: right;">
                                         <div style="display: inline-flex; gap: 0.5rem; justify-content: flex-end;">

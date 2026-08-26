@@ -26,6 +26,11 @@ class TicketSale extends Model
         'change_amount',
         'tickets_data',
         'seller_name',
+        'original_subtotal',
+        'discount_amount',
+        'discount_description',
+        'campaign_name',
+        'coupon_code',
     ];
 
     protected $casts = [
@@ -34,6 +39,8 @@ class TicketSale extends Model
         'total_amount' => 'decimal:2',
         'amount_paid' => 'decimal:2',
         'change_amount' => 'decimal:2',
+        'original_subtotal' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
     ];
 
     public function event()

@@ -393,6 +393,18 @@
 
         <div class="dash-nav-section-title" style="margin-top: 1.5rem;">GESTIÓN & HERRAMIENTAS</div>
         <ul class="dash-nav-list">
+            <li class="dash-nav-item {{ request()->routeIs('web.campaigns*') ? 'active' : '' }}">
+                <a href="{{ route('web.campaigns') }}" class="dash-nav-link">
+                    <span class="dash-nav-icon">🔥</span>
+                    <span class="dash-nav-text">Campañas</span>
+                </a>
+            </li>
+            <li class="dash-nav-item {{ request()->routeIs('web.coupons*') ? 'active' : '' }}">
+                <a href="{{ route('web.coupons') }}" class="dash-nav-link">
+                    <span class="dash-nav-icon">🎟️</span>
+                    <span class="dash-nav-text">Cupones</span>
+                </a>
+            </li>
             <li class="dash-nav-item {{ request()->routeIs('web.categories*') ? 'active' : '' }}">
                 <a href="{{ route('web.categories') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">📂</span>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\Campaign;
 use App\Models\Company;
 use App\Models\Event;
 use Carbon\Carbon;
@@ -57,7 +58,10 @@ class EventDetailController extends Controller
                 $timeDisplay .= ' HRS';
             }
 
-            // Zonas y Tipos de Entrada con Soporte de Preventa Activa y Control de Stock
+            // Comprobar si existe Campaña Promocional Activa (ej: Black Friday) para este evento
+            $activeCampaign = Campaign::getActiveForEvent($eventModel->id);
+
+            // Zonas y Tipos de Entrada con Soporte de Preventa Activa, Campañas Comerciales y Control de Stock
             $zones = is_array($eventModel->zones) ? $eventModel->zones : (is_string($eventModel->zones) ? json_decode($eventModel->zones, true) : []);
             $tickets = [];
             $today = date('Y-m-d');
@@ -99,12 +103,11 @@ class EventDetailController extends Controller
                     if ($isAvailable && $hasPresale && $discountPercent > 0) {
                         $dateValid = true;
                         if ($presaleStart && $today < $presaleStart) {
-                            $dateValid = false; // Preventa aún no inicia
+                            $dateValid = false;
                         }
                         if ($presaleEnd && $today > $presaleEnd) {
-                            $dateValid = false; // Preventa ya expiró
+                            $dateValid = false;
                         }
-                        // Si el stock específico de preventa se configuró en 0 o se agotó
                         if ($presaleStock !== null && $presaleStock <= 0) {
                             $dateValid = false;
                         }
@@ -126,14 +129,33 @@ class EventDetailController extends Controller
                         $effectivePrice = $regularPrice;
                     }
 
+                    // Aplicar Descuento de Campaña si está activa
+                    $campaignDiscount = 0.0;
+                    $hasCampaignDiscount = false;
+                    $finalPrice = $effectivePrice;
+
+                    if ($activeCampaign) {
+                        $campaignDiscount = $activeCampaign->calculateDiscount($effectivePrice);
+                        if ($campaignDiscount > 0) {
+                            $hasCampaignDiscount = true;
+                            $finalPrice = max(0, $effectivePrice - $campaignDiscount);
+                        }
+                    }
+
                     $tickets[] = [
                         'id' => $idx + 1,
                         'name' => $zoneName,
-                        'price' => number_format($effectivePrice, 2, '.', ''),
+                        'price' => number_format($finalPrice, 2, '.', ''),
+                        'effective_price' => number_format($effectivePrice, 2, '.', ''),
                         'regular_price' => number_format($regularPrice, 2, '.', ''),
                         'presale_price' => number_format($presalePrice, 2, '.', ''),
                         'is_presale_active' => $isPresaleActive,
                         'presale_discount' => $discountPercent,
+                        'has_campaign' => $hasCampaignDiscount,
+                        'campaign_discount' => $campaignDiscount,
+                        'campaign_name' => $activeCampaign?->name,
+                        'campaign_badge' => $activeCampaign?->badge_text ?: ($activeCampaign ? ('🔥 ' . strtoupper($activeCampaign->name)) : null),
+                        'campaign_color' => $activeCampaign?->banner_color ?: '#FF5500',
                         'presale_start_date' => $presaleStart,
                         'presale_end_date' => $presaleEnd,
                         'presale_stock' => $presaleStock,
@@ -291,6 +313,16 @@ class EventDetailController extends Controller
                 ],
                 'details' => $details,
                 'all_sold_out' => $allSoldOut,
+                'active_campaign' => $activeCampaign ? [
+                    'id' => $activeCampaign->id,
+                    'name' => $activeCampaign->name,
+                    'badge_text' => $activeCampaign->badge_text ?: ('🔥 ' . strtoupper($activeCampaign->name)),
+                    'banner_color' => $activeCampaign->banner_color ?: '#FF5500',
+                    'discount_type' => $activeCampaign->discount_type,
+                    'discount_value' => $activeCampaign->discount_value,
+                    'end_at' => $activeCampaign->end_at->format('Y-m-d H:i:s'),
+                    'end_at_display' => $activeCampaign->end_at->format('d/m/Y h:i A'),
+                ] : null,
                 'organizer' => [
                     'name' => $organizerName,
                     'ruc' => $organizerRuc,

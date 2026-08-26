@@ -142,6 +142,8 @@
                                             @php
                                                 $tData = is_array($sale->tickets_data) ? $sale->tickets_data : json_decode($sale->tickets_data, true);
                                                 $items = $tData['items'] ?? (is_array($tData) ? $tData : []);
+                                                $hasDiscount = (float)($sale->discount_amount ?? 0) > 0;
+                                                $origSubtotal = (float)($sale->original_subtotal ?? ($sale->total_amount + ($sale->discount_amount ?? 0)));
                                             @endphp
                                             @foreach($items as $t)
                                                 <tr>
@@ -150,6 +152,32 @@
                                                     <td align="right" style="font-size: 13px; color: #059669; font-weight: 800;">S/ {{ number_format(($t['subtotal'] ?? (($t['price'] ?? 0) * ($t['quantity'] ?? 1))), 2) }}</td>
                                                 </tr>
                                             @endforeach
+
+                                            @if($hasDiscount)
+                                                <tr style="border-top: 1.5px dashed #CBD5E1;">
+                                                    <td colspan="2" style="font-size: 13px; color: #64748B; font-weight: 700; padding-top: 8px;">Subtotal Base:</td>
+                                                    <td align="right" style="font-size: 13px; color: #64748B; font-weight: 700; padding-top: 8px;">S/ {{ number_format($origSubtotal, 2) }}</td>
+                                                </tr>
+                                                @if(!empty($sale->campaign_name))
+                                                    <tr>
+                                                        <td colspan="2" style="font-size: 12px; color: #FF5500; font-weight: 800;">🔥 Campaña ({{ $sale->campaign_name }}):</td>
+                                                        <td align="right" style="font-size: 12px; color: #FF5500; font-weight: 800;">-S/ {{ number_format($tData['campaign_discount'] ?? $sale->discount_amount, 2) }}</td>
+                                                    </tr>
+                                                @endif
+                                                @if(!empty($sale->coupon_code))
+                                                    <tr>
+                                                        <td colspan="2" style="font-size: 12px; color: #059669; font-weight: 800;">🎟️ Cupón Canjeado ({{ $sale->coupon_code }}):</td>
+                                                        <td align="right" style="font-size: 12px; color: #059669; font-weight: 800;">-S/ {{ number_format($tData['coupon_discount'] ?? $sale->discount_amount, 2) }}</td>
+                                                    </tr>
+                                                @endif
+                                                @if(empty($sale->campaign_name) && empty($sale->coupon_code))
+                                                    <tr>
+                                                        <td colspan="2" style="font-size: 12px; color: #FF5500; font-weight: 800;">🏷️ Descuento Comercial:</td>
+                                                        <td align="right" style="font-size: 12px; color: #FF5500; font-weight: 800;">-S/ {{ number_format($sale->discount_amount, 2) }}</td>
+                                                    </tr>
+                                                @endif
+                                            @endif
+
                                             <tr style="border-top: 1.5px dashed #CBD5E1;">
                                                 <td colspan="2" style="font-size: 14px; font-weight: 900; color: #0F172A; padding-top: 10px;">TOTAL PAGADO:</td>
                                                 <td align="right" style="font-size: 18px; font-weight: 900; color: #059669; padding-top: 10px;">S/ {{ number_format($sale->total_amount, 2) }}</td>

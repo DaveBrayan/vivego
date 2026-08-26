@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\Campaign;
+use App\Models\Coupon;
 use App\Models\Event;
 use App\Models\PaymentGateway;
 use App\Models\TicketSale;
@@ -18,6 +20,55 @@ use Illuminate\Support\Str;
 
 class CheckoutController extends Controller
 {
+    /**
+     * Valida un código de cupón en tiempo real vía AJAX
+     */
+    public function validateCoupon(Request $request): JsonResponse
+    {
+        $code = strtoupper(trim((string) $request->input('code', '')));
+        $eventId = (int) $request->input('event_id', 0);
+        $subtotal = (float) $request->input('subtotal', 0.0);
+
+        if (empty($code)) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Por favor ingresa un código de cupón.'
+            ], 422);
+        }
+
+        $coupon = Coupon::where('code', $code)->first();
+        if (!$coupon) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'El cupón "' . $code . '" no existe o fue ingresado incorrectamente.'
+            ], 404);
+        }
+
+        $check = $coupon->isValidForEvent($eventId, $subtotal);
+        if (!$check['valid']) {
+            return response()->json([
+                'valid' => false,
+                'message' => $check['message']
+            ], 422);
+        }
+
+        $discountAmount = $coupon->calculateDiscount($subtotal);
+        $newTotal = max(0, round($subtotal - $discountAmount, 2));
+
+        return response()->json([
+            'valid' => true,
+            'code' => $coupon->code,
+            'description' => $coupon->description,
+            'discount_type' => $coupon->discount_type,
+            'discount_value' => (float) $coupon->discount_value,
+            'discount_amount' => $discountAmount,
+            'discount_formatted' => 'S/ ' . number_format($discountAmount, 2),
+            'new_total' => $newTotal,
+            'new_total_formatted' => 'S/ ' . number_format($newTotal, 2),
+            'message' => '¡Cupón ' . $coupon->code . ' aplicado con éxito!'
+        ]);
+    }
+
     /**
      * Muestra la página completa de Carrito & Checkout
      */
@@ -41,10 +92,15 @@ class CheckoutController extends Controller
             $event = Event::with('template')->latest()->first();
         }
 
+        // Comprobar si existe Campaña Promocional Activa (ej: Black Friday) para este evento
+        $activeCampaign = $event ? Campaign::getActiveForEvent($event->id) : null;
+
         // 2. Extraer o armar Carrito de Entradas con Persistencia de Sesión
         $ticketsRaw = $request->input('tickets');
         $cartItems = [];
         $grandTotal = 0;
+        $originalSubtotal = 0;
+        $campaignDiscountTotal = 0;
 
         if (is_string($ticketsRaw)) {
             $decoded = json_decode($ticketsRaw, true);
@@ -91,14 +147,24 @@ class CheckoutController extends Controller
                             }
                         }
 
+                        $finalPrice = $effectivePrice;
+                        $itemCampaignDisc = 0.0;
+                        if ($activeCampaign) {
+                            $itemCampaignDisc = $activeCampaign->calculateDiscount($effectivePrice);
+                            $finalPrice = max(0, $effectivePrice - $itemCampaignDisc);
+                        }
+
                         $cartItems[] = [
                             'name' => $z['name'] ?? $z['capacity_type'] ?? 'Entrada',
-                            'price' => $effectivePrice,
+                            'price' => $finalPrice,
+                            'base_price' => $effectivePrice,
                             'regular_price' => $regularPrice,
                             'is_presale' => $isPresale,
                             'presale_discount' => $discountPercent,
+                            'has_campaign' => ($itemCampaignDisc > 0),
+                            'campaign_discount' => $itemCampaignDisc,
                             'quantity' => 1,
-                            'subtotal' => $effectivePrice
+                            'subtotal' => $finalPrice
                         ];
                         break; // Tomar la primera zona disponible como fallback
                     }
@@ -110,9 +176,12 @@ class CheckoutController extends Controller
                     [
                         'name' => 'Entrada General',
                         'price' => 100.00,
+                        'base_price' => 100.00,
                         'regular_price' => 100.00,
                         'is_presale' => false,
                         'presale_discount' => 0,
+                        'has_campaign' => false,
+                        'campaign_discount' => 0,
                         'quantity' => 1,
                         'subtotal' => 100.00
                     ]
@@ -120,9 +189,30 @@ class CheckoutController extends Controller
             }
         }
 
-        foreach ($cartItems as $item) {
-            $grandTotal += (float) ($item['subtotal'] ?? (($item['price'] ?? 0) * ($item['quantity'] ?? 1)));
+        foreach ($cartItems as &$item) {
+            $qty = (int)($item['quantity'] ?? 1);
+            $basePrice = (float)($item['base_price'] ?? $item['price'] ?? 0);
+            $itemPrice = (float)($item['price'] ?? 0);
+
+            // Si hay campaña activa y no se calculó aún en el item
+            if ($activeCampaign && empty($item['has_campaign'])) {
+                $itemCampDisc = $activeCampaign->calculateDiscount($basePrice);
+                if ($itemCampDisc > 0) {
+                    $item['has_campaign'] = true;
+                    $item['campaign_discount'] = $itemCampDisc;
+                    $itemPrice = max(0, $basePrice - $itemCampDisc);
+                    $item['price'] = $itemPrice;
+                    $item['subtotal'] = round($itemPrice * $qty, 2);
+                }
+            }
+
+            $originalSubtotal += ($basePrice * $qty);
+            $grandTotal += (float) ($item['subtotal'] ?? ($itemPrice * $qty));
+            if (!empty($item['has_campaign'])) {
+                $campaignDiscountTotal += ((float)($item['campaign_discount'] ?? 0) * $qty);
+            }
         }
+        unset($item);
 
         $dateSelected = $request->input('date_selected');
         if ($dateSelected) {
@@ -147,9 +237,28 @@ class CheckoutController extends Controller
             ],
             'date_selected' => $dateSelected,
             'template' => $event?->template,
+            'active_campaign' => $activeCampaign ? [
+                'id' => $activeCampaign->id,
+                'name' => $activeCampaign->name,
+                'badge_text' => $activeCampaign->badge_text ?: ('🔥 ' . strtoupper($activeCampaign->name)),
+                'banner_color' => $activeCampaign->banner_color ?: '#FF5500',
+                'discount_type' => $activeCampaign->discount_type,
+                'discount_value' => $activeCampaign->discount_value,
+                'end_at' => $activeCampaign->end_at->format('Y-m-d H:i:s'),
+                'end_at_display' => $activeCampaign->end_at->format('d/m/Y h:i A'),
+            ] : null,
         ];
 
-        return view('web.checkout', compact('eventData', 'cartItems', 'grandTotal', 'izipay', 'culqi'));
+        return view('web.checkout', compact(
+            'eventData', 
+            'cartItems', 
+            'grandTotal', 
+            'originalSubtotal', 
+            'campaignDiscountTotal', 
+            'activeCampaign', 
+            'izipay', 
+            'culqi'
+        ));
     }
 
     /**
@@ -342,6 +451,30 @@ class CheckoutController extends Controller
             $totalQty += (int)($t['quantity'] ?? 1);
         }
 
+        // Descuentos de Campaña y Cupones
+        $couponCodeInput = strtoupper(trim((string)$request->input('coupon_code', '')));
+        $couponDiscount = (float) $request->input('coupon_discount', 0);
+        $campaignNameInput = $request->input('campaign_name');
+        $campaignDiscountInput = (float) $request->input('campaign_discount', 0);
+        $originalSubtotalInput = (float) $request->input('original_subtotal', 0);
+
+        if ($couponCodeInput) {
+            $appliedCoupon = Coupon::where('code', $couponCodeInput)->first();
+            if ($appliedCoupon) {
+                $appliedCoupon->incrementUsage();
+            }
+        }
+
+        $totalDiscountAmount = $couponDiscount + $campaignDiscountInput;
+        $discountDescParts = [];
+        if ($campaignNameInput && $campaignDiscountInput > 0) {
+            $discountDescParts[] = "Campaña {$campaignNameInput}: -S/ " . number_format($campaignDiscountInput, 2);
+        }
+        if ($couponCodeInput && $couponDiscount > 0) {
+            $discountDescParts[] = "Cupón {$couponCodeInput}: -S/ " . number_format($couponDiscount, 2);
+        }
+        $discountDescription = implode(' | ', $discountDescParts);
+
         // Registrar la venta en la base de datos con correlativo REC-
         $buyerEmail = $customer['email'] ?? $request->input('customer_email');
 
@@ -354,6 +487,11 @@ class CheckoutController extends Controller
             'zone_name' => $ticketsData[0]['name'] ?? 'General',
             'unit_price' => $orderTotal / max(1, $totalQty),
             'quantity' => max(1, $totalQty),
+            'original_subtotal' => $originalSubtotalInput > 0 ? $originalSubtotalInput : ($orderTotal + $totalDiscountAmount),
+            'discount_amount' => $totalDiscountAmount,
+            'discount_description' => $discountDescription ?: null,
+            'campaign_name' => $campaignNameInput ?: null,
+            'coupon_code' => $couponCodeInput ?: null,
             'total_amount' => $orderTotal,
             'payment_method' => 'Izipay',
             'amount_paid' => $orderTotal,
@@ -365,6 +503,10 @@ class CheckoutController extends Controller
                 'izipay_order_id' => $orderId,
                 'izipay_uuid' => $firstTx['uuid'] ?? null,
                 'brand' => $brand,
+                'coupon_code' => $couponCodeInput ?: null,
+                'coupon_discount' => $couponDiscount,
+                'campaign_name' => $campaignNameInput ?: null,
+                'campaign_discount' => $campaignDiscountInput,
             ],
             'seller_name' => 'Pasarela Web Izipay',
         ]);
@@ -638,6 +780,30 @@ class CheckoutController extends Controller
             $totalQty += (int)($t['quantity'] ?? 1);
         }
 
+        // Descuentos de Campaña y Cupones
+        $couponCodeInput = strtoupper(trim((string)$request->input('coupon_code', '')));
+        $couponDiscount = (float) $request->input('coupon_discount', 0);
+        $campaignNameInput = $request->input('campaign_name');
+        $campaignDiscountInput = (float) $request->input('campaign_discount', 0);
+        $originalSubtotalInput = (float) $request->input('original_subtotal', 0);
+
+        if ($couponCodeInput) {
+            $appliedCoupon = Coupon::where('code', $couponCodeInput)->first();
+            if ($appliedCoupon) {
+                $appliedCoupon->incrementUsage();
+            }
+        }
+
+        $totalDiscountAmount = $couponDiscount + $campaignDiscountInput;
+        $discountDescParts = [];
+        if ($campaignNameInput && $campaignDiscountInput > 0) {
+            $discountDescParts[] = "Campaña {$campaignNameInput}: -S/ " . number_format($campaignDiscountInput, 2);
+        }
+        if ($couponCodeInput && $couponDiscount > 0) {
+            $discountDescParts[] = "Cupón {$couponCodeInput}: -S/ " . number_format($couponDiscount, 2);
+        }
+        $discountDescription = implode(' | ', $discountDescParts);
+
         // Registrar la venta en la base de datos
         $sale = TicketSale::create([
             'event_id' => $event?->id ?? 1,
@@ -648,6 +814,11 @@ class CheckoutController extends Controller
             'zone_name' => $ticketsData[0]['name'] ?? 'General',
             'unit_price' => $orderTotal / max(1, $totalQty),
             'quantity' => max(1, $totalQty),
+            'original_subtotal' => $originalSubtotalInput > 0 ? $originalSubtotalInput : ($orderTotal + $totalDiscountAmount),
+            'discount_amount' => $totalDiscountAmount,
+            'discount_description' => $discountDescription ?: null,
+            'campaign_name' => $campaignNameInput ?: null,
+            'coupon_code' => $couponCodeInput ?: null,
             'total_amount' => $orderTotal,
             'payment_method' => 'Culqi',
             'amount_paid' => $orderTotal,
@@ -660,6 +831,10 @@ class CheckoutController extends Controller
                 'culqi_order_id' => $orderId,
                 'culqi_token_id' => $tokenId,
                 'brand' => $brand,
+                'coupon_code' => $couponCodeInput ?: null,
+                'coupon_discount' => $couponDiscount,
+                'campaign_name' => $campaignNameInput ?: null,
+                'campaign_discount' => $campaignDiscountInput,
             ],
             'seller_name' => 'Pasarela Web Culqi',
         ]);

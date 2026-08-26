@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\Campaign;
 use App\Models\Company;
 use App\Models\Event;
 use Carbon\Carbon;
@@ -43,6 +44,21 @@ class HomeController extends Controller
                 $capacityPercentage = 75 + (($ev->id * 7) % 20);
             }
 
+            // Comprobar Campaña Activa para este evento
+            $activeCampaign = Campaign::getActiveForEvent($ev->id);
+            $hasCampaign = $activeCampaign !== null;
+            $effectiveMinPrice = (float) $minPrice;
+            $campaignDiscountAmount = 0.0;
+            $campaignBadge = null;
+            $campaignColor = null;
+
+            if ($hasCampaign) {
+                $campaignDiscountAmount = $activeCampaign->calculateDiscount((float)$minPrice);
+                $effectiveMinPrice = max(0, (float)$minPrice - $campaignDiscountAmount);
+                $campaignBadge = $activeCampaign->badge_text ?: ('🔥 ' . strtoupper($activeCampaign->name));
+                $campaignColor = $activeCampaign->banner_color ?: '#FF5500';
+            }
+
             // Formatear Fecha y Hora
             $dayNum = '15';
             $monthName = 'AGO';
@@ -61,8 +77,8 @@ class HomeController extends Controller
                 }
             }
 
-            $badge = $badgeOptions[$index % count($badgeOptions)];
-            $badgeColor = ($index % 3 === 0) ? 'badge-red' : (($index % 3 === 1) ? 'badge-orange' : 'badge-dark');
+            $badge = $hasCampaign ? $campaignBadge : $badgeOptions[$index % count($badgeOptions)];
+            $badgeColor = $hasCampaign ? 'badge-red' : (($index % 3 === 0) ? 'badge-red' : (($index % 3 === 1) ? 'badge-orange' : 'badge-dark'));
 
             $image = $ev->banner_image ?: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=1200&q=80';
             $venue = $ev->venue_name ?: ($ev->address ?: 'Recinto Oficial');
@@ -73,13 +89,18 @@ class HomeController extends Controller
                 'slug' => $ev->slug ?: (Str::slug($ev->title) . '-' . $ev->id),
                 'badge' => $badge,
                 'badge_color' => $badgeColor,
+                'has_campaign' => $hasCampaign,
+                'campaign_name' => $hasCampaign ? $activeCampaign->name : null,
+                'campaign_badge' => $campaignBadge,
+                'campaign_color' => $campaignColor,
+                'original_price' => number_format((float)$minPrice, 2, '.', ''),
+                'price' => number_format((float)$effectiveMinPrice, 2, '.', ''),
                 'date' => "{$dayName}, {$dayNum} {$monthName} • {$timeFormatted}",
                 'grid_date' => "{$dayNum} {$monthName} - {$timeFormatted}",
                 'day' => $dayNum,
                 'month' => $monthName,
                 'time' => $timeFormatted,
                 'venue' => $venue,
-                'price' => number_format((float)$minPrice, 2, '.', ''),
                 'category' => mb_strtoupper($ev->category_name ?: 'CONCIERTOS'),
                 'image' => $image,
                 'sold_percent' => $capacityPercentage . '%',

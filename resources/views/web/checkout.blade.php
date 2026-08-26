@@ -88,29 +88,35 @@
                         @foreach($cartItems as $index => $item)
                             @php
                                 $isPresale = !empty($item['is_presale']) || (!empty($item['presale_discount']) && (float)$item['presale_discount'] > 0);
+                                $hasCamp = !empty($item['has_campaign']);
+                                $basePrice = !empty($item['base_price']) ? (float)$item['base_price'] : (!empty($item['regular_price']) ? (float)$item['regular_price'] : (float)$item['price']);
                                 $regPrice = !empty($item['regular_price']) ? (float)$item['regular_price'] : (float)$item['price'];
                                 $curPrice = (float)$item['price'];
                                 $discountVal = $item['presale_discount'] ?? 0;
                             @endphp
-                            <div class="cart-row-item" data-price="{{ $item['price'] }}" style="{{ $isPresale ? 'border: 1.5px solid rgba(255, 85, 0, 0.35); background: #FFFBF8;' : '' }}">
+                            <div class="cart-row-item" data-price="{{ $item['price'] }}" style="{{ $hasCamp ? 'border: 1.5px solid rgba(255, 85, 0, 0.35); background: #FFFBF8;' : ($isPresale ? 'border: 1.5px solid rgba(255, 85, 0, 0.3); background: #FFFBF8;' : '') }}">
                                 <div class="cart-row-main">
                                     <span class="cart-item-emoji">🎟️</span>
-                                    <div>
-                                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                                            <h4 class="cart-item-title" style="margin: 0;">{{ $item['name'] }}</h4>
-                                            @if($isPresale)
-                                                <span style="background: linear-gradient(135deg, #FF5500, #FF1E3C); color: #FFFFFF; font-size: 0.675rem; font-weight: 900; padding: 2px 7px; border-radius: 6px; box-shadow: 0 2px 5px rgba(255,85,0,0.3); text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <div class="cart-item-text-box" style="flex: 1; min-width: 0;">
+                                        <div class="cart-item-header-wrap" style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+                                            <h4 class="cart-item-title" style="margin: 0; font-size: 1rem; font-weight: 800; color: #0F172A;">{{ $item['name'] }}</h4>
+                                            @if($hasCamp)
+                                                <span style="background: linear-gradient(135deg, #FF5500, #FF1E3C); color: #FFFFFF; font-size: 0.65rem; font-weight: 900; padding: 2px 7px; border-radius: 6px; box-shadow: 0 2px 5px rgba(255,85,0,0.25); text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap;">
+                                                    🔥 {{ $activeCampaign['badge_text'] ?? 'CAMPAÑA ACTIVA' }}
+                                                </span>
+                                            @elseif($isPresale)
+                                                <span style="background: linear-gradient(135deg, #FF5500, #FF1E3C); color: #FFFFFF; font-size: 0.65rem; font-weight: 900; padding: 2px 7px; border-radius: 6px; box-shadow: 0 2px 5px rgba(255,85,0,0.25); text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap;">
                                                     🔥 PREVENTA {{ $discountVal > 0 ? '-' . $discountVal . '%' : '' }}
                                                 </span>
                                             @endif
                                         </div>
-                                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
-                                            <span class="cart-item-unit-cost" style="font-size: 0.85rem; color: #475569;">
-                                                Precio: <strong style="color: var(--color-primary-orange); font-size: 0.95rem;">S/ {{ number_format($curPrice, 2) }}</strong> c/u
+                                        <div style="display: flex; align-items: center; gap: 0.45rem; margin-top: 0.2rem;">
+                                            <span class="cart-item-unit-cost" style="font-size: 0.825rem; color: #475569;">
+                                                Precio: <strong style="color: var(--color-primary-orange); font-size: 0.9rem;">S/ {{ number_format($curPrice, 2) }}</strong> c/u
                                             </span>
-                                            @if($isPresale && $regPrice > $curPrice)
-                                                <span style="font-size: 0.825rem; color: #94A3B8; text-decoration: line-through; font-weight: 600;">
-                                                    S/ {{ number_format($regPrice, 2) }}
+                                            @if(($hasCamp || $isPresale) && $basePrice > $curPrice)
+                                                <span style="font-size: 0.8rem; color: #94A3B8; text-decoration: line-through; font-weight: 600;">
+                                                    S/ {{ number_format($basePrice, 2) }}
                                                 </span>
                                             @endif
                                         </div>
@@ -131,8 +137,56 @@
                         @endforeach
                     </div>
 
+                    <!-- Sección Cupón Promocional Exclusiva para Móvil (Arriba de Total a Pagar) -->
+                    <div class="mobile-coupon-section-box" style="margin-top: 1.15rem; background: #F8FAFC; border: 1.5px dashed #CBD5E1; border-radius: 12px; padding: 0.85rem;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.45rem;">
+                            <span style="font-size: 0.825rem; font-weight: 800; color: #1E293B; display: flex; align-items: center; gap: 0.35rem;">
+                                <span>🎟️</span> ¿Tienes un cupón de descuento?
+                            </span>
+                        </div>
+                        
+                        <div id="mobileCouponInputContainer" style="display: flex; gap: 0.45rem;">
+                            <input type="text" id="mobileCheckoutCouponInput" placeholder="Ingresa código..." oninput="this.value = this.value.toUpperCase().replace(/\s+/g, '')" style="flex: 1; min-width: 0; padding: 0.5rem 0.75rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.85rem; font-family: monospace; font-weight: 800; text-transform: uppercase; color: #0F172A; outline: none; background: #FFFFFF;">
+                            <button type="button" id="btnApplyMobileCoupon" onclick="applyCouponCode('mobile')" style="background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; font-weight: 900; font-size: 0.85rem; border: none; padding: 0 0.95rem; border-radius: 10px; cursor: pointer; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,240,255,0.25);">
+                                Aplicar
+                            </button>
+                        </div>
+
+                        <!-- Badge de Cupón Aplicado en Móvil -->
+                        <div id="mobileCouponAppliedBadge" style="display: none; align-items: center; justify-content: space-between; background: rgba(16, 185, 129, 0.12); border: 1.5px solid #10B981; border-radius: 10px; padding: 0.55rem 0.75rem; margin-top: 0.45rem;">
+                            <div style="display: flex; align-items: center; gap: 0.45rem; min-width: 0;">
+                                <span style="font-size: 1.1rem;">🎟️</span>
+                                <div style="min-width: 0;">
+                                    <strong id="mobileAppliedCouponCodeText" style="font-size: 0.85rem; color: #065F46; font-family: monospace; display: block;">CUPÓN</strong>
+                                    <span id="mobileAppliedCouponDiscountText" style="font-size: 0.75rem; color: #047857; display: block; font-weight: 700;">-S/ 0.00</span>
+                                </div>
+                            </div>
+                            <button type="button" onclick="removeAppliedCoupon()" title="Remover cupón" style="background: none; border: none; color: #EF4444; font-weight: 800; font-size: 0.8rem; cursor: pointer; padding: 0.2rem 0.35rem; flex-shrink: 0;">
+                                ✕ Quitar
+                            </button>
+                        </div>
+                        
+                        <div id="mobileCouponMessageFeedback" style="display: none; font-size: 0.775rem; font-weight: 700; margin-top: 0.4rem;"></div>
+                    </div>
+
+                    <!-- Desglose de Descuentos en Móvil si aplica Campaña o Cupón -->
+                    <div id="mobileDiscountBreakdownBox" style="{{ (!empty($activeCampaign) && $campaignDiscountTotal > 0) ? 'display: block;' : 'display: none;' }} margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px dashed #E2E8F0; font-size: 0.85rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem; color: #64748B;">
+                            <span>Subtotal Base:</span>
+                            <strong id="mobileSummarySubtotalDisplay">S/ {{ number_format($originalSubtotal > 0 ? $originalSubtotal : $grandTotal, 2) }}</strong>
+                        </div>
+                        <div id="mobileCampaignDiscountRow" style="{{ (!empty($activeCampaign) && $campaignDiscountTotal > 0) ? 'display: flex;' : 'display: none;' }} justify-content: space-between; margin-bottom: 0.3rem; color: #FF5500; font-weight: 800;">
+                            <span>🔥 <span id="mobileCampaignNameDisplay">{{ $activeCampaign['badge_text'] ?? 'Campaña' }}:</span></span>
+                            <strong id="mobileCampaignDiscountDisplay">-S/ {{ number_format($campaignDiscountTotal, 2) }}</strong>
+                        </div>
+                        <div id="mobileCouponDiscountRow" style="display: none; justify-content: space-between; margin-bottom: 0.3rem; color: #059669; font-weight: 800;">
+                            <span>🎟️ <span id="mobileCouponNameDisplay">Cupón:</span></span>
+                            <strong id="mobileCouponDiscountDisplay">-S/ 0.00</strong>
+                        </div>
+                    </div>
+
                     <!-- Total en Paso 1 -->
-                    <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1.5px dashed #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1.5px dashed #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
                         <span style="font-size: 1rem; font-weight: 800; color: #475569;">Total a Pagar:</span>
                         <strong id="cartSummaryTotalStep1" style="font-size: 1.55rem; font-weight: 900; color: #059669;">S/ {{ number_format($grandTotal, 2) }}</strong>
                     </div>
@@ -404,12 +458,65 @@
 
                         <div class="light-divider"></div>
 
+                        <!-- Sección Cupón Promocional Interactiva -->
+                        <div class="coupon-section-box" style="margin-bottom: 1.25rem; background: #F8FAFC; border: 1.5px dashed #CBD5E1; border-radius: 14px; padding: 0.95rem;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span style="font-size: 0.825rem; font-weight: 800; color: #1E293B; display: flex; align-items: center; gap: 0.35rem;">
+                                    <span>🎟️</span> ¿Tienes un cupón de descuento?
+                                </span>
+                            </div>
+                            
+                            <div id="couponInputContainer" style="display: flex; gap: 0.5rem;">
+                                <input type="text" id="checkoutCouponInput" placeholder="Ingresa código..." oninput="this.value = this.value.toUpperCase().replace(/\s+/g, '')" style="flex: 1; padding: 0.55rem 0.8rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.85rem; font-family: monospace; font-weight: 800; text-transform: uppercase; color: #0F172A; outline: none; background: #FFFFFF;">
+                                <button type="button" id="btnApplyCheckoutCoupon" onclick="applyCouponCode()" style="background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; font-weight: 900; font-size: 0.85rem; border: none; padding: 0 0.95rem; border-radius: 10px; cursor: pointer; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,240,255,0.3);">
+                                    Aplicar
+                                </button>
+                            </div>
+
+                            <!-- Badge de Cupón Aplicado -->
+                            <div id="couponAppliedBadge" style="display: none; align-items: center; justify-content: space-between; background: rgba(16, 185, 129, 0.12); border: 1.5px solid #10B981; border-radius: 10px; padding: 0.55rem 0.8rem; margin-top: 0.5rem;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span style="font-size: 1.1rem;">🎟️</span>
+                                    <div>
+                                        <strong id="appliedCouponCodeText" style="font-size: 0.85rem; color: #065F46; font-family: monospace;">CUPÓN</strong>
+                                        <span id="appliedCouponDiscountText" style="font-size: 0.75rem; color: #047857; display: block; font-weight: 700;">-S/ 0.00</span>
+                                    </div>
+                                </div>
+                                <button type="button" onclick="removeAppliedCoupon()" title="Remover cupón" style="background: none; border: none; color: #EF4444; font-weight: 800; font-size: 0.8rem; cursor: pointer; padding: 0.2rem 0.4rem;">
+                                    ✕ Quitar
+                                </button>
+                            </div>
+                            
+                            <div id="couponMessageFeedback" style="display: none; font-size: 0.775rem; font-weight: 700; margin-top: 0.4rem;"></div>
+                        </div>
+
                         <!-- Desglose Financiero -->
                         <div class="pricing-summary-box">
                             <div class="price-line">
-                                <span class="line-label">Subtotal Entradas:</span>
-                                <strong class="line-amount" id="summarySubtotalDisplay">S/ {{ number_format($grandTotal, 2) }}</strong>
+                                <span class="line-label">Subtotal Base:</span>
+                                <strong class="line-amount" id="summarySubtotalDisplay">S/ {{ number_format($originalSubtotal > 0 ? $originalSubtotal : $grandTotal, 2) }}</strong>
                             </div>
+
+                            <!-- Descuento de Campaña si aplica -->
+                            <div class="price-line" id="summaryCampaignRow" style="{{ !empty($activeCampaign) && $campaignDiscountTotal > 0 ? '' : 'display: none;' }}">
+                                <span class="line-label" style="color: #FF5500; font-weight: 800; display: flex; align-items: center; gap: 0.3rem;">
+                                    <span>🔥</span> <span id="summaryCampaignNameDisplay">{{ $activeCampaign['badge_text'] ?? 'Campaña Promocional' }}:</span>
+                                </span>
+                                <strong class="line-amount" id="summaryCampaignDiscountDisplay" style="color: #FF5500; font-weight: 900;">
+                                    -S/ {{ number_format($campaignDiscountTotal, 2) }}
+                                </strong>
+                            </div>
+
+                            <!-- Descuento de Cupón si aplica -->
+                            <div class="price-line" id="summaryCouponRow" style="display: none;">
+                                <span class="line-label" style="color: #059669; font-weight: 800; display: flex; align-items: center; gap: 0.3rem;">
+                                    <span>🎟️</span> <span id="summaryCouponNameDisplay">Cupón de Descuento:</span>
+                                </span>
+                                <strong class="line-amount" id="summaryCouponDiscountDisplay" style="color: #059669; font-weight: 900;">
+                                    -S/ 0.00
+                                </strong>
+                            </div>
+
                             <div class="price-line">
                                 <span class="line-label">Comisión por servicio:</span>
                                 <span class="free-badge">Gratis (S/ 0.00)</span>
@@ -717,29 +824,32 @@
         background: #F8FAFC;
         border: 1.5px solid #E2E8F0;
         border-radius: 14px;
-        padding: 1.15rem 1.25rem;
+        padding: 1rem 1.25rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
         gap: 1rem;
-        flex-wrap: wrap;
+        transition: border-color 0.2s;
     }
 
     .cart-row-main {
         display: flex;
         align-items: center;
         gap: 0.85rem;
+        flex: 1;
+        min-width: 0;
     }
 
     .cart-item-emoji {
-        font-size: 1.6rem;
+        font-size: 1.5rem;
+        flex-shrink: 0;
     }
 
     .cart-item-title {
         font-size: 1.05rem !important;
         font-weight: 800 !important;
         color: #0F172A !important;
-        margin: 0 0 0.15rem 0 !important;
+        margin: 0 !important;
     }
 
     .cart-item-unit-cost {
@@ -750,7 +860,8 @@
     .cart-row-controls {
         display: flex;
         align-items: center;
-        gap: 1.5rem;
+        gap: 1.25rem;
+        flex-shrink: 0;
     }
 
     .light-qty-counter {
@@ -1044,12 +1155,20 @@
         display: none;
     }
 
+    .mobile-coupon-section-box {
+        display: none;
+    }
+
     @media (max-width: 950px) {
+        .mobile-coupon-section-box {
+            display: block !important;
+        }
         .mobile-event-mini-header {
             display: flex !important;
         }
         .checkout-grid-layout {
             grid-template-columns: 1fr;
+            gap: 1.5rem;
         }
         .checkout-summary-column {
             display: none !important;
@@ -1062,6 +1181,63 @@
         }
         .gateway-checkout-tabs {
             grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .checkout-white-card {
+            padding: 1.25rem 1rem !important;
+            border-radius: 16px !important;
+        }
+        .card-step-header {
+            gap: 0.75rem;
+            margin-bottom: 1.15rem;
+            padding-bottom: 0.85rem;
+        }
+        .step-num-badge {
+            width: 34px;
+            height: 34px;
+            font-size: 1rem;
+            border-radius: 10px;
+        }
+        .card-step-title {
+            font-size: 1.15rem !important;
+        }
+        .card-step-subtitle {
+            font-size: 0.775rem !important;
+        }
+        .cart-row-item {
+            padding: 0.85rem 1rem;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.75rem;
+        }
+        .cart-row-main {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+        }
+        .cart-item-emoji {
+            font-size: 1.35rem;
+        }
+        .cart-item-title {
+            font-size: 0.95rem !important;
+        }
+        .cart-row-controls {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 0.65rem;
+            border-top: 1px dashed #E2E8F0;
+        }
+        .cart-row-subtotal-price {
+            font-size: 1.25rem;
+            font-weight: 900;
+            color: #059669;
+            min-width: auto;
+            text-align: right;
         }
     }
 </style>
@@ -1089,7 +1265,14 @@
     <script>
         let cartItems = @json($cartItems);
         let eventData = @json($eventData);
+        let activeCampaign = @json($activeCampaign);
+        let appliedCoupon = null;
+
+        let baseSubtotal = {{ (float)($originalSubtotal > 0 ? $originalSubtotal : $grandTotal) }};
+        let campaignDiscountTotal = {{ (float)($campaignDiscountTotal ?? 0) }};
+        let couponDiscountTotal = 0;
         let currentGrandTotal = {{ $grandTotal }};
+
         let currentSelectedGateway = '{{ $defaultGateway }}';
         let isIzipayInitialized = false;
         let isCulqiInitialized = false;
@@ -1113,6 +1296,270 @@
             } else {
                 loadIzipayGateway();
             }
+        }
+
+        // =========================================================================
+        // RECALCULAR TOTALES, DESCUENTOS DE CAMPAÑA Y CUPONES
+        // =========================================================================
+        function recalculateOrderTotals() {
+            baseSubtotal = 0;
+            campaignDiscountTotal = 0;
+
+            cartItems.forEach(item => {
+                const qty = item.quantity || 1;
+                const baseP = parseFloat(item.base_price || item.regular_price || item.price || 0);
+                const campDisc = parseFloat(item.campaign_discount || 0);
+                
+                baseSubtotal += (baseP * qty);
+                campaignDiscountTotal += (campDisc * qty);
+            });
+
+            const subtotalAfterCampaign = Math.max(0, baseSubtotal - campaignDiscountTotal);
+
+            if (appliedCoupon) {
+                if (appliedCoupon.discount_type === 'percentage') {
+                    const pct = Math.min(100, Math.max(0, parseFloat(appliedCoupon.discount_value || 0)));
+                    couponDiscountTotal = Math.round(subtotalAfterCampaign * (pct / 100) * 100) / 100;
+                } else {
+                    couponDiscountTotal = Math.min(subtotalAfterCampaign, parseFloat(appliedCoupon.discount_value || 0));
+                }
+            } else {
+                couponDiscountTotal = 0;
+            }
+
+            currentGrandTotal = Math.max(0, Math.round((subtotalAfterCampaign - couponDiscountTotal) * 100) / 100);
+
+            // 1. Actualizar DOM en Desktop
+            if (document.getElementById('summarySubtotalDisplay')) {
+                document.getElementById('summarySubtotalDisplay').textContent = 'S/ ' + baseSubtotal.toFixed(2);
+            }
+
+            const campRow = document.getElementById('summaryCampaignRow');
+            if (campRow) {
+                if (activeCampaign && campaignDiscountTotal > 0) {
+                    campRow.style.display = 'flex';
+                    document.getElementById('summaryCampaignDiscountDisplay').textContent = '-S/ ' + campaignDiscountTotal.toFixed(2);
+                } else {
+                    campRow.style.display = 'none';
+                }
+            }
+
+            const cupRow = document.getElementById('summaryCouponRow');
+            if (cupRow) {
+                if (appliedCoupon && couponDiscountTotal > 0) {
+                    cupRow.style.display = 'flex';
+                    document.getElementById('summaryCouponNameDisplay').textContent = `Cupón ${appliedCoupon.code}:`;
+                    document.getElementById('summaryCouponDiscountDisplay').textContent = '-S/ ' + couponDiscountTotal.toFixed(2);
+                } else {
+                    cupRow.style.display = 'none';
+                }
+            }
+
+            // 2. Actualizar DOM en Móvil (Paso 1)
+            if (document.getElementById('mobileSummarySubtotalDisplay')) {
+                document.getElementById('mobileSummarySubtotalDisplay').textContent = 'S/ ' + baseSubtotal.toFixed(2);
+            }
+
+            const mobCampRow = document.getElementById('mobileCampaignDiscountRow');
+            if (mobCampRow) {
+                if (activeCampaign && campaignDiscountTotal > 0) {
+                    mobCampRow.style.display = 'flex';
+                    document.getElementById('mobileCampaignDiscountDisplay').textContent = '-S/ ' + campaignDiscountTotal.toFixed(2);
+                } else {
+                    mobCampRow.style.display = 'none';
+                }
+            }
+
+            const mobCupRow = document.getElementById('mobileCouponDiscountRow');
+            if (mobCupRow) {
+                if (appliedCoupon && couponDiscountTotal > 0) {
+                    mobCupRow.style.display = 'flex';
+                    document.getElementById('mobileCouponNameDisplay').textContent = `Cupón ${appliedCoupon.code}:`;
+                    document.getElementById('mobileCouponDiscountDisplay').textContent = '-S/ ' + couponDiscountTotal.toFixed(2);
+                } else {
+                    mobCupRow.style.display = 'none';
+                }
+            }
+
+            const mobBreakdown = document.getElementById('mobileDiscountBreakdownBox');
+            if (mobBreakdown) {
+                if ((activeCampaign && campaignDiscountTotal > 0) || (appliedCoupon && couponDiscountTotal > 0)) {
+                    mobBreakdown.style.display = 'block';
+                } else {
+                    mobBreakdown.style.display = 'none';
+                }
+            }
+
+            // Totales y Botones
+            if (document.getElementById('summaryTotalDisplay')) {
+                document.getElementById('summaryTotalDisplay').textContent = 'S/ ' + currentGrandTotal.toFixed(2);
+            }
+            if (document.getElementById('cartSummaryTotalStep1')) {
+                document.getElementById('cartSummaryTotalStep1').textContent = 'S/ ' + currentGrandTotal.toFixed(2);
+            }
+            if (document.getElementById('btnPayAmountDisplay')) {
+                document.getElementById('btnPayAmountDisplay').textContent = 'S/ ' + currentGrandTotal.toFixed(2);
+            }
+            if (document.getElementById('btnPayAmountDisplayCulqi')) {
+                document.getElementById('btnPayAmountDisplayCulqi').textContent = 'S/ ' + currentGrandTotal.toFixed(2);
+            }
+
+            // Alternar vista de cortesía o pasarela regular
+            const isCourtesy = currentGrandTotal <= 0 || cartItems.every(i => i.is_courtesy || i.price === 0);
+            const courtesyCard = document.getElementById('courtesyStepCard');
+            const regularCard = document.getElementById('regularPaymentStepCard');
+            if (courtesyCard && regularCard) {
+                courtesyCard.style.display = isCourtesy ? 'block' : 'none';
+                regularCard.style.display = isCourtesy ? 'none' : 'block';
+            }
+        }
+
+        // =========================================================================
+        // APLICAR & REMOVER CUPÓN DE DESCUENTO (Sincronizado Desktop + Móvil)
+        // =========================================================================
+        function applyCouponCode(source = 'desktop') {
+            let code = '';
+            if (source === 'mobile') {
+                const mobInput = document.getElementById('mobileCheckoutCouponInput');
+                code = mobInput ? mobInput.value.trim().toUpperCase() : '';
+            } else {
+                const deskInput = document.getElementById('checkoutCouponInput');
+                code = deskInput ? deskInput.value.trim().toUpperCase() : '';
+                if (!code) {
+                    const mobInput = document.getElementById('mobileCheckoutCouponInput');
+                    code = mobInput ? mobInput.value.trim().toUpperCase() : '';
+                }
+            }
+
+            const deskMsg = document.getElementById('couponMessageFeedback');
+            const mobMsg = document.getElementById('mobileCouponMessageFeedback');
+            const deskBtn = document.getElementById('btnApplyCheckoutCoupon');
+            const mobBtn = document.getElementById('btnApplyMobileCoupon');
+
+            if (!code) {
+                const targetMsg = (source === 'mobile' ? mobMsg : deskMsg) || mobMsg || deskMsg;
+                if (targetMsg) {
+                    targetMsg.style.color = '#EF4444';
+                    targetMsg.textContent = '⚠️ Por favor ingresa un código de cupón.';
+                    targetMsg.style.display = 'block';
+                }
+                return;
+            }
+
+            if (deskBtn) { deskBtn.disabled = true; deskBtn.textContent = '...'; }
+            if (mobBtn) { mobBtn.disabled = true; mobBtn.textContent = '...'; }
+
+            const currentSubtotalForCoupon = Math.max(0, baseSubtotal - campaignDiscountTotal);
+
+            fetch("{{ route('web.checkout.validate_coupon') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    code: code,
+                    event_id: eventData.id || 1,
+                    subtotal: currentSubtotalForCoupon
+                })
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (deskBtn) { deskBtn.disabled = false; deskBtn.textContent = 'Aplicar'; }
+                if (mobBtn) { mobBtn.disabled = false; mobBtn.textContent = 'Aplicar'; }
+
+                if (d.valid) {
+                    appliedCoupon = d;
+                    
+                    // Sincronizar Desktop
+                    const deskContainer = document.getElementById('couponInputContainer');
+                    if (deskContainer) deskContainer.style.display = 'none';
+                    const deskBadge = document.getElementById('couponAppliedBadge');
+                    if (deskBadge) {
+                        document.getElementById('appliedCouponCodeText').textContent = d.code;
+                        document.getElementById('appliedCouponDiscountText').textContent = d.discount_type === 'percentage' 
+                            ? `-${d.discount_value}% de descuento aplicado` 
+                            : `-S/ ${parseFloat(d.discount_value).toFixed(2)} de descuento aplicado`;
+                        deskBadge.style.display = 'flex';
+                    }
+                    if (deskMsg) {
+                        deskMsg.style.color = '#10B981';
+                        deskMsg.textContent = '✓ ' + (d.message || 'Cupón aplicado con éxito.');
+                        deskMsg.style.display = 'block';
+                    }
+
+                    // Sincronizar Móvil
+                    const mobContainer = document.getElementById('mobileCouponInputContainer');
+                    if (mobContainer) mobContainer.style.display = 'none';
+                    const mobBadge = document.getElementById('mobileCouponAppliedBadge');
+                    if (mobBadge) {
+                        document.getElementById('mobileAppliedCouponCodeText').textContent = d.code;
+                        document.getElementById('mobileAppliedCouponDiscountText').textContent = d.discount_type === 'percentage' 
+                            ? `-${d.discount_value}% de descuento` 
+                            : `-S/ ${parseFloat(d.discount_value).toFixed(2)} de descuento`;
+                        mobBadge.style.display = 'flex';
+                    }
+                    if (mobMsg) {
+                        mobMsg.style.color = '#10B981';
+                        mobMsg.textContent = '✓ ' + (d.message || 'Cupón aplicado con éxito.');
+                        mobMsg.style.display = 'block';
+                    }
+
+                    recalculateOrderTotals();
+
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'success',
+                            title: `🎉 ¡Cupón ${d.code} aplicado!`,
+                            showConfirmButton: false,
+                            timer: 2000,
+                            background: '#14141E',
+                            color: '#FFFFFF'
+                        });
+                    }
+                } else {
+                    appliedCoupon = null;
+                    const errTxt = '⚠️ ' + (d.message || 'Cupón no válido.');
+                    if (deskMsg) { deskMsg.style.color = '#EF4444'; deskMsg.textContent = errTxt; deskMsg.style.display = 'block'; }
+                    if (mobMsg) { mobMsg.style.color = '#EF4444'; mobMsg.textContent = errTxt; mobMsg.style.display = 'block'; }
+                }
+            })
+            .catch(err => {
+                if (deskBtn) { deskBtn.disabled = false; deskBtn.textContent = 'Aplicar'; }
+                if (mobBtn) { mobBtn.disabled = false; mobBtn.textContent = 'Aplicar'; }
+                const errTxt = '⚠️ Error al validar cupón. Intenta nuevamente.';
+                if (deskMsg) { deskMsg.style.color = '#EF4444'; deskMsg.textContent = errTxt; deskMsg.style.display = 'block'; }
+                if (mobMsg) { mobMsg.style.color = '#EF4444'; mobMsg.textContent = errTxt; mobMsg.style.display = 'block'; }
+            });
+        }
+
+        function removeAppliedCoupon() {
+            appliedCoupon = null;
+
+            // Reset Desktop
+            const deskBadge = document.getElementById('couponAppliedBadge');
+            if (deskBadge) deskBadge.style.display = 'none';
+            const deskContainer = document.getElementById('couponInputContainer');
+            if (deskContainer) deskContainer.style.display = 'flex';
+            const deskMsg = document.getElementById('couponMessageFeedback');
+            if (deskMsg) { deskMsg.style.display = 'none'; deskMsg.textContent = ''; }
+            const deskInput = document.getElementById('checkoutCouponInput');
+            if (deskInput) deskInput.value = '';
+
+            // Reset Móvil
+            const mobBadge = document.getElementById('mobileCouponAppliedBadge');
+            if (mobBadge) mobBadge.style.display = 'none';
+            const mobContainer = document.getElementById('mobileCouponInputContainer');
+            if (mobContainer) mobContainer.style.display = 'flex';
+            const mobMsg = document.getElementById('mobileCouponMessageFeedback');
+            if (mobMsg) { mobMsg.style.display = 'none'; mobMsg.textContent = ''; }
+            const mobInput = document.getElementById('mobileCheckoutCouponInput');
+            if (mobInput) mobInput.value = '';
+
+            recalculateOrderTotals();
         }
 
         // Actualizar cantidades en el carrito
@@ -1147,36 +1594,7 @@
             document.getElementById('qty-val-' + index).textContent = newQty;
             document.getElementById('subtotal-val-' + index).textContent = 'S/ ' + cartItems[index].subtotal.toFixed(2);
 
-            // Recalcular Total General
-            currentGrandTotal = 0;
-            cartItems.forEach(item => {
-                currentGrandTotal += item.subtotal;
-            });
-
-            if (document.getElementById('cartSummaryTotalStep1')) {
-                document.getElementById('cartSummaryTotalStep1').textContent = 'S/ ' + currentGrandTotal.toFixed(2);
-            }
-            if (document.getElementById('btnPayAmountDisplay')) {
-                document.getElementById('btnPayAmountDisplay').textContent = 'S/ ' + currentGrandTotal.toFixed(2);
-            }
-            if (document.getElementById('btnPayAmountDisplayCulqi')) {
-                document.getElementById('btnPayAmountDisplayCulqi').textContent = 'S/ ' + currentGrandTotal.toFixed(2);
-            }
-            if (document.getElementById('summarySubtotalDisplay')) {
-                document.getElementById('summarySubtotalDisplay').textContent = 'S/ ' + currentGrandTotal.toFixed(2);
-            }
-            if (document.getElementById('summaryTotalDisplay')) {
-                document.getElementById('summaryTotalDisplay').textContent = 'S/ ' + currentGrandTotal.toFixed(2);
-            }
-
-            // Alternar vista de cortesía o pasarela regular
-            const isCourtesy = currentGrandTotal <= 0 || cartItems.every(i => i.is_courtesy || i.price === 0);
-            const courtesyCard = document.getElementById('courtesyStepCard');
-            const regularCard = document.getElementById('regularPaymentStepCard');
-            if (courtesyCard && regularCard) {
-                courtesyCard.style.display = isCourtesy ? 'block' : 'none';
-                regularCard.style.display = isCourtesy ? 'none' : 'block';
-            }
+            recalculateOrderTotals();
         }
 
         // =========================================================================
@@ -1251,6 +1669,11 @@
                         customer_country: country,
                         customer_city: city,
                         tickets: cartItems,
+                        coupon_code: appliedCoupon ? appliedCoupon.code : null,
+                        coupon_discount: couponDiscountTotal,
+                        campaign_name: activeCampaign ? activeCampaign.name : null,
+                        campaign_discount: campaignDiscountTotal,
+                        original_subtotal: baseSubtotal,
                         ticket_pdf_base64: ticketPdfBase64
                     })
                 });
@@ -1318,7 +1741,12 @@
                     customer_phone: phone,
                     customer_doc: doc,
                     customer_country: country,
-                    customer_city: city
+                    customer_city: city,
+                    coupon_code: appliedCoupon ? appliedCoupon.code : null,
+                    coupon_discount: couponDiscountTotal,
+                    campaign_name: activeCampaign ? activeCampaign.name : null,
+                    campaign_discount: campaignDiscountTotal,
+                    original_subtotal: baseSubtotal
                 })
             })
             .then(res => res.json())
@@ -1421,6 +1849,11 @@
                     'customer_name': document.getElementById('buyerFullName')?.value || '',
                     'customer_doc': document.getElementById('buyerDoc')?.value || '',
                     'customer_phone': document.getElementById('buyerPhone')?.value || '',
+                    'coupon_code': appliedCoupon ? appliedCoupon.code : null,
+                    'coupon_discount': couponDiscountTotal,
+                    'campaign_name': activeCampaign ? activeCampaign.name : null,
+                    'campaign_discount': campaignDiscountTotal,
+                    'original_subtotal': baseSubtotal,
                     'ticket_pdf_base64': ticketPdfBase64
                 })
             })
@@ -1490,7 +1923,12 @@
                     customer_phone: phone,
                     customer_doc: doc,
                     customer_country: country,
-                    customer_city: city
+                    customer_city: city,
+                    coupon_code: appliedCoupon ? appliedCoupon.code : null,
+                    coupon_discount: couponDiscountTotal,
+                    campaign_name: activeCampaign ? activeCampaign.name : null,
+                    campaign_discount: campaignDiscountTotal,
+                    original_subtotal: baseSubtotal
                 })
             })
             .then(res => res.json())
@@ -1673,6 +2111,11 @@
                     customer_name: document.getElementById('buyerFullName')?.value || '',
                     customer_doc: document.getElementById('buyerDoc')?.value || '',
                     customer_phone: document.getElementById('buyerPhone')?.value || '',
+                    coupon_code: appliedCoupon ? appliedCoupon.code : null,
+                    coupon_discount: couponDiscountTotal,
+                    campaign_name: activeCampaign ? activeCampaign.name : null,
+                    campaign_discount: campaignDiscountTotal,
+                    original_subtotal: baseSubtotal,
                     ticket_pdf_base64: ticketPdfBase64
                 })
             })

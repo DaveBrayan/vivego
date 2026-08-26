@@ -126,9 +126,15 @@
                 <article class="event-card-v6" data-category="{{ $event['category'] }}">
                     <div class="event-card-v6-media">
                         <!-- Holographic Badge Top Right -->
-                        <div class="badge-v6-holographic">
-                            <span>{{ $event['badge'] }}</span>
-                        </div>
+                        @if(!empty($event['has_campaign']))
+                            <div class="badge-v6-holographic" style="background: {{ $event['campaign_color'] ?? '#FF5500' }}; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 1.5px solid rgba(255,255,255,0.4);">
+                                <span style="font-weight: 900; color: #FFFFFF; text-transform: uppercase;">{{ $event['badge'] }}</span>
+                            </div>
+                        @else
+                            <div class="badge-v6-holographic">
+                                <span>{{ $event['badge'] }}</span>
+                            </div>
+                        @endif
 
                         <!-- Date Stage 3D Glassmorphic Bottom Left -->
                         <div class="date-stage-v6">
@@ -162,7 +168,14 @@
                         <div class="event-card-v6-footer">
                             <div class="event-v6-price-group">
                                 <span class="event-v6-price-label">Desde</span>
-                                <span class="event-v6-price-value">S/ {{ $event['price'] }}</span>
+                                @if(!empty($event['has_campaign']) && (float)$event['original_price'] > (float)$event['price'])
+                                    <div style="display: flex; align-items: baseline; gap: 0.4rem;">
+                                        <span style="font-size: 0.8rem; color: #94A3B8; text-decoration: line-through; font-weight: 700;">S/ {{ $event['original_price'] }}</span>
+                                        <span class="event-v6-price-value" style="color: #FF5500; font-weight: 900;">S/ {{ $event['price'] }}</span>
+                                    </div>
+                                @else
+                                    <span class="event-v6-price-value">S/ {{ $event['price'] }}</span>
+                                @endif
                             </div>
                             <a href="{{ route('web.event.detail', ['slug' => $event['slug']]) }}" class="btn-buy-v6">
                                 <span>Ver Entradas</span>

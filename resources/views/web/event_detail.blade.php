@@ -89,19 +89,36 @@
                     </div>
                 @endif
 
+                @if(!empty($event['active_campaign']))
+                    <div style="background: {{ $event['active_campaign']['banner_color'] ?? '#FF5500' }}; color: #FFFFFF; padding: 0.75rem 1rem; border-radius: 12px; margin-bottom: 1.1rem; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                        <div style="display: flex; align-items: center; gap: 0.6rem;">
+                            <span style="font-size: 1.3rem;">🔥</span>
+                            <div>
+                                <strong style="font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px; display: block;">{{ $event['active_campaign']['badge_text'] }}</strong>
+                                <span style="font-size: 0.75rem; opacity: 0.9;">Descuento comercial automático aplicado en todas las entradas</span>
+                            </div>
+                        </div>
+                        <span style="font-size: 0.75rem; font-weight: 800; background: rgba(0,0,0,0.25); padding: 0.25rem 0.6rem; border-radius: 6px; white-space: nowrap;">
+                            Válido hasta {{ $event['active_campaign']['end_at_display'] }}
+                        </span>
+                    </div>
+                @endif
+
                 <!-- Lista de Zonas / Boletos en Blanco -->
                 <div class="tickets-list-box" style="display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 1.25rem;">
                     @foreach($event['tickets'] as $ticket)
                         @php
                             $isAvail = !empty($ticket['available']);
+                            $hasCamp = !empty($ticket['has_campaign']);
                         @endphp
                         <div class="ticket-type-row" 
                              data-price="{{ $ticket['price'] }}"
                              data-regular-price="{{ $ticket['regular_price'] }}"
                              data-is-presale="{{ $ticket['is_presale_active'] ? 'true' : 'false' }}"
                              data-presale-discount="{{ $ticket['presale_discount'] }}"
+                             data-has-campaign="{{ $hasCamp ? 'true' : 'false' }}"
                              data-available="{{ $isAvail ? 'true' : 'false' }}"
-                             style="background: {{ $isAvail ? '#F8FAFC' : '#F1F5F9' }}; border: 1.5px solid {{ $isAvail ? ($ticket['is_presale_active'] ? 'rgba(255, 85, 0, 0.4)' : '#E2E8F0') : '#CBD5E1' }}; border-radius: 14px; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; {{ !$isAvail ? 'opacity: 0.65;' : '' }}">
+                             style="background: {{ $isAvail ? '#FFFFFF' : '#F1F5F9' }}; border: 1.5px solid {{ $isAvail ? '#E2E8F0' : '#CBD5E1' }}; border-radius: 14px; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; {{ !$isAvail ? 'opacity: 0.65;' : '' }}">
                             
                             <div class="ticket-type-info" style="flex: 1;">
                                 <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
@@ -110,6 +127,10 @@
                                     @if(!$isAvail)
                                         <span style="background: #EF4444; color: #FFFFFF; font-size: 0.7rem; font-weight: 900; padding: 2px 8px; border-radius: 6px; text-transform: uppercase;">
                                             🚫 AGOTADO
+                                        </span>
+                                    @elseif($hasCamp)
+                                        <span style="background: {{ $ticket['campaign_color'] ?? '#FF5500' }}; color: #FFFFFF; font-size: 0.725rem; font-weight: 900; padding: 2px 8px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); text-transform: uppercase; letter-spacing: 0.5px;">
+                                            {{ $ticket['campaign_badge'] }}
                                         </span>
                                     @elseif($ticket['is_presale_active'])
                                         <span style="background: linear-gradient(135deg, #FF5500, #FF1E3C); color: #FFFFFF; font-size: 0.725rem; font-weight: 900; padding: 2px 8px; border-radius: 6px; box-shadow: 0 2px 6px rgba(255,85,0,0.3); text-transform: uppercase; letter-spacing: 0.5px;">
@@ -120,6 +141,11 @@
                                 
                                 @if(!$isAvail)
                                     <span style="font-size: 0.8rem; color: #EF4444; font-weight: 700; display: block; margin-top: 0.2rem;">Entradas agotadas</span>
+                                @elseif($hasCamp)
+                                    <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-top: 0.35rem;">
+                                        <span class="ticket-price" style="font-size: 1.25rem; font-weight: 900; color: var(--color-primary-orange);">S/ {{ number_format($ticket['price'], 2) }}</span>
+                                        <span style="font-size: 0.9rem; color: #94A3B8; text-decoration: line-through; font-weight: 600;">S/ {{ number_format($ticket['effective_price'] ?? $ticket['regular_price'], 2) }}</span>
+                                    </div>
                                 @elseif($ticket['is_presale_active'])
                                     <div style="font-size: 0.775rem; color: #E11D48; font-weight: 700; margin-top: 0.25rem; display: flex; align-items: center; gap: 0.35rem;">
                                         <span>⏳ Válido {{ !empty($ticket['presale_end_date']) ? 'hasta el ' . \Carbon\Carbon::parse($ticket['presale_end_date'])->format('d/m/Y') : '' }} o hasta agotar stock{{ !empty($ticket['presale_stock']) ? ' (' . $ticket['presale_stock'] . ' cupos)' : '' }}</span>
@@ -345,11 +371,24 @@
                                 <h3 class="sidebar-section-title" style="margin-bottom: 0.5rem;">Entradas</h3>
                             </div>
 
+                            @if(!empty($event['active_campaign']))
+                                <div style="background: {{ $event['active_campaign']['banner_color'] ?? '#FF5500' }}; color: #FFFFFF; padding: 0.65rem 0.85rem; border-radius: 10px; margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(0,0,0,0.25);">
+                                    <div style="display: flex; align-items: center; gap: 0.45rem;">
+                                        <span style="font-size: 1.1rem;">🔥</span>
+                                        <strong style="font-size: 0.85rem; text-transform: uppercase;">{{ $event['active_campaign']['badge_text'] }}</strong>
+                                    </div>
+                                    <span style="font-size: 0.7rem; font-weight: 800; background: rgba(0,0,0,0.25); padding: 0.2rem 0.5rem; border-radius: 5px;">
+                                        Hasta {{ $event['active_campaign']['end_at_display'] }}
+                                    </span>
+                                </div>
+                            @endif
+
                             <div class="tickets-list-box">
                                 @foreach($event['tickets'] as $ticket)
                                     @php
                                         $isAvail = !empty($ticket['available']);
                                         $isCourtesy = !empty($ticket['is_courtesy']);
+                                        $hasCamp = !empty($ticket['has_campaign']);
                                         $maxQty = !empty($ticket['max_quantity']) ? $ticket['max_quantity'] : 99;
                                     @endphp
                                     <div class="ticket-type-row" 
@@ -357,10 +396,11 @@
                                          data-regular-price="{{ $ticket['regular_price'] }}"
                                          data-is-presale="{{ $ticket['is_presale_active'] ? 'true' : 'false' }}"
                                          data-presale-discount="{{ $ticket['presale_discount'] }}"
+                                         data-has-campaign="{{ $hasCamp ? 'true' : 'false' }}"
                                          data-is-courtesy="{{ $isCourtesy ? 'true' : 'false' }}"
                                          data-max-quantity="{{ $maxQty }}"
                                          data-available="{{ $isAvail ? 'true' : 'false' }}"
-                                         style="{{ $isCourtesy ? 'border: 1.5px solid #10B981; background: rgba(16,185,129,0.04);' : ($ticket['is_presale_active'] && $isAvail ? 'border-color: rgba(255, 85, 0, 0.4);' : '') }} {{ !$isAvail ? 'opacity: 0.6; background: rgba(255,255,255,0.02);' : '' }}">
+                                         style="{{ $isCourtesy ? 'border: 1.5px solid #10B981; background: rgba(16,185,129,0.04);' : ($hasCamp ? 'border: 1.5px solid ' . ($ticket['campaign_color'] ?? '#FF5500') . ';' : ($ticket['is_presale_active'] && $isAvail ? 'border-color: rgba(255, 85, 0, 0.4);' : '')) }} {{ !$isAvail ? 'opacity: 0.6; background: rgba(255,255,255,0.02);' : '' }}">
                                         
                                         <div class="ticket-type-info" style="flex: 1;">
                                             <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
@@ -374,6 +414,10 @@
                                                 @elseif($isCourtesy)
                                                     <span style="background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; font-size: 0.675rem; font-weight: 900; padding: 1px 6px; border-radius: 5px; text-transform: uppercase; box-shadow: 0 2px 4px rgba(16,185,129,0.3);">
                                                         ✨ GRATIS / FREE
+                                                    </span>
+                                                @elseif($hasCamp)
+                                                    <span style="background: {{ $ticket['campaign_color'] ?? '#FF5500' }}; color: #FFFFFF; font-size: 0.675rem; font-weight: 900; padding: 1px 6px; border-radius: 5px; text-transform: uppercase;">
+                                                        {{ $ticket['campaign_badge'] }}
                                                     </span>
                                                 @elseif($ticket['is_presale_active'])
                                                     <span style="background: linear-gradient(135deg, #FF5500, #FF1E3C); color: #FFFFFF; font-size: 0.675rem; font-weight: 900; padding: 1px 6px; border-radius: 5px; box-shadow: 0 2px 4px rgba(255,85,0,0.3); text-transform: uppercase;">
@@ -392,6 +436,11 @@
                                                 </div>
                                                 <div style="margin-top: 0.2rem;">
                                                     <span class="ticket-price" style="color: #10B981; font-weight: 900; font-size: 1.15rem;">S/ 0.00 <span style="font-size: 0.75rem; color: #059669; font-weight: 700;">(GRATIS)</span></span>
+                                                </div>
+                                            @elseif($hasCamp)
+                                                <div style="display: flex; align-items: baseline; gap: 0.45rem; margin-top: 0.25rem;">
+                                                    <span class="ticket-price" style="font-size: 1.15rem; font-weight: 900; color: var(--color-primary-orange);">S/ {{ number_format($ticket['price'], 2) }}</span>
+                                                    <span style="font-size: 0.85rem; color: #94A3B8; text-decoration: line-through;">S/ {{ number_format($ticket['effective_price'] ?? $ticket['regular_price'], 2) }}</span>
                                                 </div>
                                             @elseif($ticket['is_presale_active'])
                                                 <div style="font-size: 0.725rem; color: #FF5500; font-weight: 700; margin-top: 0.15rem;">

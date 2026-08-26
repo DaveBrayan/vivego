@@ -74,6 +74,8 @@
                     @php
                         $tData = is_array($sale->tickets_data) ? $sale->tickets_data : json_decode($sale->tickets_data, true);
                         $items = $tData['items'] ?? (is_array($tData) ? $tData : []);
+                        $hasDiscount = (float)($sale->discount_amount ?? 0) > 0;
+                        $origSubtotal = (float)($sale->original_subtotal ?? ($sale->total_amount + ($sale->discount_amount ?? 0)));
                     @endphp
                     @foreach($items as $t)
                         <div style="display: flex; justify-content: space-between; font-size: 0.95rem; color: #1E293B; margin-bottom: 0.4rem;">
@@ -81,6 +83,34 @@
                             <strong style="color: #0F172A;">S/ {{ number_format(($t['subtotal'] ?? (($t['price'] ?? 0) * ($t['quantity'] ?? 1))), 2) }}</strong>
                         </div>
                     @endforeach
+
+                    @if($hasDiscount)
+                        <div style="border-top: 1px dashed #CBD5E1; margin-top: 0.6rem; padding-top: 0.6rem;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: #64748B; margin-bottom: 0.3rem;">
+                                <span>Subtotal Base:</span>
+                                <strong>S/ {{ number_format($origSubtotal, 2) }}</strong>
+                            </div>
+                            @if(!empty($sale->campaign_name))
+                                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #FF5500; font-weight: 800; margin-bottom: 0.3rem;">
+                                    <span>🔥 Campaña Promocional ({{ $sale->campaign_name }}):</span>
+                                    <span>-S/ {{ number_format($tData['campaign_discount'] ?? $sale->discount_amount, 2) }}</span>
+                                </div>
+                            @endif
+                            @if(!empty($sale->coupon_code))
+                                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #059669; font-weight: 800; margin-bottom: 0.3rem;">
+                                    <span>🎟️ Cupón de Descuento ({{ $sale->coupon_code }}):</span>
+                                    <span>-S/ {{ number_format($tData['coupon_discount'] ?? $sale->discount_amount, 2) }}</span>
+                                </div>
+                            @endif
+                            @if(empty($sale->campaign_name) && empty($sale->coupon_code))
+                                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #FF5500; font-weight: 800; margin-bottom: 0.3rem;">
+                                    <span>🏷️ Descuento Comercial:</span>
+                                    <span>-S/ {{ number_format($sale->discount_amount, 2) }}</span>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
+
                     <div style="display: flex; justify-content: space-between; border-top: 2px dashed #E2E8F0; margin-top: 0.85rem; padding-top: 0.85rem; align-items: center;">
                         <strong style="font-size: 1.1rem; color: #0F172A;">Total Pagado:</strong>
                         <strong style="font-size: 1.5rem; color: #059669; font-weight: 900;">S/ {{ number_format($sale->total_amount, 2) }}</strong>
