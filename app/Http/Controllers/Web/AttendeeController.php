@@ -249,30 +249,35 @@ class AttendeeController extends Controller
     /**
      * Anula o elimina el escaneo de un boleto para permitir probarlo o re-escanearlo.
      */
-    public function resetCheckin(Request $request, Event $event, EventTicket $ticket): JsonResponse
+    public function resetCheckin(Request $request, $event, $ticket): JsonResponse
     {
-        if ($ticket->event_id !== $event->id) {
+        $eventObj = $event instanceof Event ? $event : Event::find($event);
+        $ticketObj = $ticket instanceof EventTicket ? $ticket : (EventTicket::find($ticket) ?: EventTicket::where('ticket_code', $ticket)->orWhere('validation_hash', $ticket)->first());
+
+        if (!$ticketObj) {
             return response()->json([
                 'success' => false,
-                'message' => 'El boleto no pertenece a este evento.',
-            ], 403);
+                'message' => 'No se encontró el registro del boleto a anular.',
+            ], 404);
         }
 
-        $ticket->is_used = false;
-        $ticket->checked_in_at = null;
-        $ticket->scanned_by = null;
-        $ticket->save();
+        $ticketObj->is_used = false;
+        $ticketObj->checked_in_at = null;
+        $ticketObj->scanned_by = null;
+        $ticketObj->save();
+
+        $targetEventId = $eventObj ? $eventObj->id : $ticketObj->event_id;
 
         // Recalcular métricas en vivo
-        $ticketsIssued = EventTicket::where('event_id', $event->id)->count();
-        $checkedInCount = EventTicket::where('event_id', $event->id)->where('is_used', true)->count();
+        $ticketsIssued = EventTicket::where('event_id', $targetEventId)->count();
+        $checkedInCount = EventTicket::where('event_id', $targetEventId)->where('is_used', true)->count();
         $pendingCount = max(0, $ticketsIssued - $checkedInCount);
         $attendanceRate = $ticketsIssued > 0 ? min(100, round(($checkedInCount / $ticketsIssued) * 100, 1)) : 0;
 
         return response()->json([
             'success' => true,
-            'message' => "El ingreso del boleto {$ticket->ticket_code} fue anulado correctamente. Ya puede volver a ser escaneado.",
-            'ticket_id' => $ticket->id,
+            'message' => "El ingreso del boleto {$ticketObj->ticket_code} fue anulado correctamente. Ya puede volver a ser escaneado.",
+            'ticket_id' => $ticketObj->id,
             'metrics' => [
                 'tickets_issued' => $ticketsIssued,
                 'checked_in_count' => $checkedInCount,
