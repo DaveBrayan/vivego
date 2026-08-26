@@ -16,35 +16,85 @@ use Illuminate\View\View;
 class CustomerPortalController extends Controller
 {
     /**
-     * Mostrar vista de inicio de sesión de clientes
+     * Redirige al inicio de sesión unificado de Vive Go
      */
-    public function showLoginForm(): View|RedirectResponse
+    public function showLoginForm(): RedirectResponse
     {
-        if (session('customer_logged_in')) {
-            return redirect()->route('customer.my_tickets');
-        }
-
-        return view('web.customer.login');
+        return redirect()->route('web.login');
     }
 
     /**
-     * Iniciar sesión como Cliente
+     * Iniciar sesión unificado (Soporta Clientes y Administradores vía API/JSON)
      */
     public function login(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required|string',
-        ]);
+        $loginInput = trim($request->input('email') ?? $request->input('login') ?? '');
+        $password = (string) $request->input('password');
 
-        $email = trim(strtolower($validated['email']));
-        $user = User::where('email', $email)->first();
+        if (empty($loginInput) || empty($password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Debes ingresar tu correo/DNI y contraseña.',
+            ], 422);
+        }
 
-        // Validar contraseña únicamente contra el hash seguro en BD
-        if ($user && Hash::check($validated['password'], $user->password)) {
+        $loginLower = strtolower($loginInput);
+
+        // 1. Validar como Administrador
+        $admin = \App\Models\Administrator::where(function ($q) use ($loginInput, $loginLower) {
+            $q->where('email', $loginLower)->orWhere('username', $loginInput);
+        })->first();
+
+        if ($admin && Hash::check($password, $admin->password)) {
+            if ($admin->status !== 'Activo') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tu cuenta de administrador se encuentra inactiva o suspendida.',
+                ], 422);
+            }
+
             $request->session()->regenerate();
+            session()->forget([
+                'customer_logged_in',
+                'customer_id',
+                'customer_name',
+                'customer_email',
+                'customer_dni',
+                'customer_phone',
+            ]);
 
-            // Limpiar cualquier residuo de sesión administrativa
+            session([
+                'admin_logged_in' => true,
+                'admin_id' => $admin->id,
+                'admin_name' => $admin->full_name,
+                'admin_email' => $admin->email,
+                'admin_role' => $admin->role,
+                'admin_avatar' => $admin->avatar,
+                'must_change_password' => str_starts_with($password, 'VG'),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'role' => 'admin',
+                'message' => "¡Bienvenido de nuevo, {$admin->full_name}!",
+                'redirect_url' => route('web.dashboard'),
+            ]);
+        }
+
+        // 2. Validar como Cliente / Usuario
+        $user = User::where(function ($q) use ($loginInput, $loginLower) {
+            $q->where('email', $loginLower)->orWhere('dni', $loginInput);
+        })->first();
+
+        if ($user && Hash::check($password, $user->password)) {
+            if ($user->status && $user->status !== 'Activo') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tu cuenta de cliente se encuentra inactiva o bloqueada.',
+                ], 422);
+            }
+
+            $request->session()->regenerate();
             session()->forget([
                 'admin_logged_in',
                 'admin_id',
@@ -52,6 +102,7 @@ class CustomerPortalController extends Controller
                 'admin_email',
                 'admin_role',
                 'admin_avatar',
+                'must_change_password',
             ]);
 
             session([
@@ -65,6 +116,7 @@ class CustomerPortalController extends Controller
 
             return response()->json([
                 'success' => true,
+                'role' => 'customer',
                 'message' => '¡Bienvenido, ' . $user->name . '!',
                 'user' => [
                     'name' => $user->name,
@@ -78,7 +130,7 @@ class CustomerPortalController extends Controller
 
         return response()->json([
             'success' => false,
-            'message' => 'Correo o contraseña incorrectos.',
+            'message' => 'Correo, DNI o contraseña incorrectos.',
         ], 422);
     }
 
@@ -109,7 +161,7 @@ class CustomerPortalController extends Controller
         $customerDni = session('customer_dni');
 
         if (!session('customer_logged_in') && empty($customerEmail)) {
-            return redirect()->route('customer.login')->with('info', 'Inicia sesión para ver tus boletos.');
+            return redirect()->route('web.login')->with('info', 'Inicia sesión para ver tus boletos.');
         }
 
         $sales = TicketSale::with(['event.template'])
@@ -137,7 +189,7 @@ class CustomerPortalController extends Controller
         $customerDni = session('customer_dni');
 
         if (!session('customer_logged_in') && empty($customerEmail)) {
-            return redirect()->route('customer.login')->with('info', 'Inicia sesión para ver tus recibos.');
+            return redirect()->route('web.login')->with('info', 'Inicia sesión para ver tus recibos.');
         }
 
         $sales = TicketSale::with(['event.template'])

@@ -828,22 +828,53 @@
                                     </label>
                                 </div>
 
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                                    <div>
-                                        <label style="font-size: 0.775rem; font-weight: 700; color: #CBD5E1; display: block; margin-bottom: 0.35rem;">NOMBRE DE LA ENTRADA DE CORTESÍA</label>
-                                        <input type="text" id="courtesy_ticket_name" class="form-input-custom" value="Entrada de Cortesía (Free)" placeholder="Ej: Pase VIP de Cortesía" style="font-size: 0.85rem;">
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+                                        <div>
+                                            <label style="font-size: 0.775rem; font-weight: 700; color: #CBD5E1; display: block; margin-bottom: 0.35rem;">NOMBRE DE LA ENTRADA DE CORTESÍA</label>
+                                            <input type="text" id="courtesy_ticket_name" class="form-input-custom" value="Entrada de Cortesía (Free)" placeholder="Ej: Pase VIP de Cortesía" style="font-size: 0.85rem;">
+                                        </div>
+                                        <div>
+                                            <label style="font-size: 0.775rem; font-weight: 700; color: #CBD5E1; display: block; margin-bottom: 0.35rem;">MÁXIMO POR USUARIO (WEB)</label>
+                                            <input type="number" id="courtesy_user_max" class="form-input-custom" value="2" min="1" max="100" style="font-size: 0.85rem; font-weight: 800; color: #10B981;" placeholder="Por defecto 2">
+                                        </div>
+                                        <div>
+                                            <label style="font-size: 0.775rem; font-weight: 700; color: #CBD5E1; display: block; margin-bottom: 0.35rem;">STOCK TOTAL CORTESÍAS (GLOBAL / OPCIONAL)</label>
+                                            <input type="number" id="courtesy_stock" class="form-input-custom" placeholder="Ilimitado / según aforo" min="1" style="font-size: 0.85rem;">
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label style="font-size: 0.775rem; font-weight: 700; color: #CBD5E1; display: block; margin-bottom: 0.35rem;">MÁXIMO POR USUARIO (WEB)</label>
-                                        <input type="number" id="courtesy_user_max" class="form-input-custom" value="2" min="1" max="100" style="font-size: 0.85rem; font-weight: 800; color: #10B981;" placeholder="Por defecto 2">
-                                    </div>
-                                    <div>
-                                        <label style="font-size: 0.775rem; font-weight: 700; color: #CBD5E1; display: block; margin-bottom: 0.35rem;">STOCK TOTAL CORTESÍAS (OPCIONAL)</label>
-                                        <input type="number" id="courtesy_stock" class="form-input-custom" placeholder="Ilimitado / según aforo" min="1" style="font-size: 0.85rem;">
+
+                                    <!-- TABLA DINÁMICA DE CORTESÍAS Y CUPOS POR ZONA -->
+                                    <div style="background: rgba(15, 23, 42, 0.65); border: 1.5px solid rgba(16, 185, 129, 0.25); border-radius: 14px; padding: 1.15rem; margin-top: 1rem;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                                            <div>
+                                                <strong style="color: #10B981; font-size: 0.9rem; display: flex; align-items: center; gap: 0.4rem;">
+                                                    <span>🎟️</span> <span>Habilitar y Asignar Stock de Cortesía por Zonas (Opcional)</span>
+                                                </strong>
+                                                <p style="color: #94A3B8; font-size: 0.775rem; margin: 0.2rem 0 0 0;">
+                                                    Indica en qué sectores se permiten cortesías y cuántos pases como máximo se pueden emitir para cada zona en Taquilla.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div class="dash-table-container" style="margin-top: 0.5rem; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08);">
+                                            <table class="dash-table" style="font-size: 0.85rem; margin: 0;">
+                                                <thead>
+                                                    <tr style="background: rgba(16,185,129,0.08);">
+                                                        <th style="width: 70px; text-align: center;">Cortesía</th>
+                                                        <th>Sector / Zona</th>
+                                                        <th>Aforo Regular</th>
+                                                        <th>Precio Regular</th>
+                                                        <th style="width: 220px;">Cupo Máx. Cortesía (Stock)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="courtesyZonesConfigBody">
+                                                    <!-- Se sincroniza automáticamente -->
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
                         <!-- SECCIÓN: SUBIR IMAGEN DE REFERENCIA / PLANO DE ZONAS -->
                         <div style="margin-top: 1.75rem; background: rgba(255, 255, 255, 0.02); border: 1.5px dashed rgba(255, 255, 255, 0.18); border-radius: 18px; padding: 1.5rem;">
@@ -2397,10 +2428,73 @@
             }
         }
 
+        function syncCourtesyZonesTable() {
+            const tbody = document.getElementById('courtesyZonesConfigBody');
+            if (!tbody) return;
+
+            // Guardar valores actualmente escritos por el usuario
+            const currentInputs = {};
+            tbody.querySelectorAll('tr').forEach(row => {
+                const zName = row.getAttribute('data-zone-name');
+                if (zName) {
+                    currentInputs[zName] = {
+                        enabled: row.querySelector('.courtesy-zone-enable-cb')?.checked ?? true,
+                        stock: row.querySelector('.courtesy-zone-stock-input')?.value ?? ''
+                    };
+                }
+            });
+
+            const zoneRows = document.querySelectorAll('#zonesTableBody .zone-row');
+            tbody.innerHTML = '';
+
+            if (zoneRows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #94A3B8; padding: 1.5rem;">Agrega sectores en la tabla superior para configurar sus cupos de cortesía.</td></tr>`;
+                return;
+            }
+
+            zoneRows.forEach((row, idx) => {
+                const zName = row.querySelector('.zone-name-input')?.value?.trim() || `Zona ${idx + 1}`;
+                const zCap = parseInt(row.querySelector('.zone-capacity-input')?.value) || 0;
+                const zPrice = parseFloat(row.querySelector('.zone-price-input')?.value) || 0;
+
+                let isEnabled = true;
+                let stockVal = '';
+
+                if (currentInputs[zName]) {
+                    isEnabled = currentInputs[zName].enabled;
+                    stockVal = currentInputs[zName].stock;
+                }
+
+                const tr = document.createElement('tr');
+                tr.setAttribute('data-zone-name', zName);
+                tr.innerHTML = `
+                    <td style="text-align: center;">
+                        <input type="checkbox" class="orange-checkbox courtesy-zone-enable-cb" ${isEnabled ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
+                    </td>
+                    <td>
+                        <strong style="color: #FFFFFF; font-size: 0.9rem;" class="courtesy-zone-name-label">${zName}</strong>
+                    </td>
+                    <td>
+                        <span class="dash-badge-custom badge-blue" style="font-size: 0.75rem;">${zCap.toLocaleString()} entradas</span>
+                    </td>
+                    <td>
+                        <span style="font-weight: 800; color: #10B981; font-size: 0.875rem;">S/ ${zPrice.toFixed(2)}</span>
+                    </td>
+                    <td>
+                        <input type="number" class="form-input-custom courtesy-zone-stock-input" value="${stockVal}" min="1" max="${zCap > 0 ? zCap : 999999}" placeholder="Ilimitado / aforo total" style="font-size: 0.85rem; padding: 0.4rem 0.65rem; border-color: rgba(16,185,129,0.35); font-weight: 700; color: #10B981;">
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
         function toggleCourtesySection(enabled) {
             const box = document.getElementById('courtesyOptionsBox');
             if (box) {
                 box.style.display = enabled ? 'block' : 'none';
+                if (enabled) {
+                    syncCourtesyZonesTable();
+                }
             }
         }
 
@@ -2418,13 +2512,13 @@
                     </select>
                 </td>
                 <td>
-                    <input type="text" class="form-input-custom zone-name-input" value="NUEVA ZONA" style="font-size: 0.85rem; padding: 0.55rem;">
+                    <input type="text" class="form-input-custom zone-name-input" value="NUEVA ZONA" style="font-size: 0.85rem; padding: 0.55rem;" oninput="syncCourtesyZonesTable()">
                 </td>
                 <td>
-                    <input type="number" class="form-input-custom zone-capacity-input" value="100" min="1" style="font-size: 0.85rem; padding: 0.55rem;" oninput="recalculateTotalCapacity()">
+                    <input type="number" class="form-input-custom zone-capacity-input" value="100" min="1" style="font-size: 0.85rem; padding: 0.55rem;" oninput="recalculateTotalCapacity(); syncCourtesyZonesTable();">
                 </td>
                 <td>
-                    <input type="number" step="0.50" class="form-input-custom zone-price-input" value="50.00" min="0" style="font-size: 0.85rem; padding: 0.55rem; color: #10B981; font-weight: 800;" oninput="updateZonePresaleCalc(this); recalculateTotalCapacity();">
+                    <input type="number" step="0.50" class="form-input-custom zone-price-input" value="50.00" min="0" style="font-size: 0.85rem; padding: 0.55rem; color: #10B981; font-weight: 800;" oninput="updateZonePresaleCalc(this); recalculateTotalCapacity(); syncCourtesyZonesTable();">
                 </td>
                 <td>
                     <button type="button" class="btn btn-sm btn-toggle-presale" style="background: rgba(255,85,0,0.15); border: 1.5px solid #FF5500; color: #FF5500; font-size: 0.775rem; font-weight: 800; padding: 0.45rem 0.65rem; border-radius: 8px; width: 100%; text-align: center;" onclick="toggleZonePresaleBox(this)">
@@ -2486,6 +2580,7 @@
             tbody.appendChild(row);
             tbody.appendChild(presaleRow);
             recalculateTotalCapacity();
+            syncCourtesyZonesTable();
         }
 
         function removeZoneRow(btn) {
@@ -2497,6 +2592,7 @@
                 }
                 row.remove();
                 recalculateTotalCapacity();
+                syncCourtesyZonesTable();
             } else {
                 Swal.fire({
                     title: 'Atención',
@@ -2680,13 +2776,29 @@
             const salesType = document.querySelector('input[name="event_sales_type"]:checked')?.value || 'fisica';
 
             const courtesyEnabled = document.getElementById('courtesy_enabled')?.checked || false;
+            const courtesyZoneSettings = [];
+            document.querySelectorAll('#courtesyZonesConfigBody tr').forEach(row => {
+                const zName = row.getAttribute('data-zone-name');
+                if (zName) {
+                    const isEnabled = row.querySelector('.courtesy-zone-enable-cb')?.checked ?? true;
+                    const stockRaw = row.querySelector('.courtesy-zone-stock-input')?.value?.trim();
+                    const stock = (stockRaw !== '' && stockRaw !== null && !isNaN(parseInt(stockRaw))) ? parseInt(stockRaw) : null;
+                    courtesyZoneSettings.push({
+                        name: zName,
+                        enabled: isEnabled,
+                        stock: stock
+                    });
+                }
+            });
+
             const courtesySettings = {
                 enabled: courtesyEnabled,
                 for_users: courtesyEnabled ? (document.getElementById('courtesy_for_users')?.checked || false) : false,
                 for_admins: courtesyEnabled ? (document.getElementById('courtesy_for_admins')?.checked || false) : false,
                 name: document.getElementById('courtesy_ticket_name')?.value || 'Entrada de Cortesía (Free)',
                 user_max_quantity: parseInt(document.getElementById('courtesy_user_max')?.value) || 2,
-                stock: parseInt(document.getElementById('courtesy_stock')?.value) || null
+                stock: parseInt(document.getElementById('courtesy_stock')?.value) || null,
+                zones: courtesyZoneSettings
             };
 
             const payload = {
@@ -2747,6 +2859,7 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             initLeafletMap();
+            syncCourtesyZonesTable();
         });
     </script>
 @endpush

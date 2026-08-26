@@ -246,11 +246,12 @@
                                     <th>Hora de Ingreso</th>
                                     <th>Punto de Control</th>
                                     <th>Estado</th>
+                                    <th style="text-align: right;">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="checkinsTableBody">
                                 @forelse($recentCheckins as $idx => $chk)
-                                    <tr class="checkin-row-item">
+                                    <tr class="checkin-row-item" id="checkinRow_{{ $chk->id }}">
                                         <td>
                                             <span style="font-weight: 800; color: #94A3B8;">#{{ sprintf('%02d', $idx + 1) }}</span>
                                         </td>
@@ -287,10 +288,21 @@
                                                 ✓ Ingresado
                                             </span>
                                         </td>
+                                        <td style="text-align: right;">
+                                            <button type="button" 
+                                                    onclick="resetCheckin({{ $chk->id }}, '{{ $chk->ticket_code }}')" 
+                                                    class="btn btn-sm"
+                                                    title="Eliminar escaneo y permitir escanear de nuevo"
+                                                    style="background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.35); padding: 0.35rem 0.75rem; font-size: 0.75rem; font-weight: 800; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 0.35rem;"
+                                                    onmouseenter="this.style.background='#EF4444'; this.style.color='#FFFFFF';"
+                                                    onmouseleave="this.style.background='rgba(239, 68, 68, 0.15)'; this.style.color='#EF4444';">
+                                                <span>🗑️</span> <span>Anular Escaneo</span>
+                                            </button>
+                                        </td>
                                     </tr>
                                 @empty
                                     <tr id="emptyCheckinsRow">
-                                        <td colspan="8" style="text-align: center; padding: 2.5rem; color: #94A3B8;">
+                                        <td colspan="9" style="text-align: center; padding: 2.5rem; color: #94A3B8;">
                                             <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎫</div>
                                             <strong>Aún no se han registrado ingresos para este evento.</strong>
                                             <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem;">Escanea el primer código QR o ingresa un número de boleto para comenzar.</p>
@@ -511,8 +523,12 @@
             const emptyRow = document.getElementById('emptyCheckinsRow');
             if (emptyRow) emptyRow.remove();
 
+            const existingRow = document.getElementById(`checkinRow_${ticket.id}`);
+            if (existingRow) return;
+
             const tr = document.createElement('tr');
             tr.className = 'checkin-row-item row-highlight-new';
+            tr.id = `checkinRow_${ticket.id}`;
             tr.innerHTML = `
                 <td><span style="font-weight: 800; color: #10B981;">NUEVO</span></td>
                 <td>
@@ -528,6 +544,17 @@
                 </td>
                 <td><span style="color: #E2E8F0; font-size: 0.85rem;">${ticket.scanned_by || 'Puerta Principal'}</span></td>
                 <td><span class="dash-badge-custom badge-green" style="font-size: 0.75rem;">✓ Ingresado</span></td>
+                <td style="text-align: right;">
+                    <button type="button" 
+                            onclick="resetCheckin(${ticket.id}, '${ticket.ticket_code}')" 
+                            class="btn btn-sm"
+                            title="Eliminar escaneo y permitir escanear de nuevo"
+                            style="background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.35); padding: 0.35rem 0.75rem; font-size: 0.75rem; font-weight: 800; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 0.35rem;"
+                            onmouseenter="this.style.background='#EF4444'; this.style.color='#FFFFFF';"
+                            onmouseleave="this.style.background='rgba(239, 68, 68, 0.15)'; this.style.color='#EF4444';">
+                        <span>🗑️</span> <span>Anular Escaneo</span>
+                    </button>
+                </td>
             `;
 
             if (tbody.firstChild) {
@@ -535,6 +562,108 @@
             } else {
                 tbody.appendChild(tr);
             }
+        }
+
+        // Anular / Eliminar el escaneo de un boleto para permitir re-escanearlo
+        function resetCheckin(ticketId, ticketCode) {
+            Swal.fire({
+                title: '¿Anular este Escaneo?',
+                html: `
+                    <p style="color: #94A3B8; font-size: 0.95rem; margin-bottom: 0.5rem;">
+                        Se cancelará el registro de ingreso para el boleto <strong style="color: #FFFFFF; font-family: monospace;">${ticketCode}</strong>.
+                    </p>
+                    <p style="color: #10B981; font-weight: 700; font-size: 0.85rem;">
+                        ✨ El boleto volverá a quedar como disponible y podrá ser escaneado nuevamente.
+                    </p>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: '🗑️ Sí, Anular Escaneo',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#EF4444',
+                cancelButtonColor: '#475569',
+                background: '#14141E',
+                color: '#FFFFFF'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Anulando ingreso...',
+                        allowOutsideClick: false,
+                        didOpen: () => { Swal.showLoading(); },
+                        background: '#14141E',
+                        color: '#FFFFFF'
+                    });
+
+                    fetch(`/admin/asistentes/${eventId}/anular-escaneo/${ticketId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken
+                        }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            const row = document.getElementById(`checkinRow_${ticketId}`);
+                            if (row) {
+                                row.style.transition = 'all 0.4s ease';
+                                row.style.opacity = '0';
+                                row.style.transform = 'translateX(40px)';
+                                setTimeout(() => {
+                                    row.remove();
+                                    const tbody = document.getElementById('checkinsTableBody');
+                                    if (tbody && tbody.children.length === 0) {
+                                        tbody.innerHTML = `
+                                            <tr id="emptyCheckinsRow">
+                                                <td colspan="9" style="text-align: center; padding: 2.5rem; color: #94A3B8;">
+                                                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎫</div>
+                                                    <strong>Aún no se han registrado ingresos para este evento.</strong>
+                                                    <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem;">Escanea el primer código QR o ingresa un número de boleto para comenzar.</p>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }
+                                }, 400);
+                            }
+
+                            if (data.metrics) {
+                                updateKpis(data.metrics);
+                            }
+
+                            Swal.fire({
+                                icon: 'success',
+                                title: '¡Escaneo Anulado!',
+                                text: data.message || 'El boleto ya puede volver a ser escaneado.',
+                                confirmButtonText: 'Entendido',
+                                confirmButtonColor: '#10B981',
+                                background: '#14141E',
+                                color: '#FFFFFF'
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'No se pudo anular',
+                                text: data.message || 'Ocurrió un error inesperado.',
+                                confirmButtonColor: '#FF5500',
+                                background: '#14141E',
+                                color: '#FFFFFF'
+                            });
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error de Conexión',
+                            text: 'No se pudo comunicar con el servidor.',
+                            confirmButtonColor: '#FF5500',
+                            background: '#14141E',
+                            color: '#FFFFFF'
+                        });
+                    });
+                }
+            });
         }
 
         // Actualizar métricas KPI en pantalla

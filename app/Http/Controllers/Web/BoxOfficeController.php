@@ -194,7 +194,34 @@ class BoxOfficeController extends Controller
         $digitalRevenue = $totalRevenue - $cashRevenue;
         $ticketsSold = $sales->sum('quantity');
 
-        $zones = is_array($event->zones) ? $event->zones : [];
+        $zones = is_array($event->zones)
+            ? $event->zones
+            : (is_string($event->zones) ? json_decode($event->zones, true) : []);
+
+        if (empty($zones)) {
+            $zones = [
+                ['name' => 'BOX PLATINUM INDIVIDUAL', 'price' => 150.00, 'capacity' => 10],
+                ['name' => 'ZONA VIP STAND UP', 'price' => 95.00, 'capacity' => 20],
+                ['name' => 'ZONA GENERAL', 'price' => 55.50, 'capacity' => 30]
+            ];
+        }
+
+        $courtesySettings = is_array($event->courtesy_settings)
+            ? $event->courtesy_settings
+            : (json_decode($event->courtesy_settings ?? '[]', true) ?? []);
+
+        $courtesyEnabledGlobally = !empty($courtesySettings['enabled']);
+        $courtesyZonesConfig = $courtesySettings['zones'] ?? [];
+        $courtesyZoneConfigMap = [];
+        if (is_array($courtesyZonesConfig)) {
+            foreach ($courtesyZonesConfig as $cz) {
+                if (!empty($cz['name'])) {
+                    $courtesyZoneConfigMap[$cz['name']] = $cz;
+                }
+            }
+        }
+
+        $courtesySales = $sales->filter(fn($s) => in_array($s->payment_method, ['Cortesía', 'cortesia']));
 
         // Calcular stock por cada zona en base a ventas realizadas
         $zonesWithStats = [];
@@ -205,6 +232,22 @@ class BoxOfficeController extends Controller
             $zSold = (int) $sales->where('zone_name', $zName)->sum('quantity');
             $zTotalCap = $zAvail + $zSold;
 
+            $zCourtesySold = (int) $courtesySales->where('zone_name', $zName)->sum('quantity');
+            $hasCustomCourtesyZones = count($courtesyZoneConfigMap) > 0;
+            $zCourtesyConfig = $courtesyZoneConfigMap[$zName] ?? null;
+
+            $zCourtesyEnabled = $hasCustomCourtesyZones
+                ? (!empty($zCourtesyConfig['enabled']))
+                : $courtesyEnabledGlobally;
+
+            $zCourtesyMaxStock = ($zCourtesyConfig && isset($zCourtesyConfig['stock']) && $zCourtesyConfig['stock'] !== '' && $zCourtesyConfig['stock'] !== null)
+                ? (int) $zCourtesyConfig['stock']
+                : null;
+
+            $zCourtesyAvailable = $zCourtesyMaxStock !== null
+                ? min($zAvail, max(0, $zCourtesyMaxStock - $zCourtesySold))
+                : $zAvail;
+
             $zonesWithStats[] = [
                 'name' => $zName,
                 'price' => $zPrice,
@@ -212,6 +255,10 @@ class BoxOfficeController extends Controller
                 'sold' => $zSold,
                 'available' => $zAvail,
                 'percentage' => $zTotalCap > 0 ? min(100, round(($zSold / $zTotalCap) * 100)) : 0,
+                'courtesy_enabled' => $zCourtesyEnabled,
+                'courtesy_max_stock' => $zCourtesyMaxStock,
+                'courtesy_sold' => $zCourtesySold,
+                'courtesy_available' => $zCourtesyAvailable,
             ];
         }
 
@@ -228,7 +275,54 @@ class BoxOfficeController extends Controller
             'sales_count' => $sales->count(),
         ];
 
-        return view('web.box_office_pos', compact('event', 'zonesWithStats', 'sales', 'metrics', 'settings', 'organizer'));
+        // Obtener lista de clientes registrados para autocompletado inteligente en Taquilla / Cortesías
+        try {
+            $existingUsers = \App\Models\User::select('id', 'name', 'dni', 'email', 'phone')
+                ->where(function ($q) {
+                    $q->whereNull('role')->orWhere('role', '!=', 'admin');
+                })
+                ->orderBy('name', 'asc')
+                ->limit(500)
+                ->get();
+        } catch (\Throwable $e) {
+            $existingUsers = collect([]);
+        }
+
+        $allClients = $existingUsers->map(fn($u) => [
+            'id' => $u->id,
+            'name' => $u->name,
+            'dni' => $u->dni ?? '',
+            'email' => $u->email ?? '',
+            'phone' => $u->phone ?? '',
+        ]);
+
+        // Agregar también compradores previos de ventas si no están en $existingUsers
+        if ($sales && $sales->count() > 0) {
+            $previousBuyers = $sales->map(function ($s) {
+                $tData = is_array($s->tickets_data) ? $s->tickets_data : json_decode($s->tickets_data ?? '[]', true);
+                return [
+                    'id' => null,
+                    'name' => $s->buyer_name,
+                    'dni' => $s->buyer_dni ?? '',
+                    'email' => $s->buyer_email ?? ($tData['buyer_email'] ?? ''),
+                    'phone' => $s->buyer_phone ?? '',
+                ];
+            })->filter(function ($b) {
+                return !empty($b['name'])
+                    && !in_array(strtoupper(trim($b['name'])), ['PÚBLICO GENERAL', 'PUBLICO GENERAL', 'INVITADO DE CORTESÍA', 'INVITADO DE CORTESIA', 'INVITADO', 'INVITADO DE CORTESIA']);
+            });
+
+            $allClients = $allClients->concat($previousBuyers);
+        }
+
+        // Deduplicar clientes por DNI o por nombre
+        $allClients = $allClients->unique(function ($item) {
+            return !empty($item['dni']) && $item['dni'] !== '00000000' && $item['dni'] !== '11111111'
+                ? $item['dni']
+                : strtolower(trim($item['name']));
+        })->values();
+
+        return view('web.box_office_pos', compact('event', 'zonesWithStats', 'sales', 'metrics', 'settings', 'organizer', 'allClients'));
     }
 
     /**
@@ -239,7 +333,8 @@ class BoxOfficeController extends Controller
         $validated = $request->validate([
             'buyer_name' => 'nullable|string|max:255',
             'buyer_dni' => 'nullable|string|max:20',
-            'buyer_phone' => 'nullable|string|max:30',
+            'buyer_phone' => 'nullable|string|max:100',
+            'buyer_email' => 'nullable|string|email|max:255',
             'zone_name' => 'required|string|max:100',
             'quantity' => 'required|integer|min:1',
             'payment_method' => 'required|string|in:Efectivo,Yape,Plin,Tarjeta,Transferencia,Cortesía,cortesia',
@@ -249,6 +344,7 @@ class BoxOfficeController extends Controller
         $buyerName = !empty(trim($validated['buyer_name'] ?? '')) ? trim($validated['buyer_name']) : 'CLIENTE VARIOS';
         $buyerDni = !empty(trim($validated['buyer_dni'] ?? '')) ? trim($validated['buyer_dni']) : '00000000';
         $buyerPhone = !empty(trim($validated['buyer_phone'] ?? '')) ? trim($validated['buyer_phone']) : '-';
+        $buyerEmail = !empty(trim($validated['buyer_email'] ?? '')) ? trim($validated['buyer_email']) : null;
 
         $event = Event::findOrFail($id);
         $zones = is_array($event->zones) ? $event->zones : [];
@@ -284,7 +380,40 @@ class BoxOfficeController extends Controller
 
         $isCourtesy = ($validated['payment_method'] === 'Cortesía' || $validated['payment_method'] === 'cortesia');
 
+        $courtesySettings = is_array($event->courtesy_settings)
+            ? $event->courtesy_settings
+            : (json_decode($event->courtesy_settings ?? '[]', true) ?? []);
+
         if ($isCourtesy) {
+            $courtesyZonesConfig = $courtesySettings['zones'] ?? [];
+            if (!empty($courtesyZonesConfig) && is_array($courtesyZonesConfig)) {
+                foreach ($courtesyZonesConfig as $cz) {
+                    if (($cz['name'] ?? '') === $validated['zone_name']) {
+                        if (isset($cz['enabled']) && !$cz['enabled']) {
+                            return response()->json([
+                                'success' => false,
+                                'message' => "Las entradas de cortesía están deshabilitadas para el sector {$validated['zone_name']}.",
+                            ], 422);
+                        }
+                        if (isset($cz['stock']) && $cz['stock'] !== null && $cz['stock'] !== '') {
+                            $maxCourtesyStock = (int) $cz['stock'];
+                            $alreadySoldCourtesy = TicketSale::where('event_id', $event->id)
+                                ->whereIn('payment_method', ['Cortesía', 'cortesia'])
+                                ->where('zone_name', $validated['zone_name'])
+                                ->sum('quantity');
+                            if (($alreadySoldCourtesy + $validated['quantity']) > $maxCourtesyStock) {
+                                $remCourtesy = max(0, $maxCourtesyStock - $alreadySoldCourtesy);
+                                return response()->json([
+                                    'success' => false,
+                                    'message' => "Cupo de cortesías agotado para {$validated['zone_name']}. Cupo asignado: {$maxCourtesyStock}, disponibles: {$remCourtesy}.",
+                                ], 422);
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+
             $totalAmount = 0.00;
             $amountPaid = 0.00;
             $changeAmount = 0.00;
@@ -345,8 +474,17 @@ class BoxOfficeController extends Controller
                 'price' => $effectiveTicketPrice,
                 'buyer_name' => $buyerName,
                 'buyer_dni' => $buyerDni,
+                'buyer_phone' => $buyerPhone,
+                'buyer_email' => $buyerEmail,
                 'is_courtesy' => $isCourtesy,
             ];
+        }
+
+        $phoneFieldVal = $buyerPhone;
+        if ($buyerEmail && $buyerPhone !== '-') {
+            $phoneFieldVal = "{$buyerPhone} | {$buyerEmail}";
+        } elseif ($buyerEmail && $buyerPhone === '-') {
+            $phoneFieldVal = $buyerEmail;
         }
 
         // Crear registro en la tabla ticket_sales
@@ -355,7 +493,7 @@ class BoxOfficeController extends Controller
             'receipt_number' => $receiptNumber,
             'buyer_name' => $buyerName,
             'buyer_dni' => $buyerDni,
-            'buyer_phone' => $buyerPhone,
+            'buyer_phone' => $phoneFieldVal,
             'zone_name' => $validated['zone_name'],
             'unit_price' => $isCourtesy ? 0.00 : $unitPrice,
             'quantity' => $validated['quantity'],
@@ -392,6 +530,18 @@ class BoxOfficeController extends Controller
         $digitalRevenue = $totalRevenue - $cashRevenue;
         $ticketsSold = $allSales->sum('quantity');
 
+        $courtesySales = $allSales->filter(fn($s) => in_array($s->payment_method, ['Cortesía', 'cortesia']));
+        $courtesyZonesConfig = $courtesySettings['zones'] ?? [];
+        $courtesyZoneConfigMap = [];
+        if (is_array($courtesyZonesConfig)) {
+            foreach ($courtesyZonesConfig as $cz) {
+                if (!empty($cz['name'])) {
+                    $courtesyZoneConfigMap[$cz['name']] = $cz;
+                }
+            }
+        }
+        $courtesyEnabledGlobally = !empty($courtesySettings['enabled']);
+
         $zonesWithStats = [];
         foreach ($event->zones as $z) {
             $zName = $z['name'] ?? 'General';
@@ -400,6 +550,22 @@ class BoxOfficeController extends Controller
             $zSold = (int) $allSales->where('zone_name', $zName)->sum('quantity');
             $zTotalCap = $zAvail + $zSold;
 
+            $zCourtesySold = (int) $courtesySales->where('zone_name', $zName)->sum('quantity');
+            $hasCustomCourtesyZones = count($courtesyZoneConfigMap) > 0;
+            $zCourtesyConfig = $courtesyZoneConfigMap[$zName] ?? null;
+
+            $zCourtesyEnabled = $hasCustomCourtesyZones
+                ? (!empty($zCourtesyConfig['enabled']))
+                : $courtesyEnabledGlobally;
+
+            $zCourtesyMaxStock = ($zCourtesyConfig && isset($zCourtesyConfig['stock']) && $zCourtesyConfig['stock'] !== '' && $zCourtesyConfig['stock'] !== null)
+                ? (int) $zCourtesyConfig['stock']
+                : null;
+
+            $zCourtesyAvailable = $zCourtesyMaxStock !== null
+                ? min($zAvail, max(0, $zCourtesyMaxStock - $zCourtesySold))
+                : $zAvail;
+
             $zonesWithStats[] = [
                 'name' => $zName,
                 'price' => $zPrice,
@@ -407,6 +573,10 @@ class BoxOfficeController extends Controller
                 'sold' => $zSold,
                 'available' => $zAvail,
                 'percentage' => $zTotalCap > 0 ? min(100, round(($zSold / $zTotalCap) * 100)) : 0,
+                'courtesy_enabled' => $zCourtesyEnabled,
+                'courtesy_max_stock' => $zCourtesyMaxStock,
+                'courtesy_sold' => $zCourtesySold,
+                'courtesy_available' => $zCourtesyAvailable,
             ];
         }
 

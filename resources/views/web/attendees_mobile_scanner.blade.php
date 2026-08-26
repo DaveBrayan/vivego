@@ -396,7 +396,15 @@
                                 <small style="color: #94A3B8; font-size: 0.7rem;">📱 {{ $chk->scanned_by ?: 'Móvil Scanner' }}</small>
                             </div>
                         </div>
-                        <span style="color: #00F0FF; font-weight: 800; font-size: 0.75rem; flex-shrink: 0;">{{ $chk->checked_in_at ? $chk->checked_in_at->format('h:i:s A') : '-' }}</span>
+                        <div style="display: flex; align-items: center; gap: 0.45rem; flex-shrink: 0;">
+                            <span style="color: #00F0FF; font-weight: 800; font-size: 0.75rem;">{{ $chk->checked_in_at ? $chk->checked_in_at->format('h:i:s A') : '-' }}</span>
+                            <button type="button" 
+                                    onclick="resetMobileCheckin({{ $chk->id }}, '{{ $chk->ticket_code }}')" 
+                                    title="Anular escaneo"
+                                    style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #EF4444; border-radius: 6px; padding: 0.2rem 0.45rem; font-size: 0.7rem; font-weight: 800; cursor: pointer;">
+                                ✕
+                            </button>
+                        </div>
                     </div>
                 @empty
                     <div id="emptyMobileFeed" style="text-align: center; padding: 1.5rem; color: #64748B; font-size: 0.8rem;">
@@ -468,13 +476,22 @@
                 buyer.textContent = data.ticket?.buyer_name || 'Boleto ya usado previamente';
                 time.textContent = data.ticket?.checked_in_at || 'Previamente';
                 if (hashEl) hashEl.textContent = '🔑 HASH: ' + (data.ticket?.validation_hash || '-');
+            } else if (data.status === 'wrong_event') {
+                playMobileTone('already_used');
+                toast.className = 'result-top-toast result-already-used';
+                icon.innerHTML = '⚠️';
+                title.textContent = 'OTRO EVENTO';
+                zone.textContent = data.ticket?.event_name || 'NO CORRESPONDE';
+                buyer.textContent = data.message || 'Este boleto es de otro evento';
+                time.textContent = '-';
+                if (hashEl) hashEl.textContent = '🔑 ' + (data.ticket?.ticket_code || '-');
             } else {
                 playMobileTone('invalid');
                 toast.className = 'result-top-toast result-invalid';
                 icon.innerHTML = '❌';
                 title.textContent = 'BOLETO INVÁLIDO';
                 zone.textContent = 'NO VÁLIDO';
-                buyer.textContent = 'Código no encontrado en el sistema';
+                buyer.textContent = data.message || 'Código no encontrado en el sistema';
                 time.textContent = '-';
                 if (hashEl) hashEl.textContent = '🔑 HASH: NO ENCONTRADO';
             }
@@ -514,7 +531,15 @@
                         <small style="color: #94A3B8; font-size: 0.7rem;">📱 ${scannedBy}</small>
                     </div>
                 </div>
-                <span style="color: #00F0FF; font-weight: 800; font-size: 0.75rem; flex-shrink: 0;">${t.checked_in_at || ''}</span>
+                <div style="display: flex; align-items: center; gap: 0.45rem; flex-shrink: 0;">
+                    <span style="color: #00F0FF; font-weight: 800; font-size: 0.75rem;">${t.checked_in_at || ''}</span>
+                    <button type="button" 
+                            onclick="resetMobileCheckin(${t.id}, '${t.ticket_code}')" 
+                            title="Anular escaneo"
+                            style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #EF4444; border-radius: 6px; padding: 0.2rem 0.45rem; font-size: 0.7rem; font-weight: 800; cursor: pointer;">
+                        ✕
+                    </button>
+                </div>
             `;
 
             if (container.firstChild) {
@@ -522,6 +547,55 @@
             } else {
                 container.appendChild(item);
             }
+        }
+
+        // Anular escaneo desde el móvil
+        function resetMobileCheckin(ticketId, ticketCode) {
+            Swal.fire({
+                title: '¿Anular Escaneo?',
+                html: `<p style="color: #94A3B8; font-size: 0.85rem;">Se cancelará el ingreso del boleto <b>${ticketCode}</b> y podrá ser escaneado nuevamente.</p>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, Anular',
+                cancelButtonText: 'No',
+                confirmButtonColor: '#EF4444',
+                cancelButtonColor: '#475569',
+                background: '#14141E',
+                color: '#FFFFFF'
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    fetch(`/admin/asistentes/${eventId}/anular-escaneo/${ticketId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken
+                        }
+                    })
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.success) {
+                            const item = document.getElementById(`feedItem_${ticketId}`);
+                            if (item) item.remove();
+                            if (d.metrics) {
+                                document.getElementById('mKpiIssued').textContent = d.metrics.tickets_issued;
+                                document.getElementById('mKpiChecked').textContent = d.metrics.checked_in_count;
+                                document.getElementById('mKpiRate').textContent = `${d.metrics.attendance_rate}%`;
+                            }
+                            Swal.fire({
+                                toast: true,
+                                position: 'top',
+                                icon: 'success',
+                                title: '✓ Escaneo anulado',
+                                showConfirmButton: false,
+                                timer: 1500,
+                                background: '#14141E',
+                                color: '#FFFFFF'
+                            });
+                        }
+                    });
+                }
+            });
         }
 
         function syncMobileRealtimeFeed() {

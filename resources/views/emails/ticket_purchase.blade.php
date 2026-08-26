@@ -188,7 +188,7 @@
                                             <tr>
                                                 <td width="38%" style="font-size: 12px; color: #64748B; font-weight: 700; border-bottom: 1px solid #F1F5F9;">🔗 Enlace de Acceso:</td>
                                                 <td style="font-size: 13px; color: #FF5500; font-weight: 700; border-bottom: 1px solid #F1F5F9;">
-                                                    <a href="{{ route('customer.login') }}" style="color: #FF5500; text-decoration: underline; font-weight: 800;">{{ route('customer.login') }}</a>
+                                                    <a href="{{ route('web.login') }}" style="color: #FF5500; text-decoration: underline; font-weight: 800;">{{ route('web.login') }}</a>
                                                 </td>
                                             </tr>
                                             <tr>

@@ -118,7 +118,7 @@
                             </button>
                         </form>
                     @else
-                        <a href="{{ route('customer.login') }}" class="btn btn-primary btn-sm desktop-only" style="font-weight: 800;">
+                        <a href="{{ route('web.login') }}" class="btn btn-primary btn-sm desktop-only" style="font-weight: 800;">
                             🎟️ Mis Boletos / Iniciar Sesión
                         </a>
                     @endif
@@ -200,7 +200,7 @@
                         </button>
                     </form>
                 @else
-                    <a href="{{ route('customer.login') }}" class="btn btn-primary btn-sm" style="width: 100%; text-align: center;">
+                    <a href="{{ route('web.login') }}" class="btn btn-primary btn-sm" style="width: 100%; text-align: center;">
                         🎟️ Mis Boletos / Iniciar Sesión
                     </a>
                 @endif

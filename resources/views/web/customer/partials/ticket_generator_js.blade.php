@@ -527,12 +527,11 @@
             const ticketNumStr = 'N° ' + String(numSeq).padStart(5, '0');
 
             let hashVal = tItem.validation_hash || sale.validation_hash;
-            if (!hashVal || hashVal.length < 8) {
-                hashVal = 'VG' + Math.random().toString(36).substring(2, 10).toUpperCase();
-                while (hashVal.length < 10) hashVal += 'X';
+            if (!hashVal) {
+                hashVal = 'VG' + String(Math.abs(((sale.receipt_number || 'REC') + '_' + (i + 1)).split('').reduce((a, b) => { a = ((a << 5) - a) + b.charCodeAt(0); return a & a; }, 0))).padStart(8, '0').substring(0, 8).toUpperCase();
             }
 
-            const qrPayload = tItem.qr_payload || sale.qr_payload || `VIVEGO|${sale.receipt_number || 'REC'}|EVT-${sale.event_id || (event.id || 1)}|DNI-${sale.buyer_dni || '00000000'}|TICK-${i + 1}`;
+            const qrPayload = tItem.qr_payload || sale.qr_payload || `VIVEGO|${sale.receipt_number || 'REC'}|EVT-${sale.event_id || (event.id || 1)}|DNI-${sale.buyer_dni || '00000000'}|TICK-${numSeq}|${hashVal}`;
             const qrDataUrl = generateQrBase64(qrPayload);
 
             const unitPriceVal = parseFloat(tItem.price || sale.unit_price || sale.total_amount || 0).toFixed(2);

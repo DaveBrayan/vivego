@@ -118,10 +118,8 @@
                                     <th style="width: 50px;">#</th>
                                     <th>Evento & Modalidad</th>
                                     <th>Fecha & Local</th>
-                                    <th>Boletos Emitidos</th>
                                     <th>Asistencia en Vivo</th>
                                     <th>Por Ingresar</th>
-                                    <th>Estado</th>
                                     <th style="text-align: right;">Punto de Control</th>
                                 </tr>
                             </thead>
@@ -156,12 +154,6 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <div style="font-weight: 900; font-size: 1rem; color: #FFFFFF;">
-                                                🎟️ {{ number_format($evt['tickets_issued']) }}
-                                            </div>
-                                            <small style="color: #94A3B8; font-size: 0.75rem;">boletos en sistema</small>
-                                        </td>
-                                        <td>
                                             <div style="width: 140px;">
                                                 <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 0.85rem; font-weight: 800; margin-bottom: 0.35rem;">
                                                     <span style="color: #FFFFFF; font-weight: 900; letter-spacing: 0.3px;"><strong>{{ $evt['checked_in_count'] }}</strong> / {{ $evt['tickets_issued'] }}</span>
@@ -177,11 +169,6 @@
                                                 ⏳ {{ number_format($evt['pending_count']) }}
                                             </div>
                                             <small style="color: #94A3B8; font-size: 0.75rem;">por ingresar</small>
-                                        </td>
-                                        <td>
-                                            <span class="dash-badge-custom {{ $evt['status_class'] }}">
-                                                @if($evt['status'] === 'Publicado') ✓ @elseif($evt['status'] === 'Agotado') 🚫 @else ⏳ @endif {{ $evt['status'] }}
-                                            </span>
                                         </td>
                                          <td style="text-align: right; white-space: nowrap;">
                                             <button type="button" class="btn btn-secondary btn-sm" onclick="openEventMobileScannerModal({{ $evt['id'] }}, '{{ addslashes($evt['title']) }}')" style="font-weight: 800; padding: 0.6rem 0.95rem; border-radius: 12px; margin-right: 0.4rem; background: rgba(0, 240, 255, 0.1); border-color: rgba(0, 240, 255, 0.3); color: #00F0FF; cursor: pointer;" title="Generar QR o copiar link del scanner para celular">
