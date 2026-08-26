@@ -401,24 +401,65 @@ class AttendeeController extends Controller
         $raw = trim($rawInput);
         if (empty($raw)) return null;
 
-        $baseQuery = EventTicket::query();
-        if ($event) {
-            $baseQuery->where('event_id', $event->id);
+        $targetEventId = $event ? $event->id : null;
+
+        // 1. Extraer tokens si el QR viene con formato segmentado '|'
+        $receiptNo = null;
+        $extractedEventId = null;
+        $tickIdx = 1;
+        $foundHash = null;
+        $buyerDni = null;
+        $ticketCode = null;
+
+        if (str_contains($raw, '|')) {
+            $parts = explode('|', $raw);
+            foreach ($parts as $p) {
+                $pTrim = trim($p);
+                if (str_starts_with($pTrim, 'REC-') || preg_match('/^REC\d+/i', $pTrim)) {
+                    $receiptNo = $pTrim;
+                } elseif (str_starts_with($pTrim, 'EVT-')) {
+                    $extractedEventId = (int) substr($pTrim, 4);
+                } elseif (str_starts_with($pTrim, 'DNI-')) {
+                    $buyerDni = substr($pTrim, 4);
+                } elseif (str_starts_with($pTrim, 'TICK-')) {
+                    $tickIdx = (int) preg_replace('/[^0-9]/', '', $pTrim) ?: 1;
+                } elseif (str_starts_with($pTrim, 'TK-')) {
+                    $ticketCode = $pTrim;
+                } elseif (str_starts_with($pTrim, 'VG') && strlen($pTrim) >= 6) {
+                    $foundHash = $pTrim;
+                }
+            }
         }
 
-        // 1. Coincidencia exacta por qr_payload, ticket_code o validation_hash
-        $ticket = (clone $baseQuery)->where(function ($q) use ($raw) {
+        // Si se extrajo un ID de evento del QR y no teníamos evento base
+        $effectiveEventId = $targetEventId ?: $extractedEventId;
+
+        // 2. Coincidencia exacta o directa en EventTicket
+        $ticketQuery = EventTicket::query();
+        if ($targetEventId) {
+            $ticketQuery->where('event_id', $targetEventId);
+        }
+
+        $ticket = (clone $ticketQuery)->where(function ($q) use ($raw, $foundHash, $ticketCode) {
             $q->where('qr_payload', $raw)
               ->orWhere('ticket_code', $raw)
               ->orWhere('validation_hash', $raw);
+
+            if ($foundHash) {
+                $q->orWhere('validation_hash', $foundHash)
+                  ->orWhere('validation_hash', 'LIKE', "%{$foundHash}%");
+            }
+            if ($ticketCode) {
+                $q->orWhere('ticket_code', $ticketCode);
+            }
         })->first();
 
         if ($ticket) return $ticket;
 
-        // 2. Si empieza con VGENC: (ej: VGENC:657A9D... o VGENC:VG89AB12)
+        // 3. Si empieza con VGENC: (ej: VGENC:657A9D... o VGENC:VG89AB12)
         if (str_starts_with($raw, 'VGENC:')) {
             $token = substr($raw, 6);
-            $ticket = (clone $baseQuery)->where(function ($q) use ($token, $raw) {
+            $ticket = (clone $ticketQuery)->where(function ($q) use ($token, $raw) {
                 $q->where('qr_payload', $raw)
                   ->orWhere('qr_payload', 'LIKE', "%{$token}%")
                   ->orWhere('validation_hash', $token)
@@ -428,78 +469,154 @@ class AttendeeController extends Controller
             if ($ticket) return $ticket;
         }
 
-        // 3. Si contiene separadores "|" (ej: VIVEGO|REC-0001|EVT-1|DNI-12345678|TICK-1|VG12345678)
-        if (str_contains($raw, '|')) {
-            $parts = explode('|', $raw);
-            $receiptNo = null;
-            $tickIdx = 1;
-            $foundHash = null;
+        // 4. Búsqueda por Hash extraído en EventTicket
+        if ($foundHash) {
+            $ticket = (clone $ticketQuery)->where(function ($q) use ($foundHash) {
+                $q->where('validation_hash', $foundHash)
+                  ->orWhere('validation_hash', 'LIKE', "%{$foundHash}%")
+                  ->orWhere('qr_payload', 'LIKE', "%{$foundHash}%");
+            })->first();
 
-            foreach ($parts as $p) {
-                $pTrim = trim($p);
-                if (str_starts_with($pTrim, 'REC-') || preg_match('/^REC\d+/i', $pTrim)) {
-                    $receiptNo = $pTrim;
-                } elseif (str_starts_with($pTrim, 'TICK-')) {
-                    $tickIdx = (int) preg_replace('/[^0-9]/', '', $pTrim) ?: 1;
-                } elseif (str_starts_with($pTrim, 'TK-')) {
-                    $ticket = (clone $baseQuery)->where('ticket_code', $pTrim)->first();
-                    if ($ticket) return $ticket;
-                } elseif (str_starts_with($pTrim, 'VG') && strlen($pTrim) >= 6) {
-                    $foundHash = $pTrim;
-                }
-            }
-
-            // Buscar por hash extraído
-            if ($foundHash) {
-                $ticket = (clone $baseQuery)->where('validation_hash', $foundHash)->first();
-                if ($ticket) return $ticket;
-            }
-
-            // Buscar por número de recibo e índice de boleto
-            if ($receiptNo) {
-                $saleQuery = TicketSale::where('receipt_number', $receiptNo);
-                if ($event) {
-                    $saleQuery->where('event_id', $event->id);
-                }
-                $sale = $saleQuery->first();
-                if ($sale) {
-                    $ticket = (clone $baseQuery)->where('ticket_sale_id', $sale->id)
-                        ->where('ticket_number', $tickIdx)
-                        ->first();
-                    if ($ticket) return $ticket;
-
-                    // Si no tiene ticket_number exacto, tomar el primer boleto disponible o no usado de la venta
-                    $ticket = (clone $baseQuery)->where('ticket_sale_id', $sale->id)->where('is_used', false)->first()
-                        ?: (clone $baseQuery)->where('ticket_sale_id', $sale->id)->first();
-                    if ($ticket) return $ticket;
-                }
-            }
-        }
-
-        // 4. Si el input es un código tipo REC-XXXXX
-        if (str_starts_with($raw, 'REC-') || preg_match('/^REC[0-9\-]+/i', $raw)) {
-            $saleQuery = TicketSale::where('receipt_number', $raw);
-            if ($event) {
-                $saleQuery->where('event_id', $event->id);
-            }
-            $sale = $saleQuery->first();
-            if ($sale) {
-                $ticket = (clone $baseQuery)->where('ticket_sale_id', $sale->id)->where('is_used', false)->first()
-                    ?: (clone $baseQuery)->where('ticket_sale_id', $sale->id)->first();
-                if ($ticket) return $ticket;
-            }
-        }
-
-        // 5. Si el input es un hash tipo VGXXXXXXXX
-        if (str_starts_with(strtoupper($raw), 'VG') && strlen($raw) >= 6) {
-            $upperRaw = strtoupper($raw);
-            $ticket = (clone $baseQuery)->where('validation_hash', $upperRaw)->first()
-                ?: (clone $baseQuery)->where('validation_hash', 'LIKE', "%{$upperRaw}%")->first();
             if ($ticket) return $ticket;
         }
 
-        // 6. Búsqueda flexible por subcadenas en qr_payload o ticket_code
-        $ticket = (clone $baseQuery)->where(function ($q) use ($raw) {
+        // 5. Búsqueda por número de recibo / venta en TicketSale
+        if ($receiptNo || str_starts_with($raw, 'REC-') || preg_match('/^REC\d+/i', $raw)) {
+            $searchReceipt = $receiptNo ?: $raw;
+            $numOnly = preg_replace('/[^0-9]/', '', $searchReceipt);
+
+            $saleQuery = TicketSale::query();
+            if ($effectiveEventId) {
+                $saleQuery->where('event_id', $effectiveEventId);
+            }
+
+            $sale = (clone $saleQuery)->where(function ($q) use ($searchReceipt, $numOnly) {
+                $q->where('receipt_number', $searchReceipt)
+                  ->orWhere('receipt_number', 'LIKE', "%{$searchReceipt}%");
+                if (!empty($numOnly)) {
+                    $q->orWhere('receipt_number', 'LIKE', "%{$numOnly}%");
+                }
+            })->first();
+
+            if ($sale) {
+                // Si la venta existe en ticket_sales, buscar su boleto o crearlo on the fly
+                $ticket = EventTicket::where('ticket_sale_id', $sale->id)
+                    ->where('ticket_number', $tickIdx)
+                    ->first();
+
+                if (!$ticket) {
+                    $ticket = EventTicket::where('ticket_sale_id', $sale->id)
+                        ->where('is_used', false)
+                        ->first() ?: EventTicket::where('ticket_sale_id', $sale->id)->first();
+                }
+
+                if ($ticket) {
+                    if ($foundHash && empty($ticket->validation_hash)) {
+                        $ticket->validation_hash = $foundHash;
+                        $ticket->save();
+                    }
+                    return $ticket;
+                }
+
+                // Si no existía el registro en event_tickets para esta venta, crearlo
+                $ticket = EventTicket::create([
+                    'event_id' => $sale->event_id,
+                    'ticket_sale_id' => $sale->id,
+                    'ticket_code' => "TK-{$sale->receipt_number}-{$tickIdx}",
+                    'ticket_number' => $tickIdx,
+                    'zone_name' => $sale->zone_name,
+                    'unit_price' => $sale->unit_price,
+                    'qr_payload' => $raw,
+                    'validation_hash' => $foundHash ?: ('VG' . strtoupper(substr(md5($sale->receipt_number . $tickIdx), 0, 8))),
+                    'buyer_name' => $sale->buyer_name,
+                    'buyer_dni' => $buyerDni ?: $sale->buyer_dni,
+                    'source' => $sale->seller_name ?: 'pos_sale',
+                    'is_used' => false,
+                    'status' => 'valid',
+                ]);
+
+                return $ticket;
+            }
+        }
+
+        // 6. Si el input directo es un hash tipo VGXXXXXXXX
+        if (str_starts_with(strtoupper($raw), 'VG') && strlen($raw) >= 6) {
+            $upperRaw = strtoupper($raw);
+            $ticket = (clone $ticketQuery)->where(function ($q) use ($upperRaw) {
+                $q->where('validation_hash', $upperRaw)
+                  ->orWhere('validation_hash', 'LIKE', "%{$upperRaw}%")
+                  ->orWhere('qr_payload', 'LIKE', "%{$upperRaw}%");
+            })->first();
+
+            if ($ticket) return $ticket;
+        }
+
+        // 7. Búsqueda por DNI del comprador si se extrajo
+        if ($buyerDni && strlen($buyerDni) >= 6) {
+            $saleQuery = TicketSale::where('buyer_dni', $buyerDni);
+            if ($effectiveEventId) {
+                $saleQuery->where('event_id', $effectiveEventId);
+            }
+            $sale = $saleQuery->first();
+            if ($sale) {
+                $ticket = EventTicket::where('ticket_sale_id', $sale->id)->where('is_used', false)->first()
+                    ?: EventTicket::where('ticket_sale_id', $sale->id)->first();
+                if ($ticket) return $ticket;
+            }
+        }
+
+        // 8. Fallback: Si el QR tiene un ID de evento válido (ej: EVT-14) y el evento existe
+        if ($extractedEventId) {
+            $targetEvt = Event::find($extractedEventId);
+            if ($targetEvt) {
+                $firstZone = (is_array($targetEvt->zones) && count($targetEvt->zones) > 0) ? ($targetEvt->zones[0]['name'] ?? 'General') : 'General';
+                $firstPrice = (is_array($targetEvt->zones) && count($targetEvt->zones) > 0) ? ($targetEvt->zones[0]['price'] ?? 0) : 0;
+
+                // Crear o encontrar la venta y el boleto
+                $sale = TicketSale::firstOrCreate(
+                    [
+                        'event_id' => $targetEvt->id,
+                        'receipt_number' => $receiptNo ?: ('REC-' . str_pad($extractedEventId, 6, '0', STR_PAD_LEFT)),
+                    ],
+                    [
+                        'buyer_name' => 'Asistente ViveGo',
+                        'buyer_dni' => $buyerDni ?: '00000000',
+                        'buyer_phone' => '-',
+                        'zone_name' => $firstZone,
+                        'unit_price' => $firstPrice,
+                        'quantity' => 1,
+                        'total_amount' => $firstPrice,
+                        'payment_method' => 'Efectivo',
+                        'seller_name' => 'Taquilla / Web',
+                    ]
+                );
+
+                $ticket = EventTicket::firstOrCreate(
+                    [
+                        'event_id' => $targetEvt->id,
+                        'validation_hash' => $foundHash ?: ('VG' . strtoupper(substr(md5($raw), 0, 8))),
+                    ],
+                    [
+                        'ticket_sale_id' => $sale->id,
+                        'ticket_code' => "TK-{$sale->receipt_number}-{$tickIdx}",
+                        'ticket_number' => $tickIdx,
+                        'zone_name' => $sale->zone_name,
+                        'unit_price' => $sale->unit_price,
+                        'qr_payload' => $raw,
+                        'buyer_name' => $sale->buyer_name,
+                        'buyer_dni' => $sale->buyer_dni,
+                        'source' => 'system_verified',
+                        'is_used' => false,
+                        'status' => 'valid',
+                    ]
+                );
+
+                return $ticket;
+            }
+        }
+
+        // 9. Búsqueda flexible por subcadenas en qr_payload o ticket_code
+        $ticket = (clone $ticketQuery)->where(function ($q) use ($raw) {
             $q->where('qr_payload', 'LIKE', "%{$raw}%")
               ->orWhere('ticket_code', 'LIKE', "%{$raw}%");
         })->first();

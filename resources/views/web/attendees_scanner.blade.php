@@ -491,12 +491,21 @@
                         background: '#14141E',
                         color: '#FFFFFF'
                     });
+                } else if (body.status === 'wrong_event') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: body.title || '⚠️ Boleto de Otro Evento',
+                        html: `<p style="color: #F59E0B; font-weight: 700; font-size: 0.95rem;">${body.message || 'Este boleto pertenece a otro evento.'}</p>`,
+                        timer: 5000,
+                        background: '#14141E',
+                        color: '#FFFFFF'
+                    });
                 } else {
                     Swal.fire({
                         icon: 'error',
-                        title: '❌ Boleto Inválido',
-                        html: `<p style="color: #EF4444; font-weight: 700;">${body.message || 'El código no corresponde a este evento.'}</p>`,
-                        timer: 4000,
+                        title: body.title || '❌ Boleto Inválido',
+                        html: `<p style="color: #EF4444; font-weight: 700;">${body.message || 'El código no corresponde a ningún boleto emitido.'}</p>`,
+                        timer: 4500,
                         background: '#14141E',
                         color: '#FFFFFF'
                     });
