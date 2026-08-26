@@ -171,11 +171,7 @@
                                             <small style="color: #94A3B8; font-size: 0.75rem;">por ingresar</small>
                                         </td>
                                          <td style="text-align: right; white-space: nowrap;">
-                                            <button type="button" class="btn btn-secondary btn-sm" onclick="openEventMobileScannerModal({{ $evt['id'] }}, '{{ addslashes($evt['title']) }}')" style="font-weight: 800; padding: 0.6rem 0.95rem; border-radius: 12px; margin-right: 0.4rem; background: rgba(0, 240, 255, 0.1); border-color: rgba(0, 240, 255, 0.3); color: #00F0FF; cursor: pointer;" title="Generar QR o copiar link del scanner para celular">
-                                                <span>📱</span>
-                                                <span>Scanner Móvil</span>
-                                            </button>
-                                            <a href="{{ route('web.attendees.scanner', $evt['id']) }}" class="btn btn-primary btn-sm" style="font-weight: 800; text-decoration: none; padding: 0.6rem 1.15rem; display: inline-flex; align-items: center; gap: 0.5rem; border-radius: 12px; background: linear-gradient(135deg, #10B981, #059669); border-color: #10B981; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);">
+                                            <a href="{{ route('web.attendees.scanner', $evt['id']) }}" class="btn btn-primary btn-sm" style="font-weight: 800; text-decoration: none; padding: 0.65rem 1.35rem; display: inline-flex; align-items: center; gap: 0.5rem; border-radius: 12px; background: linear-gradient(135deg, #10B981, #059669); border-color: #10B981; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);">
                                                 <span>📊</span>
                                                 <span>Control en Vivo</span>
                                             </a>
@@ -234,60 +230,6 @@
                 timer: 2500,
                 background: '#14141E',
                 color: '#FFFFFF'
-            });
-        }
-
-        function shareEventScannerWa(id, title) {
-            const url = getEventScannerUrl(id);
-            const msg = `🎟️ *VIVE GO - SCANNER MÓVIL*\n\nHola, aquí tienes el enlace del *Scanner Móvil* para el evento:\n👉 *${title}*\n\n🔗 ${url}\n\n_Abre este enlace en tu smartphone para escanear y validar entradas._`;
-            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
-        }
-
-        function openEventMobileScannerModal(id, title) {
-            const url = getEventScannerUrl(id);
-            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=10&data=${encodeURIComponent(url)}`;
-
-            // Copiar link automáticamente al portapapeles
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(url).catch(() => {});
-            }
-
-            Swal.fire({
-                title: '📱 Terminal de Escaneo Móvil',
-                html: `
-                    <div style="text-align: center; padding: 0.5rem 0;">
-                        <p style="color: #94A3B8; font-size: 0.88rem; margin-bottom: 0.5rem; line-height: 1.4;">
-                            Evento: <strong style="color: #FFFFFF;">${title}</strong>
-                        </p>
-                        <p style="color: #64748B; font-size: 0.8rem; margin-bottom: 1.25rem;">
-                            Apunta la cámara del celular hacia este código QR para abrir el scanner móvil:
-                        </p>
-                        <div style="background: #FFFFFF; padding: 0.85rem; border-radius: 18px; display: inline-block; box-shadow: 0 6px 25px rgba(0,0,0,0.6); margin-bottom: 1.25rem;">
-                            <img src="${qrApiUrl}" alt="QR Móvil" style="width: 220px; height: 220px; display: block; border-radius: 8px;">
-                        </div>
-                        
-                        <div style="background: rgba(255,255,255,0.05); padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid rgba(0,240,255,0.25); word-break: break-all; font-family: monospace; font-size: 0.82rem; color: #00F0FF; margin-bottom: 1.25rem;">
-                            ${url}
-                        </div>
-
-                        <div style="display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap;">
-                            <button type="button" onclick="navigator.clipboard.writeText('${url}'); this.textContent='✓ ¡Link Copiado!'; setTimeout(() => this.textContent='📋 Copiar Enlace', 2500);" style="background: linear-gradient(135deg, #FF5500, #FF7733); color: #FFFFFF; border: none; font-weight: 800; font-size: 0.85rem; padding: 0.65rem 1.15rem; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 12px rgba(255,85,0,0.4);">
-                                📋 Copiar Enlace
-                            </button>
-                            <button type="button" onclick="shareEventScannerWa(${id}, '${title.replace(/'/g, "\\'")}')" style="background: rgba(37, 211, 102, 0.15); color: #25D366; border: 1px solid rgba(37, 211, 102, 0.35); font-weight: 800; font-size: 0.85rem; padding: 0.65rem 1.15rem; border-radius: 10px; cursor: pointer;">
-                                💬 WhatsApp
-                            </button>
-                            <a href="${url}" target="_blank" style="background: rgba(255,255,255,0.08); color: #FFFFFF; border: 1px solid rgba(255,255,255,0.2); font-weight: 800; font-size: 0.85rem; padding: 0.65rem 1.15rem; border-radius: 10px; text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem;">
-                                🚀 Abrir Scanner
-                            </a>
-                        </div>
-                    </div>
-                `,
-                background: '#14141E',
-                color: '#FFFFFF',
-                showConfirmButton: true,
-                confirmButtonText: 'Entendido / Cerrar',
-                confirmButtonColor: '#FF5500'
             });
         }
 

@@ -398,12 +398,6 @@
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.45rem; flex-shrink: 0;">
                             <span style="color: #00F0FF; font-weight: 800; font-size: 0.75rem;">{{ $chk->checked_in_at ? $chk->checked_in_at->format('h:i:s A') : '-' }}</span>
-                            <button type="button" 
-                                    onclick="resetMobileCheckin({{ $chk->id }}, '{{ $chk->ticket_code }}')" 
-                                    title="Anular escaneo"
-                                    style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #EF4444; border-radius: 6px; padding: 0.2rem 0.45rem; font-size: 0.7rem; font-weight: 800; cursor: pointer;">
-                                ✕
-                            </button>
                         </div>
                     </div>
                 @empty
@@ -428,6 +422,16 @@
         let lastFeedId = {{ $recentCheckins->first() ? $recentCheckins->first()->id : 0 }};
         let toastHideTimer = null;
 
+        // Leer parámetro dev / device desde URL (vinculación de scanner)
+        const urlParams = new URLSearchParams(window.location.search);
+        const paramDev = urlParams.get('dev') || urlParams.get('device');
+        if (paramDev) {
+            document.addEventListener('DOMContentLoaded', () => {
+                const devInput = document.getElementById('mobileDeviceName');
+                if (devInput) devInput.value = paramDev;
+            });
+        }
+
         function renderMobileScanResult(data) {
             const toast = document.getElementById('mobileResultToast');
             const icon = document.getElementById('mResultIcon');
@@ -444,65 +448,82 @@
             toast.style.display = 'block';
             toast.style.opacity = '1';
 
-            const currentDev = document.getElementById('mobileDeviceName')?.value || 'Móvil';
-            if (devEl) devEl.textContent = '📱 ' + currentDev;
+            toast.className = 'result-top-toast';
 
             if (data.status === 'granted') {
-                playMobileTone('granted');
-                toast.className = 'result-top-toast result-granted';
-                icon.innerHTML = '✅';
-                title.textContent = '¡ACCESO PERMITIDO!';
-                zone.textContent = data.ticket?.zone_name || 'VÁLIDO';
-                buyer.textContent = data.ticket?.buyer_name || (data.ticket?.ticket_code ? `Boleto #${data.ticket.ticket_code}` : 'Público General');
-                time.textContent = data.ticket?.checked_in_at || 'Ahora';
-                if (hashEl) hashEl.textContent = '🔑 HASH: ' + (data.ticket?.validation_hash || '-');
-
-                if (data.ticket && data.ticket.id > lastFeedId) {
-                    lastFeedId = data.ticket.id;
+                toast.classList.add('result-granted');
+                if (icon) icon.textContent = '✅';
+                if (title) title.textContent = '¡ACCESO PERMITIDO!';
+                if (zone) {
+                    zone.textContent = data.ticket?.zone_name || 'General';
+                    zone.style.display = 'inline-block';
                 }
-                appendMobileFeed(data.ticket);
+                if (buyer) buyer.textContent = data.ticket?.buyer_name || 'Asistente';
+                if (time) time.textContent = data.ticket?.checked_in_at || 'Ahora';
+                if (hashEl) hashEl.textContent = `🔑 HASH: ${data.ticket?.validation_hash || '-'}`;
+                if (devEl) devEl.textContent = `📱 ${data.ticket?.scanned_by || 'Móvil'}`;
 
+                playMobileTone('granted');
+
+                if (data.ticket) appendMobileFeed(data.ticket);
                 if (data.metrics) {
-                    document.getElementById('mKpiIssued').textContent = data.metrics.tickets_issued;
-                    document.getElementById('mKpiChecked').textContent = data.metrics.checked_in_count;
-                    document.getElementById('mKpiRate').textContent = `${data.metrics.attendance_rate}%`;
+                    const issuedEl = document.getElementById('mKpiIssued');
+                    const checkedEl = document.getElementById('mKpiChecked');
+                    const rateEl = document.getElementById('mKpiRate');
+
+                    if (issuedEl) issuedEl.textContent = data.metrics.tickets_issued;
+                    if (checkedEl) checkedEl.textContent = data.metrics.checked_in_count;
+                    if (rateEl) rateEl.textContent = `${data.metrics.attendance_rate}%`;
                 }
             } else if (data.status === 'already_used') {
-                playMobileTone('already_used');
-                toast.className = 'result-top-toast result-already-used';
-                icon.innerHTML = '🚫';
-                title.textContent = 'BOLETO YA REGISTRADO';
-                zone.textContent = 'YA INGRESÓ';
-                buyer.textContent = data.ticket?.buyer_name || 'Boleto ya usado previamente';
-                time.textContent = data.ticket?.checked_in_at || 'Previamente';
-                if (hashEl) hashEl.textContent = '🔑 HASH: ' + (data.ticket?.validation_hash || '-');
+                toast.classList.add('result-already-used');
+                if (icon) icon.textContent = '🚫';
+                if (title) title.textContent = 'BOLETO YA USADO';
+                if (zone) {
+                    zone.textContent = data.ticket?.zone_name || 'General';
+                    zone.style.display = 'inline-block';
+                }
+                if (buyer) buyer.textContent = data.ticket?.buyer_name || 'Asistente';
+                if (time) time.textContent = `Validado: ${data.ticket?.checked_in_at || '-'}`;
+                if (hashEl) hashEl.textContent = `🔑 HASH: ${data.ticket?.validation_hash || '-'}`;
+                if (devEl) devEl.textContent = `📱 ${data.ticket?.scanned_by || 'Móvil'}`;
+
+                playMobileTone('denied');
             } else if (data.status === 'wrong_event') {
-                playMobileTone('already_used');
-                toast.className = 'result-top-toast result-already-used';
-                icon.innerHTML = '⚠️';
-                title.textContent = 'OTRO EVENTO';
-                zone.textContent = data.ticket?.event_name || 'NO CORRESPONDE';
-                buyer.textContent = data.message || 'Este boleto es de otro evento';
-                time.textContent = '-';
-                if (hashEl) hashEl.textContent = '🔑 ' + (data.ticket?.ticket_code || '-');
+                toast.classList.add('result-already-used');
+                if (icon) icon.textContent = '⚠️';
+                if (title) title.textContent = 'OTRO EVENTO';
+                if (zone) {
+                    zone.textContent = 'EVENTO DISTINTO';
+                    zone.style.display = 'inline-block';
+                }
+                if (buyer) buyer.textContent = data.ticket?.event_name || 'Pertenece a otro evento';
+                if (time) time.textContent = 'Boleto No Válido Aquí';
+                if (hashEl) hashEl.textContent = `🔑 COD: ${data.ticket?.ticket_code || '-'}`;
+                if (devEl) devEl.textContent = `📱 ${data.ticket?.buyer_name || 'Móvil'}`;
+
+                playMobileTone('denied');
             } else {
-                playMobileTone('invalid');
-                toast.className = 'result-top-toast result-invalid';
-                icon.innerHTML = '❌';
-                title.textContent = 'BOLETO INVÁLIDO';
-                zone.textContent = 'NO VÁLIDO';
-                buyer.textContent = data.message || 'Código no encontrado en el sistema';
-                time.textContent = '-';
+                toast.classList.add('result-invalid');
+                if (icon) icon.textContent = '❌';
+                if (title) title.textContent = 'BOLETO INVÁLIDO';
+                if (zone) zone.style.display = 'none';
+                if (buyer) buyer.textContent = data.message || 'Código no encontrado en el sistema.';
+                if (time) time.textContent = '-';
                 if (hashEl) hashEl.textContent = '🔑 HASH: NO ENCONTRADO';
+                if (devEl) devEl.textContent = '📱 Móvil';
+
+                playMobileTone('denied');
             }
 
             toastHideTimer = setTimeout(() => {
+                toast.style.transition = 'opacity 0.4s ease';
                 toast.style.opacity = '0';
                 setTimeout(() => {
                     if (toast.style.opacity === '0') {
                         toast.style.display = 'none';
                     }
-                }, 300);
+                }, 400);
             }, 4500);
         }
 
@@ -533,12 +554,6 @@
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.45rem; flex-shrink: 0;">
                     <span style="color: #00F0FF; font-weight: 800; font-size: 0.75rem;">${t.checked_in_at || ''}</span>
-                    <button type="button" 
-                            onclick="resetMobileCheckin(${t.id}, '${t.ticket_code}')" 
-                            title="Anular escaneo"
-                            style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #EF4444; border-radius: 6px; padding: 0.2rem 0.45rem; font-size: 0.7rem; font-weight: 800; cursor: pointer;">
-                        ✕
-                    </button>
                 </div>
             `;
 
@@ -547,55 +562,6 @@
             } else {
                 container.appendChild(item);
             }
-        }
-
-        // Anular escaneo desde el móvil
-        function resetMobileCheckin(ticketId, ticketCode) {
-            Swal.fire({
-                title: '¿Anular Escaneo?',
-                html: `<p style="color: #94A3B8; font-size: 0.85rem;">Se cancelará el ingreso del boleto <b>${ticketCode}</b> y podrá ser escaneado nuevamente.</p>`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Sí, Anular',
-                cancelButtonText: 'No',
-                confirmButtonColor: '#EF4444',
-                cancelButtonColor: '#475569',
-                background: '#14141E',
-                color: '#FFFFFF'
-            }).then((res) => {
-                if (res.isConfirmed) {
-                    fetch(`/scanner/${eventId}/anular-escaneo/${ticketId}`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': csrfToken
-                        }
-                    })
-                    .then(r => r.json())
-                    .then(d => {
-                        if (d.success) {
-                            const item = document.getElementById(`feedItem_${ticketId}`);
-                            if (item) item.remove();
-                            if (d.metrics) {
-                                document.getElementById('mKpiIssued').textContent = d.metrics.tickets_issued;
-                                document.getElementById('mKpiChecked').textContent = d.metrics.checked_in_count;
-                                document.getElementById('mKpiRate').textContent = `${d.metrics.attendance_rate}%`;
-                            }
-                            Swal.fire({
-                                toast: true,
-                                position: 'top',
-                                icon: 'success',
-                                title: '✓ Escaneo anulado',
-                                showConfirmButton: false,
-                                timer: 1500,
-                                background: '#14141E',
-                                color: '#FFFFFF'
-                            });
-                        }
-                    });
-                }
-            });
         }
 
         function syncMobileRealtimeFeed() {
@@ -622,6 +588,30 @@
                                 lastFeedId = chk.id;
                             }
                             appendMobileFeed(chk);
+                        });
+                    }
+
+                    // Sincronizar anulaciones: Si un boleto fue anulado en admin, removerlo del feed móvil
+                    if (data.active_checkin_ids && Array.isArray(data.active_checkin_ids)) {
+                        const activeSet = new Set(data.active_checkin_ids.map(Number));
+                        const feedItems = document.querySelectorAll('#mobileRecentFeed .feed-mini-item');
+                        feedItems.forEach(el => {
+                            const rawId = el.id.replace('feedItem_', '');
+                            if (rawId && !activeSet.has(Number(rawId))) {
+                                el.style.transition = 'all 0.35s ease';
+                                el.style.opacity = '0';
+                                el.style.transform = 'translateX(-30px)';
+                                setTimeout(() => {
+                                    el.remove();
+                                    const remaining = document.querySelectorAll('#mobileRecentFeed .feed-mini-item');
+                                    if (remaining.length === 0) {
+                                        const feedCont = document.getElementById('mobileRecentFeed');
+                                        if (feedCont && !document.getElementById('emptyMobileFeed')) {
+                                            feedCont.innerHTML = '<div id="emptyMobileFeed" style="text-align: center; padding: 1.5rem; color: #64748B; font-size: 0.8rem;">Sin ingresos recientes todavía.</div>';
+                                        }
+                                    }
+                                }, 350);
+                            }
                         });
                     }
                 }

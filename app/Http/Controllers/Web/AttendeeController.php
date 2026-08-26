@@ -380,9 +380,15 @@ class AttendeeController extends Controller
             ];
         }
 
+        $activeCheckinIds = EventTicket::where('event_id', $event->id)
+            ->where('is_used', true)
+            ->pluck('id')
+            ->toArray();
+
         return response()->json([
             'success' => true,
             'new_checkins' => $newCheckins,
+            'active_checkin_ids' => $activeCheckinIds,
             'metrics' => [
                 'tickets_issued' => $ticketsIssued,
                 'checked_in_count' => $checkedInCount,

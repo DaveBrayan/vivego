@@ -132,7 +132,11 @@
                             📍 {{ $event->venue_name ?? 'Local Principal' }} &nbsp;|&nbsp; 🗓️ {{ $event->event_date }} {{ $event->event_time }}
                         </p>
                     </div>
-                    <div style="display: flex; gap: 0.75rem; align-items: center;">
+                    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-sm" onclick="openScannerDevicesModal()" style="background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; font-weight: 900; padding: 0.75rem 1.35rem; font-size: 0.9rem; border: none; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(0, 240, 255, 0.35); cursor: pointer; transition: all 0.2s ease;">
+                            <span>📱</span>
+                            <span>+ Agregar Scanner</span>
+                        </button>
                         <a href="{{ route('web.attendees') }}" class="btn" style="background: rgba(255, 85, 0, 0.18); border: 1.5px solid #FF5500; color: #FFFFFF; font-weight: 800; padding: 0.75rem 1.4rem; font-size: 0.9rem; text-decoration: none; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(255, 85, 0, 0.25); transition: all 0.2s ease;">
                             <span>⬅️</span>
                             <span>Volver a Asistentes</span>
@@ -226,10 +230,14 @@
                                 <p class="card-header-subtitle">Feed de entradas validadas con hora exacta y punto de control.</p>
                             </div>
                         </div>
-                        <div>
+                        <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
                             <button type="button" class="btn btn-secondary btn-sm" id="btnManualRefresh" onclick="manualRefreshFeed()" style="font-weight: 800; font-size: 0.85rem; padding: 0.55rem 1.1rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer;">
                                 <span id="refreshIcon">🔄</span>
                                 <span>Actualizar Asistencias</span>
+                            </button>
+                            <button type="button" class="btn btn-sm" onclick="openScannerDevicesModal()" style="background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; font-weight: 900; font-size: 0.85rem; padding: 0.55rem 1.25rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.45rem; border: none; box-shadow: 0 4px 15px rgba(0, 240, 255, 0.35); cursor: pointer; transition: all 0.2s ease;">
+                                <span>📱</span>
+                                <span>+ Agregar Scanner</span>
                             </button>
                         </div>
                     </div>
@@ -316,9 +324,131 @@
             </div>
         </main>
     </div>
+
+    <!-- MODAL DE VINCULACIÓN DE SCANNERS & DISPOSITIVOS MÓVILES (2 COLUMNAS) -->
+    <div id="scannerDevicesModal" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(5, 5, 12, 0.88); backdrop-filter: blur(10px); justify-content: center; align-items: center; padding: 1.25rem;">
+        <div style="background: #0F0F1A; border: 1.5px solid rgba(0, 240, 255, 0.35); border-radius: 24px; width: 100%; max-width: 980px; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 70px rgba(0,0,0,0.9), 0 0 45px rgba(0,240,255,0.15); animation: modalPop 0.25s ease;">
+            
+            <!-- Modal Header -->
+            <div style="padding: 1.25rem 1.75rem; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02);">
+                <div style="display: flex; align-items: center; gap: 0.85rem;">
+                    <div style="width: 46px; height: 46px; border-radius: 14px; background: rgba(0, 240, 255, 0.12); border: 1px solid rgba(0, 240, 255, 0.35); display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+                        📱
+                    </div>
+                    <div>
+                        <h3 style="font-size: 1.2rem; font-weight: 900; color: #FFFFFF; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>Vincular Terminales & Scanners Móviles</span>
+                            <span style="font-size: 0.72rem; padding: 0.15rem 0.6rem; border-radius: 20px; background: rgba(16,185,129,0.15); color: #10B981; border: 1px solid rgba(16,185,129,0.3); font-weight: 800;">LIVE</span>
+                        </h3>
+                        <p style="font-size: 0.82rem; color: #94A3B8; margin: 0.2rem 0 0 0;">Genera enlaces y códigos QR individuales y hasheados para cada celular o puerta de acceso.</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeScannerDevicesModal()" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #94A3B8; font-size: 1.1rem; width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease;">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Modal Body (2 Columns) -->
+            <div style="padding: 1.5rem 1.75rem; overflow-y: auto; display: grid; grid-template-columns: 1.1fr 1.15fr; gap: 1.5rem; align-items: stretch;">
+                
+                <!-- COLUMNA 1: DISPOSITIVOS & AGREGAR NUEVO -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem;">
+                    
+                    <!-- Formulario Agregar Dispositivo -->
+                    <div>
+                        <label style="font-size: 0.8rem; font-weight: 800; color: #FFFFFF; text-transform: uppercase; letter-spacing: 0.4px; display: block; margin-bottom: 0.45rem;">
+                            ➕ Agregar Nuevo Dispositivo / Puerta
+                        </label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="text" id="newDeviceInputName" placeholder="Ej: Puerta VIP, Móvil 2, Control Norte..." style="flex: 1; background: #14141E; border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 0.7rem 0.9rem; color: #FFFFFF; font-size: 0.88rem; font-weight: 700; outline: none;" onkeydown="if(event.key==='Enter') addNewScannerDevice();">
+                            <button type="button" onclick="addNewScannerDevice()" style="background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; border: none; font-weight: 900; font-size: 0.85rem; padding: 0.7rem 1.1rem; border-radius: 12px; cursor: pointer; white-space: nowrap; box-shadow: 0 4px 14px rgba(0,240,255,0.35); transition: all 0.2s ease;">
+                                + Agregar
+                            </button>
+                        </div>
+                        <small style="color: #64748B; font-size: 0.73rem; margin-top: 0.35rem; display: block;">
+                            Cada dispositivo tendrá un código QR único y registrará el nombre exacto de la puerta en las asistencias.
+                        </small>
+                    </div>
+
+                    <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 0;">
+
+                    <!-- Listado de Dispositivos Registrados -->
+                    <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                            <span style="font-size: 0.78rem; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.4px;">
+                                Terminales Activos (<span id="devicesCountBadge">0</span>)
+                            </span>
+                            <span style="font-size: 0.72rem; color: #00F0FF; font-weight: 700;">● Click para seleccionar</span>
+                        </div>
+
+                        <div id="devicesListContainer" style="display: flex; flex-direction: column; gap: 0.6rem; max-height: 280px; overflow-y: auto; padding-right: 0.3rem;">
+                            <!-- Rendered via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- COLUMNA 2: VISUALIZADOR DE QR & ENLACE HASHED -->
+                <div style="background: rgba(0, 240, 255, 0.03); border: 1.5px solid rgba(0, 240, 255, 0.25); border-radius: 20px; padding: 1.35rem; display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: space-between;">
+                    
+                    <div style="width: 100%; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.85rem;">
+                        <div style="text-align: left;">
+                            <span style="font-size: 0.7rem; font-weight: 800; color: #00F0FF; text-transform: uppercase; letter-spacing: 0.5px; display: block;">Terminal Seleccionado</span>
+                            <strong id="activeDeviceTitle" style="font-size: 1.05rem; color: #FFFFFF; font-weight: 900;">Móvil 1 - Puerta Principal</strong>
+                        </div>
+                        <span id="activeDeviceHashBadge" style="background: rgba(0,240,255,0.12); border: 1px solid rgba(0,240,255,0.3); color: #00F0FF; font-family: monospace; font-size: 0.75rem; font-weight: 800; padding: 0.25rem 0.6rem; border-radius: 8px;">
+                            HASH: -
+                        </span>
+                    </div>
+
+                    <!-- Tarjeta Blanca con QR de Alta Definición -->
+                    <div style="background: #FFFFFF; padding: 0.85rem; border-radius: 20px; display: inline-block; box-shadow: 0 12px 35px rgba(0,0,0,0.6); margin-bottom: 1rem; position: relative;">
+                        <img id="activeDeviceQrImg" src="" alt="QR Scanner" style="width: 180px; height: 180px; display: block; border-radius: 8px;">
+                    </div>
+
+                    <!-- Caja con URL Hashed del Scanner -->
+                    <div style="width: 100%; margin-bottom: 1rem;">
+                        <input type="text" id="activeDeviceUrlInput" readonly onclick="this.select(); copyActiveDeviceUrl(null);" title="Click para copiar" style="width: 100%; background: #14141E; border: 1px solid rgba(0,240,255,0.3); border-radius: 12px; padding: 0.7rem 0.9rem; color: #00F0FF; font-family: monospace; font-size: 0.76rem; text-align: center; outline: none; cursor: pointer;">
+                    </div>
+
+                    <!-- Botones de Acción para Compartir -->
+                    <div style="width: 100%; display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+                        <button type="button" onclick="copyActiveDeviceUrl(this)" style="flex: 1; min-width: 130px; background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; border: none; font-weight: 900; font-size: 0.82rem; padding: 0.65rem 0.9rem; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(0,240,255,0.35);">
+                            <span>📋</span>
+                            <span class="btn-copy-txt">Copiar Enlace</span>
+                        </button>
+                        <button type="button" onclick="shareActiveDeviceWa()" style="flex: 1; min-width: 130px; background: rgba(37, 211, 102, 0.15); color: #25D366; border: 1px solid rgba(37, 211, 102, 0.35); font-weight: 800; font-size: 0.82rem; padding: 0.65rem 0.9rem; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                            <span>💬</span>
+                            <span>WhatsApp</span>
+                        </button>
+                        <a id="activeDeviceDirectLink" href="#" target="_blank" style="background: rgba(255,255,255,0.06); color: #FFFFFF; border: 1px solid rgba(255,255,255,0.18); font-weight: 800; font-size: 0.82rem; padding: 0.65rem 0.9rem; border-radius: 10px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                            <span>🚀</span>
+                            <span>Probar</span>
+                        </a>
+                    </div>
+
+                    <div style="margin-top: 0.85rem; padding: 0.6rem 0.85rem; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px dashed rgba(255,255,255,0.12); width: 100%;">
+                        <p style="margin: 0; font-size: 0.72rem; color: #94A3B8; line-height: 1.35;">
+                            📸 <strong>Instrucciones:</strong> Apunta la cámara del celular a este código QR para abrir el scanner. El dispositivo se conectará identificado automáticamente como <strong style="color: #FFFFFF;" id="activeDeviceInstructionName">-</strong>.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div style="padding: 1rem 1.75rem; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.01);">
+                <span style="font-size: 0.75rem; color: #64748B;">
+                    🔒 Los enlaces cuentan con token de seguridad para operar sin inicio de sesión en puertas de acceso.
+                </span>
+                <button type="button" onclick="closeScannerDevicesModal()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #FFFFFF; font-weight: 800; font-size: 0.85rem; padding: 0.6rem 1.4rem; border-radius: 10px; cursor: pointer;">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         const eventId = {{ $event->id }};
         const eventTitle = "{{ addslashes($event->title) }}";
@@ -327,24 +457,243 @@
 
         let isProcessingScan = false;
 
-        // Obtener la URL absoluta del scanner móvil según el dominio/IP actual
-        function getMobileScannerUrl() {
-            return `${window.location.origin}/scanner/${eventId}`;
+        /* ========================================================
+           SISTEMA DE GESTIÓN Y VINCULACIÓN DE SCANNERS / DISPOSITIVOS
+           ======================================================== */
+        const STORAGE_KEY = `vivego_scanner_devices_evt_${eventId}`;
+        let scannerDevices = [];
+        let activeDeviceId = null;
+
+        function loadScannerDevices() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    scannerDevices = JSON.parse(saved);
+                }
+            } catch (e) {
+                scannerDevices = [];
+            }
+
+            if (!Array.isArray(scannerDevices) || scannerDevices.length === 0) {
+                // Dispositivo por defecto
+                const defHash = generateDeviceHash();
+                scannerDevices = [
+                    {
+                        id: 'dev_' + Date.now(),
+                        name: 'Móvil 1 - Puerta Principal',
+                        hash: defHash,
+                        token: 'VGTOK_' + Math.random().toString(36).substring(2, 10).toUpperCase(),
+                        createdAt: new Date().toLocaleDateString()
+                    }
+                ];
+                saveScannerDevices();
+            }
+
+            if (!activeDeviceId || !scannerDevices.find(d => d.id === activeDeviceId)) {
+                activeDeviceId = scannerDevices[0].id;
+            }
         }
 
-        // Copiar enlace directo del scanner móvil al portapapeles
-        function copyMobileScannerLink() {
-            const url = getMobileScannerUrl();
+        function saveScannerDevices() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(scannerDevices));
+        }
+
+        function generateDeviceHash() {
+            const chars = '0123456789ABCDEF';
+            let res = 'VGDEV-';
+            for (let i = 0; i < 6; i++) {
+                res += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return res;
+        }
+
+        function getDeviceScannerUrl(device) {
+            const origin = window.location.origin;
+            const devName = encodeURIComponent(device.name);
+            const devToken = encodeURIComponent(device.token || device.hash);
+            return `${origin}/scanner/${eventId}?dev=${devName}&token=${devToken}`;
+        }
+
+        function openScannerDevicesModal() {
+            loadScannerDevices();
+            renderScannerDevicesList();
+            selectScannerDevice(activeDeviceId);
+
+            const modal = document.getElementById('scannerDevicesModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                setTimeout(() => {
+                    const input = document.getElementById('newDeviceInputName');
+                    if (input) input.focus();
+                }, 100);
+            }
+        }
+
+        function closeScannerDevicesModal() {
+            const modal = document.getElementById('scannerDevicesModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function renderScannerDevicesList() {
+            const container = document.getElementById('devicesListContainer');
+            const countBadge = document.getElementById('devicesCountBadge');
+            if (!container) return;
+
+            if (countBadge) countBadge.textContent = scannerDevices.length;
+
+            container.innerHTML = '';
+            scannerDevices.forEach((dev, index) => {
+                const isActive = dev.id === activeDeviceId;
+                const card = document.createElement('div');
+                card.style.cssText = `
+                    background: ${isActive ? 'rgba(0, 240, 255, 0.12)' : 'rgba(255, 255, 255, 0.03)'};
+                    border: 1.5px solid ${isActive ? '#00F0FF' : 'rgba(255, 255, 255, 0.09)'};
+                    border-radius: 14px;
+                    padding: 0.75rem 0.95rem;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    box-shadow: ${isActive ? '0 0 18px rgba(0, 240, 255, 0.25)' : 'none'};
+                `;
+
+                card.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0;">
+                        <span style="font-size: 1.25rem;">📱</span>
+                        <div style="min-width: 0;">
+                            <strong style="font-size: 0.88rem; color: #FFFFFF; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                ${dev.name}
+                            </strong>
+                            <span style="font-family: monospace; font-size: 0.72rem; color: ${isActive ? '#00F0FF' : '#94A3B8'}; font-weight: 700;">
+                                ${dev.hash || 'VGDEV'}
+                            </span>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                        ${isActive ? '<span style="font-size: 0.7rem; font-weight: 900; background: #00F0FF; color: #050B14; padding: 0.15rem 0.45rem; border-radius: 6px;">ACTIVO</span>' : ''}
+                        ${scannerDevices.length > 1 ? `
+                            <button type="button" onclick="event.stopPropagation(); deleteScannerDevice('${dev.id}');" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #EF4444; border-radius: 8px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.8rem;" title="Eliminar dispositivo">
+                                🗑️
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+
+                card.onclick = () => selectScannerDevice(dev.id);
+                container.appendChild(card);
+            });
+        }
+
+        function addNewScannerDevice() {
+            const input = document.getElementById('newDeviceInputName');
+            let name = input ? input.value.trim() : '';
+
+            if (!name) {
+                name = `Móvil ${scannerDevices.length + 1} - Puerta ${scannerDevices.length + 1}`;
+            }
+
+            const newDev = {
+                id: 'dev_' + Date.now(),
+                name: name,
+                hash: generateDeviceHash(),
+                token: 'VGTOK_' + Math.random().toString(36).substring(2, 10).toUpperCase(),
+                createdAt: new Date().toLocaleDateString()
+            };
+
+            scannerDevices.push(newDev);
+            saveScannerDevices();
+
+            if (input) input.value = '';
+
+            activeDeviceId = newDev.id;
+            renderScannerDevicesList();
+            selectScannerDevice(newDev.id);
+
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: `✓ Dispositivo "${name}" creado`,
+                showConfirmButton: false,
+                timer: 2000,
+                background: '#14141E',
+                color: '#FFFFFF'
+            });
+        }
+
+        function selectScannerDevice(id) {
+            activeDeviceId = id;
+            const dev = scannerDevices.find(d => d.id === id) || scannerDevices[0];
+            if (!dev) return;
+
+            renderScannerDevicesList();
+
+            const url = getDeviceScannerUrl(dev);
+            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=8&data=${encodeURIComponent(url)}`;
+
+            const titleEl = document.getElementById('activeDeviceTitle');
+            const hashBadge = document.getElementById('activeDeviceHashBadge');
+            const qrImg = document.getElementById('activeDeviceQrImg');
+            const urlInput = document.getElementById('activeDeviceUrlInput');
+            const directLink = document.getElementById('activeDeviceDirectLink');
+            const instName = document.getElementById('activeDeviceInstructionName');
+
+            if (titleEl) titleEl.textContent = dev.name;
+            if (hashBadge) hashBadge.textContent = `HASH: ${dev.hash || 'VGDEV'}`;
+            if (qrImg) qrImg.src = qrApiUrl;
+            if (urlInput) urlInput.value = url;
+            if (directLink) directLink.href = url;
+            if (instName) instName.textContent = dev.name;
+        }
+
+        function deleteScannerDevice(id) {
+            if (scannerDevices.length <= 1) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'warning',
+                    title: 'Debe haber al menos 1 dispositivo vinculado',
+                    showConfirmButton: false,
+                    timer: 2000,
+                    background: '#14141E',
+                    color: '#FFFFFF'
+                });
+                return;
+            }
+
+            scannerDevices = scannerDevices.filter(d => d.id !== id);
+            saveScannerDevices();
+
+            if (activeDeviceId === id) {
+                activeDeviceId = scannerDevices[0].id;
+            }
+
+            renderScannerDevicesList();
+            selectScannerDevice(activeDeviceId);
+        }
+
+        function copyActiveDeviceUrl(btn) {
+            const dev = scannerDevices.find(d => d.id === activeDeviceId) || scannerDevices[0];
+            if (!dev) return;
+
+            const url = getDeviceScannerUrl(dev);
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(url).then(() => {
+                    if (btn) {
+                        const txt = btn.querySelector('.btn-copy-txt');
+                        if (txt) {
+                            txt.textContent = '✓ ¡Copiado!';
+                            setTimeout(() => { txt.textContent = 'Copiar Enlace'; }, 2000);
+                        }
+                    }
                     Swal.fire({
                         toast: true,
                         position: 'top-end',
                         icon: 'success',
-                        title: '📋 ¡Enlace del Scanner Copiado!',
-                        text: 'Pégalo o compártelo con el personal de puerta.',
+                        title: `📋 Enlace de "${dev.name}" copiado`,
                         showConfirmButton: false,
-                        timer: 3000,
+                        timer: 2000,
                         background: '#14141E',
                         color: '#FFFFFF'
                     });
@@ -352,6 +701,15 @@
             } else {
                 fallbackCopy(url);
             }
+        }
+
+        function shareActiveDeviceWa() {
+            const dev = scannerDevices.find(d => d.id === activeDeviceId) || scannerDevices[0];
+            if (!dev) return;
+
+            const url = getDeviceScannerUrl(dev);
+            const msg = `🎟️ *VIVE GO - TERMINAL DE CONTROL DE ACCESO*\n\nHola, aquí tienes el enlace del *Scanner Móvil* para el evento:\n👉 *${eventTitle}*\n📍 *Punto de Control:* ${dev.name}\n🔑 *Hash Dispositivo:* ${dev.hash}\n\n🔗 ${url}\n\n_Abre este enlace desde la cámara o navegador de tu celular para validar entradas._`;
+            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
         function fallbackCopy(text) {
@@ -367,65 +725,9 @@
                 icon: 'success',
                 title: '📋 ¡Enlace Copiado!',
                 showConfirmButton: false,
-                timer: 2500,
+                timer: 2000,
                 background: '#14141E',
                 color: '#FFFFFF'
-            });
-        }
-
-        // Compartir enlace del scanner por WhatsApp
-        function shareViaWhatsapp() {
-            const url = getMobileScannerUrl();
-            const message = `🎟️ *VIVE GO - TERMINAL DE CONTROL DE ACCESO*\n\nHola, aquí tienes el enlace del *Scanner Móvil* para el evento:\n👉 *${eventTitle}*\n\n🔗 ${url}\n\n_Abre este enlace desde tu celular para escanear las entradas._`;
-            const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
-            window.open(waUrl, '_blank');
-        }
-
-        // Abrir Modal con QR y Opciones de Compartir para Celulares
-        function openMobileScannerModal() {
-            const url = getMobileScannerUrl();
-            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=10&data=${encodeURIComponent(url)}`;
-
-            // Copiar link automáticamente al portapapeles
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(url).catch(() => {});
-            }
-
-            Swal.fire({
-                title: '📱 Terminal de Escaneo Móvil',
-                html: `
-                    <div style="text-align: center; padding: 0.5rem 0;">
-                        <p style="color: #94A3B8; font-size: 0.88rem; margin-bottom: 1.25rem; line-height: 1.4;">
-                            Apunta la cámara de tu smartphone hacia este código QR para abrir el <strong>Scanner Móvil</strong> sin necesidad de instalar apps:
-                        </p>
-                        <div style="background: #FFFFFF; padding: 0.85rem; border-radius: 18px; display: inline-block; box-shadow: 0 6px 25px rgba(0,0,0,0.6); margin-bottom: 1.25rem;">
-                            <img src="${qrApiUrl}" alt="QR Móvil" style="width: 220px; height: 220px; display: block; border-radius: 8px;">
-                        </div>
-                        
-                        <!-- Caja de enlace -->
-                        <div style="background: rgba(255,255,255,0.05); padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid rgba(0,240,255,0.25); word-break: break-all; font-family: monospace; font-size: 0.82rem; color: #00F0FF; margin-bottom: 1.25rem;">
-                            ${url}
-                        </div>
-
-                        <!-- Botones de Acción -->
-                        <div style="display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap;">
-                            <button type="button" onclick="navigator.clipboard.writeText('${url}'); this.textContent='✓ ¡Link Copiado!'; setTimeout(() => this.textContent='📋 Copiar Enlace', 2500);" style="background: linear-gradient(135deg, #FF5500, #FF7733); color: #FFFFFF; border: none; font-weight: 800; font-size: 0.85rem; padding: 0.65rem 1.15rem; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 12px rgba(255,85,0,0.4);">
-                                📋 Copiar Enlace
-                            </button>
-                            <button type="button" onclick="shareViaWhatsapp()" style="background: rgba(37, 211, 102, 0.15); color: #25D366; border: 1px solid rgba(37, 211, 102, 0.35); font-weight: 800; font-size: 0.85rem; padding: 0.65rem 1.15rem; border-radius: 10px; cursor: pointer;">
-                                💬 WhatsApp
-                            </button>
-                            <a href="${url}" target="_blank" style="background: rgba(255,255,255,0.08); color: #FFFFFF; border: 1px solid rgba(255,255,255,0.2); font-weight: 800; font-size: 0.85rem; padding: 0.65rem 1.15rem; border-radius: 10px; text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem;">
-                                🚀 Abrir Scanner
-                            </a>
-                        </div>
-                    </div>
-                `,
-                background: '#14141E',
-                color: '#FFFFFF',
-                showConfirmButton: true,
-                confirmButtonText: 'Entendido / Cerrar',
-                confirmButtonColor: '#FF5500'
             });
         }
 
@@ -722,6 +1024,18 @@
                                 appendCheckinRow(t);
                             } else if (isManual) {
                                 appendCheckinRow(t);
+                            }
+                        });
+                    }
+
+                    // Sincronizar filas removidas / anuladas
+                    if (data.active_checkin_ids && Array.isArray(data.active_checkin_ids)) {
+                        const activeSet = new Set(data.active_checkin_ids.map(Number));
+                        const rows = document.querySelectorAll('#checkinsTableBody .checkin-row-item');
+                        rows.forEach(r => {
+                            const rawId = r.id.replace('checkinRow_', '');
+                            if (rawId && !activeSet.has(Number(rawId))) {
+                                r.remove();
                             }
                         });
                     }
