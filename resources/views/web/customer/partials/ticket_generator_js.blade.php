@@ -479,16 +479,23 @@
         }
         const rawItems = (ticketsDataParsed && ticketsDataParsed.items) ? ticketsDataParsed.items : (Array.isArray(ticketsDataParsed) ? ticketsDataParsed : []);
 
+        const cleanZoneNameJs = (name) => {
+            if (!name) return 'GENERAL';
+            return String(name).replace(/^(?:Mejora|Upgrade):\s*(?:.*?[➔->]\s*)?/i, '').trim() || name;
+        };
+
         let ticketsList = [];
         if (rawItems.length > 0) {
             rawItems.forEach((it, idx) => {
                 const qty = parseInt(it.quantity || 1, 10);
+                const zoneClean = cleanZoneNameJs(it.zone_name || it.name || sale.zone_name);
+                const regularPrice = it.regular_price || it.price || sale.unit_price;
                 for (let q = 0; q < qty; q++) {
                     ticketsList.push({
                         ticket_code: `TK-${sale.receipt_number || '00000'}-${ticketsList.length + 1}`,
                         ticket_number: ticketsList.length + 1,
-                        zone: it.name || sale.zone_name,
-                        price: it.price || sale.unit_price,
+                        zone: zoneClean,
+                        price: regularPrice,
                         validation_hash: null,
                         qr_payload: null
                     });
@@ -496,11 +503,12 @@
             });
         } else {
             const qty = parseInt(sale.quantity || 1, 10);
+            const zoneClean = cleanZoneNameJs(sale.zone_name);
             for (let q = 0; q < qty; q++) {
                 ticketsList.push({
                     ticket_code: `TK-${sale.receipt_number || '00000'}-${q + 1}`,
                     ticket_number: q + 1,
-                    zone: sale.zone_name,
+                    zone: zoneClean,
                     price: sale.unit_price,
                     validation_hash: null,
                     qr_payload: null
@@ -542,7 +550,7 @@
                 city: eventAddress,
                 date: eventDate,
                 time: eventTime,
-                zone: tItem.zone || sale.zone_name || 'GENERAL',
+                zone: cleanZoneNameJs(tItem.zone || sale.zone_name),
                 price: 'S/ ' + unitPriceVal,
                 buyer_name: sale.buyer_name || 'CLIENTE VARIOS',
                 buyer_dni: sale.buyer_dni || '00000000',

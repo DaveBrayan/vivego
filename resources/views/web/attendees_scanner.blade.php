@@ -784,6 +784,22 @@
 
                     if (body.ticket) appendCheckinRow(body.ticket);
                     if (body.metrics) updateKpis(body.metrics);
+                } else if (body.status === 'upgraded_void') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: '🚫 Boleto Anulado por Mejora',
+                        html: `
+                            <div style="font-size: 0.95rem; margin-top: 0.5rem; text-align: left; background: rgba(239, 68, 68, 0.1); padding: 0.85rem; border-radius: 10px; border: 1px solid rgba(239, 68, 68, 0.3);">
+                                <p style="color: #EF4444; font-weight: 800; margin-bottom: 0.3rem;">⚠️ Este boleto fue ANULADO porque el usuario realizó un Upgrade.</p>
+                                <p style="color: #FFFFFF; font-size: 0.85rem; margin-bottom: 0.2rem;">Zona anterior: <strong>${body.ticket?.zone_name || '-'}</strong></p>
+                                <p style="color: #34D399; font-size: 0.85rem; font-weight: 800;">Nueva zona asignada: <strong>${body.ticket?.new_zone || 'Zona Superior'}</strong></p>
+                                <p style="color: #94A3B8; font-size: 0.8rem; margin-top: 0.4rem;">Titular: ${body.ticket?.buyer_name || 'Asistente'}</p>
+                            </div>
+                        `,
+                        timer: 6000,
+                        background: '#14141E',
+                        color: '#FFFFFF'
+                    });
                 } else if (body.status === 'already_used') {
                     Swal.fire({
                         icon: 'warning',

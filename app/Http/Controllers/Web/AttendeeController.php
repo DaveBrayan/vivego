@@ -29,50 +29,44 @@ class AttendeeController extends Controller
         foreach ($dbEvents as $ev) {
             $zones = is_array($ev->zones) ? $ev->zones : [];
             $totalCapacity = (int) array_sum(array_column($zones, 'capacity'));
-            $ticketsSold = $ev->sales ? (int) $ev->sales->sum('quantity') : (int) TicketSale::where('event_id', $ev->id)->sum('quantity');
+            $ticketsSold = (int) TicketSale::where('event_id', $ev->id)->where('status', '!=', 'upgraded')->where('status', '!=', 'cancelled')->sum('quantity');
 
-            // Total boletos registrados en el sistema (PDFs + Ventas)
-            $ticketsIssued = EventTicket::where('event_id', $ev->id)->count();
+            // Total boletos registrados en el sistema (excluyendo boletos anulados por upgrade)
+            $ticketsIssued = EventTicket::where('event_id', $ev->id)->where('status', '!=', 'upgraded')->where('status', '!=', 'cancelled')->count();
             if ($ticketsIssued === 0) {
                 $ticketsIssued = max($ticketsSold, $totalCapacity);
             }
 
             // Total validados / ingresados
-            $checkedInCount = EventTicket::where('event_id', $ev->id)->where('is_used', true)->count();
+            $checkedInCount = EventTicket::where('event_id', $ev->id)->where('is_used', true)->where('status', '!=', 'upgraded')->where('status', '!=', 'cancelled')->count();
             $pendingCount = max(0, $ticketsIssued - $checkedInCount);
             $attendanceRate = $ticketsIssued > 0 ? min(100, round(($checkedInCount / $ticketsIssued) * 100, 1)) : 0;
 
             // Formatear fecha
-            $dateFormatted = '10/04/2025';
-            if (!empty($ev->event_date)) {
-                try {
-                    $dateFormatted = $ev->event_date instanceof \DateTimeInterface 
-                        ? $ev->event_date->format('d/m/Y') 
-                        : Carbon::parse($ev->event_date)->format('d/m/Y');
-                } catch (\Exception $e) {
-                    $dateFormatted = (string) $ev->event_date;
-                }
-            }
-
             $events[] = [
                 'id' => $ev->id,
                 'title' => $ev->title,
-                'slug' => $ev->slug,
-                'category' => $ev->category_name ?? 'Concierto',
-                'sales_type' => $ev->sales_type ?? 'fisica',
-                'image' => $ev->banner_image ?: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=600&q=80',
-                'date_formatted' => $dateFormatted,
-                'venue' => $ev->venue_name ?? 'Local Principal',
+                'category' => $ev->category_name ?? 'Evento ViveGo',
+                'date_formatted' => $ev->event_date instanceof \DateTimeInterface 
+                    ? $ev->event_date->format('d M, Y') 
+                    : (is_string($ev->event_date) ? date('d M, Y', strtotime($ev->event_date)) : 'Fecha por confirmar'),
+                'time_formatted' => $ev->event_time ?: '20:00 HRS',
+                'venue_name' => $ev->venue_name ?: 'Recinto Principal',
+                'address' => $ev->address ?: 'Ubicación Oficial',
+                'banner_image' => $ev->banner_image ?: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=1200&q=80',
+                'status' => $ev->status,
+                'total_capacity' => $totalCapacity,
+                'tickets_sold' => $ticketsSold,
                 'tickets_issued' => $ticketsIssued,
                 'checked_in_count' => $checkedInCount,
                 'pending_count' => $pendingCount,
                 'attendance_rate' => $attendanceRate,
-                'status' => $ev->status ?? 'Publicado',
-                'status_class' => $ev->status === 'Publicado' ? 'badge-green' : ($ev->status === 'Agotado' ? 'badge-red' : 'badge-orange'),
+                'scanner_url' => route('web.attendees.scanner', $ev->id),
+                'mobile_scanner_url' => route('web.attendees.mobile_scanner', $ev->id),
             ];
         }
 
-        return view('web.attendees', compact('events', 'settings', 'organizer'));
+        return view('web.attendees_index', compact('events', 'settings', 'organizer'));
     }
 
     /**
@@ -86,14 +80,15 @@ class AttendeeController extends Controller
         // Asegurar que si hay ventas previas en ticket_sales pero no en event_tickets, se sincronicen
         $this->syncLegacySalesTickets($event);
 
-        $ticketsIssued = EventTicket::where('event_id', $event->id)->count();
-        $checkedInCount = EventTicket::where('event_id', $event->id)->where('is_used', true)->count();
+        $ticketsIssued = EventTicket::where('event_id', $event->id)->where('status', '!=', 'upgraded')->where('status', '!=', 'cancelled')->count();
+        $checkedInCount = EventTicket::where('event_id', $event->id)->where('is_used', true)->where('status', '!=', 'upgraded')->where('status', '!=', 'cancelled')->count();
         $pendingCount = max(0, $ticketsIssued - $checkedInCount);
         $attendanceRate = $ticketsIssued > 0 ? min(100, round(($checkedInCount / $ticketsIssued) * 100, 1)) : 0;
 
         // Historial reciente de ingresos (últimos 25)
         $recentCheckins = EventTicket::where('event_id', $event->id)
             ->where('is_used', true)
+            ->where('status', '!=', 'upgraded')
             ->orderBy('checked_in_at', 'desc')
             ->take(25)
             ->get();
@@ -103,8 +98,8 @@ class AttendeeController extends Controller
         $zonesAttendance = [];
         foreach ($zones as $z) {
             $zName = $z['name'] ?? 'General';
-            $zIssued = EventTicket::where('event_id', $event->id)->where('zone_name', $zName)->count();
-            $zChecked = EventTicket::where('event_id', $event->id)->where('zone_name', $zName)->where('is_used', true)->count();
+            $zIssued = EventTicket::where('event_id', $event->id)->where('zone_name', $zName)->where('status', '!=', 'upgraded')->where('status', '!=', 'cancelled')->count();
+            $zChecked = EventTicket::where('event_id', $event->id)->where('zone_name', $zName)->where('is_used', true)->where('status', '!=', 'upgraded')->where('status', '!=', 'cancelled')->count();
             $zRate = $zIssued > 0 ? round(($zChecked / $zIssued) * 100, 1) : 0;
 
             $zonesAttendance[] = [
@@ -181,7 +176,32 @@ class AttendeeController extends Controller
             ], 404);
         }
 
-        // 3. Si ya fue utilizado: BOLETO YA USADO / ACCESO DENEGADO
+        // 3. Comprobar si el boleto fue ANULADO / INVALIDADO por Upgrade a zona superior
+        $isTicketUpgraded = ($ticket->status === 'upgraded') 
+            || ($ticket->ticketSale && $ticket->ticketSale->status === 'upgraded');
+
+        if ($isTicketUpgraded) {
+            $upgradedToSale = $ticket->ticketSale?->upgradedTo;
+            $newZone = $upgradedToSale ? $upgradedToSale->zone_name : 'una zona superior';
+
+            return response()->json([
+                'success' => false,
+                'status' => 'upgraded_void',
+                'title' => '🚫 ¡BOLETO ANULADO POR MEJORA DE ZONA!',
+                'message' => "Este boleto para la zona {$ticket->zone_name} fue ANULADO porque el usuario realizó una mejora (upgrade) a la zona {$newZone}. Por favor solicite al asistente el nuevo boleto emitido.",
+                'ticket' => [
+                    'id' => $ticket->id,
+                    'ticket_code' => $ticket->ticket_code,
+                    'zone_name' => $ticket->zone_name,
+                    'new_zone' => $newZone,
+                    'buyer_name' => $ticket->buyer_name,
+                    'buyer_dni' => $ticket->buyer_dni,
+                    'status' => 'upgraded',
+                ],
+            ], 422);
+        }
+
+        // 4. Si ya fue utilizado: BOLETO YA USADO / ACCESO DENEGADO
         if ($ticket->is_used) {
             $usedTime = $ticket->checked_in_at ? $ticket->checked_in_at->format('d/m/Y h:i:s A') : 'Hora desconocida';
             $usedDoor = $ticket->scanned_by ?: 'Puerta Principal';
@@ -206,7 +226,7 @@ class AttendeeController extends Controller
             ], 409);
         }
 
-        // 4. BOLETO VÁLIDO: Marcar como utilizado
+        // 5. BOLETO VÁLIDO: Marcar como utilizado
         $ticket->is_used = true;
         $ticket->checked_in_at = now();
         $ticket->scanned_by = $deviceName;
@@ -214,9 +234,9 @@ class AttendeeController extends Controller
 
         $hashVal = $ticket->validation_hash ?: ('VG' . strtoupper(substr(md5($ticket->id), 0, 8)));
 
-        // Recalcular métricas en vivo
-        $ticketsIssued = EventTicket::where('event_id', $event->id)->count();
-        $checkedInCount = EventTicket::where('event_id', $event->id)->where('is_used', true)->count();
+        // Recalcular métricas en vivo (excluyendo upgrades)
+        $ticketsIssued = EventTicket::where('event_id', $event->id)->where('status', '!=', 'upgraded')->where('status', '!=', 'cancelled')->count();
+        $checkedInCount = EventTicket::where('event_id', $event->id)->where('is_used', true)->where('status', '!=', 'upgraded')->where('status', '!=', 'cancelled')->count();
         $pendingCount = max(0, $ticketsIssued - $checkedInCount);
         $attendanceRate = $ticketsIssued > 0 ? min(100, round(($checkedInCount / $ticketsIssued) * 100, 1)) : 0;
 

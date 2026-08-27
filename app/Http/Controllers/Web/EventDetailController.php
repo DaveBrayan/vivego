@@ -34,6 +34,11 @@ class EventDetailController extends Controller
         }
 
         if ($eventModel) {
+            $isDraft = ($eventModel->status === 'Borrador' || $eventModel->status === 'draft');
+            if ($isDraft && !auth()->check()) {
+                abort(404, 'Este evento se encuentra en modo borrador y aún no está disponible para el público.');
+            }
+
             // Formatear Fecha y Hora
             $formattedDate = "Sáb 15 Nov, '26";
             $rawDate = $eventModel->event_date;
@@ -75,14 +80,23 @@ class EventDetailController extends Controller
                     // Calcular ventas registradas si existe la tabla
                     $soldCount = 0;
                     try {
-                        if (\Illuminate\Support\Facades\Schema::hasTable('ticket_sales')) {
+                        if (\Illuminate\Support\Facades\Schema::hasTable('event_tickets')) {
+                            $soldCount = (int) \Illuminate\Support\Facades\DB::table('event_tickets')
+                                ->where('event_id', $eventModel->id)
+                                ->where('zone_name', $zoneName)
+                                ->where('status', '!=', 'upgraded')
+                                ->where('status', '!=', 'cancelled')
+                                ->count();
+                        }
+                        if ($soldCount === 0 && \Illuminate\Support\Facades\Schema::hasTable('ticket_sales')) {
                             $soldCount = (int) \Illuminate\Support\Facades\DB::table('ticket_sales')
                                 ->where('event_id', $eventModel->id)
                                 ->where(function($q) use ($zoneName) {
                                     $q->where('zone_name', $zoneName)
                                       ->orWhere('ticket_type', $zoneName);
                                 })
-                                ->whereIn('payment_status', ['paid', 'approved', 'completed', 'CONFIRMED'])
+                                ->where('status', '!=', 'upgraded')
+                                ->where('status', '!=', 'cancelled')
                                 ->sum('quantity');
                         }
                     } catch (\Exception $e) {

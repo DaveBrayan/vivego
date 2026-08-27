@@ -56,6 +56,7 @@ Route::get('/mi-cuenta/recibos', [CustomerPortalController::class, 'myReceipts']
 Route::get('/mi-cuenta/mis-recibos', [CustomerPortalController::class, 'myReceipts'])->name('customer.my_receipts');
 Route::get('/mi-cuenta/boleto/{sale}/pdf', [CustomerPortalController::class, 'downloadTicketPdf'])->name('web.customer.ticket_pdf');
 Route::get('/mi-cuenta/boleto/{sale}/descargar', [CustomerPortalController::class, 'downloadTicketPdf'])->name('customer.ticket_pdf');
+Route::get('/mi-cuenta/boleto/{sale}/opciones-mejora', [CustomerPortalController::class, 'getUpgradeOptions'])->name('web.customer.ticket_upgrade_options');
 Route::post('/mi-cuenta/boleto/{sale}/enviar-correo', [CustomerPortalController::class, 'emailTicketPdf'])->name('web.customer.ticket_email');
 
 // Pasarela de Pagos & Carrito de Compras Checkout

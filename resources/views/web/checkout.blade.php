@@ -76,17 +76,49 @@
 
                 <!-- PASO 1: CARRITO DE ENTRADAS -->
                 <div class="checkout-white-card">
+                    @if(!empty($isUpgrade) && !empty($upgradeData))
+                        <!-- BANNER OFICIAL DE UPGRADE / MEJORA DE ENTRADA -->
+                        <div style="background: linear-gradient(135deg, #1E1B4B 0%, #312E81 50%, #4338CA 100%); border-radius: 20px; padding: 1.25rem 1.5rem; color: #FFFFFF; margin-bottom: 1.5rem; border: 1.5px solid #818CF8; box-shadow: 0 10px 25px rgba(67, 56, 202, 0.25); position: relative; overflow: hidden;">
+                            <div style="position: absolute; right: -20px; top: -20px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%); border-radius: 50%; pointer-events: none;"></div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.85rem; position: relative; z-index: 2;">
+                                <div style="display: flex; align-items: center; gap: 0.85rem;">
+                                    <div style="width: 46px; height: 46px; border-radius: 14px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 1.6rem; border: 1px solid rgba(255,255,255,0.25);">
+                                        ⭐
+                                    </div>
+                                    <div>
+                                        <div style="display: inline-flex; align-items: center; gap: 0.35rem; background: rgba(99,102,241,0.35); border: 1px solid rgba(165,180,252,0.4); padding: 0.15rem 0.6rem; border-radius: 20px; font-size: 0.68rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.8px; color: #E0E7FF; margin-bottom: 0.25rem;">
+                                            VIVEGO UPGRADE OFICIAL
+                                        </div>
+                                        <h3 style="margin: 0; font-size: 1.15rem; font-weight: 900; color: #FFFFFF; letter-spacing: -0.3px;">
+                                            Mejora de Entrada a {{ $upgradeData['target_zone'] }}
+                                        </h3>
+                                    </div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <span style="font-size: 0.72rem; color: #C7D2FE; font-weight: 800; text-transform: uppercase; display: block;">Solo pagas la diferencia:</span>
+                                    <strong style="font-size: 1.45rem; color: #34D399; font-weight: 900;">S/ {{ number_format($upgradeData['total_difference'], 2) }}</strong>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 0.95rem; padding-top: 0.75rem; border-top: 1px dashed rgba(255,255,255,0.22); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; font-size: 0.82rem; color: #E0E7FF; position: relative; z-index: 2;">
+                                <span>🎟️ Entrada anterior reconocida: <strong>{{ $upgradeData['quantity'] }}x {{ $upgradeData['original_zone'] }}</strong> (Abono: S/ {{ number_format($upgradeData['original_total'], 2) }})</span>
+                                <span>✨ Nueva zona seleccionada: <strong>{{ $upgradeData['quantity'] }}x {{ $upgradeData['target_zone'] }}</strong> (S/ {{ number_format($upgradeData['target_unit_price'] * $upgradeData['quantity'], 2) }})</span>
+                            </div>
+                        </div>
+                    @endif
+
                     <div class="card-step-header">
                         <div class="step-num-badge">1</div>
                         <div>
-                            <h2 class="card-step-title">Tus Entradas Seleccionadas</h2>
-                            <p class="card-step-subtitle">Revisa o ajusta la cantidad de entradas para este evento.</p>
+                            <h2 class="card-step-title">{{ !empty($isUpgrade) ? 'Detalle de la Mejora de Entrada' : 'Tus Entradas Seleccionadas' }}</h2>
+                            <p class="card-step-subtitle">{{ !empty($isUpgrade) ? 'Revisa el cálculo de diferencia a pagar por tu upgrade de zona.' : 'Revisa o ajusta la cantidad de entradas para este evento.' }}</p>
                         </div>
                     </div>
 
                     <div class="cart-items-list">
                         @foreach($cartItems as $index => $item)
                             @php
+                                $isItemUpgrade = !empty($item['is_upgrade']);
                                 $isPresale = !empty($item['is_presale']) || (!empty($item['presale_discount']) && (float)$item['presale_discount'] > 0);
                                 $hasCamp = !empty($item['has_campaign']);
                                 $basePrice = !empty($item['base_price']) ? (float)$item['base_price'] : (!empty($item['regular_price']) ? (float)$item['regular_price'] : (float)$item['price']);
@@ -94,13 +126,17 @@
                                 $curPrice = (float)$item['price'];
                                 $discountVal = $item['presale_discount'] ?? 0;
                             @endphp
-                            <div class="cart-row-item" data-price="{{ $item['price'] }}" style="{{ $hasCamp ? 'border: 1.5px solid rgba(255, 85, 0, 0.35); background: #FFFBF8;' : ($isPresale ? 'border: 1.5px solid rgba(255, 85, 0, 0.3); background: #FFFBF8;' : '') }}">
+                            <div class="cart-row-item" data-price="{{ $item['price'] }}" style="{{ $isItemUpgrade ? 'border: 2px solid #818CF8; background: #FAF5FF;' : ($hasCamp ? 'border: 1.5px solid rgba(255, 85, 0, 0.35); background: #FFFBF8;' : ($isPresale ? 'border: 1.5px solid rgba(255, 85, 0, 0.3); background: #FFFBF8;' : '')) }}">
                                 <div class="cart-row-main">
-                                    <span class="cart-item-emoji">🎟️</span>
+                                    <span class="cart-item-emoji">{{ $isItemUpgrade ? '⭐' : '🎟️' }}</span>
                                     <div class="cart-item-text-box" style="flex: 1; min-width: 0;">
                                         <div class="cart-item-header-wrap" style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
                                             <h4 class="cart-item-title" style="margin: 0; font-size: 1rem; font-weight: 800; color: #0F172A;">{{ $item['name'] }}</h4>
-                                            @if($hasCamp)
+                                            @if($isItemUpgrade)
+                                                <span style="background: linear-gradient(135deg, #6366F1, #4F46E5); color: #FFFFFF; font-size: 0.65rem; font-weight: 900; padding: 2px 8px; border-radius: 6px; box-shadow: 0 2px 5px rgba(99,102,241,0.25); text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap;">
+                                                    ⭐ UPGRADE ACTIVO
+                                                </span>
+                                            @elseif($hasCamp)
                                                 <span style="background: linear-gradient(135deg, #FF5500, #FF1E3C); color: #FFFFFF; font-size: 0.65rem; font-weight: 900; padding: 2px 7px; border-radius: 6px; box-shadow: 0 2px 5px rgba(255,85,0,0.25); text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap;">
                                                     🔥 {{ $activeCampaign['badge_text'] ?? 'CAMPAÑA ACTIVA' }}
                                                 </span>
@@ -110,26 +146,41 @@
                                                 </span>
                                             @endif
                                         </div>
-                                        <div style="display: flex; align-items: center; gap: 0.45rem; margin-top: 0.2rem;">
-                                            <span class="cart-item-unit-cost" style="font-size: 0.825rem; color: #475569;">
-                                                Precio: <strong style="color: var(--color-primary-orange); font-size: 0.9rem;">S/ {{ number_format($curPrice, 2) }}</strong> c/u
-                                            </span>
-                                            @if(($hasCamp || $isPresale) && $basePrice > $curPrice)
-                                                <span style="font-size: 0.8rem; color: #94A3B8; text-decoration: line-through; font-weight: 600;">
-                                                    S/ {{ number_format($basePrice, 2) }}
+                                        <div style="display: flex; align-items: center; gap: 0.45rem; margin-top: 0.2rem; flex-wrap: wrap;">
+                                            @if($isItemUpgrade)
+                                                <span class="cart-item-unit-cost" style="font-size: 0.825rem; color: #4338CA; font-weight: 700;">
+                                                    Diferencia por entrada: <strong style="color: #059669; font-size: 0.95rem; font-weight: 900;">S/ {{ number_format($curPrice, 2) }}</strong>
                                                 </span>
+                                                <span style="font-size: 0.775rem; color: #64748B;">
+                                                    (Valor nueva zona: S/ {{ number_format($regPrice, 2) }})
+                                                </span>
+                                            @else
+                                                <span class="cart-item-unit-cost" style="font-size: 0.825rem; color: #475569;">
+                                                    Precio: <strong style="color: var(--color-primary-orange); font-size: 0.9rem;">S/ {{ number_format($curPrice, 2) }}</strong> c/u
+                                                </span>
+                                                @if(($hasCamp || $isPresale) && $basePrice > $curPrice)
+                                                    <span style="font-size: 0.8rem; color: #94A3B8; text-decoration: line-through; font-weight: 600;">
+                                                        S/ {{ number_format($basePrice, 2) }}
+                                                    </span>
+                                                @endif
                                             @endif
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="cart-row-controls">
-                                    <div class="light-qty-counter">
-                                        <button type="button" class="btn-lgt-qty" onclick="updateItemQuantity({{ $index }}, -1)">−</button>
-                                        <span class="lgt-qty-num" id="qty-val-{{ $index }}">{{ $item['quantity'] }}</span>
-                                        <button type="button" class="btn-lgt-qty" onclick="updateItemQuantity({{ $index }}, 1)">+</button>
-                                    </div>
-                                    <span class="cart-row-subtotal-price" id="subtotal-val-{{ $index }}">
+                                    @if($isItemUpgrade)
+                                        <div style="background: #EEF2FF; border: 1px solid #C7D2FE; border-radius: 10px; padding: 0.35rem 0.75rem; font-weight: 800; font-size: 0.85rem; color: #4F46E5;">
+                                            {{ $item['quantity'] }}x entradas
+                                        </div>
+                                    @else
+                                        <div class="light-qty-counter">
+                                            <button type="button" class="btn-lgt-qty" onclick="updateItemQuantity({{ $index }}, -1)">−</button>
+                                            <span class="lgt-qty-num" id="qty-val-{{ $index }}">{{ $item['quantity'] }}</span>
+                                            <button type="button" class="btn-lgt-qty" onclick="updateItemQuantity({{ $index }}, 1)">+</button>
+                                        </div>
+                                    @endif
+                                    <span class="cart-row-subtotal-price" id="subtotal-val-{{ $index }}" style="{{ $isItemUpgrade ? 'color: #059669; font-weight: 900;' : '' }}">
                                         S/ {{ number_format(($curPrice * $item['quantity']), 2) }}
                                     </span>
                                 </div>
@@ -492,10 +543,25 @@
 
                         <!-- Desglose Financiero -->
                         <div class="pricing-summary-box">
-                            <div class="price-line">
-                                <span class="line-label">Subtotal Base:</span>
-                                <strong class="line-amount" id="summarySubtotalDisplay">S/ {{ number_format($originalSubtotal > 0 ? $originalSubtotal : $grandTotal, 2) }}</strong>
-                            </div>
+                            @if(!empty($isUpgrade) && !empty($upgradeData))
+                                <div class="price-line" style="color: #4F46E5;">
+                                    <span class="line-label" style="font-weight: 700;">Nueva Zona ({{ $upgradeData['quantity'] }}x {{ $upgradeData['target_zone'] }}):</span>
+                                    <strong class="line-amount" style="color: #4F46E5; font-weight: 800;">S/ {{ number_format($upgradeData['target_unit_price'] * $upgradeData['quantity'], 2) }}</strong>
+                                </div>
+                                <div class="price-line" style="color: #059669;">
+                                    <span class="line-label" style="font-weight: 700;">Abono Entrada Previa:</span>
+                                    <strong class="line-amount" style="color: #059669; font-weight: 800;">-S/ {{ number_format($upgradeData['original_total'], 2) }}</strong>
+                                </div>
+                                <div class="price-line" style="border-top: 1px dashed #E2E8F0; padding-top: 0.4rem; margin-top: 0.4rem;">
+                                    <span class="line-label" style="font-weight: 800; color: #0F172A;">Diferencia a Pagar:</span>
+                                    <strong class="line-amount" id="summarySubtotalDisplay" style="color: #059669; font-weight: 900;">S/ {{ number_format($grandTotal, 2) }}</strong>
+                                </div>
+                            @else
+                                <div class="price-line">
+                                    <span class="line-label">Subtotal Base:</span>
+                                    <strong class="line-amount" id="summarySubtotalDisplay">S/ {{ number_format($originalSubtotal > 0 ? $originalSubtotal : $grandTotal, 2) }}</strong>
+                                </div>
+                            @endif
 
                             <!-- Descuento de Campaña si aplica -->
                             <div class="price-line" id="summaryCampaignRow" style="{{ !empty($activeCampaign) && $campaignDiscountTotal > 0 ? '' : 'display: none;' }}">
@@ -523,8 +589,8 @@
                             </div>
                             
                             <div class="total-big-line">
-                                <span class="total-big-label">TOTAL A PAGAR:</span>
-                                <span class="total-big-val" id="summaryTotalDisplay">S/ {{ number_format($grandTotal, 2) }}</span>
+                                <span class="total-big-label">{{ !empty($isUpgrade) ? 'TOTAL DIFERENCIA:' : 'TOTAL A PAGAR:' }}</span>
+                                <span class="total-big-val" id="summaryTotalDisplay" style="{{ !empty($isUpgrade) ? 'color: #059669;' : '' }}">S/ {{ number_format($grandTotal, 2) }}</span>
                             </div>
                         </div>
 
@@ -1267,6 +1333,8 @@
         let eventData = @json($eventData);
         let activeCampaign = @json($activeCampaign);
         let appliedCoupon = null;
+        let isUpgrade = {{ !empty($isUpgrade) ? 'true' : 'false' }};
+        let upgradeData = @json($upgradeData ?? null);
 
         let baseSubtotal = {{ (float)($originalSubtotal > 0 ? $originalSubtotal : $grandTotal) }};
         let campaignDiscountTotal = {{ (float)($campaignDiscountTotal ?? 0) }};
@@ -1746,7 +1814,9 @@
                     coupon_discount: couponDiscountTotal,
                     campaign_name: activeCampaign ? activeCampaign.name : null,
                     campaign_discount: campaignDiscountTotal,
-                    original_subtotal: baseSubtotal
+                    original_subtotal: baseSubtotal,
+                    upgrade_sale_id: upgradeData ? upgradeData.sale_id : null,
+                    is_upgrade: isUpgrade
                 })
             })
             .then(res => res.json())
@@ -1854,6 +1924,8 @@
                     'campaign_name': activeCampaign ? activeCampaign.name : null,
                     'campaign_discount': campaignDiscountTotal,
                     'original_subtotal': baseSubtotal,
+                    'upgrade_sale_id': upgradeData ? upgradeData.sale_id : null,
+                    'is_upgrade': isUpgrade,
                     'ticket_pdf_base64': ticketPdfBase64
                 })
             })
@@ -1928,7 +2000,9 @@
                     coupon_discount: couponDiscountTotal,
                     campaign_name: activeCampaign ? activeCampaign.name : null,
                     campaign_discount: campaignDiscountTotal,
-                    original_subtotal: baseSubtotal
+                    original_subtotal: baseSubtotal,
+                    upgrade_sale_id: upgradeData ? upgradeData.sale_id : null,
+                    is_upgrade: isUpgrade
                 })
             })
             .then(res => res.json())
@@ -2116,6 +2190,8 @@
                     campaign_name: activeCampaign ? activeCampaign.name : null,
                     campaign_discount: campaignDiscountTotal,
                     original_subtotal: baseSubtotal,
+                    upgrade_sale_id: upgradeData ? upgradeData.sale_id : null,
+                    is_upgrade: isUpgrade,
                     ticket_pdf_base64: ticketPdfBase64
                 })
             })

@@ -31,6 +31,12 @@ class TicketSale extends Model
         'discount_description',
         'campaign_name',
         'coupon_code',
+        'status',
+        'is_upgrade',
+        'upgraded_from_sale_id',
+        'upgraded_to_sale_id',
+        'upgrade_difference',
+        'upgrade_original_zone',
     ];
 
     protected $casts = [
@@ -41,10 +47,32 @@ class TicketSale extends Model
         'change_amount' => 'decimal:2',
         'original_subtotal' => 'decimal:2',
         'discount_amount' => 'decimal:2',
+        'upgrade_difference' => 'decimal:2',
+        'is_upgrade' => 'boolean',
     ];
 
     public function event()
     {
         return $this->belongsTo(Event::class, 'event_id');
+    }
+
+    public function eventTickets()
+    {
+        return $this->hasMany(EventTicket::class, 'ticket_sale_id');
+    }
+
+    public function upgradedFrom()
+    {
+        return $this->belongsTo(TicketSale::class, 'upgraded_from_sale_id');
+    }
+
+    public function upgradedTo()
+    {
+        return $this->belongsTo(TicketSale::class, 'upgraded_to_sale_id');
+    }
+
+    public function isUpgraded(): bool
+    {
+        return $this->status === 'upgraded' || !empty($this->upgraded_to_sale_id) || (!empty($this->tickets_data['is_upgraded']));
     }
 }

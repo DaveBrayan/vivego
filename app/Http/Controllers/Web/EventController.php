@@ -85,6 +85,16 @@ class EventController extends Controller
                 'elements' => $templateModel ? ($templateModel->elements ?? []) : [],
             ];
 
+            $evStatus = $ev->status ?? 'Publicado';
+            $evStatusClass = 'badge-green';
+            if ($evStatus === 'Borrador' || $evStatus === 'draft') {
+                $evStatusClass = 'badge-gray';
+            } elseif ($evStatus === 'Oculto' || $evStatus === 'No Marketplace' || $evStatus === 'unlisted') {
+                $evStatusClass = 'badge-purple';
+            } elseif ($evStatus === 'Agotado') {
+                $evStatusClass = 'badge-red';
+            }
+
             $events[] = [
                 'id' => $ev->id,
                 'title' => $ev->title,
@@ -102,8 +112,8 @@ class EventController extends Controller
                 'capacity_percentage' => $capacityPercentage,
                 'min_price' => 'S/ ' . number_format($minPrice, 2),
                 'revenue_formatted' => 'S/ 0.00',
-                'status' => $ev->status ?? 'Publicado',
-                'status_class' => 'badge-green',
+                'status' => $evStatus,
+                'status_class' => $evStatusClass,
                 'sales_type' => $ev->sales_type ?? 'fisica',
                 'template' => $templateData,
                 'zones' => $zones,

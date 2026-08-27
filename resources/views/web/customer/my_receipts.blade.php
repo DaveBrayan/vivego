@@ -104,6 +104,17 @@
                                         $eventDateTime = \Carbon\Carbon::parse($eventDateStr . ' ' . $eventTimeStr);
                                         $isPastEvent = $eventDateTime->isPast();
                                     }
+
+                                    $pm = strtolower($sale->payment_method ?? '');
+                                    $isCourtesy = ($pm === 'cortesía' || $pm === 'cortesia' || !empty($tData['is_courtesy']) || (float)$sale->total_amount == 0 || str_contains(strtolower($sale->zone_name ?? ''), 'cortesía') || str_contains(strtolower($sale->zone_name ?? ''), 'cortesia'));
+
+                                    $cleanZoneName = function($name, $zoneFallback = '') {
+                                        $str = !empty($name) ? $name : $zoneFallback;
+                                        if (preg_match('/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?(.+)/iu', $str, $m)) {
+                                            return trim($m[1]);
+                                        }
+                                        return $str;
+                                    };
                                 @endphp
                                 <tr style="border-bottom: 1px solid #F1F5F9; color: #334155; transition: background 0.15s;" onmouseover="this.style.background='#F8FAFC'" onmouseout="this.style.background='transparent'">
                                     <td style="padding: 1.2rem 1.25rem;">
@@ -121,10 +132,10 @@
                                         <div style="font-size: 0.8rem; color: #64748B;">
                                             @if(count($items) > 0)
                                                 @foreach($items as $idx => $it)
-                                                    <span>{{ $it['quantity'] ?? 1 }}x {{ $it['name'] ?? 'Entrada' }}{{ $idx < count($items) - 1 ? ' • ' : '' }}</span>
+                                                    <span>{{ $it['quantity'] ?? 1 }}x {{ $cleanZoneName($it['zone_name'] ?? ($it['name'] ?? ''), $sale->zone_name) }}{{ $idx < count($items) - 1 ? ' • ' : '' }}</span>
                                                 @endforeach
                                             @else
-                                                <span>{{ $sale->quantity }}x {{ $sale->zone_name }}</span>
+                                                <span>{{ $sale->quantity }}x {{ $cleanZoneName($sale->zone_name) }}</span>
                                             @endif
                                         </div>
                                     </td>
@@ -134,14 +145,37 @@
                                         </span>
                                     </td>
                                     <td style="padding: 1.2rem 1.25rem;">
-                                        <span style="background: #ECFDF5; color: #059669; font-weight: 800; font-size: 0.775rem; padding: 0.3rem 0.75rem; border-radius: 20px; border: 1px solid #A7F3D0; display: inline-flex; align-items: center; gap: 0.3rem;">
-                                            💳 {{ $sale->payment_method ?: 'Izipay Online' }}
-                                        </span>
+                                        @if($isCourtesy)
+                                            <span style="background: #ECFDF5; color: #059669; font-weight: 800; font-size: 0.775rem; padding: 0.3rem 0.75rem; border-radius: 20px; border: 1px solid #A7F3D0; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                                🎁 Entrada de Cortesía
+                                            </span>
+                                        @elseif($sale->is_upgrade)
+                                            <span style="background: #EEF2FF; color: #4F46E5; font-weight: 800; font-size: 0.775rem; padding: 0.3rem 0.75rem; border-radius: 20px; border: 1px solid #C7D2FE; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                                ⭐ Mejora (Upgrade)
+                                            </span>
+                                        @else
+                                            <span style="background: #ECFDF5; color: #059669; font-weight: 800; font-size: 0.775rem; padding: 0.3rem 0.75rem; border-radius: 20px; border: 1px solid #A7F3D0; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                                💳 {{ $sale->payment_method ?: 'Izipay Online' }}
+                                            </span>
+                                        @endif
                                     </td>
                                     <td style="padding: 1.2rem 1.25rem; text-align: right;">
-                                        <strong style="color: #059669; font-size: 1.1rem; font-weight: 900; display: block;">
-                                            S/ {{ number_format($sale->total_amount, 2) }}
-                                        </strong>
+                                        @if($isCourtesy)
+                                            <strong style="color: #059669; font-size: 1.05rem; font-weight: 900; display: block;">
+                                                GRATIS
+                                            </strong>
+                                        @elseif($sale->is_upgrade)
+                                            <strong style="color: #4F46E5; font-size: 1.1rem; font-weight: 900; display: block;">
+                                                +S/ {{ number_format($sale->total_amount, 2) }}
+                                            </strong>
+                                            <small style="display: block; font-size: 0.7rem; color: #6366F1; font-weight: 800;">
+                                                Diferencia Pagada
+                                            </small>
+                                        @else
+                                            <strong style="color: #059669; font-size: 1.1rem; font-weight: 900; display: block;">
+                                                S/ {{ number_format($sale->total_amount, 2) }}
+                                            </strong>
+                                        @endif
                                         @if((float)($sale->discount_amount ?? 0) > 0)
                                             <small style="display: inline-block; font-size: 0.725rem; color: #EA580C; font-weight: 800; background: #FFF7ED; padding: 2px 6px; border-radius: 6px; border: 1px solid #FFEDD5; margin-top: 3px;">
                                                 Ahorro: S/ {{ number_format($sale->discount_amount, 2) }}

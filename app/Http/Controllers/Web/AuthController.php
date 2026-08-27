@@ -31,7 +31,9 @@ class AuthController extends Controller
         // 2. Si ya tiene sesión activa como Cliente
         if (session('customer_logged_in') && session('customer_id')) {
             $user = User::find(session('customer_id'));
-            if ($user && ($user->status === 'Activo' || is_null($user->status))) {
+            $statusLower = strtolower(trim((string) ($user?->status ?? 'active')));
+            $isInactive = in_array($statusLower, ['inactivo', 'inactive', 'bloqueado', 'blocked', 'suspendido', 'suspended', '0']);
+            if ($user && !$isInactive) {
                 return redirect()->route('web.customer.tickets');
             }
             session()->forget(['customer_logged_in', 'customer_id', 'customer_name', 'customer_email', 'customer_dni', 'customer_phone']);
@@ -129,7 +131,10 @@ class AuthController extends Controller
         })->first();
 
         if ($user && Hash::check($password, $user->password)) {
-            if ($user->status && $user->status !== 'Activo') {
+            $statusLower = strtolower(trim((string) $user->status));
+            $isInactive = in_array($statusLower, ['inactivo', 'inactive', 'bloqueado', 'blocked', 'suspendido', 'suspended', '0']);
+
+            if ($isInactive) {
                 if ($request->wantsJson() || $request->ajax()) {
                     return response()->json([
                         'success' => false,

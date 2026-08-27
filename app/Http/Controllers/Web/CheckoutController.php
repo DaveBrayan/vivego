@@ -77,45 +77,128 @@ class CheckoutController extends Controller
         $izipay = PaymentGateway::getIzipay();
         $culqi = PaymentGateway::getCulqi();
 
-        // 1. Obtener Evento
-        $eventId = $request->input('event_id');
-        $eventSlug = $request->input('event_slug');
-
+        // 0. Detectar si es una solicitud de Mejora de Entrada (Ticket Upgrade)
+        $upgradeSaleId = $request->input('upgrade_sale_id');
+        $upgradeZoneName = $request->input('upgrade_zone');
+        $isUpgrade = false;
+        $upgradeData = null;
         $event = null;
-        if ($eventId) {
-            $event = Event::with('template')->find($eventId);
-        } elseif ($eventSlug) {
-            $event = Event::with('template')->where('slug', $eventSlug)->first();
-        }
-
-        if (!$event) {
-            $event = Event::with('template')->latest()->first();
-        }
-
-        // Comprobar si existe Campaña Promocional Activa (ej: Black Friday) para este evento
-        $activeCampaign = $event ? Campaign::getActiveForEvent($event->id) : null;
-
-        // 2. Extraer o armar Carrito de Entradas con Persistencia de Sesión
-        $ticketsRaw = $request->input('tickets');
         $cartItems = [];
         $grandTotal = 0;
         $originalSubtotal = 0;
         $campaignDiscountTotal = 0;
 
-        if (is_string($ticketsRaw)) {
-            $decoded = json_decode($ticketsRaw, true);
-            if (is_array($decoded) && !empty($decoded)) {
-                $cartItems = $decoded;
-                session(['checkout_cart_' . ($event?->id ?? 'default') => $cartItems]);
+        if ($upgradeSaleId) {
+            $upgradeSale = TicketSale::with('event')->find($upgradeSaleId);
+            if ($upgradeSale && !$upgradeSale->isUpgraded()) {
+                $event = $upgradeSale->event;
+                $zones = is_array($event?->zones) ? $event->zones : (is_string($event?->zones) ? json_decode($event->zones, true) : []);
+                
+                $targetZone = null;
+                foreach ($zones as $z) {
+                    $zName = $z['name'] ?? $z['capacity_type'] ?? '';
+                    if (strtolower(trim($zName)) === strtolower(trim((string) $upgradeZoneName))) {
+                        $targetZone = $z;
+                        break;
+                    }
+                }
+                if (!$targetZone && !empty($zones)) {
+                    $targetZone = $zones[0];
+                }
+
+                if ($targetZone) {
+                    $isUpgrade = true;
+                    $targetZoneName = $targetZone['name'] ?? $targetZone['capacity_type'] ?? 'Zona Superior';
+                    $targetPrice = (float) ($targetZone['price'] ?? 0);
+                    $qty = max(1, (int) $upgradeSale->quantity);
+                    $currentUnitPrice = (float) $upgradeSale->unit_price;
+                    if ($currentUnitPrice <= 0 && (float) $upgradeSale->total_amount > 0) {
+                        $currentUnitPrice = round((float) $upgradeSale->total_amount / $qty, 2);
+                    }
+
+                    $unitDifference = max(0, round($targetPrice - $currentUnitPrice, 2));
+                    $totalDifference = round($unitDifference * $qty, 2);
+
+                    $cartItems = [
+                        [
+                            'name' => $targetZoneName,
+                            'zone_name' => $targetZoneName,
+                            'original_zone' => $upgradeSale->zone_name,
+                            'price' => $unitDifference,
+                            'base_price' => $unitDifference,
+                            'regular_price' => $targetPrice,
+                            'is_upgrade' => true,
+                            'upgrade_sale_id' => $upgradeSale->id,
+                            'quantity' => $qty,
+                            'subtotal' => $totalDifference,
+                        ]
+                    ];
+
+                    $grandTotal = $totalDifference;
+                    $originalSubtotal = $totalDifference;
+
+                    $upgradeData = [
+                        'sale_id' => $upgradeSale->id,
+                        'receipt_number' => $upgradeSale->receipt_number,
+                        'original_zone' => $upgradeSale->zone_name,
+                        'original_unit_price' => $currentUnitPrice,
+                        'original_total' => (float) $upgradeSale->total_amount,
+                        'target_zone' => $targetZoneName,
+                        'target_unit_price' => $targetPrice,
+                        'unit_difference' => $unitDifference,
+                        'quantity' => $qty,
+                        'total_difference' => $totalDifference,
+                    ];
+                }
             }
-        } elseif (is_array($ticketsRaw) && !empty($ticketsRaw)) {
-            $cartItems = $ticketsRaw;
-            session(['checkout_cart_' . ($event?->id ?? 'default') => $cartItems]);
         }
 
-        // Si no viene en el request actual, intentar restaurar de la sesión
-        if (empty($cartItems) && $event && session()->has('checkout_cart_' . $event->id)) {
-            $cartItems = session('checkout_cart_' . $event->id, []);
+        // 1. Obtener Evento si no se definió por el upgrade
+        if (!$event) {
+            $eventId = $request->input('event_id');
+            $eventSlug = $request->input('event_slug');
+
+            if ($eventId) {
+                $event = Event::with('template')->find($eventId);
+            } elseif ($eventSlug) {
+                $event = Event::with('template')->where('slug', $eventSlug)->first();
+            }
+
+            if (!$event) {
+                $event = Event::with('template')->latest()->first();
+            }
+        }
+
+        if ($event && ($event->status === 'Borrador' || $event->status === 'draft') && !auth()->check()) {
+            return redirect()->route('web.home')->with('error', 'El evento seleccionado se encuentra en modo borrador y no está disponible para la venta.');
+        }
+
+        // Comprobar si existe Campaña Promocional Activa (ej: Black Friday) para este evento
+        $activeCampaign = ($event && !$isUpgrade) ? Campaign::getActiveForEvent($event->id) : null;
+
+        // 2. Extraer o armar Carrito de Entradas si no es Upgrade
+        if (!$isUpgrade) {
+            $ticketsRaw = $request->input('tickets');
+            $cartItems = [];
+            $grandTotal = 0;
+            $originalSubtotal = 0;
+            $campaignDiscountTotal = 0;
+
+            if (is_string($ticketsRaw)) {
+                $decoded = json_decode($ticketsRaw, true);
+                if (is_array($decoded) && !empty($decoded)) {
+                    $cartItems = $decoded;
+                    session(['checkout_cart_' . ($event?->id ?? 'default') => $cartItems]);
+                }
+            } elseif (is_array($ticketsRaw) && !empty($ticketsRaw)) {
+                $cartItems = $ticketsRaw;
+                session(['checkout_cart_' . ($event?->id ?? 'default') => $cartItems]);
+            }
+
+            // Si no viene en el request actual, intentar restaurar de la sesión
+            if (empty($cartItems) && $event && session()->has('checkout_cart_' . $event->id)) {
+                $cartItems = session('checkout_cart_' . $event->id, []);
+            }
         }
 
         // Si aún está vacío, cargar las zonas reales del evento
@@ -189,30 +272,36 @@ class CheckoutController extends Controller
             }
         }
 
-        foreach ($cartItems as &$item) {
-            $qty = (int)($item['quantity'] ?? 1);
-            $basePrice = (float)($item['base_price'] ?? $item['price'] ?? 0);
-            $itemPrice = (float)($item['price'] ?? 0);
+        if (!$isUpgrade) {
+            $originalSubtotal = 0;
+            $grandTotal = 0;
+            $campaignDiscountTotal = 0;
 
-            // Si hay campaña activa y no se calculó aún en el item
-            if ($activeCampaign && empty($item['has_campaign'])) {
-                $itemCampDisc = $activeCampaign->calculateDiscount($basePrice);
-                if ($itemCampDisc > 0) {
-                    $item['has_campaign'] = true;
-                    $item['campaign_discount'] = $itemCampDisc;
-                    $itemPrice = max(0, $basePrice - $itemCampDisc);
-                    $item['price'] = $itemPrice;
-                    $item['subtotal'] = round($itemPrice * $qty, 2);
+            foreach ($cartItems as &$item) {
+                $qty = (int)($item['quantity'] ?? 1);
+                $basePrice = (float)($item['base_price'] ?? $item['price'] ?? 0);
+                $itemPrice = (float)($item['price'] ?? 0);
+
+                // Si hay campaña activa y no se calculó aún en el item
+                if ($activeCampaign && empty($item['has_campaign'])) {
+                    $itemCampDisc = $activeCampaign->calculateDiscount($basePrice);
+                    if ($itemCampDisc > 0) {
+                        $item['has_campaign'] = true;
+                        $item['campaign_discount'] = $itemCampDisc;
+                        $itemPrice = max(0, $basePrice - $itemCampDisc);
+                        $item['price'] = $itemPrice;
+                        $item['subtotal'] = round($itemPrice * $qty, 2);
+                    }
+                }
+
+                $originalSubtotal += ($basePrice * $qty);
+                $grandTotal += (float) ($item['subtotal'] ?? ($itemPrice * $qty));
+                if (!empty($item['has_campaign'])) {
+                    $campaignDiscountTotal += ((float)($item['campaign_discount'] ?? 0) * $qty);
                 }
             }
-
-            $originalSubtotal += ($basePrice * $qty);
-            $grandTotal += (float) ($item['subtotal'] ?? ($itemPrice * $qty));
-            if (!empty($item['has_campaign'])) {
-                $campaignDiscountTotal += ((float)($item['campaign_discount'] ?? 0) * $qty);
-            }
+            unset($item);
         }
-        unset($item);
 
         $dateSelected = $request->input('date_selected');
         if ($dateSelected) {
@@ -257,7 +346,9 @@ class CheckoutController extends Controller
             'campaignDiscountTotal', 
             'activeCampaign', 
             'izipay', 
-            'culqi'
+            'culqi',
+            'isUpgrade',
+            'upgradeData'
         ));
     }
 
@@ -400,9 +491,13 @@ class CheckoutController extends Controller
         $customer = $answer['customer'] ?? [];
         $billing = $customer['billingDetails'] ?? [];
 
-        $buyerName = trim(($billing['firstName'] ?? '') . ' ' . ($billing['lastName'] ?? '')) ?: 'Cliente ViveGo';
-        $buyerPhone = $billing['phoneNumber'] ?? '';
-        $buyerDni = $billing['identityCode'] ?? '';
+        $buyerEmail = strtolower(trim((string)($customer['email'] ?? $request->input('customer_email') ?? '')));
+        $buyerName = trim(($billing['firstName'] ?? '') . ' ' . ($billing['lastName'] ?? ''));
+        if (empty($buyerName)) {
+            $buyerName = trim($request->input('customer_name') ?: 'Cliente ViveGo');
+        }
+        $buyerPhone = !empty($billing['phoneNumber']) ? $billing['phoneNumber'] : ($request->input('customer_phone') ?: '999999999');
+        $buyerDni = !empty($billing['identityCode']) ? $billing['identityCode'] : ($request->input('customer_doc') ?: '00000000');
 
         // Obtener correlativo secuencial continuo sin colisiones (REC-000046)
         $allReceipts = TicketSale::where('receipt_number', 'LIKE', 'REC-%')->pluck('receipt_number');
@@ -431,9 +526,9 @@ class CheckoutController extends Controller
 
         $subMethod = 'Tarjeta';
         if (in_array($methodType, ['IP_WA', 'QR', 'YAPE', 'PLIN'])) {
-            $subMethod = 'QR Yape / Plin';
-        } elseif ($methodType === 'PAGOEFECTIVO') {
-            $subMethod = 'PagoEfectivo';
+            $subMethod = 'QR Billeteras (Yape / Plin)';
+        } elseif (in_array($methodType, ['PAGOS_DIGITALES', 'PAGOEFECTIVO', 'CIP'])) {
+            $subMethod = 'PagoEfectivo (CIP)';
         } elseif (!empty($brand)) {
             $subMethod = 'Tarjeta ' . $brand;
         }
@@ -475,8 +570,21 @@ class CheckoutController extends Controller
         }
         $discountDescription = implode(' | ', $discountDescParts);
 
-        // Registrar la venta en la base de datos con correlativo REC-
-        $buyerEmail = $customer['email'] ?? $request->input('customer_email');
+        // Detectar si es Mejora de Entrada (Upgrade)
+        $upgradeSaleId = $request->input('upgrade_sale_id') ?: ($ticketsData[0]['upgrade_sale_id'] ?? null);
+        $effectiveZoneName = $ticketsData[0]['zone_name'] ?? $ticketsData[0]['name'] ?? 'General';
+        if (preg_match('/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?(.+)/iu', $effectiveZoneName, $matches)) {
+            $effectiveZoneName = trim($matches[1]);
+        }
+        foreach ($ticketsData as &$t) {
+            $rawZ = $t['zone_name'] ?? $t['name'] ?? $effectiveZoneName;
+            if (preg_match('/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?(.+)/iu', $rawZ, $m)) {
+                $rawZ = trim($m[1]);
+            }
+            $t['name'] = $rawZ;
+            $t['zone_name'] = $rawZ;
+        }
+        unset($t);
 
         $sale = TicketSale::create([
             'event_id' => $event?->id ?? 1,
@@ -484,7 +592,7 @@ class CheckoutController extends Controller
             'buyer_name' => $buyerName,
             'buyer_dni' => $buyerDni ?: '00000000',
             'buyer_phone' => $buyerPhone ?: '999999999',
-            'zone_name' => $ticketsData[0]['name'] ?? 'General',
+            'zone_name' => $effectiveZoneName,
             'unit_price' => $orderTotal / max(1, $totalQty),
             'quantity' => max(1, $totalQty),
             'original_subtotal' => $originalSubtotalInput > 0 ? $originalSubtotalInput : ($orderTotal + $totalDiscountAmount),
@@ -496,6 +604,10 @@ class CheckoutController extends Controller
             'payment_method' => 'Izipay',
             'amount_paid' => $orderTotal,
             'change_amount' => 0.00,
+            'status' => 'completed',
+            'is_upgrade' => !empty($upgradeSaleId),
+            'upgraded_from_sale_id' => $upgradeSaleId,
+            'upgrade_difference' => !empty($upgradeSaleId) ? $orderTotal : 0.00,
             'tickets_data' => [
                 'items' => $ticketsData,
                 'sub_method' => $subMethod,
@@ -507,9 +619,14 @@ class CheckoutController extends Controller
                 'coupon_discount' => $couponDiscount,
                 'campaign_name' => $campaignNameInput ?: null,
                 'campaign_discount' => $campaignDiscountInput,
+                'is_upgrade' => !empty($upgradeSaleId),
+                'upgrade_sale_id' => $upgradeSaleId,
             ],
             'seller_name' => 'Pasarela Web Izipay',
         ]);
+
+        // Invalidar boleto previo si fue upgrade y registrar boletos oficiales en event_tickets
+        $this->processSaleCompletionAndTickets($sale, $event, $totalQty, $upgradeSaleId, $ticketsData);
 
         // 1. Crear o sincronizar cuenta de Cliente para que pueda ver "Mis Boletos" y "Mis Recibos"
         $isNewUser = false;
@@ -804,6 +921,37 @@ class CheckoutController extends Controller
         }
         $discountDescription = implode(' | ', $discountDescParts);
 
+        // Detectar si es Mejora de Entrada (Upgrade)
+        $upgradeSaleId = $request->input('upgrade_sale_id') ?: ($ticketsData[0]['upgrade_sale_id'] ?? null);
+        if ($upgradeSaleId) {
+            $origSale = TicketSale::find($upgradeSaleId);
+            if ($origSale) {
+                if (($buyerDni === '00000000' || empty($buyerDni)) && !empty($origSale->buyer_dni)) {
+                    $buyerDni = $origSale->buyer_dni;
+                }
+                if (empty($buyerEmail)) {
+                    $origTData = is_array($origSale->tickets_data) ? $origSale->tickets_data : json_decode($origSale->tickets_data, true);
+                    $buyerEmail = strtolower(trim($origTData['customer_email'] ?? ''));
+                }
+                if ($buyerName === 'Cliente ViveGo' && !empty($origSale->buyer_name)) {
+                    $buyerName = $origSale->buyer_name;
+                }
+            }
+        }
+        $effectiveZoneName = $ticketsData[0]['zone_name'] ?? $ticketsData[0]['name'] ?? 'General';
+        if (preg_match('/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?(.+)/iu', $effectiveZoneName, $matches)) {
+            $effectiveZoneName = trim($matches[1]);
+        }
+        foreach ($ticketsData as &$t) {
+            $rawZ = $t['zone_name'] ?? $t['name'] ?? $effectiveZoneName;
+            if (preg_match('/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?(.+)/iu', $rawZ, $m)) {
+                $rawZ = trim($m[1]);
+            }
+            $t['name'] = $rawZ;
+            $t['zone_name'] = $rawZ;
+        }
+        unset($t);
+
         // Registrar la venta en la base de datos
         $sale = TicketSale::create([
             'event_id' => $event?->id ?? 1,
@@ -811,7 +959,7 @@ class CheckoutController extends Controller
             'buyer_name' => $buyerName,
             'buyer_dni' => $buyerDni ?: '00000000',
             'buyer_phone' => $buyerPhone ?: '999999999',
-            'zone_name' => $ticketsData[0]['name'] ?? 'General',
+            'zone_name' => $effectiveZoneName,
             'unit_price' => $orderTotal / max(1, $totalQty),
             'quantity' => max(1, $totalQty),
             'original_subtotal' => $originalSubtotalInput > 0 ? $originalSubtotalInput : ($orderTotal + $totalDiscountAmount),
@@ -823,6 +971,10 @@ class CheckoutController extends Controller
             'payment_method' => 'Culqi',
             'amount_paid' => $orderTotal,
             'change_amount' => 0.00,
+            'status' => 'completed',
+            'is_upgrade' => !empty($upgradeSaleId),
+            'upgraded_from_sale_id' => $upgradeSaleId,
+            'upgrade_difference' => !empty($upgradeSaleId) ? $orderTotal : 0.00,
             'tickets_data' => [
                 'items' => $ticketsData,
                 'sub_method' => $subMethod,
@@ -835,9 +987,14 @@ class CheckoutController extends Controller
                 'coupon_discount' => $couponDiscount,
                 'campaign_name' => $campaignNameInput ?: null,
                 'campaign_discount' => $campaignDiscountInput,
+                'is_upgrade' => !empty($upgradeSaleId),
+                'upgrade_sale_id' => $upgradeSaleId,
             ],
             'seller_name' => 'Pasarela Web Culqi',
         ]);
+
+        // Invalidar boleto previo si fue upgrade y registrar boletos oficiales en event_tickets
+        $this->processSaleCompletionAndTickets($sale, $event, $totalQty, $upgradeSaleId, $ticketsData);
 
         // 1. Crear o sincronizar cuenta de Cliente para que pueda ver "Mis Boletos" y "Mis Recibos"
         $isNewUser = false;
@@ -1156,5 +1313,70 @@ class CheckoutController extends Controller
     public function confirmation(TicketSale $sale): View
     {
         return view('web.checkout_confirmation', compact('sale'));
+    }
+
+    /**
+     * Procesa la invalidación de boletos previos por upgrade y genera los nuevos EventTicket oficiales
+     */
+    protected function processSaleCompletionAndTickets(TicketSale $sale, $event, int $totalQty, $upgradeSaleId = null, array $ticketsData = []): void
+    {
+        $targetEvent = $event ?: ($sale->event ?: Event::find($sale->event_id));
+
+        // 1. Si es una Mejora de Boleto, anular e invalidar la venta y boletos anteriores
+        if ($upgradeSaleId) {
+            $origSale = TicketSale::find($upgradeSaleId);
+            if ($origSale) {
+                $origSale->status = 'upgraded';
+                $origSale->upgraded_to_sale_id = $sale->id;
+
+                $origTData = is_array($origSale->tickets_data) ? $origSale->tickets_data : (json_decode($origSale->tickets_data, true) ?: []);
+                $origTData['is_upgraded'] = true;
+                $origTData['upgraded_to_sale_id'] = $sale->id;
+                $origTData['upgraded_to_zone'] = $sale->zone_name;
+                $origTData['upgraded_at'] = now()->toDateTimeString();
+                $origSale->tickets_data = $origTData;
+                $origSale->save();
+
+                // Marcar boletos anteriores como anulados por upgrade para que el Scanner Móvil los rechace
+                \App\Models\EventTicket::where('ticket_sale_id', $origSale->id)->update([
+                    'status' => 'upgraded',
+                    'is_used' => true,
+                    'upgraded_at' => now(),
+                ]);
+
+                // Actualizar la venta nueva con la zona previa
+                $sale->upgrade_original_zone = $origSale->zone_name;
+                $sale->save();
+            }
+        }
+
+        // 2. Generar boletos individuales en la tabla event_tickets para la nueva venta
+        if ($targetEvent) {
+            $lastTicket = \App\Models\EventTicket::where('event_id', $targetEvent->id)->orderBy('id', 'desc')->first();
+            $startSeq = $lastTicket ? ((int) preg_replace('/[^0-9]/', '', (string) $lastTicket->ticket_number) + 1) : 1;
+
+            for ($i = 1; $i <= $totalQty; $i++) {
+                $currentSeq = $startSeq + ($i - 1);
+                $ticketCode = 'TK-' . strtoupper(substr(\Illuminate\Support\Str::slug($targetEvent->title), 0, 3)) . '-' . str_pad($currentSeq, 5, '0', STR_PAD_LEFT);
+                $validationHash = 'VG' . strtoupper(substr(md5($sale->receipt_number . $i . $sale->id), 0, 8));
+                $qrPayload = "VIVEGO|{$sale->receipt_number}|EVT-{$sale->event_id}|DNI-{$sale->buyer_dni}|TICK-{$currentSeq}|{$validationHash}";
+
+                \App\Models\EventTicket::create([
+                    'event_id' => $targetEvent->id,
+                    'ticket_sale_id' => $sale->id,
+                    'ticket_code' => $ticketCode,
+                    'ticket_number' => $currentSeq,
+                    'zone_name' => $sale->zone_name,
+                    'unit_price' => $sale->unit_price,
+                    'qr_payload' => $qrPayload,
+                    'validation_hash' => $validationHash,
+                    'buyer_name' => $sale->buyer_name,
+                    'buyer_dni' => $sale->buyer_dni,
+                    'source' => $sale->seller_name ?: 'web_checkout',
+                    'is_used' => false,
+                    'status' => 'valid',
+                ]);
+            }
+        }
     }
 }

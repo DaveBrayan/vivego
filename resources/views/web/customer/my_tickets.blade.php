@@ -119,25 +119,49 @@
                             $eventDateTime = \Carbon\Carbon::parse($eventDateStr . ' ' . $eventTimeStr);
                             $isPastEvent = $eventDateTime->isPast();
                         }
+
+                        $isUpgraded = $sale->isUpgraded();
+                        $pm = strtolower($sale->payment_method ?? '');
+                        $isCourtesy = ($pm === 'cortesía' || $pm === 'cortesia' || !empty($tData['is_courtesy']) || (float)$sale->total_amount == 0 || str_contains(strtolower($sale->zone_name ?? ''), 'cortesía') || str_contains(strtolower($sale->zone_name ?? ''), 'cortesia'));
+
+                        $cleanZoneName = function($name, $zoneFallback = '') {
+                            $str = !empty($name) ? $name : $zoneFallback;
+                            if (preg_match('/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?(.+)/iu', $str, $m)) {
+                                return trim($m[1]);
+                            }
+                            return $str;
+                        };
                     @endphp
 
-                    <div class="ticket-customer-card" style="background: #FFFFFF; border: 1.5px solid {{ $isPastEvent ? '#E2E8F0' : '#CBD5E1' }}; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); display: flex; flex-direction: column; position: relative; transition: transform 0.2s, box-shadow 0.2s; opacity: {{ $isPastEvent ? '0.78' : '1' }};">
+                    <div class="ticket-customer-card" style="background: #FFFFFF; border: 1.5px solid {{ $isPastEvent ? '#E2E8F0' : ($isUpgraded ? '#E0E7FF' : ($isCourtesy ? '#A7F3D0' : ($sale->is_upgrade ? '#818CF8' : '#CBD5E1'))) }}; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); display: flex; flex-direction: column; position: relative; transition: transform 0.2s, box-shadow 0.2s; opacity: {{ ($isPastEvent || $isUpgraded) ? '0.82' : '1' }};">
                         
                         <!-- Top Image Banner -->
                         <div style="position: relative; height: 160px; background: #0F172A; overflow: hidden;">
                             @if($sale->event && $sale->event->banner_image)
-                                <img src="{{ $sale->event->banner_image }}" alt="{{ $sale->event->title }}" style="width: 100%; height: 100%; object-fit: cover; {{ $isPastEvent ? 'filter: grayscale(100%) contrast(85%); opacity: 0.65;' : 'transition: transform 0.3s;' }}">
+                                <img src="{{ $sale->event->banner_image }}" alt="{{ $sale->event->title }}" style="width: 100%; height: 100%; object-fit: cover; {{ ($isPastEvent || $isUpgraded) ? 'filter: grayscale(80%) contrast(90%); opacity: 0.75;' : 'transition: transform 0.3s;' }}">
                             @else
-                                <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #1E1B4B, #0F172A); display: flex; align-items: center; justify-content: center; color: #FFF; font-size: 2.5rem; {{ $isPastEvent ? 'filter: grayscale(100%);' : '' }}">🎟️</div>
+                                <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #1E1B4B, #0F172A); display: flex; align-items: center; justify-content: center; color: #FFF; font-size: 2.5rem; {{ ($isPastEvent || $isUpgraded) ? 'filter: grayscale(100%);' : '' }}">🎟️</div>
                             @endif
 
                             <!-- Gradient Protection Overlay -->
                             <div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(15,23,42,0.8) 0%, transparent 60%);"></div>
                             
                             <!-- Status Badge -->
-                            @if($isPastEvent)
+                            @if($isUpgraded)
+                                <span style="position: absolute; top: 12px; right: 12px; background: linear-gradient(135deg, #6366F1, #4F46E5); color: #FFFFFF; font-size: 0.72rem; font-weight: 900; padding: 0.35rem 0.85rem; border-radius: 20px; box-shadow: 0 4px 12px rgba(99,102,241,0.35); text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid #A5B4FC;">
+                                    🔄 MEJORADA (INACTIVA)
+                                </span>
+                            @elseif($isPastEvent)
                                 <span style="position: absolute; top: 12px; right: 12px; background: #64748B; color: #FFFFFF; font-size: 0.75rem; font-weight: 900; padding: 0.35rem 0.85rem; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); text-transform: uppercase; letter-spacing: 0.5px;">
                                     🕒 EVENTO FINALIZADO
+                                </span>
+                            @elseif($isCourtesy)
+                                <span style="position: absolute; top: 12px; right: 12px; background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; font-size: 0.75rem; font-weight: 900; padding: 0.35rem 0.85rem; border-radius: 20px; box-shadow: 0 4px 12px rgba(16,185,129,0.35); text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid #6EE7B7;">
+                                    🎁 CORTESÍA (GRATIS)
+                                </span>
+                            @elseif($sale->is_upgrade)
+                                <span style="position: absolute; top: 12px; right: 12px; background: linear-gradient(135deg, #6366F1, #4F46E5); color: #FFFFFF; font-size: 0.75rem; font-weight: 900; padding: 0.35rem 0.85rem; border-radius: 20px; box-shadow: 0 4px 12px rgba(99,102,241,0.35); text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid #A5B4FC;">
+                                    ⭐ ENTRADA MEJORADA (VÁLIDA)
                                 </span>
                             @else
                                 <span style="position: absolute; top: 12px; right: 12px; background: #10B981; color: #FFFFFF; font-size: 0.75rem; font-weight: 900; padding: 0.35rem 0.85rem; border-radius: 20px; box-shadow: 0 4px 12px rgba(16,185,129,0.35); text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid #34D399;">
@@ -159,14 +183,70 @@
                                 <span style="font-size: 0.75rem; font-weight: 900; color: #EA580C; font-family: monospace; letter-spacing: 0.5px;">
                                     OPERACIÓN #{{ $sale->receipt_number }}
                                 </span>
-                                <span style="font-size: 0.85rem; color: #059669; font-weight: 900;">
-                                    S/ {{ number_format($sale->total_amount, 2) }}
-                                </span>
+                                @if($isCourtesy)
+                                    <span style="font-size: 0.85rem; color: #059669; font-weight: 900; background: #ECFDF5; padding: 0.2rem 0.6rem; border-radius: 8px; border: 1px solid #A7F3D0;">
+                                        🎁 GRATIS
+                                    </span>
+                                @elseif($sale->is_upgrade)
+                                    <div style="text-align: right;">
+                                        <span style="font-size: 0.68rem; color: #6366F1; font-weight: 800; display: block; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            DIFERENCIA PAGADA
+                                        </span>
+                                        <span style="font-size: 0.95rem; color: #4F46E5; font-weight: 900;">
+                                            +S/ {{ number_format($sale->total_amount, 2) }}
+                                        </span>
+                                    </div>
+                                @else
+                                    <span style="font-size: 0.85rem; color: #059669; font-weight: 900;">
+                                        S/ {{ number_format($sale->total_amount, 2) }}
+                                    </span>
+                                @endif
                             </div>
 
                             <h3 style="font-size: 1.25rem; font-weight: 900; color: #0F172A; margin: 0 0 0.9rem 0; line-height: 1.25;">
                                 {{ $sale->event?->title ?? 'Evento ViveGo' }}
                             </h3>
+
+                            @if($isUpgraded)
+                                <div style="background: #EEF2FF; border: 1px solid #C7D2FE; border-radius: 12px; padding: 0.6rem 0.85rem; margin-bottom: 0.9rem; font-size: 0.8rem; color: #4338CA; font-weight: 700; display: flex; align-items: flex-start; gap: 0.45rem;">
+                                    <span style="font-size: 1rem;">🔄</span>
+                                    <div>
+                                        Esta entrada fue canjeada por un upgrade a una zona superior. Tu nuevo boleto vigente con código QR actualizado se encuentra disponible en tu lista.
+                                    </div>
+                                </div>
+                            @elseif($isCourtesy)
+                                <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 12px; padding: 0.6rem 0.85rem; margin-bottom: 0.9rem; font-size: 0.8rem; color: #065F46; font-weight: 700; display: flex; align-items: flex-start; gap: 0.45rem;">
+                                    <span style="font-size: 1rem;">🎁</span>
+                                    <div>
+                                        Boleto Oficial de Cortesía emitido sin costo. Válido para ingreso directo al recinto del evento.
+                                    </div>
+                                </div>
+                            @elseif($sale->is_upgrade)
+                                @php
+                                    $origZone = $sale->upgrade_original_zone ?: 'Zona Anterior';
+                                    $prevSale = $sale->upgradedFromSale;
+                                    $prevAmount = $prevSale ? (float)$prevSale->total_amount : 0;
+                                    $fullZonePrice = (float)($sale->original_subtotal > 0 ? $sale->original_subtotal : ($prevAmount + (float)$sale->total_amount));
+                                    if ($fullZonePrice <= (float)$sale->total_amount && $prevAmount > 0) {
+                                        $fullZonePrice = $prevAmount + (float)$sale->total_amount;
+                                    }
+                                @endphp
+                                <div style="background: linear-gradient(135deg, #F5F3FF 0%, #EEF2FF 100%); border: 1.5px solid #C7D2FE; border-radius: 12px; padding: 0.75rem 0.95rem; margin-bottom: 0.9rem; font-size: 0.82rem; color: #3730A3;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.3rem;">
+                                        <strong style="color: #4F46E5; display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.85rem;">
+                                            <span>⭐</span> Mejora de Zona Aplicada
+                                        </strong>
+                                        @if($fullZonePrice > 0)
+                                            <span style="background: #E0E7FF; color: #3730A3; padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; border: 1px solid #A5B4FC;">
+                                                Precio Regular Zona: S/ {{ number_format($fullZonePrice, 2) }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                    <div style="font-size: 0.78rem; color: #4338CA; line-height: 1.4;">
+                                        Canjeaste tu entrada de <strong>{{ $cleanZoneName($origZone) }}</strong> pagando solo la diferencia de <strong>S/ {{ number_format($sale->total_amount, 2) }}</strong>. Tu zona actual y vigente es <strong>{{ $cleanZoneName($sale->zone_name) }}</strong>.
+                                    </div>
+                                </div>
+                            @endif
 
                             <!-- Desglose por Sectores / Zonas Adquiridas -->
                             <div style="background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 16px; padding: 0.95rem; margin-bottom: 1.25rem;">
@@ -177,24 +257,42 @@
                                 <div style="display: flex; flex-direction: column; gap: 0.45rem;">
                                     @if(count($items) > 0)
                                         @foreach($items as $t)
+                                            @php
+                                                $tDisplayName = $cleanZoneName($t['zone_name'] ?? ($t['name'] ?? ''), $sale->zone_name);
+                                            @endphp
                                             <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 0.45rem 0.75rem;">
                                                 <span style="font-weight: 800; color: #0F172A;">
                                                     <span style="background: rgba(255,85,0,0.12); color: #FF5500; padding: 2px 6px; border-radius: 6px; font-weight: 900;">{{ $t['quantity'] ?? 1 }}x</span>
-                                                    {{ $t['name'] ?? 'Entrada' }}
+                                                    {{ $tDisplayName }}
                                                 </span>
                                                 <span style="font-weight: 800; color: #059669; font-size: 0.85rem;">
-                                                    S/ {{ number_format(($t['subtotal'] ?? (($t['price'] ?? 0) * ($t['quantity'] ?? 1))), 2) }}
+                                                    @if($isCourtesy)
+                                                        Gratis
+                                                    @elseif($sale->is_upgrade)
+                                                        <span style="font-size: 0.78rem; color: #6366F1; font-weight: 800;">+S/ {{ number_format(($t['subtotal'] ?? (($t['price'] ?? 0) * ($t['quantity'] ?? 1))), 2) }}</span>
+                                                    @else
+                                                        S/ {{ number_format(($t['subtotal'] ?? (($t['price'] ?? 0) * ($t['quantity'] ?? 1))), 2) }}
+                                                    @endif
                                                 </span>
                                             </div>
                                         @endforeach
                                     @else
+                                        @php
+                                            $sDisplayName = $cleanZoneName($sale->zone_name);
+                                        @endphp
                                         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 0.45rem 0.75rem;">
                                             <span style="font-weight: 800; color: #0F172A;">
                                                 <span style="background: rgba(255,85,0,0.12); color: #FF5500; padding: 2px 6px; border-radius: 6px; font-weight: 900;">{{ $sale->quantity }}x</span>
-                                                {{ $sale->zone_name }}
+                                                {{ $sDisplayName }}
                                             </span>
                                             <span style="font-weight: 800; color: #059669; font-size: 0.85rem;">
-                                                S/ {{ number_format($sale->total_amount, 2) }}
+                                                @if($isCourtesy)
+                                                    Gratis
+                                                @elseif($sale->is_upgrade)
+                                                    <span style="font-size: 0.78rem; color: #6366F1; font-weight: 800;">+S/ {{ number_format($sale->total_amount, 2) }}</span>
+                                                @else
+                                                    S/ {{ number_format($sale->total_amount, 2) }}
+                                                @endif
                                             </span>
                                         </div>
                                     @endif
@@ -206,9 +304,13 @@
                                 </div>
                             </div>
 
-                            <!-- Botones de Acción: Generar Boleto & Enviar por Correo -->
-                            <div style="margin-top: auto; display: flex; flex-direction: column; gap: 0.5rem;">
-                                @if($isPastEvent)
+                            <!-- Botones de Acción: Generar Boleto & Mejorar Entrada -->
+                            <div style="margin-top: auto; display: flex; flex-direction: column; gap: 0.6rem;">
+                                @if($isUpgraded)
+                                    <button type="button" disabled style="width: 100%; border: 1.5px dashed #CBD5E1; background: #F1F5F9; color: #64748B; padding: 0.85rem 1rem; font-size: 0.875rem; font-weight: 800; border-radius: 14px; cursor: not-allowed; display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem;">
+                                        <span>🔒 Entrada Canjeada por Upgrade</span>
+                                    </button>
+                                @elseif($isPastEvent)
                                     <button type="button" disabled style="width: 100%; background: #F1F5F9; color: #94A3B8; border: 1.5px solid #E2E8F0; padding: 0.9rem 1rem; font-size: 0.9rem; font-weight: 800; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; cursor: not-allowed;">
                                         <span>🔒 Entrada Caducada</span>
                                     </button>
@@ -221,10 +323,17 @@
                                             <line x1="12" y1="15" x2="12" y2="3"></line>
                                         </svg>
                                     </button>
-                                    <button type="button" disabled style="width: 100%; border: 1.5px dashed #CBD5E1; cursor: not-allowed; box-sizing: border-box; background: #F8FAFC; color: #94A3B8; text-align: center; padding: 0.65rem 1rem; font-size: 0.85rem; font-weight: 800; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; opacity: 0.85;" title="La opción de mejorar entrada / upgrade estará disponible próximamente">
-                                        <span>⭐ Mejorar mi Entrada</span>
-                                        <span style="font-size: 0.65rem; background: #E2E8F0; color: #64748B; padding: 0.15rem 0.45rem; border-radius: 6px; font-weight: 800; text-transform: uppercase;">Bloqueado</span>
-                                    </button>
+
+                                    @if(!$isCourtesy)
+                                        <!-- Botón Mejorar Entrada (Habilitado con cálculo de diferencia) -->
+                                        <button type="button" class="btn-mejorar-boleto" onclick="openTicketUpgradeModal({{ $sale->id }})" style="width: 100%; border: 1.5px solid #6366F1; cursor: pointer; box-sizing: border-box; background: linear-gradient(135deg, #F5F3FF 0%, #EEF2FF 100%); color: #4F46E5; text-align: center; padding: 0.7rem 1rem; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.12); transition: all 0.2s;">
+                                            <div style="display: flex; align-items: center; gap: 0.45rem;">
+                                                <span style="font-size: 0.92rem; font-weight: 900;">⭐ Mejorar mi Entrada</span>
+                                                <span style="font-size: 0.65rem; background: #6366F1; color: #FFFFFF; padding: 0.15rem 0.45rem; border-radius: 6px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px;">UPGRADE</span>
+                                            </div>
+                                            <span style="font-size: 0.74rem; color: #6366F1; font-weight: 800; opacity: 0.95;">⚡ Solo paga la diferencia</span>
+                                        </button>
+                                    @endif
                                 @endif
                             </div>
 
@@ -233,6 +342,107 @@
                 @endforeach
             </div>
         @endif
+
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL DE MEJORA DE ENTRADA (TICKET UPGRADE) -->
+<!-- ========================================== -->
+<div id="ticketUpgradeModal" style="display: none; position: fixed; inset: 0; z-index: 999999; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); overflow-y: auto; padding: 1.5rem 1rem; align-items: center; justify-content: center;">
+    <div style="background: #FFFFFF; border-radius: 28px; width: 100%; max-width: 680px; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35); overflow: hidden; position: relative; border: 1.5px solid #E2E8F0; margin: auto; animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+        
+        <!-- Header del Modal con Gradiente Premium -->
+        <div style="background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 60%, #312E81 100%); padding: 1.75rem 2rem; color: #FFFFFF; position: relative;">
+            <button type="button" onclick="closeTicketUpgradeModal()" style="position: absolute; top: 1.25rem; right: 1.25rem; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); color: #FFFFFF; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; cursor: pointer; transition: background 0.2s;">
+                ✕
+            </button>
+            <div style="display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(99,102,241,0.25); border: 1px solid rgba(165,180,252,0.4); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #A5B4FC; margin-bottom: 0.6rem;">
+                <span>⭐</span> VIVEGO UPGRADE PASS
+            </div>
+            <h2 style="font-size: 1.5rem; font-weight: 900; margin: 0 0 0.25rem 0; letter-spacing: -0.5px; color: #FFFFFF;">
+                Mejorar mi Entrada
+            </h2>
+            <p style="color: #94A3B8; font-size: 0.875rem; margin: 0; line-height: 1.4;">
+                Sube de zona y vive la mejor experiencia pagando <strong style="color: #38BDF8;">únicamente la diferencia</strong>.
+            </p>
+        </div>
+
+        <!-- Cuerpo del Modal -->
+        <div style="padding: 1.75rem 2rem; max-height: calc(85vh - 200px); overflow-y: auto;">
+            
+            <!-- Loading Spinner -->
+            <div id="upgradeModalLoading" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 1rem; gap: 1rem;">
+                <div style="width: 44px; height: 44px; border: 4px solid #E2E8F0; border-top-color: #6366F1; border-radius: 50%; animation: spinUpgrade 0.8s linear infinite;"></div>
+                <span style="font-size: 0.95rem; font-weight: 700; color: #64748B;">Consultando aforo y zonas disponibles en vivo...</span>
+            </div>
+
+            <!-- Error State -->
+            <div id="upgradeModalError" style="display: none; background: #FEF2F2; border: 1.5px solid #FCA5A5; color: #991B1B; padding: 1.25rem; border-radius: 16px; font-weight: 700; text-align: center;">
+                <span style="font-size: 1.8rem; display: block; margin-bottom: 0.5rem;">⚠️</span>
+                <div id="upgradeModalErrorMessage" style="font-size: 0.95rem; margin-bottom: 1rem;"></div>
+                <button type="button" onclick="closeTicketUpgradeModal()" style="background: #DC2626; color: #FFFFFF; border: none; padding: 0.6rem 1.25rem; border-radius: 10px; font-weight: 800; cursor: pointer;">Cerrar</button>
+            </div>
+
+            <!-- Content Area (Rendered when loaded) -->
+            <div id="upgradeModalContent" style="display: none;">
+                
+                <!-- Ticket Actual Summary Card -->
+                <div style="background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 18px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                    <div>
+                        <span style="font-size: 0.72rem; font-weight: 800; color: #64748B; text-transform: uppercase; display: block; letter-spacing: 0.5px;">Tu Entrada Actual:</span>
+                        <div style="font-size: 1.1rem; font-weight: 900; color: #0F172A; display: flex; align-items: center; gap: 0.5rem;">
+                            <span id="uCurrentQuantityBadge" style="background: rgba(255,85,0,0.12); color: #FF5500; padding: 2px 8px; border-radius: 8px; font-size: 0.9rem;">1x</span>
+                            <span id="uCurrentZoneName">Zona General</span>
+                        </div>
+                        <span id="uCurrentEventTitle" style="font-size: 0.8rem; color: #64748B; font-weight: 600; display: block; margin-top: 2px;"></span>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="font-size: 0.72rem; font-weight: 800; color: #64748B; text-transform: uppercase; display: block;">Monto Abonado:</span>
+                        <span id="uCurrentTotalPaid" style="font-size: 1.15rem; font-weight: 900; color: #059669;">S/ 0.00</span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.82rem; font-weight: 900; color: #0F172A; text-transform: uppercase; letter-spacing: 0.5px;">
+                        Selecciona la Zona a la que deseas mejorar:
+                    </span>
+                    <span style="font-size: 0.75rem; color: #64748B; font-weight: 700;">Aforo en Tiempo Real ⚡</span>
+                </div>
+
+                <!-- Lista Dinámica de Zonas Disponibles -->
+                <div id="uZonesList" style="display: flex; flex-direction: column; gap: 0.85rem;">
+                    <!-- Inserted dynamically via JavaScript -->
+                </div>
+
+                <!-- Resumen de Pago de Diferencia -->
+                <div id="uUpgradeSummaryBox" style="display: none; margin-top: 1.5rem; background: linear-gradient(135deg, #FAF5FF 0%, #EEF2FF 100%); border: 2px solid #818CF8; border-radius: 20px; padding: 1.25rem 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                        <span style="font-size: 0.9rem; font-weight: 800; color: #4338CA;">Nueva Zona Elegida:</span>
+                        <strong id="uSummarySelectedZone" style="font-size: 1.05rem; font-weight: 900; color: #312E81;">-</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: #64748B; margin-bottom: 0.4rem;">
+                        <span>Diferencia por entrada:</span>
+                        <strong id="uSummaryUnitDiff" style="color: #0F172A;">S/ 0.00</strong>
+                    </div>
+                    <div style="border-top: 1.5px dashed #CBD5E1; margin: 0.6rem 0; padding-top: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <span style="font-size: 1rem; font-weight: 900; color: #0F172A; display: block;">Total a Pagar (Solo Diferencia):</span>
+                            <span style="font-size: 0.75rem; color: #6366F1; font-weight: 800;">🔒 Se anula el boleto previo y recibes el nuevo QR</span>
+                        </div>
+                        <span id="uSummaryTotalDiff" style="font-size: 1.6rem; font-weight: 900; color: #059669;">S/ 0.00</span>
+                    </div>
+
+                    <!-- Botón CTA Ir al Checkout -->
+                    <button type="button" id="btnProceedUpgradeCheckout" onclick="proceedToUpgradeCheckout()" style="width: 100%; border: none; cursor: pointer; background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%); color: #FFFFFF; font-size: 1rem; font-weight: 900; padding: 0.95rem 1.5rem; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35); margin-top: 0.75rem; transition: transform 0.15s, box-shadow 0.15s;">
+                        <span>Continuar al Checkout y Pagar Diferencia</span>
+                        <span>➔</span>
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
 
     </div>
 </div>
@@ -249,9 +459,209 @@
         transform: translateY(-2px);
         box-shadow: 0 8px 24px rgba(255, 85, 0, 0.45) !important;
     }
+    .btn-mejorar-boleto:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25) !important;
+        background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%) !important;
+    }
+    .zone-upgrade-card {
+        transition: all 0.2s ease;
+    }
+    .zone-upgrade-card.selectable:hover {
+        border-color: #6366F1 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 18px rgba(99, 102, 241, 0.12) !important;
+    }
+    .zone-upgrade-card.selected {
+        border-color: #6366F1 !important;
+        background: #FAF5FF !important;
+        box-shadow: 0 0 0 2px #6366F1 !important;
+    }
+    @keyframes spinUpgrade {
+        to { transform: rotate(360deg); }
+    }
+    @keyframes modalSlideUp {
+        from { opacity: 0; transform: translateY(20px) scale(0.97); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
 </style>
 @endsection
 
 @push('scripts')
     @include('web.customer.partials.ticket_generator_js')
+
+    <script>
+        let currentUpgradeData = null;
+        let selectedUpgradeZone = null;
+
+        function openTicketUpgradeModal(saleId) {
+            const modal = document.getElementById('ticketUpgradeModal');
+            const loading = document.getElementById('upgradeModalLoading');
+            const errorBox = document.getElementById('upgradeModalError');
+            const content = document.getElementById('upgradeModalContent');
+            const summaryBox = document.getElementById('uUpgradeSummaryBox');
+
+            if (!modal) return;
+
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            loading.style.display = 'flex';
+            errorBox.style.display = 'none';
+            content.style.display = 'none';
+            summaryBox.style.display = 'none';
+            selectedUpgradeZone = null;
+
+            fetch(`/mi-cuenta/boleto/${saleId}/opciones-mejora`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                loading.style.display = 'none';
+                if (!data.success) {
+                    errorBox.style.display = 'block';
+                    document.getElementById('upgradeModalErrorMessage').textContent = data.message || 'No se pudieron consultar las opciones de mejora.';
+                    return;
+                }
+
+                currentUpgradeData = data;
+                renderUpgradeModal(data);
+                content.style.display = 'block';
+            })
+            .catch(err => {
+                console.error('Error cargando opciones de mejora:', err);
+                loading.style.display = 'none';
+                errorBox.style.display = 'block';
+                document.getElementById('upgradeModalErrorMessage').textContent = 'Ocurrió un error de conexión al consultar las opciones. Por favor intenta nuevamente.';
+            });
+        }
+
+        function closeTicketUpgradeModal() {
+            const modal = document.getElementById('ticketUpgradeModal');
+            if (modal) modal.style.display = 'none';
+            document.body.style.overflow = '';
+            currentUpgradeData = null;
+            selectedUpgradeZone = null;
+        }
+
+        function renderUpgradeModal(data) {
+            const sale = data.sale;
+            const event = data.event;
+            const zones = data.zones || [];
+
+            document.getElementById('uCurrentQuantityBadge').textContent = `${sale.quantity}x`;
+            document.getElementById('uCurrentZoneName').textContent = sale.zone_name;
+            document.getElementById('uCurrentEventTitle').textContent = `📅 ${event.title} • ${event.date_formatted}`;
+            document.getElementById('uCurrentTotalPaid').textContent = `S/ ${parseFloat(sale.total_amount).toFixed(2)}`;
+
+            const zonesList = document.getElementById('uZonesList');
+            zonesList.innerHTML = '';
+
+            if (zones.length === 0) {
+                zonesList.innerHTML = `<div style="text-align: center; padding: 2rem; color: #64748B; font-weight: 700;">No hay zonas registradas para este evento.</div>`;
+                return;
+            }
+
+            zones.forEach((z, index) => {
+                const isAvailable = z.available_for_upgrade;
+                const card = document.createElement('div');
+                card.className = `zone-upgrade-card ${isAvailable ? 'selectable' : 'disabled'}`;
+                card.id = `zoneCard_${index}`;
+                
+                let cardStyle = "border-radius: 18px; padding: 1.1rem 1.25rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; border: 1.5px solid #E2E8F0;";
+                if (z.is_current) {
+                    cardStyle += " background: #F8FAFC; opacity: 0.85;";
+                } else if (!isAvailable) {
+                    cardStyle += " background: #F1F5F9; opacity: 0.7; cursor: not-allowed;";
+                } else {
+                    cardStyle += " background: #FFFFFF; cursor: pointer;";
+                }
+                card.style.cssText = cardStyle;
+
+                if (isAvailable) {
+                    card.onclick = () => selectUpgradeZone(z, index);
+                }
+
+                let badgeHtml = '';
+                if (z.is_current) {
+                    badgeHtml = `<span style="background: #E2E8F0; color: #475569; font-size: 0.72rem; font-weight: 800; padding: 0.25rem 0.6rem; border-radius: 8px;">📍 ZONA ACTUAL</span>`;
+                } else if (z.badge_status === 'sold_out') {
+                    badgeHtml = `<span style="background: #FEE2E2; color: #DC2626; font-size: 0.72rem; font-weight: 800; padding: 0.25rem 0.6rem; border-radius: 8px;">🚫 AGOTADO / SIN AFORO</span>`;
+                } else if (z.badge_status === 'lower_tier') {
+                    badgeHtml = `<span style="background: #E2E8F0; color: #64748B; font-size: 0.72rem; font-weight: 800; padding: 0.25rem 0.6rem; border-radius: 8px;">ℹ️ PRECIO MENOR O IGUAL</span>`;
+                } else {
+                    badgeHtml = `<span style="background: #DCFCE7; color: #15803D; font-size: 0.72rem; font-weight: 900; padding: 0.25rem 0.6rem; border-radius: 8px;">⚡ ${z.remaining} CUPOS DISPONIBLES</span>`;
+                }
+
+                card.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 1rem; min-width: 0;">
+                        ${isAvailable ? `
+                            <input type="radio" name="selected_upgrade_zone_radio" id="radioZone_${index}" style="accent-color: #6366F1; width: 18px; height: 18px; cursor: pointer;">
+                        ` : `
+                            <span style="font-size: 1.1rem; color: #94A3B8;">🔒</span>
+                        `}
+                        <div style="min-width: 0;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                <strong style="font-size: 1.05rem; color: #0F172A;">${z.name}</strong>
+                                ${badgeHtml}
+                            </div>
+                            <span style="font-size: 0.8rem; color: #64748B; display: block; margin-top: 2px;">
+                                Precio Regular: <strong>${z.price_formatted}</strong> c/u
+                            </span>
+                        </div>
+                    </div>
+
+                    <div style="text-align: right; flex-shrink: 0;">
+                        ${isAvailable ? `
+                            <span style="font-size: 0.7rem; font-weight: 800; color: #6366F1; text-transform: uppercase; display: block;">Solo Paga Diferencia:</span>
+                            <span style="font-size: 1.15rem; font-weight: 900; color: #059669; display: block;">
+                                + ${z.unit_difference_formatted} <span style="font-size: 0.75rem; color: #64748B; font-weight: 600;">c/u</span>
+                            </span>
+                            <span style="font-size: 0.72rem; color: #475569; font-weight: 700;">
+                                Total (${sale.quantity}x): ${z.total_difference_formatted}
+                            </span>
+                        ` : `
+                            <span style="font-size: 0.8rem; color: #94A3B8; font-weight: 700;">No disponible</span>
+                        `}
+                    </div>
+                `;
+
+                zonesList.appendChild(card);
+            });
+        }
+
+        function selectUpgradeZone(zone, index) {
+            selectedUpgradeZone = zone;
+
+            document.querySelectorAll('.zone-upgrade-card').forEach(c => c.classList.remove('selected'));
+            const selectedCard = document.getElementById(`zoneCard_${index}`);
+            if (selectedCard) selectedCard.classList.add('selected');
+
+            const radio = document.getElementById(`radioZone_${index}`);
+            if (radio) radio.checked = true;
+
+            const summaryBox = document.getElementById('uUpgradeSummaryBox');
+            summaryBox.style.display = 'block';
+
+            document.getElementById('uSummarySelectedZone').textContent = zone.name;
+            document.getElementById('uSummaryUnitDiff').textContent = `${zone.unit_difference_formatted} c/u (${currentUpgradeData.sale.quantity} entrada(s))`;
+            document.getElementById('uSummaryTotalDiff').textContent = zone.total_difference_formatted;
+        }
+
+        function proceedToUpgradeCheckout() {
+            if (!currentUpgradeData || !selectedUpgradeZone) {
+                alert('Por favor selecciona una zona superior para continuar con la mejora.');
+                return;
+            }
+
+            const saleId = currentUpgradeData.sale.id;
+            const zoneName = selectedUpgradeZone.name;
+            const checkoutUrl = `{{ route('web.checkout') }}?upgrade_sale_id=${saleId}&upgrade_zone=${encodeURIComponent(zoneName)}`;
+
+            window.location.href = checkoutUrl;
+        }
+    </script>
 @endpush
+

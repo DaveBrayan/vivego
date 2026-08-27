@@ -76,11 +76,32 @@
                         $items = $tData['items'] ?? (is_array($tData) ? $tData : []);
                         $hasDiscount = (float)($sale->discount_amount ?? 0) > 0;
                         $origSubtotal = (float)($sale->original_subtotal ?? ($sale->total_amount + ($sale->discount_amount ?? 0)));
+
+                        $cleanZoneName = function($name, $zoneFallback = '') {
+                            $str = !empty($name) ? $name : $zoneFallback;
+                            if (preg_match('/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?(.+)/iu', $str, $m)) {
+                                return trim($m[1]);
+                            }
+                            return $str;
+                        };
                     @endphp
+
+                    @if($sale->is_upgrade)
+                        <div style="background: #EEF2FF; border: 1px solid #C7D2FE; border-radius: 10px; padding: 0.6rem 0.85rem; margin-bottom: 0.85rem; font-size: 0.82rem; color: #4338CA; font-weight: 700;">
+                            ⭐ <strong>Mejora de Entrada Confirmada:</strong> Tu entrada anterior fue actualizada con éxito a la nueva zona vigente.
+                        </div>
+                    @endif
+
                     @foreach($items as $t)
                         <div style="display: flex; justify-content: space-between; font-size: 0.95rem; color: #1E293B; margin-bottom: 0.4rem;">
-                            <span>🎟️ <strong>{{ $t['quantity'] ?? 1 }}x</strong> {{ $t['name'] ?? 'Entrada' }}</span>
-                            <strong style="color: #0F172A;">S/ {{ number_format(($t['subtotal'] ?? (($t['price'] ?? 0) * ($t['quantity'] ?? 1))), 2) }}</strong>
+                            <span>🎟️ <strong>{{ $t['quantity'] ?? 1 }}x</strong> {{ $cleanZoneName($t['zone_name'] ?? ($t['name'] ?? ''), $sale->zone_name) }}</span>
+                            <strong style="color: #0F172A;">
+                                @if($sale->is_upgrade)
+                                    <span style="font-size: 0.85rem; color: #6366F1;">+S/ {{ number_format(($t['subtotal'] ?? (($t['price'] ?? 0) * ($t['quantity'] ?? 1))), 2) }}</span>
+                                @else
+                                    S/ {{ number_format(($t['subtotal'] ?? (($t['price'] ?? 0) * ($t['quantity'] ?? 1))), 2) }}
+                                @endif
+                            </strong>
                         </div>
                     @endforeach
 
@@ -112,8 +133,12 @@
                     @endif
 
                     <div style="display: flex; justify-content: space-between; border-top: 2px dashed #E2E8F0; margin-top: 0.85rem; padding-top: 0.85rem; align-items: center;">
-                        <strong style="font-size: 1.1rem; color: #0F172A;">Total Pagado:</strong>
-                        <strong style="font-size: 1.5rem; color: #059669; font-weight: 900;">S/ {{ number_format($sale->total_amount, 2) }}</strong>
+                        <strong style="font-size: 1.1rem; color: #0F172A;">
+                            {{ $sale->is_upgrade ? 'Diferencia Pagada:' : 'Total Pagado:' }}
+                        </strong>
+                        <strong style="font-size: 1.5rem; color: {{ $sale->is_upgrade ? '#4F46E5' : '#059669' }}; font-weight: 900;">
+                            {{ $sale->is_upgrade ? '+ ' : '' }}S/ {{ number_format($sale->total_amount, 2) }}
+                        </strong>
                     </div>
                 </div>
             </div>

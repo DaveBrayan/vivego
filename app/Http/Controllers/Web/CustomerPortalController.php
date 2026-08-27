@@ -87,7 +87,9 @@ class CustomerPortalController extends Controller
         })->first();
 
         if ($user && Hash::check($password, $user->password)) {
-            if ($user->status && $user->status !== 'Activo') {
+            $statusLower = strtolower(trim((string) $user->status));
+            $isInactive = in_array($statusLower, ['inactivo', 'inactive', 'bloqueado', 'blocked', 'suspendido', 'suspended', '0']);
+            if ($isInactive) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Tu cuenta de cliente se encuentra inactiva o bloqueada.',
@@ -157,10 +159,19 @@ class CustomerPortalController extends Controller
      */
     public function myTickets(): View|RedirectResponse
     {
+        $customerId = session('customer_id');
         $customerEmail = session('customer_email');
         $customerDni = session('customer_dni');
 
-        if (!session('customer_logged_in') && empty($customerEmail)) {
+        if ($customerId && (empty($customerEmail) || empty($customerDni))) {
+            $custUser = User::find($customerId);
+            if ($custUser) {
+                $customerEmail = $customerEmail ?: $custUser->email;
+                $customerDni = $customerDni ?: $custUser->dni;
+            }
+        }
+
+        if (!session('customer_logged_in') && empty($customerEmail) && empty($customerDni)) {
             return redirect()->route('web.login')->with('info', 'Inicia sesión para ver tus boletos.');
         }
 
@@ -168,7 +179,8 @@ class CustomerPortalController extends Controller
             ->where(function ($query) use ($customerEmail, $customerDni) {
                 if ($customerEmail) {
                     $query->orWhereJsonContains('tickets_data->customer_email', $customerEmail)
-                          ->orWhere('tickets_data', 'LIKE', "%{$customerEmail}%");
+                          ->orWhere('tickets_data', 'LIKE', "%{$customerEmail}%")
+                          ->orWhere('buyer_name', $customerEmail);
                 }
                 if ($customerDni) {
                     $query->orWhere('buyer_dni', $customerDni);
@@ -185,10 +197,19 @@ class CustomerPortalController extends Controller
      */
     public function myReceipts(): View|RedirectResponse
     {
+        $customerId = session('customer_id');
         $customerEmail = session('customer_email');
         $customerDni = session('customer_dni');
 
-        if (!session('customer_logged_in') && empty($customerEmail)) {
+        if ($customerId && (empty($customerEmail) || empty($customerDni))) {
+            $custUser = User::find($customerId);
+            if ($custUser) {
+                $customerEmail = $customerEmail ?: $custUser->email;
+                $customerDni = $customerDni ?: $custUser->dni;
+            }
+        }
+
+        if (!session('customer_logged_in') && empty($customerEmail) && empty($customerDni)) {
             return redirect()->route('web.login')->with('info', 'Inicia sesión para ver tus recibos.');
         }
 
@@ -196,7 +217,8 @@ class CustomerPortalController extends Controller
             ->where(function ($query) use ($customerEmail, $customerDni) {
                 if ($customerEmail) {
                     $query->orWhereJsonContains('tickets_data->customer_email', $customerEmail)
-                          ->orWhere('tickets_data', 'LIKE', "%{$customerEmail}%");
+                          ->orWhere('tickets_data', 'LIKE', "%{$customerEmail}%")
+                          ->orWhere('buyer_name', $customerEmail);
                 }
                 if ($customerDni) {
                     $query->orWhere('buyer_dni', $customerDni);
@@ -206,6 +228,202 @@ class CustomerPortalController extends Controller
             ->get();
 
         return view('web.customer.my_receipts', compact('sales'));
+    }
+
+    /**
+     * Obtiene las opciones de zonas y cálculo de diferencias para mejorar una entrada
+     */
+    public function getUpgradeOptions(TicketSale $sale): JsonResponse
+    {
+        $customerEmail = session('customer_email');
+        $customerDni = session('customer_dni');
+        $customerId = session('customer_id');
+        $isAdmin = session('admin_logged_in');
+
+        $isAuthorized = false;
+        if ($isAdmin) {
+            $isAuthorized = true;
+        } elseif ($customerId) {
+            $custUser = User::find($customerId);
+            if ($custUser) {
+                $customerEmail = $customerEmail ?: $custUser->email;
+                $customerDni = $customerDni ?: $custUser->dni;
+            }
+        }
+
+        $ticketsDataStr = is_array($sale->tickets_data) ? json_encode($sale->tickets_data) : (string) $sale->tickets_data;
+
+        if ($isAdmin) {
+            $isAuthorized = true;
+        } elseif ($customerDni && !empty($sale->buyer_dni) && $sale->buyer_dni === $customerDni) {
+            $isAuthorized = true;
+        } elseif ($customerEmail && (str_contains($ticketsDataStr, $customerEmail) || str_contains((string) ($sale->buyer_email ?? ''), $customerEmail))) {
+            $isAuthorized = true;
+        }
+
+        if (!$isAuthorized) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes autorización para consultar las opciones de esta entrada.',
+            ], 403);
+        }
+
+        if ($sale->isUpgraded()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Esta entrada ya fue mejorada a una zona superior previamente.',
+            ], 422);
+        }
+
+        $pm = strtolower($sale->payment_method ?? '');
+        $tData = is_array($sale->tickets_data) ? $sale->tickets_data : json_decode($sale->tickets_data, true);
+        $isCourtesy = ($pm === 'cortesía' || $pm === 'cortesia' || !empty($tData['is_courtesy']) || (float)$sale->total_amount == 0 || str_contains(strtolower($sale->zone_name ?? ''), 'cortesía') || str_contains(strtolower($sale->zone_name ?? ''), 'cortesia'));
+
+        if ($isCourtesy) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Las entradas de cortesía no aplican para mejoras de zona.',
+            ], 422);
+        }
+
+        $event = $sale->event;
+        if (!$event) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontró el evento correspondiente a esta entrada.',
+            ], 404);
+        }
+
+        // Validar si el evento ya pasó
+        $eventDateStr = !empty($event->event_date) ? (is_string($event->event_date) ? substr($event->event_date, 0, 10) : $event->event_date->format('Y-m-d')) : null;
+        if ($eventDateStr) {
+            $eventTimeStr = $event->event_time ?: '23:59:59';
+            $eventDateTime = \Carbon\Carbon::parse($eventDateStr . ' ' . $eventTimeStr);
+            if ($eventDateTime->isPast()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El evento ya ha finalizado. No es posible realizar mejoras de entrada.',
+                ], 422);
+            }
+        }
+
+        $zonesRaw = is_array($event->zones) ? $event->zones : (is_string($event->zones) ? json_decode($event->zones, true) : []);
+        $quantity = max(1, (int) $sale->quantity);
+        $currentUnitPrice = (float) $sale->unit_price;
+        if ($currentUnitPrice <= 0 && (float) $sale->total_amount > 0) {
+            $currentUnitPrice = round((float) $sale->total_amount / $quantity, 2);
+        }
+
+        $upgradeOptions = [];
+        $hasAvailableUpgrades = false;
+
+        foreach ($zonesRaw as $idx => $zone) {
+            $zoneName = $zone['name'] ?? $zone['capacity_type'] ?? ('Zona ' . ($idx + 1));
+            $zonePrice = isset($zone['price']) ? (float) $zone['price'] : 0.00;
+            $zoneCapacity = isset($zone['capacity']) ? (int) $zone['capacity'] : 100;
+            $zoneColor = $zone['color'] ?? '#FF5500';
+            $zoneDescription = $zone['description'] ?? null;
+
+            // Calcular boletos activos en esta zona (excluyendo los anulados por upgrade)
+            $activeCount = EventTicket::where('event_id', $event->id)
+                ->where('zone_name', $zoneName)
+                ->where(function ($q) {
+                    $q->whereNull('status')->orWhereNotIn('status', ['upgraded', 'cancelled', 'void']);
+                })
+                ->count();
+
+            if ($activeCount === 0) {
+                // Fallback a ticket_sales si no hay registros individuales en event_tickets
+                $activeCount = (int) TicketSale::where('event_id', $event->id)
+                    ->where('zone_name', $zoneName)
+                    ->where(function ($q) {
+                        $q->whereNull('status')->orWhereNotIn('status', ['upgraded', 'cancelled', 'void']);
+                    })
+                    ->sum('quantity');
+            }
+
+            $remainingCapacity = max(0, $zoneCapacity - $activeCount);
+            $isCurrent = strtolower(trim($zoneName)) === strtolower(trim($sale->zone_name));
+
+            $unitDifference = max(0, round($zonePrice - $currentUnitPrice, 2));
+            $totalDifference = round($unitDifference * $quantity, 2);
+
+            $availableForUpgrade = false;
+            $badgeStatus = 'blocked';
+            $statusReason = '';
+
+            if ($isCurrent) {
+                $statusReason = 'Tu zona actual';
+                $badgeStatus = 'current';
+            } elseif ($zonePrice <= $currentUnitPrice) {
+                $statusReason = 'Zona de igual o menor precio';
+                $badgeStatus = 'lower_tier';
+            } elseif ($remainingCapacity < $quantity) {
+                $statusReason = 'Agotado / Sin espacio suficiente';
+                $badgeStatus = 'sold_out';
+            } else {
+                $availableForUpgrade = true;
+                $badgeStatus = 'available';
+                $hasAvailableUpgrades = true;
+                $statusReason = 'Disponible para mejora';
+            }
+
+            $upgradeOptions[] = [
+                'name' => $zoneName,
+                'price' => $zonePrice,
+                'price_formatted' => 'S/ ' . number_format($zonePrice, 2),
+                'capacity' => $zoneCapacity,
+                'remaining' => $remainingCapacity,
+                'color' => $zoneColor,
+                'description' => $zoneDescription,
+                'is_current' => $isCurrent,
+                'unit_difference' => $unitDifference,
+                'unit_difference_formatted' => 'S/ ' . number_format($unitDifference, 2),
+                'total_difference' => $totalDifference,
+                'total_difference_formatted' => 'S/ ' . number_format($totalDifference, 2),
+                'available_for_upgrade' => $availableForUpgrade,
+                'badge_status' => $badgeStatus,
+                'status_reason' => $statusReason,
+            ];
+        }
+
+        $dateFormatted = 'Fecha por confirmar';
+        if (!empty($event->event_date)) {
+            try {
+                $dateFormatted = $event->event_date instanceof \DateTimeInterface 
+                    ? $event->event_date->format('d/m/Y') 
+                    : \Carbon\Carbon::parse($event->event_date)->format('d/m/Y');
+            } catch (\Exception $e) {
+                $dateFormatted = (string) $event->event_date;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'has_available_upgrades' => $hasAvailableUpgrades,
+            'sale' => [
+                'id' => $sale->id,
+                'receipt_number' => $sale->receipt_number,
+                'buyer_name' => $sale->buyer_name,
+                'buyer_dni' => $sale->buyer_dni,
+                'zone_name' => $sale->zone_name,
+                'quantity' => $quantity,
+                'unit_price' => $currentUnitPrice,
+                'unit_price_formatted' => 'S/ ' . number_format($currentUnitPrice, 2),
+                'total_amount' => (float) $sale->total_amount,
+                'total_amount_formatted' => 'S/ ' . number_format((float) $sale->total_amount, 2),
+            ],
+            'event' => [
+                'id' => $event->id,
+                'title' => $event->title,
+                'slug' => $event->slug,
+                'date_formatted' => $dateFormatted,
+                'time_formatted' => $event->event_time ?: '20:00 HRS',
+                'venue' => $event->venue_name ?? 'Recinto Oficial',
+                'banner_image' => $event->banner_image,
+            ],
+            'zones' => $upgradeOptions,
+        ]);
     }
 
     /**

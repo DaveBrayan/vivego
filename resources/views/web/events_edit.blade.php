@@ -1262,6 +1262,73 @@
                             </div>
                         </div>
 
+                        <!-- ESTADO DE PUBLICACIÓN Y VISIBILIDAD -->
+                        @php
+                            $currentStatus = $eventData['status'] ?? 'Publicado';
+                        @endphp
+                        <div style="background: rgba(255, 255, 255, 0.03); border: 1.5px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 1.5rem; margin-bottom: 2rem;">
+                            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.25rem;">
+                                <span style="font-size: 1.3rem;">📢</span>
+                                <div>
+                                    <h4 style="color: #FFFFFF; font-size: 1rem; font-weight: 800; margin: 0;">Visibilidad y Estado de Publicación</h4>
+                                    <p style="color: #94A3B8; font-size: 0.825rem; margin: 0;">Elige cómo y dónde estará disponible este evento para tus clientes</p>
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
+                                <!-- Opción 1: Público (Marketplace & Web) -->
+                                <label class="publication-status-card {{ $currentStatus === 'Publicado' ? 'selected' : '' }}" id="pubCard_Publicado" style="background: {{ $currentStatus === 'Publicado' ? 'rgba(255, 85, 0, 0.08)' : 'rgba(255, 255, 255, 0.03)' }}; border: 2px solid {{ $currentStatus === 'Publicado' ? '#FF5500' : 'rgba(255, 255, 255, 0.12)' }}; border-radius: 16px; padding: 1.15rem; cursor: pointer; display: flex; flex-direction: column; gap: 0.6rem; transition: all 0.2s ease; box-shadow: {{ $currentStatus === 'Publicado' ? '0 0 0 2px rgba(255, 85, 0, 0.25)' : 'none' }};">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <span style="font-size: 1.4rem;">🌐</span>
+                                            <div>
+                                                <strong style="color: #FFFFFF; font-size: 0.95rem; display: block;">Público (Marketplace)</strong>
+                                                <span style="color: #10B981; font-size: 0.725rem; font-weight: 800; text-transform: uppercase;">Visible en toda la web</span>
+                                            </div>
+                                        </div>
+                                        <input type="radio" name="event_publication_status" value="Publicado" {{ $currentStatus === 'Publicado' ? 'checked' : '' }} onchange="updatePublicationCardStyles()" style="accent-color: #FF5500; width: 18px; height: 18px; cursor: pointer;">
+                                    </div>
+                                    <p style="color: #94A3B8; font-size: 0.8rem; line-height: 1.35; margin: 0;">
+                                        El evento aparece en el inicio (Home), catálogo general, buscador, detalle del evento y la compra está 100% activa.
+                                    </p>
+                                </label>
+
+                                <!-- Opción 2: Oculto en Marketplace (Solo Enlace Directo) -->
+                                <label class="publication-status-card {{ $currentStatus === 'Oculto' ? 'selected' : '' }}" id="pubCard_Oculto" style="background: {{ $currentStatus === 'Oculto' ? 'rgba(255, 85, 0, 0.08)' : 'rgba(255, 255, 255, 0.03)' }}; border: 2px solid {{ $currentStatus === 'Oculto' ? '#FF5500' : 'rgba(255, 255, 255, 0.12)' }}; border-radius: 16px; padding: 1.15rem; cursor: pointer; display: flex; flex-direction: column; gap: 0.6rem; transition: all 0.2s ease; box-shadow: {{ $currentStatus === 'Oculto' ? '0 0 0 2px rgba(255, 85, 0, 0.25)' : 'none' }};">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <span style="font-size: 1.4rem;">🔗</span>
+                                            <div>
+                                                <strong style="color: #FFFFFF; font-size: 0.95rem; display: block;">Oculto en Marketplace</strong>
+                                                <span style="color: #818CF8; font-size: 0.725rem; font-weight: 800; text-transform: uppercase;">Solo con Enlace Directo</span>
+                                            </div>
+                                        </div>
+                                        <input type="radio" name="event_publication_status" value="Oculto" {{ $currentStatus === 'Oculto' ? 'checked' : '' }} onchange="updatePublicationCardStyles()" style="accent-color: #FF5500; width: 18px; height: 18px; cursor: pointer;">
+                                    </div>
+                                    <p style="color: #94A3B8; font-size: 0.8rem; line-height: 1.35; margin: 0;">
+                                        <strong>NO</strong> aparece en el Home ni en el catálogo de eventos. Únicamente quienes tengan el enlace directo podrán ver y comprar entradas.
+                                    </p>
+                                </label>
+
+                                <!-- Opción 3: Borrador -->
+                                <label class="publication-status-card {{ $currentStatus === 'Borrador' ? 'selected' : '' }}" id="pubCard_Borrador" style="background: {{ $currentStatus === 'Borrador' ? 'rgba(255, 85, 0, 0.08)' : 'rgba(255, 255, 255, 0.03)' }}; border: 2px solid {{ $currentStatus === 'Borrador' ? '#FF5500' : 'rgba(255, 255, 255, 0.12)' }}; border-radius: 16px; padding: 1.15rem; cursor: pointer; display: flex; flex-direction: column; gap: 0.6rem; transition: all 0.2s ease; box-shadow: {{ $currentStatus === 'Borrador' ? '0 0 0 2px rgba(255, 85, 0, 0.25)' : 'none' }};">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <span style="font-size: 1.4rem;">📝</span>
+                                            <div>
+                                                <strong style="color: #FFFFFF; font-size: 0.95rem; display: block;">Borrador (Oculto)</strong>
+                                                <span style="color: #94A3B8; font-size: 0.725rem; font-weight: 800; text-transform: uppercase;">En Edición / No Público</span>
+                                            </div>
+                                        </div>
+                                        <input type="radio" name="event_publication_status" value="Borrador" {{ $currentStatus === 'Borrador' ? 'checked' : '' }} onchange="updatePublicationCardStyles()" style="accent-color: #FF5500; width: 18px; height: 18px; cursor: pointer;">
+                                    </div>
+                                    <p style="color: #94A3B8; font-size: 0.8rem; line-height: 1.35; margin: 0;">
+                                        El evento <strong>no</strong> está publicado en ningún lado ni se pueden comprar entradas. Solo los administradores pueden verlo y editarlo.
+                                    </p>
+                                </label>
+                            </div>
+                        </div>
+
                         <div style="display: flex; justify-content: space-between;">
                             <button type="button" class="btn btn-cancel-custom" onclick="goToStep(3)">
                                 ← Volver al Paso 3
@@ -2802,6 +2869,7 @@
                 tags: tags,
                 zones: zones,
                 courtesy_settings: courtesySettings,
+                status: document.querySelector('input[name="event_publication_status"]:checked')?.value || 'Publicado',
                 sales_type: salesType,
                 custom_ticket: certState
             };
@@ -2822,7 +2890,7 @@
                 if (data.success) {
                     Swal.fire({
                         title: '¡Evento Principal Actualizado!',
-                        text: data.message || 'El espectáculo y su boleto se actualizaron exitosamente.',
+                        text: data.message || 'El espectáculo y su configuración se actualizaron exitosamente.',
                         icon: 'success',
                         background: '#14141E',
                         color: '#FFFFFF'
@@ -2838,10 +2906,28 @@
             });
         }
 
+        function updatePublicationCardStyles() {
+            const selectedVal = document.querySelector('input[name="event_publication_status"]:checked')?.value || 'Publicado';
+            document.querySelectorAll('.publication-status-card').forEach(card => {
+                card.classList.remove('selected');
+                card.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+                card.style.background = 'rgba(255, 255, 255, 0.03)';
+                card.style.boxShadow = 'none';
+            });
+            const activeCard = document.getElementById(`pubCard_${selectedVal}`);
+            if (activeCard) {
+                activeCard.classList.add('selected');
+                activeCard.style.borderColor = '#FF5500';
+                activeCard.style.background = 'rgba(255, 85, 0, 0.08)';
+                activeCard.style.boxShadow = '0 0 0 2px rgba(255, 85, 0, 0.25)';
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             initLeafletMap();
             recalculateTotalCapacity();
             syncCourtesyZonesTable();
+            updatePublicationCardStyles();
         });
     </script>
 @endpush

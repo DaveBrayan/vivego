@@ -144,12 +144,22 @@
                                                 $items = $tData['items'] ?? (is_array($tData) ? $tData : []);
                                                 $hasDiscount = (float)($sale->discount_amount ?? 0) > 0;
                                                 $origSubtotal = (float)($sale->original_subtotal ?? ($sale->total_amount + ($sale->discount_amount ?? 0)));
+
+                                                $cleanZoneName = function($name, $zoneFallback = '') {
+                                                    $str = !empty($name) ? $name : $zoneFallback;
+                                                    if (preg_match('/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?(.+)/iu', $str, $m)) {
+                                                        return trim($m[1]);
+                                                    }
+                                                    return $str;
+                                                };
                                             @endphp
                                             @foreach($items as $t)
                                                 <tr>
-                                                    <td style="font-size: 13px; color: #0F172A; font-weight: 700;">🎟️ {{ $t['name'] ?? 'Entrada' }}</td>
+                                                    <td style="font-size: 13px; color: #0F172A; font-weight: 700;">🎟️ {{ $cleanZoneName($t['zone_name'] ?? ($t['name'] ?? ''), $sale->zone_name) }}</td>
                                                     <td align="center" style="font-size: 13px; color: #475569;">{{ $t['quantity'] ?? 1 }}</td>
-                                                    <td align="right" style="font-size: 13px; color: #059669; font-weight: 800;">S/ {{ number_format(($t['subtotal'] ?? (($t['price'] ?? 0) * ($t['quantity'] ?? 1))), 2) }}</td>
+                                                    <td align="right" style="font-size: 13px; color: {{ $sale->is_upgrade ? '#4F46E5' : '#059669' }}; font-weight: 800;">
+                                                        {{ $sale->is_upgrade ? '+ ' : '' }}S/ {{ number_format(($t['subtotal'] ?? (($t['price'] ?? 0) * ($t['quantity'] ?? 1))), 2) }}
+                                                    </td>
                                                 </tr>
                                             @endforeach
 
@@ -179,8 +189,12 @@
                                             @endif
 
                                             <tr style="border-top: 1.5px dashed #CBD5E1;">
-                                                <td colspan="2" style="font-size: 14px; font-weight: 900; color: #0F172A; padding-top: 10px;">TOTAL PAGADO:</td>
-                                                <td align="right" style="font-size: 18px; font-weight: 900; color: #059669; padding-top: 10px;">S/ {{ number_format($sale->total_amount, 2) }}</td>
+                                                <td colspan="2" style="font-size: 14px; font-weight: 900; color: #0F172A; padding-top: 10px;">
+                                                    {{ $sale->is_upgrade ? 'DIFERENCIA PAGADA:' : 'TOTAL PAGADO:' }}
+                                                </td>
+                                                <td align="right" style="font-size: 18px; font-weight: 900; color: {{ $sale->is_upgrade ? '#4F46E5' : '#059669' }}; padding-top: 10px;">
+                                                    {{ $sale->is_upgrade ? '+ ' : '' }}S/ {{ number_format($sale->total_amount, 2) }}
+                                                </td>
                                             </tr>
                                         </table>
                                     </td>

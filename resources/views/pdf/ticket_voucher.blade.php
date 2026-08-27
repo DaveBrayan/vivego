@@ -158,8 +158,13 @@
     @for($i = 0; $i < $totalTickets; $i++)
         @php
             $ticketItem = $items[$i] ?? null;
-            $zoneName = $ticketItem['name'] ?? $sale->zone_name;
-            $ticketPrice = $ticketItem['price'] ?? $sale->unit_price;
+            $rawZone = $ticketItem['zone_name'] ?? ($ticketItem['name'] ?? $sale->zone_name);
+            if (preg_match('/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?(.+)/iu', $rawZone, $m)) {
+                $zoneName = trim($m[1]);
+            } else {
+                $zoneName = $rawZone;
+            }
+            $ticketPrice = $ticketItem['regular_price'] ?? ($ticketItem['price'] ?? $sale->unit_price);
             $numSeq = $sale->id ? ($sale->id + $i) : ($i + 1);
             $ticketNumStr = 'N° ' . str_pad($numSeq, 5, '0', STR_PAD_LEFT);
             $hashVal = 'VG' . strtoupper(substr(md5($sale->receipt_number . $i . $sale->id), 0, 8));

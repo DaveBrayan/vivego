@@ -475,6 +475,20 @@
                     if (checkedEl) checkedEl.textContent = data.metrics.checked_in_count;
                     if (rateEl) rateEl.textContent = `${data.metrics.attendance_rate}%`;
                 }
+            } else if (data.status === 'upgraded_void') {
+                toast.classList.add('result-already-used');
+                if (icon) icon.textContent = '🔄';
+                if (title) title.textContent = 'BOLETO ANULADO (UPGRADE)';
+                if (zone) {
+                    zone.textContent = 'UPGRADE A ' + (data.ticket?.new_zone || 'SUPERIOR');
+                    zone.style.display = 'inline-block';
+                }
+                if (buyer) buyer.textContent = `${data.ticket?.buyer_name || 'Asistente'} (Ex: ${data.ticket?.zone_name || '-'})`;
+                if (time) time.textContent = 'Solicitar Nuevo Boleto';
+                if (hashEl) hashEl.textContent = `🔑 COD: ${data.ticket?.ticket_code || '-'}`;
+                if (devEl) devEl.textContent = `📱 NUEVA ZONA: ${data.ticket?.new_zone || 'SUPERIOR'}`;
+
+                playMobileTone('denied');
             } else if (data.status === 'already_used') {
                 toast.classList.add('result-already-used');
                 if (icon) icon.textContent = '🚫';

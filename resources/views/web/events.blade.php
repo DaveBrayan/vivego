@@ -172,7 +172,17 @@
                                         </td>
                                         <td>
                                             <span class="dash-badge-custom {{ $evt['status_class'] }}">
-                                                @if($evt['status'] === 'Publicado') ✓ @elseif($evt['status'] === 'Agotado') 🚫 @else ⏳ @endif {{ $evt['status'] }}
+                                                @if($evt['status'] === 'Publicado')
+                                                    🌐 Público
+                                                @elseif($evt['status'] === 'Oculto' || $evt['status'] === 'No Marketplace' || $evt['status'] === 'unlisted')
+                                                    🔗 Oculto en Marketplace
+                                                @elseif($evt['status'] === 'Borrador' || $evt['status'] === 'draft')
+                                                    📝 Borrador
+                                                @elseif($evt['status'] === 'Agotado')
+                                                    🚫 Agotado
+                                                @else
+                                                    {{ $evt['status'] }}
+                                                @endif
                                             </span>
                                         </td>
                                         <td style="text-align: right;">

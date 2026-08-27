@@ -26,12 +26,16 @@ class EventTicket extends Model
         'is_used',
         'checked_in_at',
         'scanned_by',
+        'status',
+        'upgraded_to_ticket_id',
+        'upgraded_at',
     ];
 
     protected $casts = [
         'unit_price' => 'decimal:2',
         'is_used' => 'boolean',
         'checked_in_at' => 'datetime',
+        'upgraded_at' => 'datetime',
     ];
 
     public function event()
@@ -42,5 +46,10 @@ class EventTicket extends Model
     public function ticketSale()
     {
         return $this->belongsTo(TicketSale::class, 'ticket_sale_id');
+    }
+
+    public function isUpgraded(): bool
+    {
+        return $this->status === 'upgraded' || !empty($this->upgraded_at) || !empty($this->upgraded_to_ticket_id);
     }
 }

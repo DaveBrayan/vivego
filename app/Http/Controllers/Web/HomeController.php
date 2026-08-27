@@ -25,8 +25,11 @@ class HomeController extends Controller
             0 => 'DOM', 1 => 'LUN', 2 => 'MAR', 3 => 'MIÉ', 4 => 'JUE', 5 => 'VIE', 6 => 'SÁB'
         ];
 
-        // Obtener eventos guardados en la BD (los mismos de "Mis Eventos" del Admin)
-        $dbEvents = Event::with('sales')->orderBy('id', 'desc')->get();
+        // Obtener eventos guardados en la BD que estén publicados oficialmente en el Marketplace
+        $dbEvents = Event::with('sales')
+            ->whereNotIn('status', ['Borrador', 'Oculto', 'draft', 'unlisted', 'no_marketplace', 'No Marketplace', 'Privado', 'Inactivo'])
+            ->orderBy('id', 'desc')
+            ->get();
 
         $formattedDbEvents = [];
         $badgeOptions = ['PREVENTA OFICIAL', 'ÚLTIMOS CUPOS', 'MÁS VENDIDO', 'DESTACADO', 'EN VIVO', 'RECOMENDADO'];
