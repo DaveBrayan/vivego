@@ -481,7 +481,7 @@
 
         const cleanZoneNameJs = (name) => {
             if (!name) return 'GENERAL';
-            return String(name).replace(/^(?:Mejora|Upgrade):\s*(?:.*?[➔->]\s*)?/i, '').trim() || name;
+            return String(name).replace(/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?/i, '').trim() || name;
         };
 
         let ticketsList = [];

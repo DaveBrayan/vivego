@@ -2649,16 +2649,17 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
                 body: JSON.stringify({ email: email, password: password })
             })
-            .then(res => res.json())
-            .then(data => {
+            .then(async (res) => {
+                const data = await res.json().catch(() => ({}));
                 btn.disabled = false;
                 btn.textContent = 'Ingresar a mi Cuenta';
 
-                if (data.success) {
+                if (res.ok && data.success) {
                     if (data.user) {
                         if (document.getElementById('buyerFullName')) document.getElementById('buyerFullName').value = data.user.name || '';
                         if (document.getElementById('buyerEmail')) document.getElementById('buyerEmail').value = data.user.email || '';
@@ -2676,14 +2677,14 @@
                     alert('¡Sesión iniciada con éxito! Tus datos se han autocompletado.');
                     location.reload();
                 } else {
-                    errBox.textContent = data.message || 'Credenciales inválidas.';
+                    errBox.textContent = data.message || 'Credenciales inválidas. Verifica tu correo o DNI y contraseña.';
                     errBox.style.display = 'block';
                 }
             })
             .catch(err => {
                 btn.disabled = false;
                 btn.textContent = 'Ingresar a mi Cuenta';
-                errBox.textContent = 'Error al iniciar sesión.';
+                errBox.textContent = 'Error al conectar con el servidor.';
                 errBox.style.display = 'block';
             });
         }
@@ -2705,21 +2706,22 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
                 body: JSON.stringify({ identifier: identifier })
             })
-            .then(res => res.json())
-            .then(data => {
+            .then(async (res) => {
+                const data = await res.json().catch(() => ({}));
                 btn.disabled = false;
                 btn.textContent = 'Enviar Contraseña Temporal a mi Correo';
 
                 alertBox.style.display = 'block';
-                if (data.success) {
+                if (res.ok && data.success) {
                     alertBox.style.background = '#F0FDF4';
                     alertBox.style.borderColor = '#BBF7D0';
                     alertBox.style.color = '#16A34A';
-                    alertBox.innerHTML = '<strong>¡Correo Enviado!</strong><br>' + data.message;
+                    alertBox.innerHTML = '<strong>¡Correo Enviado!</strong><br>' + (data.message || 'Contraseña temporal enviada.');
                     
                     if (data.email) {
                         document.getElementById('fastLoginEmail').value = data.email;
@@ -2739,7 +2741,7 @@
                     alertBox.style.background = '#FEF2F2';
                     alertBox.style.borderColor = '#FCA5A5';
                     alertBox.style.color = '#DC2626';
-                    alertBox.textContent = data.message || 'No se encontró una cuenta con esos datos.';
+                    alertBox.textContent = data.message || 'No encontramos ninguna cuenta con ese correo o DNI.';
                 }
             })
             .catch(err => {
@@ -2781,6 +2783,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
                 body: JSON.stringify({
@@ -2788,12 +2791,12 @@
                     new_password_confirmation: confirmPassword
                 })
             })
-            .then(res => res.json())
-            .then(data => {
+            .then(async (res) => {
+                const data = await res.json().catch(() => ({}));
                 btn.disabled = false;
                 btn.textContent = '💾 Guardar Contraseña y Continuar';
 
-                if (data.success) {
+                if (res.ok && data.success) {
                     closeFastLoginModal();
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({

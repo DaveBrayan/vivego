@@ -883,21 +883,22 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
                 body: JSON.stringify({ identifier: identifier })
             })
-            .then(res => res.json())
-            .then(data => {
+            .then(async (res) => {
+                const data = await res.json().catch(() => ({}));
                 btn.disabled = false;
                 btn.textContent = '📩 Enviar Contraseña Temporal';
                 alertBox.style.display = 'block';
 
-                if (data.success) {
+                if (res.ok && data.success) {
                     alertBox.style.background = '#F0FDF4';
                     alertBox.style.borderColor = '#BBF7D0';
                     alertBox.style.color = '#16A34A';
-                    alertBox.innerHTML = '<strong>¡Correo Enviado!</strong><br>' + data.message;
+                    alertBox.innerHTML = '<strong>¡Correo Enviado!</strong><br>' + (data.message || 'Contraseña temporal enviada.');
                     
                     if (data.email) {
                         document.getElementById('login').value = data.email;
@@ -911,7 +912,7 @@
                     alertBox.style.background = '#FEF2F2';
                     alertBox.style.borderColor = '#FCA5A5';
                     alertBox.style.color = '#DC2626';
-                    alertBox.textContent = data.message || 'No se encontró una cuenta con esos datos.';
+                    alertBox.textContent = data.message || 'No encontramos ninguna cuenta con ese correo o DNI.';
                 }
             })
             .catch(err => {
@@ -952,6 +953,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
                 body: JSON.stringify({
@@ -959,12 +961,12 @@
                     new_password_confirmation: confirmPassword
                 })
             })
-            .then(res => res.json())
-            .then(data => {
+            .then(async (res) => {
+                const data = await res.json().catch(() => ({}));
                 btn.disabled = false;
                 btn.textContent = '💾 Guardar Nueva Contraseña y Continuar';
 
-                if (data.success) {
+                if (res.ok && data.success) {
                     alert('¡Contraseña actualizada exitosamente!');
                     location.reload();
                 } else {
