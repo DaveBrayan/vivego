@@ -56,21 +56,22 @@
             display: inline-flex;
             align-items: center;
             gap: 0.85rem;
-            background: #FFFFFF;
-            border: 2px solid #FFFFFF;
+            background: linear-gradient(135deg, #0B1E48 0%, #16387C 100%);
+            border: 1.5px solid #FFFFFF;
             border-radius: 14px;
             padding: 0.65rem 1.15rem;
             text-decoration: none;
-            color: #0F0F14;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 255, 255, 0.15);
+            color: #FFFFFF;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 15px rgba(22, 56, 124, 0.35);
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             margin-top: 1.15rem;
         }
 
         .footer-claim-badge-pro:hover {
             transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 25px rgba(255, 85, 0, 0.35);
-            border-color: #FF5500;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 25px rgba(37, 99, 235, 0.5);
+            border-color: #FFFFFF;
+            background: linear-gradient(135deg, #0E275E 0%, #1D4ED8 100%);
         }
 
         .footer-claim-img {
@@ -78,7 +79,7 @@
             height: auto;
             max-height: 38px;
             object-fit: contain;
-            filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.25));
+            filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4));
         }
 
         .footer-claim-text-group {
@@ -91,16 +92,16 @@
             font-family: var(--font-heading, 'Outfit', sans-serif);
             font-size: 0.925rem;
             font-weight: 900;
-            color: #0F0F14;
+            color: #FFFFFF;
             letter-spacing: -0.01em;
             line-height: 1.2;
         }
 
         .footer-claim-sub {
             font-size: 0.7rem;
-            color: #64748B;
+            color: #93C5FD;
             font-weight: 700;
-            letter-spacing: 0.02em;
+            letter-spacing: 0.03em;
             text-transform: uppercase;
         }
     </style>
