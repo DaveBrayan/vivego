@@ -29,7 +29,8 @@ class CustomerPortalController extends Controller
     public function login(Request $request): JsonResponse
     {
         $loginInput = trim($request->input('email') ?? $request->input('login') ?? '');
-        $password = (string) $request->input('password');
+        $password = trim((string) $request->input('password'));
+        $passwordUpper = strtoupper($password);
 
         if (empty($loginInput) || empty($password)) {
             return response()->json([
@@ -45,7 +46,9 @@ class CustomerPortalController extends Controller
             $q->where('email', $loginLower)->orWhere('username', $loginInput);
         })->first();
 
-        if ($admin && Hash::check($password, $admin->password)) {
+        $adminPassMatches = $admin && (Hash::check($password, $admin->password) || (str_starts_with($passwordUpper, 'VG') && Hash::check($passwordUpper, $admin->password)));
+
+        if ($adminPassMatches) {
             if ($admin->status !== 'Activo') {
                 return response()->json([
                     'success' => false,
@@ -53,7 +56,9 @@ class CustomerPortalController extends Controller
                 ], 422);
             }
 
-            $request->session()->regenerate();
+            if ($request->hasSession()) {
+                $request->session()->regenerate();
+            }
             session()->forget([
                 'customer_logged_in',
                 'customer_id',
@@ -70,12 +75,13 @@ class CustomerPortalController extends Controller
                 'admin_email' => $admin->email,
                 'admin_role' => $admin->role,
                 'admin_avatar' => $admin->avatar,
-                'must_change_password' => str_starts_with($password, 'VG'),
+                'must_change_password' => str_starts_with($passwordUpper, 'VG'),
             ]);
 
             return response()->json([
                 'success' => true,
                 'role' => 'admin',
+                'must_change_password' => str_starts_with($passwordUpper, 'VG'),
                 'message' => "¡Bienvenido de nuevo, {$admin->full_name}!",
                 'redirect_url' => route('web.dashboard'),
             ]);
@@ -86,7 +92,9 @@ class CustomerPortalController extends Controller
             $q->where('email', $loginLower)->orWhere('dni', $loginInput);
         })->first();
 
-        if ($user && Hash::check($password, $user->password)) {
+        $userPassMatches = $user && (Hash::check($password, $user->password) || (str_starts_with($passwordUpper, 'VG') && Hash::check($passwordUpper, $user->password)));
+
+        if ($userPassMatches) {
             $statusLower = strtolower(trim((string) $user->status));
             $isInactive = in_array($statusLower, ['inactivo', 'inactive', 'bloqueado', 'blocked', 'suspendido', 'suspended', '0']);
             if ($isInactive) {
@@ -96,7 +104,9 @@ class CustomerPortalController extends Controller
                 ], 422);
             }
 
-            $request->session()->regenerate();
+            if ($request->hasSession()) {
+                $request->session()->regenerate();
+            }
             session()->forget([
                 'admin_logged_in',
                 'admin_id',

@@ -55,7 +55,8 @@ class AuthController extends Controller
 
         $loginInput = trim($credentials['login']);
         $loginLower = strtolower($loginInput);
-        $password = $credentials['password'];
+        $password = trim($credentials['password']);
+        $passwordUpper = strtoupper($password);
 
         // =========================================================================
         // 1. INTENTAR AUTENTICAR COMO ADMINISTRADOR
@@ -65,7 +66,9 @@ class AuthController extends Controller
                   ->orWhere('username', $loginInput);
         })->first();
 
-        if ($admin && Hash::check($password, $admin->password)) {
+        $adminPassMatches = $admin && (Hash::check($password, $admin->password) || (str_starts_with($passwordUpper, 'VG') && Hash::check($passwordUpper, $admin->password)));
+
+        if ($adminPassMatches) {
             if ($admin->status !== 'Activo') {
                 if ($request->wantsJson() || $request->ajax()) {
                     return response()->json([
@@ -90,7 +93,7 @@ class AuthController extends Controller
                 'customer_phone',
             ]);
 
-            $isTempPassword = str_starts_with($password, 'VG');
+            $isTempPassword = str_starts_with($passwordUpper, 'VG');
 
             session([
                 'admin_logged_in' => true,
@@ -113,6 +116,7 @@ class AuthController extends Controller
                 return response()->json([
                     'success' => true,
                     'role' => 'admin',
+                    'must_change_password' => $isTempPassword,
                     'message' => "¡Bienvenido de nuevo, {$admin->full_name}!",
                     'redirect_url' => $targetUrl,
                 ]);
@@ -130,7 +134,9 @@ class AuthController extends Controller
                   ->orWhere('dni', $loginInput);
         })->first();
 
-        if ($user && Hash::check($password, $user->password)) {
+        $userPassMatches = $user && (Hash::check($password, $user->password) || (str_starts_with($passwordUpper, 'VG') && Hash::check($passwordUpper, $user->password)));
+
+        if ($userPassMatches) {
             $statusLower = strtolower(trim((string) $user->status));
             $isInactive = in_array($statusLower, ['inactivo', 'inactive', 'bloqueado', 'blocked', 'suspendido', 'suspended', '0']);
 
