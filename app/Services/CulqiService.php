@@ -73,7 +73,7 @@ class CulqiService
             $response = Http::withHeaders([
                 'Authorization' => "Bearer {$secKey}",
                 'Content-Type' => 'application/json',
-            ])->timeout(12)->get('https://api.culqi.com/v2/charges', [
+            ])->withoutVerifying()->timeout(12)->get('https://api.culqi.com/v2/charges', [
                 'limit' => 1,
             ]);
 
@@ -114,6 +114,17 @@ class CulqiService
     public function createOrder(array $payload): array
     {
         try {
+            // Petición HTTP directa a Culqi API v2 (con fallback seguro SSL)
+            $response = Http::withHeaders($this->getHeaders())
+                ->withoutVerifying()
+                ->timeout(15)
+                ->post('https://api.culqi.com/v2/orders', $payload);
+
+            $data = $response->json();
+            if ($response->successful() && is_array($data)) {
+                return $data;
+            }
+
             if ($this->culqiClient && isset($this->culqiClient->Orders)) {
                 $order = $this->culqiClient->Orders->create($payload);
                 if (is_object($order)) {
@@ -126,12 +137,7 @@ class CulqiService
                 return (array) $order;
             }
 
-            // Fallback HTTP directo
-            $response = Http::withHeaders($this->getHeaders())
-                ->timeout(15)
-                ->post('https://api.culqi.com/v2/orders', $payload);
-
-            return $response->json() ?? [];
+            return $data ?? ['object' => 'error', 'user_message' => 'Error al comunicarse con Culqi (' . $response->status() . ')'];
         } catch (\Throwable $e) {
             Log::error('Error al crear orden en Culqi: ' . $e->getMessage());
             return [
@@ -147,6 +153,16 @@ class CulqiService
     public function createCharge(array $payload): array
     {
         try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->withoutVerifying()
+                ->timeout(15)
+                ->post('https://api.culqi.com/v2/charges', $payload);
+
+            $data = $response->json();
+            if ($response->successful() && is_array($data)) {
+                return $data;
+            }
+
             if ($this->culqiClient && isset($this->culqiClient->Charges)) {
                 $charge = $this->culqiClient->Charges->create($payload);
                 if (is_object($charge)) {
@@ -159,12 +175,7 @@ class CulqiService
                 return (array) $charge;
             }
 
-            // Fallback HTTP directo
-            $response = Http::withHeaders($this->getHeaders())
-                ->timeout(15)
-                ->post('https://api.culqi.com/v2/charges', $payload);
-
-            return $response->json() ?? [];
+            return $data ?? ['object' => 'error', 'user_message' => 'Error al procesar cargo con Culqi (' . $response->status() . ')'];
         } catch (\Throwable $e) {
             Log::error('Error al crear cargo en Culqi: ' . $e->getMessage());
             return [
@@ -180,6 +191,16 @@ class CulqiService
     public function getOrder(string $orderId): array
     {
         try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->withoutVerifying()
+                ->timeout(12)
+                ->get("https://api.culqi.com/v2/orders/{$orderId}");
+
+            $data = $response->json();
+            if ($response->successful() && is_array($data)) {
+                return $data;
+            }
+
             if ($this->culqiClient && isset($this->culqiClient->Orders)) {
                 $order = $this->culqiClient->Orders->get($orderId);
                 if (is_object($order)) {
@@ -192,11 +213,7 @@ class CulqiService
                 return (array) $order;
             }
 
-            $response = Http::withHeaders($this->getHeaders())
-                ->timeout(12)
-                ->get("https://api.culqi.com/v2/orders/{$orderId}");
-
-            return $response->json() ?? [];
+            return $data ?? [];
         } catch (\Throwable $e) {
             Log::error('Error al consultar orden en Culqi: ' . $e->getMessage());
             return [
@@ -212,16 +229,22 @@ class CulqiService
     public function getCharge(string $chargeId): array
     {
         try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->withoutVerifying()
+                ->timeout(12)
+                ->get("https://api.culqi.com/v2/charges/{$chargeId}");
+
+            $data = $response->json();
+            if ($response->successful() && is_array($data)) {
+                return $data;
+            }
+
             if ($this->culqiClient && isset($this->culqiClient->Charges)) {
                 $charge = $this->culqiClient->Charges->get($chargeId);
                 return is_object($charge) ? (array) $charge : (is_array($charge) ? $charge : json_decode($charge, true) ?? []);
             }
 
-            $response = Http::withHeaders($this->getHeaders())
-                ->timeout(12)
-                ->get("https://api.culqi.com/v2/charges/{$chargeId}");
-
-            return $response->json() ?? [];
+            return $data ?? [];
         } catch (\Throwable $e) {
             Log::error('Error al consultar cargo en Culqi: ' . $e->getMessage());
             return [
