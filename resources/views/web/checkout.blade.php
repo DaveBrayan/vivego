@@ -436,21 +436,6 @@
 
                     <!-- CONTENIDO DE PASARELA: CULQI -->
                     <div id="checkout-gateway-culqi" class="checkout-gateway-panel {{ $defaultGateway === 'culqi' ? 'active' : '' }}">
-                        <div class="payment-tabs-preview">
-                            <div class="pay-method-pill active" style="background: #FFF7ED; border-color: #FF5500; color: #EA580C;">
-                                <span class="method-icon">📱</span> Pago con QR (Yape / Plin)
-                            </div>
-                            <div class="pay-method-pill">
-                                <span class="method-icon">💳</span> Tarjetas Débito / Crédito
-                            </div>
-                            <div class="pay-method-pill">
-                                <span class="method-icon">⚡</span> Yape Directo
-                            </div>
-                            <div class="pay-method-pill">
-                                <span class="method-icon">💵</span> PagoEfectivo
-                            </div>
-                        </div>
-
                         <!-- Botón Inicial de Carga de Culqi -->
                         <div id="initCulqiPaymentSection" style="text-align: center; padding: 1.5rem 0 0.5rem 0;">
                             <button type="button" class="btn-pay-orange" id="btnInitCulqi" onclick="loadCulqiGateway()" style="background: linear-gradient(135deg, #FF5500, #E64A00);">
