@@ -174,6 +174,17 @@
                 </ul>
             </div>
 
+            <!-- Enlaces Legales en Drawer Móvil -->
+            <div class="drawer-section" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.08);">
+                <h4 class="drawer-section-title">Legal & Soporte</h4>
+                <ul class="drawer-category-list">
+                    <li><a href="{{ route('web.terms') }}" class="drawer-cat-link">📜 Términos y Condiciones</a></li>
+                    <li><a href="{{ route('web.privacy') }}" class="drawer-cat-link">🔒 Políticas de Privacidad</a></li>
+                    <li><a href="{{ route('web.cookies') }}" class="drawer-cat-link">🍪 Política de Cookies</a></li>
+                    <li><a href="{{ route('web.claim_book') }}" class="drawer-cat-link" style="color: #FF5500; font-weight: 800;">📖 Libro de Reclamaciones</a></li>
+                </ul>
+            </div>
+
             <!-- Botones de Acción Móvil -->
             <div class="drawer-actions">
                 @if(session('customer_logged_in'))
@@ -227,7 +238,7 @@
                         Vive Go es la plataforma líder en venta de entradas, boletaje inteligente y gestión de eventos
                         masivos. VIVE CADA MOMENTO.
                     </p>
-                    <a href="#" class="claim-book-badge">
+                    <a href="{{ route('web.claim_book') }}" class="claim-book-badge" title="Libro de Reclamaciones Virtual">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
@@ -240,33 +251,30 @@
                 <div>
                     <h3 class="footer-col-title">Marketplace</h3>
                     <ul class="footer-links">
-                        <li><a href="#">Conciertos y Festivales</a></li>
-                        <li><a href="#">Fiestas y Clubes</a></li>
-                        <li><a href="#">Teatro y Comedia</a></li>
-                        <li><a href="#">Eventos Deportivos</a></li>
-                        <li><a href="#">Experiencias VIP</a></li>
+                        <li><a href="{{ route('web.home') }}">Conciertos y Festivales</a></li>
+                        <li><a href="{{ route('web.home') }}">Fiestas y Clubes</a></li>
+                        <li><a href="{{ route('web.home') }}">Teatro y Comedia</a></li>
+                        <li><a href="{{ route('web.home') }}">Eventos Deportivos</a></li>
                     </ul>
                 </div>
 
                 <div>
-                    <h3 class="footer-col-title">Organizadores</h3>
+                    <h3 class="footer-col-title">Plataforma</h3>
                     <ul class="footer-links">
-                        <li><a href="#">Vende tus Entradas</a></li>
-                        <li><a href="#">Panel de Control SaaS</a></li>
-                        <li><a href="#">Gestión de RRPP</a></li>
-                        <li><a href="#">Sistema de Escaneo Puerta</a></li>
-                        <li><a href="#">Punto de Venta POS</a></li>
+                        <li><a href="{{ route('web.home') }}">Vende tus Entradas</a></li>
+                        <li><a href="{{ route('web.login') }}">Mis Boletos</a></li>
+                        <li><a href="{{ route('web.login') }}">Portal de Clientes</a></li>
+                        <li><a href="{{ route('web.claim_book') }}">Libro de Reclamaciones</a></li>
                     </ul>
                 </div>
 
                 <div>
-                    <h3 class="footer-col-title">Legal & Soporte</h3>
+                    <h3 class="footer-col-title">Legal & Transparencia</h3>
                     <ul class="footer-links">
-                        <li><a href="#">Términos y Condiciones</a></li>
-                        <li><a href="#">Políticas de Privacidad</a></li>
-                        <li><a href="#">Preguntas Frecuentes</a></li>
-                        <li><a href="#">Centro de Ayuda</a></li>
-                        <li><a href="#">Contacto / Soporte</a></li>
+                        <li><a href="{{ route('web.terms') }}">📜 Términos y Condiciones</a></li>
+                        <li><a href="{{ route('web.privacy') }}">🔒 Políticas de Privacidad</a></li>
+                        <li><a href="{{ route('web.cookies') }}">🍪 Política de Cookies</a></li>
+                        <li><a href="{{ route('web.claim_book') }}">📖 Libro de Reclamaciones</a></li>
                     </ul>
                 </div>
             </div>

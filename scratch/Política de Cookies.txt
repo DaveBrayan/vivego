@@ -1,0 +1,124 @@
+POLÍTICA DE COOKIES DE VIVEGO.PE
+Última actualización: agosto de 2026
+1. ¿QUÉ ES ESTA POLÍTICA DE COOKIES?
+La presente Política de Cookies explica IPEXA S.A.C., identificada con RUC N.° 20606476231, en adelante, “IPEXA S.A.C.”, utiliza cookies y tecnologías similares en la plataforma digital VIVEGO.PE, en adelante, “VIVEGO” o la “Plataforma”.
+El objetivo de estas tecnologías es contribuir al correcto funcionamiento del sitio web, recordar determinadas preferencias, reforzar la seguridad de las operaciones, comprender cómo los usuarios interactúan con la Plataforma y mejorar los servicios que VIVEGO.PE ofrece.
+Esta Política debe ser leída conjuntamente con nuestra Política de Privacidad, en la cual se explica de manera más amplia cómo IPEXA S.A.C. realiza el tratamiento de los datos personales obtenidos a través de sus servicios y canales digitales.
+2. ¿QUÉ SON LAS COOKIES?
+Las cookies son pequeños archivos de texto que un sitio web puede almacenar en el navegador o dispositivo del usuario cuando visita una página.
+Estos archivos permiten que el sitio web reconozca determinada información durante una visita o en visitas posteriores, facilitando, por ejemplo, el funcionamiento de una sesión, la conservación de preferencias o la mejora de la experiencia de navegación.
+Además de las cookies, VIVEGO.PE podrá utilizar otras tecnologías con funciones similares, como identificadores, etiquetas, píxeles u otras herramientas tecnológicas que permitan analizar el uso, funcionamiento y seguridad de la Plataforma.
+Estas tecnologías no permiten necesariamente identificar directamente a una persona. Sin embargo, en determinados casos, la información recopilada a través de ellas puede estar relacionada con datos personales, por lo que será tratada conforme a la legislación aplicable y a nuestra Política de Privacidad.
+3. ¿PARA QUÉ UTILIZAMOS COOKIES EN VIVEGO.PE?
+Dependiendo de las funcionalidades habilitadas en la Plataforma, VIVEGO.PE podrá utilizar cookies y tecnologías similares para las siguientes finalidades:
+3.1. Funcionamiento esencial de la Plataforma
+Algunas cookies son necesarias para permitir el correcto funcionamiento de determinadas funcionalidades de VIVEGO.PE.
+Por ejemplo, pueden utilizarse para:
+Mantener activa la sesión del usuario.
+Recordar acciones realizadas durante una misma visita.
+Permitir el acceso a áreas restringidas.
+Facilitar procesos de registro e inicio de sesión.
+Mantener la seguridad durante la navegación.
+Procesar determinadas operaciones dentro de la Plataforma.
+La desactivación de estas cookies podría afectar el funcionamiento de determinados servicios.
+3.2. Preferencias y personalización
+Estas tecnologías pueden utilizarse para recordar determinadas elecciones realizadas por el usuario.
+Por ejemplo:
+Idioma seleccionado.
+Configuraciones de navegación.
+Preferencias relacionadas con el uso de la Plataforma.
+Información necesaria para facilitar futuras visitas.
+Su finalidad es ofrecer una experiencia de navegación más cómoda y adaptada a determinadas preferencias previamente seleccionadas.
+3.3. Seguridad y prevención de actividades irregulares
+VIVEGO.PE podrá utilizar tecnologías destinadas a detectar comportamientos inusuales, prevenir accesos no autorizados y proteger las operaciones realizadas dentro de la Plataforma.
+Estas herramientas podrán contribuir a:
+Detectar intentos de fraude.
+Identificar comportamientos automatizados o sospechosos.
+Proteger las cuentas de los usuarios.
+Prevenir usos indebidos de la Plataforma.
+Reforzar la seguridad de las transacciones.
+3.4. Análisis y rendimiento
+Podremos utilizar cookies o herramientas similares para comprender de manera general cómo se utiliza VIVEGO.PE.
+Esto puede incluir información relacionada con:
+Páginas visitadas.
+Tiempo de navegación.
+Funcionalidades utilizadas.
+Errores técnicos.
+Rendimiento del sitio.
+Interacciones generales con la Plataforma.
+Esta información podrá utilizarse para identificar problemas técnicos, mejorar la navegación y optimizar los servicios ofrecidos.
+3.5. Medición de campañas y contenido
+Cuando VIVEGO.PE realice campañas publicitarias o de difusión, determinadas tecnologías podrán utilizarse para conocer, de manera general, el rendimiento de dichas campañas.
+Esto puede permitir analizar aspectos como:
+Desde qué canal llegó un usuario a la Plataforma.
+Qué campañas generaron visitas.
+El rendimiento general de anuncios o contenidos.
+Interacciones relacionadas con campañas promocionales.
+El uso de estas tecnologías estará sujeto a las configuraciones, herramientas y servicios que VIVEGO.PE tenga habilitados.
+4. TIPOS DE COOKIES QUE PODRÍAN UTILIZARSE
+Dependiendo de su finalidad y duración, VIVEGO.PE podrá utilizar diferentes categorías de cookies.
+Cookies necesarias
+Son aquellas que permiten el funcionamiento básico del sitio web y determinadas funcionalidades esenciales.
+Estas cookies pueden ser necesarias para mantener una sesión activa, gestionar procesos de navegación, reforzar la seguridad y permitir el uso adecuado de determinadas herramientas.
+Cookies de preferencias
+Permiten recordar determinadas configuraciones o elecciones realizadas por el usuario para facilitar futuras interacciones con la Plataforma.
+Cookies analíticas o de rendimiento
+Se utilizan para obtener información sobre el funcionamiento y uso general del sitio web.
+Su finalidad puede incluir la identificación de problemas técnicos, el análisis del rendimiento y la mejora de la experiencia de los usuarios.
+Cookies de publicidad y medición
+Podrán utilizarse cuando VIVEGO.PE implemente herramientas destinadas a medir campañas, conocer el rendimiento de contenidos promocionales o realizar acciones publicitarias.
+Estas tecnologías podrán ser propias o proporcionadas por terceros, dependiendo de las herramientas utilizadas por la Plataforma.
+5. COOKIES PROPIAS Y TECNOLOGÍAS DE TERCEROS
+Algunas cookies pueden ser instaladas directamente por VIVEGO.PE.
+Asimismo, dependiendo de los servicios y herramientas habilitadas, determinados terceros podrán utilizar tecnologías propias dentro de la Plataforma.
+Estos terceros podrían incluir, según corresponda:
+Proveedores de alojamiento o infraestructura tecnológica.
+Servicios de análisis y medición.
+Proveedores de procesamiento de pagos.
+Servicios de seguridad.
+Herramientas de publicidad digital.
+Servicios de atención o comunicación con usuarios.
+Cada proveedor podrá contar con sus propias políticas de privacidad, configuraciones y condiciones respecto al tratamiento de la información.
+VIVEGO.PE procurará utilizar proveedores que resulten adecuados para la prestación de sus servicios y adoptar medidas razonables respecto de las herramientas incorporadas en la Plataforma.
+6. DURACIÓN DE LAS COOKIES
+Las cookies pueden permanecer activas durante diferentes períodos de tiempo.
+Cookies de sesión
+Son aquellas que permanecen activas mientras el usuario mantiene abierta una sesión o navega temporalmente por la Plataforma.
+Generalmente, dejan de funcionar cuando el usuario cierra el navegador, aunque determinados mecanismos técnicos pueden variar según el servicio utilizado.
+Cookies persistentes
+Son aquellas que pueden permanecer almacenadas durante un período determinado para recordar determinadas configuraciones, preferencias o información relacionada con futuras visitas.
+La duración dependerá de la finalidad de cada cookie y de la configuración técnica correspondiente.
+7. ¿CÓMO PUEDE EL USUARIO CONTROLAR LAS COOKIES?
+El usuario puede administrar, bloquear o eliminar determinadas cookies mediante las opciones de configuración de su navegador.
+La mayoría de navegadores permite, entre otras acciones:
+Visualizar las cookies almacenadas.
+Eliminar cookies existentes.
+Bloquear determinadas cookies.
+Configurar restricciones para futuras cookies.
+Recibir avisos antes de la instalación de determinadas tecnologías.
+Las opciones específicas dependerán del navegador y dispositivo utilizado por el usuario.
+Debe tenerse en cuenta que bloquear o eliminar determinadas cookies puede afectar el funcionamiento de algunas secciones o funcionalidades de VIVEGO.PE.
+En particular, las cookies necesarias para el funcionamiento básico de la Plataforma pueden resultar indispensables para utilizar determinados servicios.
+8. CONFIGURACIÓN Y PREFERENCIAS DEL USUARIO
+Cuando la tecnología y configuración de VIVEGO.PE lo permitan, la Plataforma podrá implementar mecanismos específicos para que los usuarios puedan conocer, aceptar, rechazar o configurar determinadas categorías de cookies.
+Las preferencias seleccionadas por el usuario podrán conservarse durante un período razonable para evitar solicitar la misma configuración en cada visita.
+El usuario podrá modificar sus preferencias posteriormente, cuando dicha funcionalidad se encuentre disponible.
+Las cookies estrictamente necesarias para el funcionamiento y seguridad de la Plataforma podrán permanecer activas cuando resulten indispensables para la prestación del servicio solicitado.
+9. RELACIÓN ENTRE LAS COOKIES Y LOS DATOS PERSONALES
+Determinada información obtenida mediante cookies o tecnologías similares puede constituir un dato personal o permitir su vinculación con un usuario identificado o identificable.
+Cuando ello ocurra, IPEXA S.A.C. realizará el tratamiento correspondiente conforme a la legislación aplicable en materia de protección de datos personales y a lo establecido en la Política de Privacidad de VIVEGO.PE.
+La información obtenida mediante estas tecnologías podrá utilizarse únicamente para las finalidades descritas en la presente Política o para otras finalidades respecto de las cuales exista una base legal aplicable.
+10. CAMBIOS EN NUESTRA POLÍTICA DE COOKIES
+IPEXA S.A.C. podrá actualizar la presente Política cuando sea necesario debido a cambios en:
+Las tecnologías utilizadas por VIVEGO.PE.
+Las funcionalidades de la Plataforma.
+Los proveedores tecnológicos.
+Las herramientas de análisis o seguridad.
+Las campañas de comunicación o publicidad.
+La legislación aplicable.
+Los procesos internos relacionados con el tratamiento de información.
+La versión actualizada será publicada en VIVEGO.PE.
+Se recomienda a los usuarios revisar periódicamente esta Política para mantenerse informados sobre la forma en que utilizamos cookies y tecnologías similares.
+11. VIGENCIA
+La presente Política de Cookies entra en vigencia desde su publicación en VIVEGO.PE y permanecerá vigente hasta que sea modificada, actualizada o reemplazada por una nueva versión.
+Al continuar navegando y utilizando las funcionalidades de VIVEGO.PE, el usuario reconoce haber sido informado sobre el uso de cookies y tecnologías similares conforme a lo establecido en la presente Política, sin perjuicio de las opciones de configuración y consentimiento que puedan estar disponibles en la Plataforma de acuerdo con la naturaleza de las cookies utilizadas.

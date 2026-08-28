@@ -216,6 +216,25 @@
             background: rgba(255, 255, 255, 0.2);
             border-radius: 10px;
         }
+
+        /* PANELES DE PASOS (STEPPER) */
+        .step-content-panel {
+            display: none;
+        }
+        .step-content-panel.active {
+            display: block !important;
+            animation: fadeInStep 0.3s ease-in-out;
+        }
+        @keyframes fadeInStep {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 @endpush
 
@@ -617,12 +636,12 @@
                 <!-- STEP 2: ZONAS & TARIFAS -->
                 <div class="step-content-panel" id="stepPanel2">
                     <div class="settings-card-box">
-                        <div class="settings-card-header" style="justify-content: space-between;">
+                        <div class="settings-card-header" style="justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
                             <div style="display: flex; align-items: center; gap: 0.85rem;">
                                 <div class="card-header-icon" style="background: rgba(234, 179, 8, 0.15); border-color: rgba(234, 179, 8, 0.3); color: #EAB308;">🏷️</div>
                                 <div>
                                     <h3 class="card-header-title">Paso 2: Zonas & Configuración de Tarifas</h3>
-                                    <p class="card-header-subtitle">Establece la capacidad y precio de cada zona para este evento</p>
+                                    <p class="card-header-subtitle">Establece la capacidad y precio de cada zona para este evento (Modo Estándar o Diseñador Interactivo)</p>
                                 </div>
                             </div>
                             <button type="button" class="btn btn-primary btn-save-settings" style="font-size: 0.85rem; padding: 0.65rem 1.25rem;" onclick="addDynamicZoneRow()">
@@ -630,7 +649,12 @@
                             </button>
                         </div>
 
-                        <div class="dash-table-container" style="margin-bottom: 1.5rem;">
+                        <!-- SELECTOR DE MODO PASO 2 & CONSTRUCTOR INTERACTIVO EN 2 COLUMNAS (ELEMENTOR + CANVA) -->
+                        @include('web.events.partials.step2_interactive_zone_builder')
+
+                        <!-- MODO 1: CONTENEDOR ESTÁNDAR (TABLA DE TARIFAS Y CORTESÍAS) -->
+                        <div id="step2StandardContainer">
+                            <div class="dash-table-container" style="margin-bottom: 1.5rem;">
                             <table class="dash-table" id="zonesDynamicTable">
                                 <thead>
                                     <tr>
@@ -922,7 +946,8 @@
                                     </button>
                                 </div>
                             </div>
-                        </div>
+                            </div>
+                        </div> <!-- Fin #step2StandardContainer -->
 
                         <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
                             <button type="button" class="btn btn-cancel-custom" onclick="goToStep(1)">
@@ -1629,30 +1654,68 @@
         let quillEditor = null;
 
         function goToStep(step) {
-            document.querySelectorAll('.step-content-panel').forEach(p => p.classList.remove('active'));
+            console.log(`[ViveGo Stepper] 🚀 Navegando hacia el Paso ${step}...`);
+            try {
+                if (typeof SeatMapEditor !== 'undefined' && typeof SeatMapEditor.syncToStandardTable === 'function') {
+                    SeatMapEditor.syncToStandardTable();
+                    console.log('[ViveGo Stepper] ✓ Zonas interactivas sincronizadas con éxito.');
+                }
+            } catch(e) {
+                console.warn('[ViveGo Stepper] ⚠️ Error al sincronizar SeatMapEditor:', e);
+            }
+
+            document.querySelectorAll('.step-content-panel').forEach(p => {
+                p.classList.remove('active');
+                p.style.display = 'none';
+            });
             document.querySelectorAll('.stepper-step').forEach(s => s.classList.remove('active'));
 
             const targetPanel = document.getElementById('stepPanel' + step);
             const targetIndicator = document.getElementById('stepIndicator' + step);
 
-            if (targetPanel) targetPanel.classList.add('active');
-            if (targetIndicator) targetIndicator.classList.add('active');
+            if (targetPanel) {
+                targetPanel.classList.add('active');
+                targetPanel.style.display = 'block';
+                console.log(`[ViveGo Stepper] ✓ Panel #stepPanel${step} activado y visible.`, targetPanel);
+            } else {
+                console.error(`[ViveGo Stepper] ❌ No se encontró el elemento #stepPanel${step} en el DOM!`);
+            }
+
+            if (targetIndicator) {
+                targetIndicator.classList.add('active');
+            }
 
             currentStep = step;
 
-            if (step === 1 && !leafletMap) {
+            if (step === 1 && typeof initLeafletMap === 'function') {
                 setTimeout(initLeafletMap, 200);
             }
             if (step === 3) {
+                console.log('[ViveGo Stepper] 🎨 Inicializando Diseñador Canva (Paso 3)...');
                 setTimeout(() => {
-                    if (!quillEditor && document.getElementById('cert-text-editor')) {
-                        initQuillEditor();
+                    try {
+                        if (!quillEditor && document.getElementById('cert-text-editor') && typeof initQuillEditor === 'function') {
+                            initQuillEditor();
+                        }
+                        if (typeof renderCanvas === 'function') {
+                            renderCanvas();
+                            console.log('[ViveGo Stepper] ✓ Canva renderizado correctamente.');
+                        }
+                    } catch(err) {
+                        console.error('[ViveGo Stepper] ❌ Error renderizando Canva:', err);
                     }
-                    renderCanvas();
-                }, 150);
+                }, 100);
             }
             if (step === 4) {
-                updateReviewSummary();
+                console.log('[ViveGo Stepper] 📋 Actualizando Resumen de Confirmación (Paso 4)...');
+                try {
+                    if (typeof updateReviewSummary === 'function') {
+                        updateReviewSummary();
+                        console.log('[ViveGo Stepper] ✓ Resumen actualizado correctamente.');
+                    }
+                } catch(err) {
+                    console.warn('[ViveGo Stepper] ⚠️ Error en updateReviewSummary:', err);
+                }
             }
         }
 
@@ -2254,6 +2317,9 @@
                 if (input) input.value = url;
                 if (placeholder) placeholder.style.display = 'none';
                 if (container) container.style.display = 'block';
+                if (typeof SeatMapEditor !== 'undefined') {
+                    SeatMapEditor.setReferenceImage(url);
+                }
             } else if (mediaContext === 'background_image') {
                 const preview = document.getElementById('bgPreviewImg');
                 const input = document.getElementById('background_image');
@@ -2726,6 +2792,28 @@
             }
         }
 
+        function handleReferenceImageUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('reference_image').value = e.target.result;
+                    if (document.getElementById('referencePreviewImg')) document.getElementById('referencePreviewImg').src = e.target.result;
+                    if (document.getElementById('referencePlaceholderBox')) document.getElementById('referencePlaceholderBox').style.display = 'none';
+                    if (document.getElementById('referencePreviewContainer')) document.getElementById('referencePreviewContainer').style.display = 'block';
+                    if (typeof SeatMapEditor !== 'undefined') SeatMapEditor.updateImageBadge();
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removeReferenceImage() {
+            document.getElementById('reference_image').value = '';
+            if (document.getElementById('referencePreviewImg')) document.getElementById('referencePreviewImg').src = '';
+            if (document.getElementById('referencePlaceholderBox')) document.getElementById('referencePlaceholderBox').style.display = 'block';
+            if (document.getElementById('referencePreviewContainer')) document.getElementById('referencePreviewContainer').style.display = 'none';
+            if (typeof SeatMapEditor !== 'undefined') SeatMapEditor.updateImageBadge();
+        }
+
         function handleBgImageUpload(input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
@@ -2943,6 +3031,10 @@
             initLeafletMap();
             syncCourtesyZonesTable();
             updatePublicationCardStyles();
+            if (typeof SeatMapEditor !== 'undefined') {
+                SeatMapEditor.init();
+            }
         });
     </script>
+    @include('web.events.partials.step2_interactive_zone_js')
 @endpush

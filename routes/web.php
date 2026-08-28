@@ -20,6 +20,9 @@ use App\Http\Controllers\Web\CouponController;
 use App\Http\Controllers\Web\CustomerController;
 use App\Http\Controllers\Web\CustomerPortalController;
 use App\Http\Controllers\Web\PaymentGatewayController;
+use App\Http\Controllers\Web\LegalController;
+use App\Http\Controllers\Web\ClaimBookController;
+use App\Http\Controllers\Web\ClaimAdminController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -38,6 +41,16 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('web.logout');
 Route::post('/recuperar-password', [AuthController::class, 'recoverPassword'])->name('web.password.recover');
 Route::post('/actualizar-password-temporal', [AuthController::class, 'updateTemporaryPassword'])->name('web.password.update_temp');
 Route::get('/evento/{slug}', [EventDetailController::class, 'show'])->name('web.event.detail');
+
+// Páginas Legales & Políticas Institucionales
+Route::get('/terminos-y-condiciones', [LegalController::class, 'terms'])->name('web.terms');
+Route::get('/politicas-de-privacidad', [LegalController::class, 'privacy'])->name('web.privacy');
+Route::get('/politica-de-cookies', [LegalController::class, 'cookies'])->name('web.cookies');
+
+// Libro de Reclamaciones Virtual (INDECOPI / Hoja de Reclamación)
+Route::get('/libro-de-reclamaciones', [ClaimBookController::class, 'index'])->name('web.claim_book');
+Route::post('/libro-de-reclamaciones', [ClaimBookController::class, 'store'])->name('web.claim_book.store');
+Route::get('/libro-de-reclamaciones/constancia/{code}', [ClaimBookController::class, 'confirmation'])->name('web.claim_book.confirmation');
 
 // Terminal Móvil de Control de Acceso & Scanner QR
 Route::get('/scanner/{event}', [AttendeeController::class, 'mobileScanner'])->name('web.scanner.direct');
@@ -164,6 +177,13 @@ Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group
     Route::post('/admin/responsable', [ManagerController::class, 'store'])->name('web.managers.store');
     Route::put('/admin/responsable/{manager}', [ManagerController::class, 'update'])->name('web.managers.update');
     Route::delete('/admin/responsable/{manager}', [ManagerController::class, 'destroy'])->name('web.managers.destroy');
+
+    // Libro de Reclamaciones (Atención de Reclamos y Quejas)
+    Route::get('/admin/reclamaciones', [ClaimAdminController::class, 'index'])->name('web.claims');
+    Route::get('/admin/reclamaciones/{id}/detalle', [ClaimAdminController::class, 'show'])->name('web.claims.details');
+    Route::post('/admin/reclamaciones/{id}/responder', [ClaimAdminController::class, 'respond'])->name('web.claims.respond');
+    Route::post('/admin/reclamaciones/{id}/estado', [ClaimAdminController::class, 'updateStatus'])->name('web.claims.update_status');
+    Route::delete('/admin/reclamaciones/{id}', [ClaimAdminController::class, 'destroy'])->name('web.claims.destroy');
 
     // Administración de Usuarios Admin
     Route::get('/admin/administradores', [AdminController::class, 'index'])->name('web.admins');

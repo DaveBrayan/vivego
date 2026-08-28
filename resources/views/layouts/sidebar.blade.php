@@ -12,6 +12,8 @@
     if (empty($loggedUserAvatar)) {
         $loggedUserAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
     }
+
+    $pendingClaimsCount = \Illuminate\Support\Facades\Schema::hasTable('claims') ? \App\Models\Claim::where('status', 'Pendiente')->count() : 0;
 @endphp
 
 <!-- ESTILOS DIRECTOS DEL SISTEMA RESPONSIVE MÓVIL (OFFCANVAS + TABLAS + BANNERS) -->
@@ -437,6 +439,15 @@
                 <a href="{{ route('web.capacity_types') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">🏟️</span>
                     <span class="dash-nav-text">Tipos de Aforo</span>
+                </a>
+            </li>
+            <li class="dash-nav-item {{ (request()->routeIs('web.claims*') || request()->is('admin/reclamaciones*')) ? 'active' : '' }}">
+                <a href="{{ route('web.claims') }}" class="dash-nav-link">
+                    <span class="dash-nav-icon">📖</span>
+                    <span class="dash-nav-text">Reclamaciones</span>
+                    @if(!empty($pendingClaimsCount) && $pendingClaimsCount > 0)
+                        <span class="dash-nav-pill-count" style="background: #FF5500; color: #FFFFFF; padding: 0.15rem 0.55rem; border-radius: 9999px; font-size: 0.725rem; font-weight: 900; margin-left: auto; box-shadow: 0 2px 8px rgba(255,85,0,0.5);">{{ $pendingClaimsCount }}</span>
+                    @endif
                 </a>
             </li>
         </ul>

@@ -1,0 +1,279 @@
+POLITICA DE PRIVACIDAD VIVEGO.PE
+En IPEXA S.A.C nos preocupamos por la protección y privacidad de los datos personales de nuestros usuarios. Por ello, garantizamos la absoluta confidencialidad de tus datos y empleamos altos estándares de seguridad, de conformidad con lo estipulado en la presente Política de Privacidad.
+1. ALCANCE DE LA PRESENTE POLÍTICA
+La presente Política de Privacidad establece las condiciones bajo las cuales INDUSTRIA PERUANA DE EXPORTACIÓN E IMPORTACIÓN ANDINA S.A.C., identificada con RUC N.° 20606476231, en adelante, “IPEXA S.A.C.”, realiza el tratamiento de los datos personales obtenidos a través de la plataforma digital VIVEGO.PE, sus páginas, funcionalidades, formularios, canales de atención y demás medios digitales que se encuentren vinculados a los servicios ofrecidos bajo la marca VIVEGO.
+VIVEGO.PE constituye una plataforma digital que permite, según los servicios habilitados en cada momento, la publicación, promoción, difusión, compra y venta de entradas para conciertos, espectáculos y otros eventos culturales, artísticos, deportivos, académicos, empresariales o recreativos, así como la comercialización de productos y otros bienes o servicios ofrecidos directamente por IPEXA S.A.C. o por terceros que utilicen la Plataforma.
+La presente Política resulta aplicable, según corresponda, a las personas que navegan, se registran, realizan compras, publican eventos, ofrecen productos, solicitan información, se comunican con VIVEGO.PE o utilizan cualquiera de sus servicios.
+2. INFORMACIÓN QUE PODRÁ SER RECOPILADA
+Para permitir el funcionamiento de la Plataforma y la prestación de los servicios solicitados, IPEXA S.A.C. podrá recopilar información proporcionada directamente por el Usuario, información generada como consecuencia de la utilización de VIVEGO.PE e información obtenida legítimamente de terceros cuando ello resulte necesario y permitido por la normativa aplicable.
+Dependiendo del tipo de servicio utilizado, la información tratada podrá incluir:
+Datos de identificación
+Nombres y apellidos.
+Tipo y número de documento de identidad.
+Número de RUC, cuando corresponda.
+Nacionalidad.
+Fecha de nacimiento, cuando resulte necesaria.
+Imagen u otros datos requeridos para fines específicos.
+Datos de contacto
+Dirección de correo electrónico.
+Número telefónico.
+Dirección de domicilio o entrega.
+Ciudad o localidad.
+Persona de contacto, cuando corresponda.
+Información relacionada con transacciones
+Historial de compras.
+Entradas adquiridas.
+Eventos seleccionados.
+Productos adquiridos.
+Fecha y hora de las operaciones.
+Importe de las transacciones.
+Estado de los pagos.
+Información necesaria para verificar o gestionar una operación.
+Información relacionada con Organizadores y Vendedores
+Cuando un Usuario publique eventos o comercialice productos a través de VIVEGO.PE, podrán solicitarse datos adicionales relacionados con la persona natural o jurídica responsable de la operación, tales como información de identificación, datos de contacto, RUC, razón social, nombre comercial, información bancaria, datos de representantes o personas de contacto y otra información razonablemente necesaria para la ejecución de la relación comercial.
+Información técnica y de navegación
+Durante el uso de la Plataforma podrán recopilarse datos técnicos relacionados con la navegación y utilización de VIVEGO.PE, tales como dirección IP, tipo de dispositivo, navegador, sistema operativo, fecha y hora de acceso, páginas visitadas, interacciones dentro de la Plataforma e información necesaria para fines de seguridad, funcionamiento y mejora del servicio.
+IPEXA S.A.C. procurará solicitar únicamente la información que resulte pertinente para las finalidades informadas y para la correcta prestación de los servicios ofrecidos.
+3. VERACIDAD Y ACTUALIZACIÓN DE LA INFORMACIÓN
+Para que los servicios puedan ser prestados adecuadamente, el Usuario se compromete a proporcionar información verdadera, completa, exacta y vigente.
+Asimismo, deberá comunicar o actualizar cualquier cambio relevante en su información cuando ello pueda afectar la correcta ejecución de una compra, la entrega de un producto, la emisión de una entrada, la comunicación de cambios en un evento o cualquier otro servicio contratado.
+IPEXA S.A.C. podrá realizar acciones razonables de validación, verificación o actualización de la información cuando ello resulte necesario para prevenir fraudes, proteger la seguridad de la Plataforma, verificar la identidad del Usuario o ejecutar correctamente una relación contractual o precontractual.
+En caso de detectarse información falsa, inconsistente, fraudulenta o proporcionada sin autorización, VIVEGO.PE podrá suspender determinadas operaciones, solicitar información adicional, restringir temporalmente el acceso o adoptar las medidas que correspondan conforme a los Términos y Condiciones y la legislación aplicable.
+4. FINALIDADES DEL TRATAMIENTO PARA TODOS LOS USUARIOS
+Los datos personales recopilados a través de VIVEGO.PE podrán ser tratados, según el servicio utilizado, para las siguientes finalidades:
+4.1. Registro y administración de cuentas
+Crear, verificar, administrar y mantener la cuenta del Usuario, así como brindar asistencia relacionada con el acceso y funcionamiento de la Plataforma.
+4.2. Verificación y seguridad
+Realizar procesos razonables de validación de identidad, detección de actividades inusuales, prevención de fraudes, protección de cuentas y seguridad de las transacciones realizadas a través de VIVEGO.PE.
+4.3. Ejecución de compras y servicios
+Procesar la compra de entradas, productos o servicios, gestionar pagos, emitir confirmaciones, generar tickets o códigos de acceso y realizar las acciones necesarias para cumplir con la operación solicitada por el Usuario.
+4.4. Comunicación sobre operaciones realizadas
+Enviar información relacionada con compras, pagos, confirmaciones, cambios, reprogramaciones, cancelaciones, incidencias, entregas, devoluciones, seguridad de la cuenta y demás aspectos necesarios para la correcta ejecución del servicio.
+4.5. Atención de consultas y solicitudes
+Atender consultas, solicitudes, sugerencias, quejas, reclamos y otras comunicaciones realizadas por los Usuarios a través de los canales habilitados por VIVEGO.PE.
+4.6. Gestión de eventos
+Facilitar a los Organizadores la información que resulte necesaria para la validación de entradas, control de acceso, comunicación de información relevante y demás actividades directamente relacionadas con la organización y ejecución del evento adquirido por el Usuario.
+4.7. Gestión de productos y entregas
+Facilitar a los Vendedores y proveedores involucrados la información estrictamente necesaria para procesar pedidos, preparar productos, coordinar entregas y atender incidencias relacionadas con una compra.
+4.8. Mejora de la Plataforma
+Analizar el funcionamiento, uso, navegación e interacción de los Usuarios con VIVEGO.PE para identificar oportunidades de mejora, optimizar la experiencia de navegación y desarrollar nuevas funcionalidades o servicios.
+4.9. Elaboración de información estadística
+Generar información estadística, analítica y reportes internos relacionados con el uso de la Plataforma, el funcionamiento de los servicios, tendencias de compra y otros indicadores necesarios para la gestión y mejora de VIVEGO.PE.
+Cuando sea posible, IPEXA S.A.C. procurará utilizar información agregada o disociada para estas finalidades.
+4.10. Cumplimiento de obligaciones
+Cumplir obligaciones contractuales, legales, tributarias, administrativas y requerimientos formulados por autoridades competentes.
+5. COMUNICACIONES RELACIONADAS CON EL SERVICIO
+IPEXA S.A.C. podrá comunicarse con los Usuarios mediante correo electrónico, llamadas telefónicas, mensajes de texto, WhatsApp, notificaciones u otros canales de contacto proporcionados o habilitados por el Usuario.
+Estas comunicaciones podrán estar relacionadas, entre otros aspectos, con:
+Confirmaciones de compra.
+Estado de pagos.
+Emisión o envío de entradas.
+Cambios o reprogramaciones de eventos.
+Cancelaciones.
+Información sobre la entrega de productos.
+Solicitudes de verificación.
+Alertas de seguridad.
+Actualizaciones de la Plataforma.
+Atención de solicitudes o reclamos.
+Encuestas de satisfacción relacionadas con los servicios recibidos.
+Estas comunicaciones podrán ser necesarias para la correcta ejecución de una relación contractual o para brindar adecuadamente los servicios solicitados por el Usuario.
+6. ANÁLISIS Y MEJORA DE LOS SERVICIOS
+IPEXA S.A.C. podrá analizar información relacionada con el uso de VIVEGO.PE para comprender cómo interactúan los Usuarios con la Plataforma, mejorar sus funcionalidades, reforzar la seguridad y optimizar los procesos de compra y venta.
+Para estos fines podrán utilizarse herramientas tecnológicas, procesos automatizados o procedimientos manuales.
+Estos análisis podrán incluir información relacionada con navegación, transacciones, patrones de uso, incidencias técnicas y otros indicadores necesarios para mejorar la operatividad de la Plataforma.
+Cuando se utilicen procesos automatizados que produzcan efectos relevantes para el Usuario, IPEXA S.A.C. procurará aplicar las medidas que correspondan conforme a la normativa aplicable.
+7. TRATAMIENTO DE DATOS DE LOS ORGANIZADORES DE EVENTOS
+Los Organizadores pueden ser personas naturales con negocio, empresas u otras personas jurídicas que utilicen VIVEGO.PE para publicar, promocionar y comercializar entradas para sus eventos.
+Además de la información general aplicable a los Usuarios, IPEXA S.A.C. podrá solicitar a los Organizadores información adicional que resulte necesaria para establecer y ejecutar la relación comercial.
+Dicha información podrá incluir:
+Nombres y apellidos.
+Documento de identidad.
+RUC.
+Razón social.
+Nombre comercial.
+Información de contacto.
+Dirección.
+Información bancaria necesaria para la ejecución de pagos o liquidaciones.
+Información sobre representantes o personas autorizadas.
+Información relacionada con los eventos publicados.
+Permisos, autorizaciones o documentación que pueda resultar necesaria según la naturaleza del evento.
+Los datos podrán ser utilizados para:
+a) Gestionar la relación comercial
+Permitir el registro, publicación y administración de eventos dentro de VIVEGO.PE.
+b) Gestionar pagos y liquidaciones
+Procesar operaciones económicas vinculadas con las ventas realizadas a través de la Plataforma, cuando corresponda.
+c) Brindar soporte
+Atender consultas, incidencias y solicitudes relacionadas con el uso de las herramientas de VIVEGO.PE.
+d) Verificar información
+Realizar validaciones razonables relacionadas con la identidad, actividad comercial o información proporcionada por el Organizador.
+e) Atender solicitudes relacionadas con los eventos
+Facilitar la atención de consultas, incidencias, quejas o reclamos relacionados con eventos publicados a través de la Plataforma.
+8. TRATAMIENTO DE DATOS DE LOS VENDEDORES DE PRODUCTOS
+VIVEGO.PE podrá permitir que personas naturales o jurídicas publiquen y comercialicen productos a través de la Plataforma.
+Para ello, IPEXA S.A.C. podrá recopilar información necesaria para identificar al Vendedor, administrar su cuenta, publicar sus productos y ejecutar las operaciones comerciales correspondientes.
+Esta información podrá incluir, según corresponda:
+Datos de identificación.
+RUC.
+Razón social o nombre comercial.
+Datos de contacto.
+Dirección.
+Información bancaria.
+Datos de representantes o personas autorizadas.
+Información sobre los productos ofrecidos.
+Datos necesarios para coordinar entregas, devoluciones o incidencias.
+Los datos serán tratados principalmente para administrar la relación comercial entre VIVEGO.PE y el Vendedor, facilitar la comercialización de productos y atender las obligaciones derivadas de las operaciones realizadas.
+9. TRATAMIENTO DE DATOS DE LOS COMPRADORES POR PARTE DE LOS ORGANIZADORES
+VIVEGO.PE permite que terceros Organizadores publiquen y comercialicen entradas para sus propios eventos.
+Por esta razón, cuando un Usuario adquiere una entrada, determinada información podrá ser comunicada al Organizador correspondiente cuando resulte necesaria para ejecutar adecuadamente el evento.
+El Organizador podrá utilizar dicha información para fines directamente vinculados con:
+Validación de la compra.
+Verificación de entradas.
+Control de acceso.
+Gestión de asistentes.
+Comunicación de cambios importantes.
+Reprogramaciones o cancelaciones.
+Atención de incidencias relacionadas con el evento.
+Seguridad y organización del evento.
+La identidad del Organizador responsable del evento deberá encontrarse disponible para el Usuario en la información del evento o durante el proceso de compra, según las funcionalidades habilitadas en la Plataforma.
+Cuando el Organizador realice tratamientos de datos personales para finalidades propias y distintas de aquellas estrictamente necesarias para la ejecución del evento, será responsable de cumplir con las obligaciones que le correspondan conforme a la normativa aplicable.
+10. DATOS ADICIONALES SOLICITADOS POR LOS ORGANIZADORES
+Dependiendo de la naturaleza del evento, algunos Organizadores podrán requerir información adicional a los asistentes.
+Estos datos podrán ser necesarios, por ejemplo, para:
+Cumplir requisitos de ingreso.
+Gestionar acreditaciones.
+Organizar actividades especiales.
+Coordinar servicios incluidos en el evento.
+Cumplir requisitos de seguridad.
+Otras finalidades directamente relacionadas con la prestación del servicio adquirido.
+Cuando VIVEGO.PE habilite la solicitud de datos complementarios por cuenta del Organizador, se procurará informar al Usuario sobre la información requerida durante el proceso correspondiente.
+El tratamiento posterior de estos datos por parte del Organizador será responsabilidad de dicho Organizador respecto de las finalidades propias que determine, sin perjuicio de las obligaciones que correspondan a VIVEGO.PE por el tratamiento que realice directamente.
+11. DATOS DE LOS COMPRADORES Y VENDEDORES DE PRODUCTOS
+Cuando un Usuario adquiere un producto publicado por un tercero a través de VIVEGO.PE, podrá ser necesario compartir determinada información con el Vendedor o con los proveedores involucrados en la entrega.
+La información compartida podrá incluir únicamente los datos razonablemente necesarios para:
+Confirmar el pedido.
+Preparar el producto.
+Coordinar la entrega.
+Comunicarse respecto de la compra.
+Gestionar cambios o devoluciones cuando correspondan.
+Atender incidencias relacionadas con la operación.
+Los Vendedores que reciban información de los compradores deberán utilizarla únicamente para las finalidades relacionadas con la operación correspondiente, salvo que exista otra base legal válida para un tratamiento adicional.
+12. USO DE PROVEEDORES DE PAGO Y PROCESAMIENTO DE TRANSACCIONES
+VIVEGO.PE podrá utilizar proveedores tecnológicos o entidades especializadas para facilitar el procesamiento de pagos realizados mediante tarjetas, billeteras digitales, transferencias u otros medios habilitados.
+Cuando el procesamiento de pagos sea realizado por un proveedor externo, determinada información podrá ser transmitida directamente a dicho proveedor para verificar, autorizar y procesar la operación.
+IPEXA S.A.C. podrá recibir información relacionada con el resultado o estado de la transacción, incluyendo confirmaciones, rechazos, anulaciones, devoluciones o información necesaria para prevenir operaciones fraudulentas.
+Los datos completos de las tarjetas podrán ser tratados directamente por los proveedores especializados que intervengan en la operación, de acuerdo con sus propios mecanismos de seguridad y condiciones aplicables.
+En caso de utilizarse mecanismos de tokenización, verificación o preautorización de medios de pago, estos serán informados al Usuario durante el proceso de pago cuando corresponda.
+13. RESPONSABILIDAD DEL USUARIO SOBRE LA INFORMACIÓN PROPORCIONADA
+Cada Usuario es responsable de la veracidad, exactitud y vigencia de la información proporcionada a VIVEGO.PE.
+El suministro de información falsa, fraudulenta, incompleta o perteneciente a terceros sin autorización podrá afectar la correcta prestación de los servicios.
+Cuando la información resulte esencial para completar una operación y no pueda ser validada razonablemente, VIVEGO.PE podrá suspender, rechazar o anular la operación correspondiente, sin perjuicio de las acciones que puedan corresponder conforme a los Términos y Condiciones y a la legislación aplicable.
+14. PAGOS Y TRANSACCIONES
+Los pagos podrán realizarse mediante los medios habilitados en la Plataforma, los cuales podrán incluir, según disponibilidad:
+Yape.
+Plin.
+Tarjetas de crédito.
+Tarjetas de débito.
+Transferencias bancarias.
+Otros medios de pago que puedan habilitarse en el futuro.
+La disponibilidad de cada medio de pago podrá variar según el tipo de operación, proveedor, sistema de seguridad o condiciones técnicas.
+VIVEGO.PE podrá utilizar proveedores especializados para el procesamiento de pagos.
+IPEXA S.A.C. no garantiza la disponibilidad permanente de todos los medios de pago.
+Una transacción será considerada confirmada cuando el pago haya sido procesado correctamente y registrado conforme a los mecanismos de la Plataforma o del proveedor de pagos correspondiente.
+15. SEGURIDAD Y PREVENCIÓN DE FRAUDES
+VIVEGO.PE podrá implementar mecanismos tecnológicos y procedimientos destinados a prevenir operaciones fraudulentas.
+Cuando se detecten operaciones inusuales, inconsistencias en la información, posibles fraudes o riesgos de seguridad, la Plataforma podrá:
+Solicitar información adicional.
+Suspender temporalmente una transacción.
+Cancelar una operación cuando corresponda.
+Bloquear o restringir una cuenta.
+Comunicar el incidente a las autoridades competentes cuando legalmente corresponda.
+El Usuario es responsable de proporcionar información verdadera y de utilizar medios de pago sobre los cuales tenga autorización.
+16. DATOS PERSONALES Y PRIVACIDAD
+Los datos personales proporcionados por los Usuarios serán tratados conforme a la normativa peruana aplicable en materia de protección de datos personales y de acuerdo con la Política de Privacidad de VIVEGO.PE.
+Los datos podrán ser utilizados, según corresponda, para:
+Crear y administrar cuentas.
+Procesar compras y pagos.
+Emitir confirmaciones.
+Gestionar el acceso a eventos.
+Coordinar la entrega de productos.
+Atender consultas y reclamos.
+Prevenir fraudes.
+Cumplir obligaciones legales.
+Mejorar los servicios de la Plataforma.
+Cuando sea necesario para la ejecución de una compra o prestación del servicio, determinados datos podrán ser compartidos con Organizadores, Vendedores, proveedores tecnológicos o proveedores de pago, respetando las disposiciones legales aplicables.
+VIVEGO.PE no almacenará información de tarjetas de pago cuando dicha información sea procesada directamente por proveedores especializados.
+17. LIMITACIÓN DE RESPONSABILIDAD
+Cuando un evento sea organizado por un tercero, VIVEGO.PE no será responsable por la producción, realización, calidad, desarrollo, seguridad, contenido, artistas, programación, cancelación o reprogramación del evento, salvo en los casos en que la responsabilidad corresponda legalmente a IPEXA S.A.C.
+Cuando un producto sea comercializado por un Vendedor externo, dicho Vendedor será responsable por las obligaciones relacionadas directamente con el producto ofrecido.
+VIVEGO.PE no será responsable por:
+Errores del Usuario al ingresar información.
+Problemas derivados de la conexión a internet del Usuario.
+Fallas en dispositivos del Usuario.
+Información incorrecta proporcionada por Organizadores o Vendedores.
+Operaciones rechazadas por entidades financieras o proveedores de pago.
+Casos fortuitos, fuerza mayor u otros acontecimientos fuera de su control razonable.
+Nada de lo establecido en estos Términos y Condiciones limita los derechos irrenunciables que correspondan a los consumidores conforme a la legislación aplicable.
+18. OBLIGACIONES DEL USUARIO
+El Usuario se compromete a utilizar VIVEGO.PE de manera lícita y responsable.
+Queda prohibido:
+Utilizar información falsa.
+Suplantar la identidad de terceros.
+Manipular los sistemas de la Plataforma.
+Intentar obtener acceso no autorizado.
+Introducir programas maliciosos.
+Realizar actividades fraudulentas.
+Interferir con el funcionamiento de la Plataforma.
+Utilizar entradas falsificadas o alteradas.
+Publicar productos o eventos ilícitos.
+Vulnerar derechos de terceros.
+Utilizar la Plataforma para fines contrarios a la ley.
+El incumplimiento podrá generar la suspensión o cancelación de la cuenta, sin perjuicio de otras acciones que pudieran corresponder.
+19. PROPIEDAD INTELECTUAL
+Todos los elementos que forman parte de VIVEGO.PE, incluyendo, entre otros:
+Nombre comercial.
+Marca.
+Logotipos.
+Diseño.
+Software.
+Código.
+Bases de datos.
+Contenido gráfico.
+Textos propios.
+Fotografías y elementos audiovisuales sobre los cuales VIVEGO.PE tenga derechos.
+Se encuentran protegidos por la legislación aplicable en materia de propiedad intelectual.
+Queda prohibida su reproducción, modificación, distribución, comercialización o utilización no autorizada, salvo autorización expresa del titular de los derechos.
+Los contenidos proporcionados por Organizadores, Vendedores o terceros seguirán perteneciendo a sus respectivos titulares, quienes garantizan contar con los derechos necesarios para su publicación.
+20. SUSPENSIÓN Y CANCELACIÓN DE CUENTAS
+VIVEGO.PE podrá restringir, suspender o cancelar cuentas cuando:
+Se incumplan los presentes Términos y Condiciones.
+Se detecte información falsa.
+Existan indicios de fraude.
+Se realicen actividades que afecten la seguridad de la Plataforma.
+Se vulneren derechos de terceros.
+Exista un requerimiento legal o de autoridad competente.
+El Usuario utilice la Plataforma de manera ilícita.
+La suspensión o cancelación de una cuenta no libera al Usuario de las obligaciones pendientes que se hayan generado antes de dicha medida.
+21. MODIFICACIÓN DE LOS TÉRMINOS Y CONDICIONES
+IPEXA S.A.C. podrá modificar o actualizar los presentes Términos y Condiciones cuando resulte necesario por razones operativas, tecnológicas, comerciales, legales o regulatorias.
+Las modificaciones entrarán en vigencia desde su publicación en VIVEGO.PE, salvo que se indique expresamente una fecha distinta.
+El Usuario es responsable de revisar periódicamente los presentes Términos y Condiciones.
+La utilización continuada de la Plataforma después de la entrada en vigencia de una modificación podrá considerarse como aceptación de la versión actualizada, en la medida permitida por la legislación aplicable.
+22. DISPONIBILIDAD DE LA PLATAFORMA
+IPEXA S.A.C. realizará esfuerzos razonables para mantener el funcionamiento de VIVEGO.PE.
+Sin embargo, la Plataforma podrá ser suspendida temporalmente debido a:
+Mantenimiento.
+Actualizaciones.
+Problemas técnicos.
+Fallas de proveedores.
+Medidas de seguridad.
+Caso fortuito o fuerza mayor.
+Circunstancias fuera del control razonable de IPEXA S.A.C.
+La suspensión temporal de la Plataforma no generará automáticamente responsabilidad, salvo que corresponda conforme a la legislación aplicable.
+23. RECLAMOS Y ATENCIÓN AL USUARIO
+Para consultas, solicitudes o incidencias relacionadas con VIVEGO.PE, el Usuario podrá comunicarse mediante el siguiente correo electrónico:
+soportee@vivego.com
+Asimismo, cuando corresponda conforme a la normativa aplicable, los Usuarios podrán utilizar los mecanismos de atención y reclamación que IPEXA S.A.C. tenga habilitados.
+Las reclamaciones relacionadas directamente con la organización de un evento o con un producto comercializado por un tercero podrán requerir la participación o atención del respectivo Organizador o Vendedor, sin perjuicio de las obligaciones legales que correspondan a VIVEGO.PE.
+24. LEGISLACIÓN APLICABLE
+Los presentes Términos y Condiciones se rigen por las leyes de la República del Perú.
+Cualquier controversia será tratada conforme a la legislación peruana y a los mecanismos de solución de controversias que correspondan según la naturaleza del caso, sin perjuicio de los derechos que la normativa de protección al consumidor reconozca a los Usuarios.
