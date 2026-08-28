@@ -713,11 +713,14 @@
                         </div>
                     </div>
 
-                    <div class="form-options-row">
+                    <div class="form-options-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem;">
                         <label class="remember-label">
                             <input type="checkbox" name="remember" checked>
                             <span>Recordar mi sesión</span>
                         </label>
+                        <a href="javascript:void(0)" onclick="openLoginRecoveryModal()" style="color: var(--color-primary); font-size: 0.85rem; font-weight: 700; text-decoration: none; transition: opacity 0.2s ease;">
+                            ¿Olvidaste tu contraseña?
+                        </a>
                     </div>
 
                     <button type="submit" class="btn-submit-main">
@@ -734,8 +737,103 @@
 
     </div>
 
+    <!-- MODAL DE RECUPERACIÓN DE CONTRASEÑA POR CORREO O DNI -->
+    <div id="recoveryModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(8px); padding: 1rem;">
+        <div style="background: #FFFFFF; border-radius: 24px; width: 100%; max-width: 450px; padding: 2.25rem; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.3); border: 1px solid #E2E8F0; position: relative;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="font-size: 1.35rem; font-weight: 900; color: #0F172A; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>🛡️</span> Recuperar Acceso
+                </h3>
+                <button type="button" onclick="closeLoginRecoveryModal()" style="background: #F1F5F9; border: none; color: #64748B; width: 34px; height: 34px; border-radius: 10px; font-weight: 800; cursor: pointer; font-size: 1rem;">✕</button>
+            </div>
+            <p style="font-size: 0.875rem; color: #64748B; margin: 0 0 1.25rem 0; line-height: 1.5;">
+                Ingresa tu <strong>Correo Electrónico</strong> o <strong>DNI</strong> registrado. Te enviaremos de inmediato una contraseña temporal para que accedas y crees tu nueva clave.
+            </p>
+
+            <div id="recoveryModalAlert" style="display: none; padding: 0.85rem 1rem; border-radius: 12px; font-size: 0.875rem; font-weight: 600; margin-bottom: 1.25rem; border-width: 1.5px; border-style: solid; line-height: 1.4;"></div>
+
+            <form onsubmit="submitLoginRecovery(event)">
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label class="form-label" style="display: block; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; color: #334155; margin-bottom: 0.45rem;">Correo Electrónico o DNI:</label>
+                    <div class="input-box">
+                        <svg class="input-icon-left" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                            <polyline points="22,6 12,13 2,6"></polyline>
+                        </svg>
+                        <input type="text" id="recoveryIdentifierInput" class="form-input" placeholder="ejemplo@correo.com o DNI" required>
+                    </div>
+                </div>
+
+                <button type="submit" id="btnSubmitRecoveryModal" class="btn-submit-main" style="padding: 0.95rem; font-size: 0.95rem; margin-bottom: 1rem;">
+                    📩 Enviar Contraseña Temporal
+                </button>
+
+                <div style="text-align: center;">
+                    <a href="javascript:void(0)" onclick="closeLoginRecoveryModal()" style="color: #64748B; font-size: 0.85rem; font-weight: 700; text-decoration: underline;">
+                        ← Volver a Iniciar Sesión
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL OBLIGATORIO DE CAMBIO DE CONTRASEÑA TEMPORAL -->
+    @if(session('must_change_password'))
+    <div id="mandatoryChangePasswordModal" style="display: flex; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.85); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(8px); padding: 1rem;">
+        <div style="background: #FFFFFF; border-radius: 24px; width: 100%; max-width: 460px; padding: 2.25rem; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.4); border: 1px solid #E2E8F0;">
+            <div style="text-align: center; margin-bottom: 1.25rem;">
+                <div style="width: 56px; height: 56px; border-radius: 50%; background-color: #FFF7ED; border: 2px solid #FFEDD5; color: #EA580C; font-size: 26px; line-height: 56px; margin: 0 auto 12px auto;">
+                    🔒
+                </div>
+                <h3 style="font-size: 1.4rem; font-weight: 900; color: #0F172A; margin: 0 0 0.4rem 0;">
+                    Establecer Nueva Contraseña
+                </h3>
+                <p style="font-size: 0.875rem; color: #64748B; margin: 0; line-height: 1.4;">
+                    Has ingresado con una <strong>contraseña temporal</strong>. Por seguridad de tu cuenta, ingresa una nueva contraseña personalizada para continuar:
+                </p>
+            </div>
+
+            <div id="mandatoryChangePassError" style="display: none; background: #FEF2F2; border: 1.5px solid #FCA5A5; color: #DC2626; padding: 0.85rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; margin-bottom: 1.25rem;"></div>
+
+            <form onsubmit="submitMandatoryChangePassword(event)">
+                <div class="form-group" style="margin-bottom: 1.15rem;">
+                    <label class="form-label">Nueva Contraseña (mínimo 6 caracteres):</label>
+                    <div class="input-box">
+                        <svg class="input-icon-left" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                        <input type="password" id="mandatoryNewPassword" class="form-input" placeholder="••••••••••••" required minlength="6">
+                        <button type="button" class="toggle-password-btn" onclick="togglePasswordVisibilityField('mandatoryNewPassword', this)" title="Mostrar / Ocultar">
+                            👁️
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.75rem;">
+                    <label class="form-label">Confirmar Nueva Contraseña:</label>
+                    <div class="input-box">
+                        <svg class="input-icon-left" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                        <input type="password" id="mandatoryConfirmPassword" class="form-input" placeholder="••••••••••••" required minlength="6">
+                        <button type="button" class="toggle-password-btn" onclick="togglePasswordVisibilityField('mandatoryConfirmPassword', this)" title="Mostrar / Ocultar">
+                            👁️
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" id="btnSubmitMandatoryPass" class="btn-submit-main" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); box-shadow: 0 10px 24px rgba(16, 185, 129, 0.35);">
+                    💾 Guardar Nueva Contraseña y Continuar
+                </button>
+            </form>
+        </div>
+    </div>
+    @endif
+
     <script>
-        // Toggle visibilidad de contraseña
+        // Toggle visibilidad de contraseña del login principal
         const toggleBtn = document.getElementById('togglePasswordBtn');
         const passInput = document.getElementById('password');
         const eyeIcon = document.getElementById('eyeIcon');
@@ -745,6 +843,140 @@
                 const isPassword = passInput.type === 'password';
                 passInput.type = isPassword ? 'text' : 'password';
                 eyeIcon.style.color = isPassword ? '#FF5500' : '#94A3B8';
+            });
+        }
+
+        function togglePasswordVisibilityField(inputId, btnEl) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            btnEl.style.color = isPassword ? '#FF5500' : '#94A3B8';
+        }
+
+        function openLoginRecoveryModal() {
+            const loginVal = document.getElementById('login')?.value.trim();
+            if (loginVal && document.getElementById('recoveryIdentifierInput')) {
+                document.getElementById('recoveryIdentifierInput').value = loginVal;
+            }
+            document.getElementById('recoveryModalAlert').style.display = 'none';
+            document.getElementById('recoveryModal').style.display = 'flex';
+        }
+
+        function closeLoginRecoveryModal() {
+            document.getElementById('recoveryModal').style.display = 'none';
+        }
+
+        function submitLoginRecovery(e) {
+            e.preventDefault();
+            const identifier = document.getElementById('recoveryIdentifierInput').value.trim();
+            const alertBox = document.getElementById('recoveryModalAlert');
+            const btn = document.getElementById('btnSubmitRecoveryModal');
+
+            if (!identifier) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Verificando y enviando...';
+            alertBox.style.display = 'none';
+
+            fetch("{{ route('web.password.recover') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ identifier: identifier })
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.textContent = '📩 Enviar Contraseña Temporal';
+                alertBox.style.display = 'block';
+
+                if (data.success) {
+                    alertBox.style.background = '#F0FDF4';
+                    alertBox.style.borderColor = '#BBF7D0';
+                    alertBox.style.color = '#16A34A';
+                    alertBox.innerHTML = '<strong>¡Correo Enviado!</strong><br>' + data.message;
+                    
+                    if (data.email) {
+                        document.getElementById('login').value = data.email;
+                    }
+
+                    setTimeout(() => {
+                        closeLoginRecoveryModal();
+                        document.getElementById('password').focus();
+                    }, 2500);
+                } else {
+                    alertBox.style.background = '#FEF2F2';
+                    alertBox.style.borderColor = '#FCA5A5';
+                    alertBox.style.color = '#DC2626';
+                    alertBox.textContent = data.message || 'No se encontró una cuenta con esos datos.';
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.textContent = '📩 Enviar Contraseña Temporal';
+                alertBox.style.display = 'block';
+                alertBox.style.background = '#FEF2F2';
+                alertBox.style.borderColor = '#FCA5A5';
+                alertBox.style.color = '#DC2626';
+                alertBox.textContent = 'Ocurrió un error al procesar tu solicitud.';
+            });
+        }
+
+        function submitMandatoryChangePassword(e) {
+            e.preventDefault();
+            const newPassword = document.getElementById('mandatoryNewPassword').value;
+            const confirmPassword = document.getElementById('mandatoryConfirmPassword').value;
+            const errBox = document.getElementById('mandatoryChangePassError');
+            const btn = document.getElementById('btnSubmitMandatoryPass');
+
+            if (newPassword.length < 6) {
+                errBox.textContent = 'La nueva contraseña debe tener al menos 6 caracteres.';
+                errBox.style.display = 'block';
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                errBox.textContent = 'Las contraseñas no coinciden.';
+                errBox.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Guardando contraseña...';
+            errBox.style.display = 'none';
+
+            fetch("{{ route('web.password.update_temp') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    new_password: newPassword,
+                    new_password_confirmation: confirmPassword
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.textContent = '💾 Guardar Nueva Contraseña y Continuar';
+
+                if (data.success) {
+                    alert('¡Contraseña actualizada exitosamente!');
+                    location.reload();
+                } else {
+                    errBox.textContent = data.message || 'No se pudo actualizar la contraseña.';
+                    errBox.style.display = 'block';
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.textContent = '💾 Guardar Nueva Contraseña y Continuar';
+                errBox.textContent = 'Error al actualizar contraseña.';
+                errBox.style.display = 'block';
             });
         }
     </script>

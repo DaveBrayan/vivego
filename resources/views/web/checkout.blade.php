@@ -2586,8 +2586,11 @@
             }
         });
 
-        // Modal de Login Rápido de Cliente
+        // =========================================================================
+        // MODAL DE LOGIN RÁPIDO, RECUPERACIÓN Y CAMBIO DE CONTRASEÑA TEMPORAL
+        // =========================================================================
         function openFastLoginModal() {
+            showFastLoginView();
             document.getElementById('fastLoginModal').style.display = 'flex';
         }
 
@@ -2595,6 +2598,42 @@
             document.getElementById('fastLoginModal').style.display = 'none';
         }
 
+        function toggleFastPasswordVisibility(inputId, btnEl) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            btnEl.style.color = isPassword ? '#FF5500' : '#94A3B8';
+        }
+
+        function showFastLoginView() {
+            document.getElementById('fastLoginView').style.display = 'block';
+            document.getElementById('fastRecoveryView').style.display = 'none';
+            document.getElementById('fastChangePasswordView').style.display = 'none';
+            document.getElementById('fastLoginError').style.display = 'none';
+            document.getElementById('fastRecoveryAlert').style.display = 'none';
+            document.getElementById('fastChangePasswordError').style.display = 'none';
+        }
+
+        function showFastRecoveryView() {
+            document.getElementById('fastLoginView').style.display = 'none';
+            document.getElementById('fastRecoveryView').style.display = 'block';
+            document.getElementById('fastChangePasswordView').style.display = 'none';
+            document.getElementById('fastRecoveryAlert').style.display = 'none';
+            const emailCurrent = document.getElementById('fastLoginEmail')?.value.trim();
+            if (emailCurrent && document.getElementById('fastRecoveryIdentifier')) {
+                document.getElementById('fastRecoveryIdentifier').value = emailCurrent;
+            }
+        }
+
+        function showFastChangePasswordView() {
+            document.getElementById('fastLoginView').style.display = 'none';
+            document.getElementById('fastRecoveryView').style.display = 'none';
+            document.getElementById('fastChangePasswordView').style.display = 'block';
+            document.getElementById('fastChangePasswordError').style.display = 'none';
+        }
+
+        // Login con soporte de contraseña temporal
         function submitFastLogin(e) {
             e.preventDefault();
             const email = document.getElementById('fastLoginEmail').value.trim();
@@ -2618,13 +2657,21 @@
             .then(data => {
                 btn.disabled = false;
                 btn.textContent = 'Ingresar a mi Cuenta';
+
                 if (data.success) {
                     if (data.user) {
-                        document.getElementById('buyerFullName').value = data.user.name || '';
-                        document.getElementById('buyerEmail').value = data.user.email || '';
-                        if (data.user.dni) document.getElementById('buyerDoc').value = data.user.dni;
-                        if (data.user.phone) document.getElementById('buyerPhone').value = data.user.phone;
+                        if (document.getElementById('buyerFullName')) document.getElementById('buyerFullName').value = data.user.name || '';
+                        if (document.getElementById('buyerEmail')) document.getElementById('buyerEmail').value = data.user.email || '';
+                        if (data.user.dni && document.getElementById('buyerDoc')) document.getElementById('buyerDoc').value = data.user.dni;
+                        if (data.user.phone && document.getElementById('buyerPhone')) document.getElementById('buyerPhone').value = data.user.phone;
                     }
+
+                    // Si inició con contraseña temporal, exigir cambio obligatorio
+                    if (data.must_change_password) {
+                        showFastChangePasswordView();
+                        return;
+                    }
+
                     closeFastLoginModal();
                     alert('¡Sesión iniciada con éxito! Tus datos se han autocompletado.');
                     location.reload();
@@ -2640,32 +2687,255 @@
                 errBox.style.display = 'block';
             });
         }
+
+        // Recuperación de Contraseña por Correo o DNI
+        function submitFastRecovery(e) {
+            e.preventDefault();
+            const identifier = document.getElementById('fastRecoveryIdentifier').value.trim();
+            const alertBox = document.getElementById('fastRecoveryAlert');
+            const btn = document.getElementById('btnSubmitFastRecovery');
+
+            if (!identifier) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Verificando y enviando...';
+            alertBox.style.display = 'none';
+
+            fetch("{{ route('web.password.recover') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ identifier: identifier })
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.textContent = 'Enviar Contraseña Temporal a mi Correo';
+
+                alertBox.style.display = 'block';
+                if (data.success) {
+                    alertBox.style.background = '#F0FDF4';
+                    alertBox.style.borderColor = '#BBF7D0';
+                    alertBox.style.color = '#16A34A';
+                    alertBox.innerHTML = '<strong>¡Correo Enviado!</strong><br>' + data.message;
+                    
+                    if (data.email) {
+                        document.getElementById('fastLoginEmail').value = data.email;
+                    }
+
+                    setTimeout(() => {
+                        showFastLoginView();
+                        const loginErr = document.getElementById('fastLoginError');
+                        loginErr.style.background = '#F0FDF4';
+                        loginErr.style.borderColor = '#BBF7D0';
+                        loginErr.style.color = '#16A34A';
+                        loginErr.innerHTML = '✨ ' + data.message;
+                        loginErr.style.display = 'block';
+                        document.getElementById('fastLoginPassword').focus();
+                    }, 2500);
+                } else {
+                    alertBox.style.background = '#FEF2F2';
+                    alertBox.style.borderColor = '#FCA5A5';
+                    alertBox.style.color = '#DC2626';
+                    alertBox.textContent = data.message || 'No se encontró una cuenta con esos datos.';
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.textContent = 'Enviar Contraseña Temporal a mi Correo';
+                alertBox.style.display = 'block';
+                alertBox.style.background = '#FEF2F2';
+                alertBox.style.borderColor = '#FCA5A5';
+                alertBox.style.color = '#DC2626';
+                alertBox.textContent = 'Ocurrió un error al procesar tu solicitud.';
+            });
+        }
+
+        // Cambio Obligatorio de Contraseña Temporal
+        function submitFastChangePassword(e) {
+            e.preventDefault();
+            const newPassword = document.getElementById('fastNewPassword').value;
+            const confirmPassword = document.getElementById('fastConfirmPassword').value;
+            const errBox = document.getElementById('fastChangePasswordError');
+            const btn = document.getElementById('btnSubmitFastChangePassword');
+
+            if (newPassword.length < 6) {
+                errBox.textContent = 'La nueva contraseña debe tener al menos 6 caracteres.';
+                errBox.style.display = 'block';
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                errBox.textContent = 'Las contraseñas no coinciden. Verifica e intenta de nuevo.';
+                errBox.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Guardando nueva contraseña...';
+            errBox.style.display = 'none';
+
+            fetch("{{ route('web.password.update_temp') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    new_password: newPassword,
+                    new_password_confirmation: confirmPassword
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.textContent = '💾 Guardar Contraseña y Continuar';
+
+                if (data.success) {
+                    closeFastLoginModal();
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Contraseña Actualizada!',
+                            text: 'Tu contraseña definitiva se ha guardado exitosamente.',
+                            confirmButtonColor: '#FF5500'
+                        });
+                    } else {
+                        alert('¡Contraseña actualizada exitosamente!');
+                    }
+                    location.reload();
+                } else {
+                    errBox.textContent = data.message || 'No se pudo actualizar la contraseña.';
+                    errBox.style.display = 'block';
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.textContent = '💾 Guardar Contraseña y Continuar';
+                errBox.textContent = 'Error al actualizar contraseña.';
+                errBox.style.display = 'block';
+            });
+        }
     </script>
 
-    <!-- MODAL INICIO DE SESIÓN RÁPIDO PARA CLIENTES -->
-    <div id="fastLoginModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(6px);">
-        <div style="background: #FFFFFF; border-radius: 20px; width: 95%; max-width: 440px; padding: 2rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
-                <h3 style="font-size: 1.3rem; font-weight: 900; color: #0F172A; margin: 0;">🔑 Iniciar Sesión</h3>
-                <button type="button" onclick="closeFastLoginModal()" style="background: #F1F5F9; border: none; color: #64748B; width: 32px; height: 32px; border-radius: 8px; font-weight: 800; cursor: pointer;">✕</button>
+    <!-- MODAL INTEGRAL DE INICIO DE SESIÓN, RECUPERACIÓN Y CAMBIO DE CONTRASEÑA -->
+    <div id="fastLoginModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(6px);">
+        <div style="background: #FFFFFF; border-radius: 24px; width: 95%; max-width: 440px; padding: 2rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3); border: 1px solid #E2E8F0; position: relative;">
+            
+            <!-- VISTA 1: INICIAR SESIÓN -->
+            <div id="fastLoginView">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 style="font-size: 1.3rem; font-weight: 900; color: #0F172A; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+                        <span>🔑</span> Iniciar Sesión
+                    </h3>
+                    <button type="button" onclick="closeFastLoginModal()" style="background: #F1F5F9; border: none; color: #64748B; width: 32px; height: 32px; border-radius: 8px; font-weight: 800; cursor: pointer;">✕</button>
+                </div>
+                <p style="font-size: 0.85rem; color: #64748B; margin: 0 0 1.25rem 0;">Ingresa tu correo/DNI y contraseña para cargar tus datos y asociar tus boletos.</p>
+
+                <div id="fastLoginError" style="display: none; background: #FEF2F2; border: 1px solid #FCA5A5; color: #DC2626; padding: 0.75rem; border-radius: 10px; font-size: 0.85rem; font-weight: 600; margin-bottom: 1rem;"></div>
+
+                <form onsubmit="submitFastLogin(event)">
+                    <div style="margin-bottom: 1rem;">
+                        <label class="field-dark-label" style="display: block; font-size: 0.8rem; font-weight: 800; color: #334155; margin-bottom: 0.4rem; text-transform: uppercase;">Correo Electrónico o DNI:</label>
+                        <input type="text" id="fastLoginEmail" class="input-dark-text" placeholder="tu.correo@ejemplo.com o DNI" required style="width: 100%; padding: 0.8rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 12px; font-size: 0.95rem; outline: none; background: #F8FAFC;">
+                    </div>
+                    
+                    <div style="margin-bottom: 0.75rem;">
+                        <label class="field-dark-label" style="display: block; font-size: 0.8rem; font-weight: 800; color: #334155; margin-bottom: 0.4rem; text-transform: uppercase;">Contraseña:</label>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <input type="password" id="fastLoginPassword" class="input-dark-text" placeholder="••••••••••••" required style="width: 100%; padding: 0.8rem 2.75rem 0.8rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 12px; font-size: 0.95rem; outline: none; background: #F8FAFC;">
+                            <button type="button" onclick="toggleFastPasswordVisibility('fastLoginPassword', this)" style="position: absolute; right: 10px; background: none; border: none; color: #94A3B8; cursor: pointer; padding: 4px; display: flex; align-items: center; font-size: 1.1rem;" title="Mostrar / Ocultar Contraseña">
+                                👁️
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="text-align: right; margin-bottom: 1.25rem;">
+                        <a href="javascript:void(0)" onclick="showFastRecoveryView()" style="color: #FF5500; font-size: 0.825rem; font-weight: 700; text-decoration: none; transition: color 0.2s ease;">
+                            ¿Olvidaste tu contraseña?
+                        </a>
+                    </div>
+
+                    <button type="submit" id="btnSubmitFastLogin" style="width: 100%; background: linear-gradient(135deg, #FF5500, #E64A00); color: #FFF; border: none; padding: 0.9rem; border-radius: 12px; font-size: 0.95rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 14px rgba(255,85,0,0.35);">
+                        Ingresar a mi Cuenta
+                    </button>
+                </form>
             </div>
-            <p style="font-size: 0.875rem; color: #64748B; margin: 0 0 1.25rem 0;">Ingresa tu correo y contraseña para cargar tus datos y asociar tus boletos.</p>
 
-            <div id="fastLoginError" style="display: none; background: #FEF2F2; border: 1px solid #FCA5A5; color: #DC2626; padding: 0.75rem; border-radius: 10px; font-size: 0.85rem; font-weight: 600; margin-bottom: 1rem;"></div>
+            <!-- VISTA 2: RECUPERAR CONTRASEÑA POR CORREO O DNI -->
+            <div id="fastRecoveryView" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 style="font-size: 1.3rem; font-weight: 900; color: #0F172A; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+                        <span>🛡️</span> Recuperar Acceso
+                    </h3>
+                    <button type="button" onclick="closeFastLoginModal()" style="background: #F1F5F9; border: none; color: #64748B; width: 32px; height: 32px; border-radius: 8px; font-weight: 800; cursor: pointer;">✕</button>
+                </div>
+                <p style="font-size: 0.85rem; color: #64748B; margin: 0 0 1.25rem 0;">
+                    Ingresa tu <strong>Correo Electrónico</strong> o <strong>DNI</strong> registrado. Te enviaremos una contraseña temporal de acceso inmediato.
+                </p>
 
-            <form onsubmit="submitFastLogin(event)">
-                <div style="margin-bottom: 1rem;">
-                    <label class="field-dark-label">Correo Electrónico:</label>
-                    <input type="email" id="fastLoginEmail" class="input-dark-text" placeholder="tu.correo@ejemplo.com" required style="width: 100%;">
+                <div id="fastRecoveryAlert" style="display: none; padding: 0.85rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; margin-bottom: 1rem; border-width: 1.5px; border-style: solid; line-height: 1.4;"></div>
+
+                <form onsubmit="submitFastRecovery(event)">
+                    <div style="margin-bottom: 1.25rem;">
+                        <label class="field-dark-label" style="display: block; font-size: 0.8rem; font-weight: 800; color: #334155; margin-bottom: 0.4rem; text-transform: uppercase;">Correo Electrónico o DNI:</label>
+                        <input type="text" id="fastRecoveryIdentifier" placeholder="ejemplo@correo.com o DNI de 8 dígitos" required style="width: 100%; padding: 0.8rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 12px; font-size: 0.95rem; outline: none; background: #F8FAFC;">
+                    </div>
+
+                    <button type="submit" id="btnSubmitFastRecovery" style="width: 100%; background: linear-gradient(135deg, #FF5500, #E64A00); color: #FFF; border: none; padding: 0.9rem; border-radius: 12px; font-size: 0.925rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 14px rgba(255,85,0,0.35); margin-bottom: 1rem;">
+                        Enviar Contraseña Temporal a mi Correo
+                    </button>
+
+                    <div style="text-align: center;">
+                        <a href="javascript:void(0)" onclick="showFastLoginView()" style="color: #64748B; font-size: 0.825rem; font-weight: 700; text-decoration: underline;">
+                            ← Volver al formulario de inicio de sesión
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- VISTA 3: CAMBIO OBLIGATORIO DE CONTRASEÑA TEMPORAL -->
+            <div id="fastChangePasswordView" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 style="font-size: 1.25rem; font-weight: 900; color: #0F172A; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+                        <span>🔒</span> Establecer Nueva Contraseña
+                    </h3>
                 </div>
-                <div style="margin-bottom: 1.5rem;">
-                    <label class="field-dark-label">Contraseña:</label>
-                    <input type="password" id="fastLoginPassword" class="input-dark-text" placeholder="••••••••" required style="width: 100%;">
+                <div style="background: #FFF7ED; border: 1.5px solid #FED7AA; color: #EA580C; padding: 0.75rem; border-radius: 12px; font-size: 0.825rem; font-weight: 600; margin-bottom: 1.25rem; line-height: 1.4;">
+                    ⚠️ Has ingresado con una <strong>contraseña temporal</strong>. Por seguridad, ingresa una nueva contraseña definitiva para tu cuenta:
                 </div>
-                <button type="submit" id="btnSubmitFastLogin" style="width: 100%; background: #FF5500; color: #FFF; border: none; padding: 0.85rem; border-radius: 12px; font-size: 0.95rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 12px rgba(255,85,0,0.3);">
-                    Ingresar a mi Cuenta
-                </button>
-            </form>
+
+                <div id="fastChangePasswordError" style="display: none; background: #FEF2F2; border: 1px solid #FCA5A5; color: #DC2626; padding: 0.75rem; border-radius: 10px; font-size: 0.85rem; font-weight: 600; margin-bottom: 1rem;"></div>
+
+                <form onsubmit="submitFastChangePassword(event)">
+                    <div style="margin-bottom: 1rem;">
+                        <label class="field-dark-label" style="display: block; font-size: 0.8rem; font-weight: 800; color: #334155; margin-bottom: 0.4rem; text-transform: uppercase;">Nueva Contraseña (mínimo 6 caracteres):</label>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <input type="password" id="fastNewPassword" placeholder="••••••••••••" required minlength="6" style="width: 100%; padding: 0.8rem 2.75rem 0.8rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 12px; font-size: 0.95rem; outline: none; background: #F8FAFC;">
+                            <button type="button" onclick="toggleFastPasswordVisibility('fastNewPassword', this)" style="position: absolute; right: 10px; background: none; border: none; color: #94A3B8; cursor: pointer; padding: 4px; display: flex; align-items: center; font-size: 1.1rem;" title="Mostrar / Ocultar">
+                                👁️
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 1.5rem;">
+                        <label class="field-dark-label" style="display: block; font-size: 0.8rem; font-weight: 800; color: #334155; margin-bottom: 0.4rem; text-transform: uppercase;">Confirmar Nueva Contraseña:</label>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <input type="password" id="fastConfirmPassword" placeholder="••••••••••••" required minlength="6" style="width: 100%; padding: 0.8rem 2.75rem 0.8rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 12px; font-size: 0.95rem; outline: none; background: #F8FAFC;">
+                            <button type="button" onclick="toggleFastPasswordVisibility('fastConfirmPassword', this)" style="position: absolute; right: 10px; background: none; border: none; color: #94A3B8; cursor: pointer; padding: 4px; display: flex; align-items: center; font-size: 1.1rem;" title="Mostrar / Ocultar">
+                                👁️
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="btnSubmitFastChangePassword" style="width: 100%; background: linear-gradient(135deg, #10B981, #059669); color: #FFF; border: none; padding: 0.9rem; border-radius: 12px; font-size: 0.95rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 14px rgba(16,185,129,0.35);">
+                        💾 Guardar Nueva Contraseña y Continuar
+                    </button>
+                </form>
+            </div>
+
         </div>
     </div>
 

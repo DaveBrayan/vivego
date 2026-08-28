@@ -107,6 +107,8 @@ class CustomerPortalController extends Controller
                 'must_change_password',
             ]);
 
+            $isTempPassword = str_starts_with($password, 'VG');
+
             session([
                 'customer_logged_in' => true,
                 'customer_id' => $user->id,
@@ -114,12 +116,14 @@ class CustomerPortalController extends Controller
                 'customer_email' => $user->email,
                 'customer_dni' => $user->dni,
                 'customer_phone' => $user->phone,
+                'must_change_password' => $isTempPassword,
             ]);
 
             return response()->json([
                 'success' => true,
                 'role' => 'customer',
-                'message' => '¡Bienvenido, ' . $user->name . '!',
+                'must_change_password' => $isTempPassword,
+                'message' => $isTempPassword ? 'Has ingresado con una contraseña temporal. Por favor establece una nueva contraseña.' : ('¡Bienvenido, ' . $user->name . '!'),
                 'user' => [
                     'name' => $user->name,
                     'email' => $user->email,

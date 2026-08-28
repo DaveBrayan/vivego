@@ -35,6 +35,8 @@ Route::get('/', [HomeController::class, 'index'])->name('web.home');
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('web.login');
 Route::post('/login', [AuthController::class, 'login'])->name('web.login.submit');
 Route::post('/logout', [AuthController::class, 'logout'])->name('web.logout');
+Route::post('/recuperar-password', [AuthController::class, 'recoverPassword'])->name('web.password.recover');
+Route::post('/actualizar-password-temporal', [AuthController::class, 'updateTemporaryPassword'])->name('web.password.update_temp');
 Route::get('/evento/{slug}', [EventDetailController::class, 'show'])->name('web.event.detail');
 
 // Terminal Móvil de Control de Acceso & Scanner QR

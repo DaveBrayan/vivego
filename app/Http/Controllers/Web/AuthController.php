@@ -159,6 +159,8 @@ class AuthController extends Controller
                 'must_change_password',
             ]);
 
+            $isTempPassword = str_starts_with($password, 'VG');
+
             session([
                 'customer_logged_in' => true,
                 'customer_id' => $user->id,
@@ -166,6 +168,7 @@ class AuthController extends Controller
                 'customer_email' => $user->email,
                 'customer_dni' => $user->dni,
                 'customer_phone' => $user->phone,
+                'must_change_password' => $isTempPassword,
             ]);
 
             $targetUrl = session()->pull('url.intended', route('web.customer.tickets'));
@@ -179,7 +182,8 @@ class AuthController extends Controller
                 return response()->json([
                     'success' => true,
                     'role' => 'customer',
-                    'message' => "¡Bienvenido, {$user->name}!",
+                    'must_change_password' => $isTempPassword,
+                    'message' => $isTempPassword ? 'Has ingresado con una contraseña temporal. Por favor establece una nueva contraseña.' : "¡Bienvenido, {$user->name}!",
                     'user' => [
                         'name' => $user->name,
                         'email' => $user->email,
@@ -207,6 +211,136 @@ class AuthController extends Controller
         return redirect()->back()
             ->withInput($request->only('login'))
             ->withErrors(['login' => 'Credenciales incorrectas. Verifica tu usuario/correo/DNI y contraseña.']);
+    }
+
+    /**
+     * Procesa la recuperación de contraseña enviando una contraseña temporal por correo electrónico.
+     */
+    public function recoverPassword(Request $request): JsonResponse|RedirectResponse
+    {
+        $validated = $request->validate([
+            'identifier' => 'required|string|max:150',
+        ]);
+
+        $input = trim($validated['identifier']);
+        $inputLower = strtolower($input);
+
+        // 1. Buscar en Users (Clientes) por email o DNI
+        $accountFound = User::where(function ($q) use ($input, $inputLower) {
+            $q->where('email', $inputLower)
+              ->orWhere('dni', $input);
+        })->first();
+
+        // 2. Si no se encontró en Users, buscar en Administradores
+        if (!$accountFound) {
+            $admin = Administrator::where(function ($q) use ($input, $inputLower) {
+                $q->where('email', $inputLower)
+                  ->orWhere('username', $input);
+            })->first();
+
+            if ($admin) {
+                $accountFound = $admin;
+            }
+        }
+
+        if (!$accountFound) {
+            $msg = 'No encontramos ninguna cuenta registrada con el correo electrónico o DNI ingresado.';
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $msg,
+                ], 404);
+            }
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['identifier' => $msg]);
+        }
+
+        // Generar contraseña temporal segura con prefijo VG-
+        $tempPassword = 'VG-' . rand(100000, 999999);
+        $accountFound->password = Hash::make($tempPassword);
+        $accountFound->save();
+
+        // Enviar Correo Electrónico
+        try {
+            \Illuminate\Support\Facades\Mail::to($accountFound->email)
+                ->send(new \App\Mail\PasswordResetMail($accountFound, $tempPassword));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error enviando correo de recuperación: ' . $e->getMessage());
+        }
+
+        // Ofuscar correo para privacidad (ej: j***@gmail.com)
+        $emailParts = explode('@', $accountFound->email);
+        $namePart = $emailParts[0] ?? '';
+        $domainPart = $emailParts[1] ?? '';
+        $maskedName = strlen($namePart) > 2 ? substr($namePart, 0, 2) . str_repeat('*', max(3, strlen($namePart) - 2)) : $namePart . '***';
+        $maskedEmail = $maskedName . '@' . $domainPart;
+
+        $successMsg = "¡Listo! Hemos enviado tu contraseña temporal a tu correo registrado ({$maskedEmail}). Revisa tu bandeja de entrada o carpeta de spam.";
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => $successMsg,
+                'email_masked' => $maskedEmail,
+                'email' => $accountFound->email,
+            ]);
+        }
+
+        return redirect()->route('web.login')
+            ->with('success', $successMsg);
+    }
+
+    /**
+     * Actualiza obligatoriamente la contraseña temporal por una nueva contraseña definitiva.
+     */
+    public function updateTemporaryPassword(Request $request): JsonResponse|RedirectResponse
+    {
+        $validated = $request->validate([
+            'new_password' => 'required|string|min:6|confirmed',
+        ]);
+
+        $userId = session('customer_id');
+        $adminId = session('admin_id');
+
+        $account = null;
+        if ($userId) {
+            $account = User::find($userId);
+        } elseif ($adminId) {
+            $account = Administrator::find($adminId);
+        }
+
+        if (!$account) {
+            $msg = 'Debes tener una sesión activa con contraseña temporal para realizar esta acción.';
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $msg,
+                ], 401);
+            }
+            return redirect()->route('web.login')->with('error', $msg);
+        }
+
+        $account->password = Hash::make($validated['new_password']);
+        $account->save();
+
+        session()->forget('must_change_password');
+
+        $msg = '¡Tu nueva contraseña ha sido guardada exitosamente!';
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => $msg,
+                'user' => [
+                    'name' => $account->name ?? $account->full_name,
+                    'email' => $account->email,
+                    'dni' => $account->dni ?? null,
+                    'phone' => $account->phone ?? null,
+                ],
+            ]);
+        }
+
+        return redirect()->back()->with('success', $msg);
     }
 
     /**
