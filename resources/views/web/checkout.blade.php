@@ -2660,6 +2660,9 @@
                 btn.textContent = 'Ingresar a mi Cuenta';
 
                 if (res.ok && data.success) {
+                    if (data.csrf_token) {
+                        window.activeCsrfToken = data.csrf_token;
+                    }
                     if (data.user) {
                         if (document.getElementById('buyerFullName')) document.getElementById('buyerFullName').value = data.user.name || '';
                         if (document.getElementById('buyerEmail')) document.getElementById('buyerEmail').value = data.user.email || '';
@@ -2779,12 +2782,13 @@
             btn.textContent = 'Guardando nueva contraseña...';
             errBox.style.display = 'none';
 
+            const csrfHeader = window.activeCsrfToken || '{{ csrf_token() }}';
             fetch("{{ route('web.password.update_temp') }}", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': csrfHeader
                 },
                 body: JSON.stringify({
                     new_password: newPassword,

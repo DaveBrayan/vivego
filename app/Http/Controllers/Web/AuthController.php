@@ -189,6 +189,7 @@ class AuthController extends Controller
                     'success' => true,
                     'role' => 'customer',
                     'must_change_password' => $isTempPassword,
+                    'csrf_token' => csrf_token(),
                     'message' => $isTempPassword ? 'Has ingresado con una contraseña temporal. Por favor establece una nueva contraseña.' : "¡Bienvenido, {$user->name}!",
                     'user' => [
                         'name' => $user->name,

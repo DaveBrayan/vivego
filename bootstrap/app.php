@@ -27,6 +27,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'scanner/*/anular-escaneo/*',
             'admin/asistentes/*/validar-qr',
             'admin/asistentes/*/anular-escaneo/*',
+            'actualizar-password-temporal',
+            'recuperar-password',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
