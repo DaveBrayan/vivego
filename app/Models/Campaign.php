@@ -98,17 +98,21 @@ class Campaign extends Model
      */
     public static function getActiveForEvent(int|string $eventId): ?self
     {
-        $now = Carbon::now();
-        $campaigns = self::where('is_active', true)
-            ->where('start_at', '<=', $now)
-            ->where('end_at', '>=', $now)
-            ->orderBy('id', 'desc')
-            ->get();
+        try {
+            $now = Carbon::now();
+            $campaigns = self::where('is_active', true)
+                ->where('start_at', '<=', $now)
+                ->where('end_at', '>=', $now)
+                ->orderBy('id', 'desc')
+                ->get();
 
-        foreach ($campaigns as $campaign) {
-            if ($campaign->appliesToEvent($eventId)) {
-                return $campaign;
+            foreach ($campaigns as $campaign) {
+                if ($campaign->appliesToEvent($eventId)) {
+                    return $campaign;
+                }
             }
+        } catch (\Throwable $e) {
+            return null;
         }
 
         return null;

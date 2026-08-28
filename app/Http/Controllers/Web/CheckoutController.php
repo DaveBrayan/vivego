@@ -333,8 +333,8 @@ class CheckoutController extends Controller
                 'banner_color' => $activeCampaign->banner_color ?: '#FF5500',
                 'discount_type' => $activeCampaign->discount_type,
                 'discount_value' => $activeCampaign->discount_value,
-                'end_at' => $activeCampaign->end_at->format('Y-m-d H:i:s'),
-                'end_at_display' => $activeCampaign->end_at->format('d/m/Y h:i A'),
+                'end_at' => $activeCampaign->end_at ? ($activeCampaign->end_at instanceof \DateTimeInterface ? $activeCampaign->end_at->format('Y-m-d H:i:s') : (string)$activeCampaign->end_at) : null,
+                'end_at_display' => $activeCampaign->end_at ? ($activeCampaign->end_at instanceof \DateTimeInterface ? $activeCampaign->end_at->format('d/m/Y h:i A') : (string)$activeCampaign->end_at) : '',
             ] : null,
         ];
 

@@ -31,14 +31,14 @@
 
                 <!-- Badges de Confianza -->
                 <div class="trust-badges-group">
-                    @if($izipay->is_active)
+                    @if(!empty($izipay?->is_active))
                         <div class="izipay-verified-pill">
                             <span class="izipay-logo-txt">izi<span>pay</span></span>
                             <span class="verified-dot">● Oficial</span>
                         </div>
                     @endif
 
-                    @if($culqi->is_active)
+                    @if(!empty($culqi?->is_active))
                         <div class="culqi-verified-pill">
                             <span class="culqi-logo-txt">culqi</span>
                             <span class="verified-dot">● QR & Yape</span>
