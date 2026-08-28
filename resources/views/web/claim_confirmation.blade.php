@@ -334,11 +334,17 @@
         <div class="sheet-card" id="printableClaimSheet">
             <!-- Header Oficial -->
             <div class="sheet-header">
-                <div class="sheet-company-info">
-                    <h3>{{ $company->name ?? 'IPEXA S.A.C.' }}</h3>
-                    <p><strong>RUC:</strong> {{ $company->ruc ?? '20606476231' }}</p>
-                    <p><strong>Dirección Fiscal:</strong> {{ $company->address ?? 'Jr. Parinacochas N.º 11, Lima, Perú' }}</p>
-                    <p><strong>Plataforma Digital:</strong> VIVEGO.PE</p>
+                <div style="display: flex; align-items: center; gap: 1.25rem;">
+                    <img src="{{ asset('images/libro_de_reclamaciones.png') }}" 
+                         alt="Libro de Reclamaciones" 
+                         style="width: 100px; height: auto; object-fit: contain; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.5));"
+                         onerror="this.src='{{ asset('images/libro_de_reclamaciones.jpeg') }}'">
+                    <div class="sheet-company-info">
+                        <h3>IPEXA S.A.C</h3>
+                        <p><strong>RUC:</strong> 20606476231</p>
+                        <p><strong>Dirección Fiscal:</strong> JR APRINACOCHAZ Nº 11</p>
+                        <p><strong>Plataforma Digital:</strong> VIVEGO.PE</p>
+                    </div>
                 </div>
 
                 <div class="sheet-meta-box">

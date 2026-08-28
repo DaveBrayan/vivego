@@ -16,9 +16,43 @@
         background: radial-gradient(circle at 50% 0%, rgba(255, 85, 0, 0.2) 0%, rgba(15, 15, 20, 0) 70%),
                     linear-gradient(180deg, #14141E 0%, #0A0A10 100%);
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        padding: 3rem 1rem 2rem 1rem;
-        text-align: center;
+        padding: 3rem 1rem 2.25rem 1rem;
         margin-bottom: 2rem;
+    }
+
+    .claim-hero-content {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 2.25rem;
+        max-width: 950px;
+        margin: 0 auto;
+        text-align: left;
+    }
+
+    .claim-book-visual-wrapper {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .claim-book-hero-img {
+        width: 190px;
+        max-width: 100%;
+        height: auto;
+        object-fit: contain;
+        filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 18px rgba(255, 85, 0, 0.3));
+        transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        background: transparent !important;
+    }
+
+    .claim-book-hero-img:hover {
+        transform: scale(1.06) rotate(-2deg);
+    }
+
+    .claim-hero-text {
+        flex: 1;
     }
 
     .claim-badge {
@@ -34,24 +68,35 @@
         font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        margin-bottom: 1rem;
+        margin-bottom: 0.85rem;
     }
 
     .claim-title {
         font-family: var(--font-heading, 'Outfit', sans-serif);
-        font-size: 2.6rem;
+        font-size: 2.5rem;
         font-weight: 900;
         color: #FFFFFF;
         margin-bottom: 0.5rem;
         letter-spacing: -0.02em;
+        line-height: 1.15;
     }
 
     .claim-subtitle {
         color: #94A3B8;
-        font-size: 1rem;
-        max-width: 650px;
-        margin: 0 auto;
-        line-height: 1.5;
+        font-size: 0.975rem;
+        margin: 0;
+        line-height: 1.55;
+    }
+
+    @media (max-width: 768px) {
+        .claim-hero-content {
+            flex-direction: column;
+            text-align: center;
+            gap: 1.25rem;
+        }
+        .claim-book-hero-img {
+            width: 140px;
+        }
     }
 
     .claim-form-wrapper {
@@ -399,11 +444,21 @@
     <!-- Hero Header -->
     <div class="claim-hero">
         <div class="container">
-            <span class="claim-badge">⚖️ Conforme a Ley N.° 29571</span>
-            <h1 class="claim-title">Libro de Reclamaciones Virtual</h1>
-            <p class="claim-subtitle">
-                Plataforma oficial de atención de Reclamos y Quejas de <strong>VIVEGO.PE</strong> administrada por <strong>IPEXA S.A.C.</strong>
-            </p>
+            <div class="claim-hero-content">
+                <div class="claim-book-visual-wrapper">
+                    <img src="{{ asset('images/libro_de_reclamaciones.png') }}" 
+                         alt="Libro de Reclamaciones ViveGo" 
+                         class="claim-book-hero-img"
+                         onerror="this.src='{{ asset('images/libro_de_reclamaciones.jpeg') }}'">
+                </div>
+                <div class="claim-hero-text">
+                    <span class="claim-badge">⚖️ Conforme a Ley N.° 29571</span>
+                    <h1 class="claim-title">Libro de Reclamaciones Virtual</h1>
+                    <p class="claim-subtitle">
+                        Plataforma oficial de atención de Reclamos y Quejas de <strong>VIVEGO.PE</strong> administrada por <strong>IPEXA S.A.C</strong>
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -425,15 +480,15 @@
         <div class="company-official-card">
             <div class="company-data-item">
                 <span class="company-data-label">Razón Social</span>
-                <span class="company-data-value">{{ $company->name ?? 'IPEXA S.A.C.' }}</span>
+                <span class="company-data-value">IPEXA S.A.C</span>
             </div>
             <div class="company-data-item">
                 <span class="company-data-label">RUC</span>
-                <span class="company-data-value">{{ $company->ruc ?? '20606476231' }}</span>
+                <span class="company-data-value">20606476231</span>
             </div>
             <div class="company-data-item">
                 <span class="company-data-label">Dirección Fiscal</span>
-                <span class="company-data-value">{{ $company->address ?? 'Jr. Parinacochas N.º 11, Lima, Perú' }}</span>
+                <span class="company-data-value">JR APRINACOCHAZ Nº 11</span>
             </div>
             <div class="company-data-item">
                 <span class="company-data-label">Fecha y Hora</span>
