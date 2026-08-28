@@ -380,7 +380,9 @@
 
                         @if($culqiActive || (!$izipayActive && !$culqiActive))
                             <button type="button" class="btn-checkout-gateway-tab {{ $defaultGateway === 'culqi' ? 'active' : '' }}" onclick="selectCheckoutGateway('culqi', this)">
-                                <span class="gtw-tab-ico">🟧</span>
+                                <span class="gtw-tab-ico" style="display: flex; align-items: center; justify-content: center;">
+                                    <img src="{{ asset('images/logo-yape.png') }}" alt="Yape" style="width: 28px; height: 28px; object-fit: contain; border-radius: 7px; box-shadow: 0 2px 6px rgba(116, 38, 140, 0.25);">
+                                </span>
                                 <div>
                                     <strong class="gtw-tab-title">Culqi Perú</strong>
                                     <span class="gtw-tab-sub">Pago con QR, Yape & Tarjetas</span>
@@ -439,7 +441,10 @@
                         <!-- Botón Inicial de Carga de Culqi -->
                         <div id="initCulqiPaymentSection" style="text-align: center; padding: 1.5rem 0 0.5rem 0;">
                             <button type="button" class="btn-pay-orange" id="btnInitCulqi" onclick="loadCulqiGateway()" style="background: linear-gradient(135deg, #FF5500, #E64A00);">
-                                <span>🟧 Generar Código QR <span id="btnPayAmountDisplayCulqi">S/ {{ number_format($grandTotal, 2) }}</span> con Culqi</span>
+                                <span style="display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem;">
+                                    <img src="{{ asset('images/logo-yape.png') }}" alt="Yape" style="width: 22px; height: 22px; object-fit: contain; border-radius: 5px; vertical-align: middle;">
+                                    Generar Código QR <span id="btnPayAmountDisplayCulqi">S/ {{ number_format($grandTotal, 2) }}</span> con Culqi
+                                </span>
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                     <line x1="5" y1="12" x2="19" y2="12"></line>
                                     <polyline points="12 5 19 12 12 19"></polyline>

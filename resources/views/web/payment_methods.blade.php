@@ -61,7 +61,9 @@
                     </button>
 
                     <button type="button" class="gateway-tab-btn {{ $activeTab === 'culqi' ? 'active' : '' }}" onclick="switchGatewayTab('culqi', this)">
-                        <span class="tab-btn-icon">🟧</span>
+                        <span class="tab-btn-icon" style="display: flex; align-items: center; justify-content: center;">
+                            <img src="{{ asset('images/logo-yape.png') }}" alt="Yape" style="width: 24px; height: 24px; object-fit: contain; border-radius: 6px;">
+                        </span>
                         <div class="tab-btn-text">
                             <strong class="tab-title">Culqi Perú</strong>
                             <span class="tab-subtitle">
