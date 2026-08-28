@@ -51,6 +51,58 @@
             visibility: hidden;
             pointer-events: none;
         }
+
+        .footer-claim-badge-pro {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.85rem;
+            background: #FFFFFF;
+            border: 2px solid #FFFFFF;
+            border-radius: 14px;
+            padding: 0.65rem 1.15rem;
+            text-decoration: none;
+            color: #0F0F14;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 255, 255, 0.15);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-top: 1.15rem;
+        }
+
+        .footer-claim-badge-pro:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 25px rgba(255, 85, 0, 0.35);
+            border-color: #FF5500;
+        }
+
+        .footer-claim-img {
+            width: 48px;
+            height: auto;
+            max-height: 38px;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.25));
+        }
+
+        .footer-claim-text-group {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+        }
+
+        .footer-claim-title {
+            font-family: var(--font-heading, 'Outfit', sans-serif);
+            font-size: 0.925rem;
+            font-weight: 900;
+            color: #0F0F14;
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+        }
+
+        .footer-claim-sub {
+            font-size: 0.7rem;
+            color: #64748B;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
     </style>
 
     @stack('styles')
@@ -238,13 +290,15 @@
                         Vive Go es la plataforma líder en venta de entradas, boletaje inteligente y gestión de eventos
                         masivos. VIVE CADA MOMENTO.
                     </p>
-                    <a href="{{ route('web.claim_book') }}" class="claim-book-badge" title="Libro de Reclamaciones Virtual">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-                        </svg>
-                        Libro de Reclamaciones
+                    <a href="{{ route('web.claim_book') }}" class="footer-claim-badge-pro" title="Libro de Reclamaciones Virtual - Conforme a Ley N.° 29571">
+                        <img src="{{ asset('images/libro_de_reclamaciones.png') }}" 
+                             alt="Libro de Reclamaciones" 
+                             class="footer-claim-img"
+                             onerror="this.src='{{ asset('images/libro_de_reclamaciones.jpeg') }}'">
+                        <div class="footer-claim-text-group">
+                            <span class="footer-claim-title">Libro de Reclamaciones</span>
+                            <span class="footer-claim-sub">Conforme a Ley N.° 29571</span>
+                        </div>
                     </a>
                 </div>
 
@@ -264,7 +318,6 @@
                         <li><a href="{{ route('web.home') }}">Vende tus Entradas</a></li>
                         <li><a href="{{ route('web.login') }}">Mis Boletos</a></li>
                         <li><a href="{{ route('web.login') }}">Portal de Clientes</a></li>
-                        <li><a href="{{ route('web.claim_book') }}">Libro de Reclamaciones</a></li>
                     </ul>
                 </div>
 
@@ -274,7 +327,6 @@
                         <li><a href="{{ route('web.terms') }}">📜 Términos y Condiciones</a></li>
                         <li><a href="{{ route('web.privacy') }}">🔒 Políticas de Privacidad</a></li>
                         <li><a href="{{ route('web.cookies') }}">🍪 Política de Cookies</a></li>
-                        <li><a href="{{ route('web.claim_book') }}">📖 Libro de Reclamaciones</a></li>
                     </ul>
                 </div>
             </div>
