@@ -454,22 +454,69 @@
                         <!-- Botón Inicial de Carga de Culqi -->
                         <div id="initCulqiPaymentSection" style="text-align: center; padding: 1.5rem 0 0.5rem 0;">
                             <button type="button" class="btn-pay-orange" id="btnInitCulqi" onclick="loadCulqiGateway()" style="background: linear-gradient(135deg, #FF5500, #E64A00);">
-                                <span>🟧 Pagar <span id="btnPayAmountDisplayCulqi">S/ {{ number_format($grandTotal, 2) }}</span> con Culqi</span>
+                                <span>🟧 Generar Código QR <span id="btnPayAmountDisplayCulqi">S/ {{ number_format($grandTotal, 2) }}</span> con Culqi</span>
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                     <line x1="5" y1="12" x2="19" y2="12"></line>
                                     <polyline points="12 5 19 12 12 19"></polyline>
                                 </svg>
                             </button>
                             <p style="font-size: 0.825rem; color: #64748B; margin-top: 0.85rem;">
-                                🔒 Pagos instantáneos con <strong>Código QR, Yape, Plin y Tarjetas</strong> respaldados por Culqi Perú.
+                                🔒 Pagos instantáneos con <strong>Código QR (Yape, Plin), Tarjetas y PagoEfectivo</strong> respaldados por Culqi Perú.
                             </p>
                         </div>
 
                         <!-- Loader Culqi -->
                         <div id="culqiLoaderBox" style="display: none; text-align: center; padding: 2.5rem 1rem;">
                             <div class="preloader-ring" style="width: 44px; height: 44px; margin: 0 auto 0.85rem auto; border-width: 3.5px; border-color: #FF5500; border-top-color: transparent;"></div>
-                            <p style="font-size: 0.95rem; color: #1E293B; font-weight: 700; margin: 0;">Iniciando pasarela de pagos Culqi...</p>
-                            <span style="font-size: 0.8rem; color: #64748B;">Abriendo formulario seguro y código QR</span>
+                            <p style="font-size: 0.95rem; color: #1E293B; font-weight: 700; margin: 0;">Generando código QR oficial en Culqi...</p>
+                            <span style="font-size: 0.8rem; color: #64748B;">Conectando con servidores de Culqi / Niubiz</span>
+                        </div>
+
+                        <!-- Contenedor Oficial QR Directo en Pantalla -->
+                        <div id="culqiQrDisplaySection" style="display: none; text-align: center; margin-top: 1rem; padding: 1.5rem 1.25rem; background: #FFFFFF; border: 2px solid #FED7AA; border-radius: 18px; box-shadow: 0 10px 25px -5px rgba(255,85,0,0.08);">
+                            <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: #FFF7ED; padding: 0.35rem 0.95rem; border-radius: 20px; color: #EA580C; font-weight: 800; font-size: 0.85rem; margin-bottom: 0.75rem;">
+                                <span>📱</span> Código QR Oficial Culqi (Yape / Plin / Billeteras)
+                            </div>
+                            <h3 style="font-size: 1.25rem; font-weight: 900; color: #0F172A; margin: 0 0 0.4rem 0;">Escanea el Código QR para Pagar</h3>
+                            <p style="font-size: 0.85rem; color: #64748B; margin: 0 0 1.25rem 0;">
+                                Abre tu app <strong>Yape</strong>, <strong>Plin</strong> o tu banca móvil y escanea el código a continuación:
+                            </p>
+
+                            <!-- QR Box -->
+                            <div style="display: inline-block; padding: 1rem; background: #FFFFFF; border-radius: 16px; border: 2px solid #FED7AA; box-shadow: 0 4px 15px rgba(0,0,0,0.06); margin-bottom: 0.85rem;">
+                                <img id="culqiQrImage" src="" alt="Código QR Culqi" style="width: 230px; height: 230px; display: block; border-radius: 8px; object-fit: contain; margin: 0 auto;">
+                                <div style="margin-top: 0.65rem; font-size: 1.2rem; font-weight: 900; color: #EA580C;" id="culqiQrAmountText">
+                                    S/ 0.00
+                                </div>
+                            </div>
+
+                            <!-- Código CIP / PagoEfectivo si existe -->
+                            <div id="culqiCipBox" style="display: none; background: #F8FAFC; border: 1px dashed #CBD5E1; padding: 0.75rem 1rem; border-radius: 12px; max-width: 360px; margin: 0 auto 1rem auto;">
+                                <span style="font-size: 0.775rem; color: #64748B; display: block;">Código de Pago CIP (PagoEfectivo / Agentes):</span>
+                                <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.25rem;">
+                                    <strong style="font-size: 1.2rem; color: #0F172A; letter-spacing: 1px;" id="culqiCipCode">---</strong>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="copyCulqiCipCode()" style="padding: 0.25rem 0.65rem; font-size: 0.75rem; font-weight: 700;">📋 Copiar</button>
+                                </div>
+                            </div>
+
+                            <!-- Estado en tiempo real con animación de pulso -->
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 0.6rem; padding: 0.75rem; background: #F0FDF4; border-radius: 12px; border: 1px solid #BBF7D0; max-width: 440px; margin: 0 auto 1.25rem auto;">
+                                <span class="pulse-indicator" style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #16A34A; box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); animation: pulseGreen 1.5s infinite;"></span>
+                                <span style="font-size: 0.85rem; font-weight: 700; color: #166534;" id="culqiStatusMessage">Esperando tu pago... Se confirmará automáticamente</span>
+                            </div>
+
+                            <!-- Botones de Acción -->
+                            <div style="display: flex; flex-direction: column; gap: 0.6rem; max-width: 380px; margin: 0 auto;">
+                                <button type="button" class="btn btn-primary" onclick="verifyCulqiPaymentManual()" id="btnVerifyCulqiManual" style="padding: 0.75rem 1.25rem; font-weight: 800; background: linear-gradient(135deg, #FF5500, #E64A00); border-radius: 12px; width: 100%;">
+                                    ⚡ Ya realicé el pago / Verificar ahora
+                                </button>
+                                <button type="button" class="btn btn-outline" onclick="openCulqiCardModalDirectly()" style="padding: 0.65rem 1.25rem; font-weight: 700; color: #475569; border-color: #CBD5E1; border-radius: 12px; width: 100%;">
+                                    💳 Pagar con Tarjeta (Débito / Crédito)
+                                </button>
+                                <button type="button" onclick="cancelCulqiQrView()" style="font-size: 0.825rem; color: #94A3B8; text-decoration: underline; background: none; border: none; cursor: pointer; padding: 0.4rem;">
+                                    ← Volver o elegir otro medio de pago
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -690,6 +737,12 @@
         align-items: center;
         gap: 0.75rem;
         flex-wrap: wrap;
+    }
+
+    @keyframes pulseGreen {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(22, 163, 74, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
     }
 
     .izipay-verified-pill {
@@ -2007,50 +2060,54 @@
             })
             .then(res => res.json())
             .then(data => {
-                document.getElementById('initCulqiPaymentSection').style.display = 'block';
                 document.getElementById('culqiLoaderBox').style.display = 'none';
 
-                if (data.success && typeof Culqi !== 'undefined') {
+                if (data.success) {
                     isCulqiInitialized = true;
                     currentCulqiOrderId = data.orderId || null;
 
-                    Culqi.publicKey = data.publicKey || '{{ $culqiPublicKey }}';
+                    // Si Culqi generó el código QR oficial, lo mostramos directamente en pantalla
+                    if (data.qr) {
+                        const qrImg = document.getElementById('culqiQrImage');
+                        if (qrImg) qrImg.src = data.qr;
 
-                    const culqiSettings = {
-                        title: 'ViveGo - ' + (eventData.title || 'Entradas'),
-                        currency: 'PEN',
-                        amount: data.amountCents || Math.round(currentGrandTotal * 100),
-                    };
+                        const amountTxt = document.getElementById('culqiQrAmountText');
+                        if (amountTxt) amountTxt.textContent = data.amountFormatted || ('S/ ' + currentGrandTotal.toFixed(2));
 
-                    if (data.orderId) {
-                        culqiSettings.order = data.orderId;
-                    }
-
-                    Culqi.settings(culqiSettings);
-
-                    Culqi.options({
-                        lang: 'es',
-                        installments: false,
-                        paymentMethods: {
-                            tarjeta: true,
-                            yape: true,
-                            billetera: true, // QR Billeteras (Yape, Plin)
-                            pagoefectivo: true,
-                            cuotealo: false
-                        },
-                        style: {
-                            logo: '{{ asset("images/logo-icon.png") }}',
-                            maincolor: '#FF5500',
-                            buttontext: '#ffffff',
-                            maintext: '#0F172A',
-                            desctext: '#64748B'
+                        if (data.payment_code) {
+                            const cipBox = document.getElementById('culqiCipBox');
+                            const cipCode = document.getElementById('culqiCipCode');
+                            if (cipBox && cipCode) {
+                                cipCode.textContent = data.payment_code;
+                                cipBox.style.display = 'block';
+                            }
                         }
-                    });
 
-                    // Abrir Checkout v4 de Culqi
-                    Culqi.open();
+                        document.getElementById('initCulqiPaymentSection').style.display = 'none';
+                        document.getElementById('culqiQrDisplaySection').style.display = 'block';
+
+                        // Iniciar monitoreo en tiempo real del pago QR
+                        startCulqiOrderPolling(data.orderId);
+                    } else if (typeof Culqi !== 'undefined') {
+                        // Fallback a modal Culqi Checkout si no viene imagen QR directa
+                        document.getElementById('initCulqiPaymentSection').style.display = 'block';
+                        Culqi.publicKey = data.publicKey || '{{ $culqiPublicKey }}';
+                        Culqi.settings({
+                            title: 'ViveGo - ' + (eventData.title || 'Entradas'),
+                            currency: 'PEN',
+                            amount: data.amountCents || Math.round(currentGrandTotal * 100),
+                            order: data.orderId || undefined
+                        });
+                        Culqi.options({
+                            lang: 'es',
+                            installments: false,
+                            paymentMethods: { tarjeta: true, yape: true, billetera: true, pagoefectivo: true, cuotealo: false }
+                        });
+                        Culqi.open();
+                    }
                 } else {
-                    errorBox.textContent = '⚠️ ' + (data.warning || data.message || 'No se pudo abrir el checkout de Culqi.');
+                    document.getElementById('initCulqiPaymentSection').style.display = 'block';
+                    errorBox.textContent = '⚠️ ' + (data.warning || data.message || 'No se pudo generar la orden de Culqi.');
                     errorBox.style.display = 'block';
                 }
             })
@@ -2059,6 +2116,112 @@
                 document.getElementById('culqiLoaderBox').style.display = 'none';
                 errorBox.textContent = '⚠️ Error de comunicación: ' + err.message;
                 errorBox.style.display = 'block';
+            });
+        }
+
+        // Abre el modal nativo de Culqi exclusivamente para pagar con Tarjeta
+        function openCulqiCardModalDirectly() {
+            if (typeof Culqi === 'undefined') return;
+            Culqi.publicKey = '{{ $culqiPublicKey }}';
+            Culqi.settings({
+                title: 'ViveGo - ' + (eventData.title || 'Entradas'),
+                currency: 'PEN',
+                amount: Math.round(currentGrandTotal * 100),
+                order: currentCulqiOrderId || undefined
+            });
+            Culqi.options({
+                lang: 'es',
+                installments: false,
+                paymentMethods: {
+                    tarjeta: true,
+                    yape: true,
+                    billetera: false,
+                    pagoefectivo: false,
+                    cuotealo: false
+                }
+            });
+            Culqi.open();
+        }
+
+        // Cancela la vista de QR y vuelve al selector
+        function cancelCulqiQrView() {
+            if (culqiPollingInterval) clearInterval(culqiPollingInterval);
+            document.getElementById('culqiQrDisplaySection').style.display = 'none';
+            document.getElementById('initCulqiPaymentSection').style.display = 'block';
+        }
+
+        // Copia el código CIP al portapapeles
+        function copyCulqiCipCode() {
+            const cip = document.getElementById('culqiCipCode')?.textContent;
+            if (cip && cip !== '---') {
+                navigator.clipboard.writeText(cip).then(() => {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Código Copiado!',
+                            text: 'Código CIP: ' + cip,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        alert('Código CIP copiado: ' + cip);
+                    }
+                });
+            }
+        }
+
+        // Verificación manual del estado del pago QR
+        function verifyCulqiPaymentManual() {
+            if (!currentCulqiOrderId) {
+                alert('⚠️ No se ha generado una orden de pago activa.');
+                return;
+            }
+
+            const btn = document.getElementById('btnVerifyCulqiManual');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '🔄 Verificando con Culqi...';
+            }
+
+            fetch("{{ route('web.checkout.culqi_order_status') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ order_id: currentCulqiOrderId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '⚡ Ya realicé el pago / Verificar ahora';
+                }
+
+                if (data.success && data.is_paid) {
+                    if (culqiPollingInterval) clearInterval(culqiPollingInterval);
+                    processCulqiComplete({ order_id: currentCulqiOrderId });
+                } else {
+                    const statusMsg = document.getElementById('culqiStatusMessage');
+                    if (statusMsg) {
+                        statusMsg.textContent = '⏳ Pago aún no detectado. Si ya pagaste en Yape/Plin, espera unos segundos mientras Culqi lo confirma.';
+                    }
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Pago en Proceso',
+                            text: 'Aún no se ha detectado la confirmación de tu pago. Si ya escaneaste el QR en Yape o Plin, se actualizará en breve.',
+                            confirmButtonColor: '#FF5500'
+                        });
+                    }
+                }
+            })
+            .catch(err => {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '⚡ Ya realicé el pago / Verificar ahora';
+                }
+                console.error('[Culqi] Error manual verify:', err);
             });
         }
 
