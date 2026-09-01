@@ -189,7 +189,7 @@
                                                     🔒 Caducado
                                                 </button>
                                             @else
-                                                <button type="button" onclick="downloadClientTicketPdf(this)" data-sale-payload="{{ base64_encode(json_encode($sale)) }}" style="background: linear-gradient(135deg, #FF5500, #E64A00); color: #FFFFFF; border: none; cursor: pointer; padding: 0.5rem 0.95rem; font-size: 0.825rem; font-weight: 900; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 3px 10px rgba(255,85,0,0.3); transition: transform 0.15s;">
+                                                <button type="button" onclick="downloadPosSalePdf({{ $sale->id }})" data-sale-id="{{ $sale->id }}" data-sale-payload="{{ base64_encode(json_encode($sale)) }}" style="background: linear-gradient(135deg, #FF5500, #E64A00); color: #FFFFFF; border: none; cursor: pointer; padding: 0.5rem 0.95rem; font-size: 0.825rem; font-weight: 900; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 3px 10px rgba(255,85,0,0.3); transition: transform 0.15s;">
                                                     <span>🎟️ Boleto PDF</span>
                                                 </button>
                                             @endif
@@ -211,5 +211,9 @@
 @endsection
 
 @push('scripts')
+    <script>
+        window.posSalesMap = window.posSalesMap || {};
+        Object.assign(window.posSalesMap, @json($sales->keyBy('id')));
+    </script>
     @include('web.customer.partials.ticket_generator_js')
 @endpush

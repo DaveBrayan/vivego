@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Mail\TicketPurchaseMail;
 use App\Models\Event;
 use App\Models\Setting;
 use App\Models\TicketSale;
@@ -10,6 +11,8 @@ use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class BoxOfficeController extends Controller
@@ -337,7 +340,7 @@ class BoxOfficeController extends Controller
             'buyer_email' => 'nullable|string|email|max:255',
             'zone_name' => 'required|string|max:100',
             'quantity' => 'required|integer|min:1',
-            'payment_method' => 'required|string|in:Efectivo,Yape,Plin,Tarjeta,Transferencia,Cortesía,cortesia',
+            'payment_method' => 'required|string|in:Efectivo,Culqi,culqi,Yape,Plin,Tarjeta,Transferencia,Cortesía,cortesia',
             'amount_paid' => 'required|numeric|min:0',
         ]);
 
@@ -580,13 +583,41 @@ class BoxOfficeController extends Controller
             ];
         }
 
-        $totalCapacity = array_sum(array_column($zonesWithStats, 'capacity'));
-        $remainingStock = array_sum(array_column($zonesWithStats, 'available'));
+        // Envío automático de correo con el PDF si se proporcionó o detectó un email válido
+        $pdfBase64 = $request->input('ticket_pdf_base64');
+        $effectiveEmail = $buyerEmail;
+
+        if (empty($effectiveEmail) && !empty($buyerDni) && $buyerDni !== '00000000') {
+            $userFound = \App\Models\User::where('dni', $buyerDni)->first();
+            if ($userFound && !empty($userFound->email)) {
+                $effectiveEmail = $userFound->email;
+            }
+        }
+
+        if (empty($effectiveEmail) && !empty($buyerName) && !in_array(strtoupper($buyerName), ['CLIENTE VARIOS', 'INVITADO DE CORTESÍA', 'INVITADO'])) {
+            $userFound = \App\Models\User::where('name', $buyerName)->whereNotNull('email')->first();
+            if ($userFound && !empty($userFound->email)) {
+                $effectiveEmail = $userFound->email;
+            }
+        }
+
+        $emailSent = false;
+        if (!empty($effectiveEmail) && filter_var($effectiveEmail, FILTER_VALIDATE_EMAIL)) {
+            try {
+                Mail::to($effectiveEmail)->send(new TicketPurchaseMail($sale, null, false, $pdfBase64));
+                $emailSent = true;
+                Log::info("Boleto oficial enviado automáticamente a {$effectiveEmail} tras venta en Taquilla POS");
+            } catch (\Throwable $e) {
+                Log::warning("No se pudo enviar el correo tras registrar venta en Taquilla: " . $e->getMessage());
+            }
+        }
 
         return response()->json([
             'success' => true,
             'message' => '¡Venta registrada con éxito en Taquilla!',
             'sale' => $sale,
+            'email_sent' => $emailSent,
+            'recipient' => $effectiveEmail,
             'metrics' => [
                 'total_revenue' => 'S/ ' . number_format($totalRevenue, 2),
                 'cash_revenue' => 'S/ ' . number_format($cashRevenue, 2),
@@ -658,6 +689,66 @@ class BoxOfficeController extends Controller
             'success' => true,
             'message' => '¡Entrada / venta eliminada correctamente y aforo restaurado!'
         ]);
+    }
+
+    /**
+     * Enviar Entrada PDF oficial generada en Canva Studio por correo desde Taquilla POS.
+     */
+    public function emailTicketPdf(Request $request, TicketSale $sale): JsonResponse
+    {
+        $recipient = $request->input('email');
+
+        if (empty($recipient) && !empty($sale->tickets_data)) {
+            $tData = is_array($sale->tickets_data) ? $sale->tickets_data : json_decode($sale->tickets_data, true);
+            $recipient = $tData['customer_email'] ?? ($tData['buyer_email'] ?? ($tData['email'] ?? null));
+        }
+
+        if (empty($recipient) && !empty($sale->buyer_dni) && $sale->buyer_dni !== '00000000') {
+            $user = \App\Models\User::where('dni', $sale->buyer_dni)->first();
+            if ($user && !empty($user->email)) {
+                $recipient = $user->email;
+            }
+        }
+
+        if (empty($recipient) && !empty($sale->buyer_name)) {
+            $user = \App\Models\User::where('name', $sale->buyer_name)->whereNotNull('email')->first();
+            if ($user && !empty($user->email)) {
+                $recipient = $user->email;
+            }
+        }
+
+        if (empty($recipient) || !filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontró un correo electrónico válido registrado para este boleto.'
+            ], 422);
+        }
+
+        // Guardar en tickets_data si no estaba registrado
+        $tData = is_array($sale->tickets_data) ? $sale->tickets_data : (json_decode($sale->tickets_data ?? '[]', true) ?: []);
+        if (empty($tData['customer_email']) || $tData['customer_email'] !== $recipient) {
+            $tData['customer_email'] = $recipient;
+            $sale->tickets_data = $tData;
+            $sale->save();
+        }
+
+        $pdfBase64 = $request->input('ticket_pdf_base64');
+
+        try {
+            Mail::to($recipient)->send(new TicketPurchaseMail($sale, null, false, $pdfBase64));
+
+            return response()->json([
+                'success' => true,
+                'message' => "¡Boleto oficial enviado exitosamente a {$recipient}!"
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error enviando boleto por correo desde Taquilla POS: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al enviar el correo: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }
 

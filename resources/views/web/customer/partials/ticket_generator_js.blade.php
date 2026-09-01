@@ -17,19 +17,41 @@
         }
     }
 
+    function getFullAssetUrl(urlStr) {
+        if (!urlStr || typeof urlStr !== 'string') return '';
+        if (urlStr.startsWith('data:')) return urlStr;
+
+        let clean = urlStr;
+        try {
+            if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) {
+                const parsed = new URL(urlStr);
+                clean = parsed.pathname;
+            }
+        } catch(e) {}
+
+        clean = clean.replace(/^\//, '');
+
+        if (clean.includes('storage/')) {
+            clean = 'storage/' + clean.split('storage/').pop();
+        } else if (clean.includes('images/')) {
+            clean = 'images/' + clean.split('images/').pop();
+        } else if (clean.startsWith('events/') || clean.startsWith('templates/') || clean.startsWith('media/') || clean.startsWith('uploads/')) {
+            clean = 'storage/' + clean;
+        } else if (clean.includes('media/')) {
+            clean = 'storage/media/' + clean.split('media/').pop();
+        }
+
+        return window.location.origin + '/' + clean;
+    }
+
     async function preloadPosImageAsDataUrl(url, type = 'banner') {
         if (!url || typeof url !== 'string' || url.trim() === '') return '';
         if (url.startsWith('data:')) return url;
+        
+        const targetUrl = getFullAssetUrl(url) || url;
+
         try {
-            if (url.startsWith('http://') || url.startsWith('https://')) {
-                const parsed = new URL(url);
-                if (parsed.origin !== window.location.origin) {
-                    return url;
-                }
-            }
-        } catch(e) {}
-        try {
-            const response = await fetch(url, { mode: 'cors', cache: 'force-cache' });
+            const response = await fetch(targetUrl, { cache: 'force-cache' });
             if (response.ok) {
                 const blob = await response.blob();
                 const dataUrl = await new Promise((resolve, reject) => {
@@ -41,6 +63,7 @@
                 if (dataUrl && dataUrl.startsWith('data:image')) return dataUrl;
             }
         } catch (e) {}
+
         try {
             const dataUrl = await new Promise((resolve, reject) => {
                 const img = new Image();
@@ -57,12 +80,12 @@
                         resolve(canvas.toDataURL('image/jpeg', 0.92));
                     } catch (err) { reject(err); }
                 };
-                img.onerror = () => { clearTimeout(timeout); resolve(url); };
-                img.src = url;
+                img.onerror = () => { clearTimeout(timeout); resolve(targetUrl); };
+                img.src = targetUrl;
             });
-            return dataUrl || url;
+            return dataUrl || targetUrl;
         } catch (e) {
-            return url;
+            return targetUrl;
         }
     }
 
@@ -190,11 +213,13 @@
         if (!html || typeof html !== 'string') return html;
         const cleanLabel = labelKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         
+        // Caso 1: Estructura multilínea de párrafos <p>Label:</p><p>Valor</p>
         const multiPRegex = new RegExp(`(<p[^>]*>\\s*${cleanLabel}:?\\s*<\\/p>\\s*<p[^>]*>)(.*?)(<\\/p>)`, 'gi');
         if (multiPRegex.test(html)) {
             return html.replace(multiPRegex, `$1${newValue}$3`);
         }
 
+        // Caso 2: Estructura en línea Label: Valor
         const singleRegex = new RegExp(`(${cleanLabel}:?\\s*)((?:<[^>]+>\\s*)*)([^<\\s]+[^<]*)`, 'gi');
         if (singleRegex.test(html)) {
             return html.replace(singleRegex, `$1$2${newValue}`);
@@ -212,6 +237,7 @@
             elements = convertPositionsToElements(rawPos);
         }
 
+        // Deduplicar elementos del sistema para evitar renderizado doble
         const seenFields = new Set();
         const uniqueElements = [];
         for (let i = elements.length - 1; i >= 0; i--) {
@@ -281,6 +307,7 @@
             } else {
                 let rawTxt = el.content || el.html || el.text || '';
 
+                // Limpieza de artefactos de Quill
                 if (typeof rawTxt === 'string') {
                     rawTxt = rawTxt.replace(/<span class="ql-cursor">.*?<\/span>/gi, '').replace(/\uFEFF/g, '');
                 }
@@ -378,10 +405,12 @@
                 const flexAlign = textAlign === 'center' ? 'center' : (textAlign === 'right' ? 'flex-end' : 'flex-start');
 
                 if (typeof rawTxt === 'string' && rawTxt.includes('<')) {
+                    // Forzar text-align en cualquier estilo existente
                     rawTxt = rawTxt
                         .replace(/text-align\s*:\s*(left|center|right|justify)/gi, `text-align: ${textAlign}`)
                         .replace(/align-items\s*:\s*(flex-start|center|flex-end|stretch)/gi, `align-items: ${flexAlign}`);
                     
+                    // Inyectar text-align y width: 100% en todas las etiquetas de bloque internas
                     rawTxt = rawTxt.replace(/<(p|div|h[1-6])\b([^>]*)>/gi, (match, tag, attrs) => {
                         if (/style\s*=/i.test(attrs)) {
                             return `<${tag} ${attrs.replace(/style\s*=\s*(['"])/i, `style=$1text-align: ${textAlign} !important; width: 100% !important; `)}>`;
@@ -430,16 +459,121 @@
         return window.location.origin + '/' + clean;
     }
 
+    function cleanZoneNameJs(name) {
+        if (!name) return 'GENERAL';
+        return String(name).replace(/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?/i, '').trim() || name;
+    }
+
+    function getSaleObject(saleOrId) {
+        if (typeof saleOrId === 'object' && saleOrId !== null) {
+            if (saleOrId instanceof HTMLElement) {
+                const payloadEncoded = saleOrId.getAttribute('data-sale-payload');
+                if (payloadEncoded) {
+                    try {
+                        return JSON.parse(decodeURIComponent(escape(atob(payloadEncoded))));
+                    } catch (e) {
+                        try { return JSON.parse(atob(payloadEncoded)); } catch(err){}
+                    }
+                }
+                const saleId = saleOrId.getAttribute('data-sale-id');
+                if (saleId && window.posSalesMap && window.posSalesMap[saleId]) {
+                    return window.posSalesMap[saleId];
+                }
+            }
+            return saleOrId;
+        }
+        if (window.posSalesMap && window.posSalesMap[saleOrId]) return window.posSalesMap[saleOrId];
+        return null;
+    }
+
+    // =========================================================================
+    // FUNCIÓN UNIFICADA IDÉNTICA A LA DE TAQUILLA (POS) PARA GENERAR ENTRADA PDF
+    // =========================================================================
+    async function downloadPosSalePdf(saleOrId) {
+        const sale = getSaleObject(saleOrId);
+        if (!sale) {
+            console.error('[CanvaStudio POS PDF] Venta no encontrada:', saleOrId);
+            return;
+        }
+
+        console.log('[CanvaStudio POS PDF] Starting PDF generation for sale:', sale);
+
+        Swal.fire({
+            title: '🎨 Generando Entrada PDF...',
+            html: 'Compilando diseño oficial del boleto con Canva Studio...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); },
+            background: '#14141E',
+            color: '#FFFFFF'
+        });
+
+        try {
+            const { pdf } = await generateTicketPdfDoc(sale);
+
+            if (pdf) {
+                pdf.save(`Entradas_VIRTUAL_${sale.receipt_number || 'ViveGo'}.pdf`);
+            }
+
+            let countTickets = 1;
+            let ticketsDataParsed = sale.tickets_data;
+            if (typeof ticketsDataParsed === 'string') {
+                try { ticketsDataParsed = JSON.parse(ticketsDataParsed); } catch(e) {}
+            }
+            if (ticketsDataParsed && ticketsDataParsed.items && Array.isArray(ticketsDataParsed.items)) {
+                countTickets = ticketsDataParsed.items.reduce((acc, it) => acc + parseInt(it.quantity || 1, 10), 0);
+            } else if (Array.isArray(ticketsDataParsed)) {
+                countTickets = ticketsDataParsed.length;
+            } else {
+                countTickets = parseInt(sale.quantity || 1, 10);
+            }
+
+            Swal.fire({
+                title: '📥 PDF de Entradas Generado Exitosamente',
+                text: `Se ha generado el PDF con ${countTickets} hoja(s) A4 para la venta N° ${sale.receipt_number}.`,
+                icon: 'success',
+                confirmButtonColor: '#06B6D4',
+                background: '#14141E',
+                color: '#FFFFFF'
+            });
+        } catch (err) {
+            console.error('Error generando PDF de entrada:', err);
+            const el = document.querySelector('.posPdfSingleCanvas');
+            if (el) el.remove();
+
+            Swal.fire({
+                title: 'Inconveniente con el PDF',
+                text: 'No se pudo procesar la entrada: ' + (err.message || 'error de renderizado'),
+                icon: 'error',
+                confirmButtonColor: '#FF5500',
+                background: '#14141E',
+                color: '#FFFFFF'
+            });
+        }
+    }
+
+    // Generador principal de documento PDF (compartido para descarga y envío por correo)
     async function generateTicketPdfDoc(sale) {
         const event = sale.event || {};
-        const template = event.template || { id: 1, name: 'Plantilla Oficial', bg_color: '#FFFFFF', positions: {}, elements: [] };
+        const template = (event && event.template) ? event.template : { id: 1, name: 'Plantilla Oficial', bg_color: '#FFFFFF', positions: {}, elements: [] };
 
         const eventTitle = event.title || 'CONCIERTO EN VIVO';
         const eventVenue = event.venue_name || '';
         const eventAddress = event.address || '';
-        const eventDate = event.event_date ? (typeof event.event_date === 'string' ? event.event_date.substring(0, 10) : '') : '';
+        
+        let eventDate = '';
+        if (event && event.event_date) {
+            if (typeof event.event_date === 'string') {
+                const rawDate = event.event_date.substring(0, 10);
+                const parts = rawDate.split('-');
+                if (parts.length === 3) {
+                    eventDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                } else {
+                    eventDate = event.event_date;
+                }
+            }
+        }
         const eventTime = event.event_time || '';
-        const logoWhite = "{{ asset('images/logo-white.png') }}";
+        const logoWhite = getFullAssetUrl('/images/logo-white.png');
 
         const bgColor = template.bg_color || '#FFFFFF';
 
@@ -477,39 +611,49 @@
         if (typeof ticketsDataParsed === 'string') {
             try { ticketsDataParsed = JSON.parse(ticketsDataParsed); } catch(e) {}
         }
-        const rawItems = (ticketsDataParsed && ticketsDataParsed.items) ? ticketsDataParsed.items : (Array.isArray(ticketsDataParsed) ? ticketsDataParsed : []);
 
-        const cleanZoneNameJs = (name) => {
-            if (!name) return 'GENERAL';
-            return String(name).replace(/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?/i, '').trim() || name;
-        };
+        const isCourtesy = (sale.payment_method === 'Cortesía' || sale.payment_method === 'cortesia' || String(sale.payment_method).toLowerCase() === 'cortesia' || parseFloat(sale.total_amount) === 0);
 
         let ticketsList = [];
-        if (rawItems.length > 0) {
-            rawItems.forEach((it, idx) => {
+        if (ticketsDataParsed && ticketsDataParsed.items && Array.isArray(ticketsDataParsed.items) && ticketsDataParsed.items.length > 0) {
+            ticketsDataParsed.items.forEach((it, idx) => {
                 const qty = parseInt(it.quantity || 1, 10);
-                const zoneClean = cleanZoneNameJs(it.zone_name || it.name || sale.zone_name);
-                const regularPrice = it.regular_price || it.price || sale.unit_price;
+                const zoneName = cleanZoneNameJs(it.zone_name || it.name || sale.zone_name);
+                const price = it.price || it.regular_price || sale.unit_price;
                 for (let q = 0; q < qty; q++) {
                     ticketsList.push({
-                        ticket_code: `TK-${sale.receipt_number || '00000'}-${ticketsList.length + 1}`,
+                        ticket_code: it.ticket_code || `TK-${sale.receipt_number || 'REC'}-${ticketsList.length + 1}`,
                         ticket_number: ticketsList.length + 1,
-                        zone: zoneClean,
-                        price: regularPrice,
-                        validation_hash: null,
-                        qr_payload: null
+                        zone: zoneName,
+                        price: price,
+                        is_courtesy: isCourtesy || it.is_courtesy,
+                        validation_hash: it.validation_hash || null,
+                        qr_payload: it.qr_payload || null
                     });
                 }
             });
+        } else if (Array.isArray(ticketsDataParsed) && ticketsDataParsed.length > 0) {
+            ticketsDataParsed.forEach((tItem, i) => {
+                ticketsList.push({
+                    ticket_code: tItem.ticket_code || `TK-${sale.receipt_number || 'REC'}-${i + 1}`,
+                    ticket_number: tItem.ticket_number || (i + 1),
+                    zone: cleanZoneNameJs(tItem.zone || tItem.zone_name || sale.zone_name),
+                    price: tItem.price || sale.unit_price,
+                    is_courtesy: isCourtesy || tItem.is_courtesy,
+                    validation_hash: tItem.validation_hash || null,
+                    qr_payload: tItem.qr_payload || null
+                });
+            });
         } else {
             const qty = parseInt(sale.quantity || 1, 10);
-            const zoneClean = cleanZoneNameJs(sale.zone_name);
+            const zoneName = cleanZoneNameJs(sale.zone_name);
             for (let q = 0; q < qty; q++) {
                 ticketsList.push({
-                    ticket_code: `TK-${sale.receipt_number || '00000'}-${q + 1}`,
+                    ticket_code: `TK-${sale.receipt_number || 'REC'}-${q + 1}`,
                     ticket_number: q + 1,
-                    zone: zoneClean,
+                    zone: zoneName,
                     price: sale.unit_price,
+                    is_courtesy: isCourtesy,
                     validation_hash: null,
                     qr_payload: null
                 });
@@ -542,7 +686,9 @@
             const qrPayload = tItem.qr_payload || sale.qr_payload || `VIVEGO|${sale.receipt_number || 'REC'}|EVT-${sale.event_id || (event.id || 1)}|DNI-${sale.buyer_dni || '00000000'}|TICK-${numSeq}|${hashVal}`;
             const qrDataUrl = generateQrBase64(qrPayload);
 
-            const unitPriceVal = parseFloat(tItem.price || sale.unit_price || sale.total_amount || 0).toFixed(2);
+            const isCourtesyTicket = isCourtesy || tItem.is_courtesy;
+            const unitPriceVal = isCourtesyTicket ? '0.00' : parseFloat(tItem.price || sale.unit_price || sale.total_amount || 0).toFixed(2);
+            const priceDisplay = isCourtesyTicket ? 'CORTESÍA' : ('S/ ' + unitPriceVal);
 
             const dynamicData = {
                 title: eventTitle,
@@ -551,8 +697,8 @@
                 date: eventDate,
                 time: eventTime,
                 zone: cleanZoneNameJs(tItem.zone || sale.zone_name),
-                price: 'S/ ' + unitPriceVal,
-                buyer_name: sale.buyer_name || 'CLIENTE VARIOS',
+                price: priceDisplay,
+                buyer_name: sale.buyer_name || (isCourtesyTicket ? 'INVITADO DE CORTESÍA' : 'CLIENTE VARIOS'),
                 buyer_dni: sale.buyer_dni || '00000000',
                 ticket_number: ticketNumStr,
                 hash: hashVal,
@@ -611,6 +757,12 @@
         return { pdf, sale };
     }
 
+    // Alias global para compatibilidad con llamadas existentes
+    window.downloadPosSalePdf = downloadPosSalePdf;
+    window.downloadClientTicketPdf = function(target) {
+        return downloadPosSalePdf(target);
+    };
+
     // Helper global para compilar base64 directamente
     window.compileTicketPdfBase64 = async function(sale) {
         const { pdf } = await generateTicketPdfDoc(sale);
@@ -618,72 +770,13 @@
     };
     window.generateTicketPdfDoc = generateTicketPdfDoc;
 
-    async function downloadClientTicketPdf(btn) {
-        if (!btn) return;
-        const payloadEncoded = btn.getAttribute('data-sale-payload');
-        if (!payloadEncoded) return;
-
-        let sale;
-        try {
-            sale = JSON.parse(decodeURIComponent(escape(atob(payloadEncoded))));
-        } catch (e) {
-            console.error('Error decodificando payload de venta:', e);
-            return;
-        }
-
-        Swal.fire({
-            title: '🎟️ Generando Boleto Oficial...',
-            html: 'Compilando diseño de entrada en formato A4 con alta definición...',
-            allowOutsideClick: false,
-            didOpen: () => { Swal.showLoading(); },
-            background: '#14141E',
-            color: '#FFFFFF'
-        });
-
-        try {
-            const { pdf } = await generateTicketPdfDoc(sale);
-
-            if (pdf) {
-                pdf.save(`Boleto_Oficial_${sale.receipt_number || 'ViveGo'}.pdf`);
-                Swal.fire({
-                    icon: 'success',
-                    title: '🎉 ¡Boleto Descargado!',
-                    text: `Tu boleto oficial ha sido generado y descargado exitosamente.`,
-                    background: '#14141E',
-                    color: '#FFFFFF',
-                    confirmButtonColor: '#FF5500',
-                    timer: 3000
-                });
-            }
-        } catch (err) {
-            console.error('Error generando PDF de cliente:', err);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error al generar boleto',
-                text: 'Ocurrió un inconveniente al compilar el PDF. Por favor intenta nuevamente.',
-                background: '#14141E',
-                color: '#FFFFFF',
-                confirmButtonColor: '#FF5500'
-            });
-        }
-    }
-
     async function emailClientTicketPdf(btn) {
-        if (!btn) return;
-        const payloadEncoded = btn.getAttribute('data-sale-payload');
-        if (!payloadEncoded) return;
-
-        let sale;
-        try {
-            sale = JSON.parse(decodeURIComponent(escape(atob(payloadEncoded))));
-        } catch (e) {
-            console.error('Error decodificando payload de venta:', e);
-            return;
-        }
+        const sale = getSaleObject(btn);
+        if (!sale) return;
 
         Swal.fire({
             title: '📧 Enviando a tu Correo...',
-            html: 'Compilando boleto con fondo oficial y enviándolo a tu bandeja de entrada...',
+            html: 'Compilando boleto oficial y enviándolo a tu bandeja de entrada...',
             allowOutsideClick: false,
             didOpen: () => { Swal.showLoading(); },
             background: '#14141E',

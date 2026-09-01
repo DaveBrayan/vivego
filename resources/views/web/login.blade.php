@@ -672,7 +672,9 @@
                 @endif
 
                 <!-- Unified Form -->
-                <form action="{{ route('web.login.submit') }}" method="POST" id="loginForm">
+                <div id="loginFormAlert" style="display: none; padding: 0.85rem 1.15rem; border-radius: 12px; font-size: 0.875rem; font-weight: 700; margin-bottom: 1.25rem; border: 1.5px solid #FCA5A5; background: #FEF2F2; color: #DC2626; line-height: 1.4;"></div>
+
+                <form action="{{ route('web.login.submit') }}" method="POST" id="loginForm" onsubmit="submitLoginForm(event)">
                     @csrf
 
                     <div class="form-group">
@@ -723,7 +725,7 @@
                         </a>
                     </div>
 
-                    <button type="submit" class="btn-submit-main">
+                    <button type="submit" id="btnSubmitLogin" class="btn-submit-main">
                         🚀 Iniciar Sesión en Vive Go
                     </button>
                 </form>
@@ -778,32 +780,32 @@
     </div>
 
     <!-- MODAL OBLIGATORIO DE CAMBIO DE CONTRASEÑA TEMPORAL -->
-    @if(session('must_change_password'))
-    <div id="mandatoryChangePasswordModal" style="display: flex; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.85); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(8px); padding: 1rem;">
-        <div style="background: #FFFFFF; border-radius: 24px; width: 100%; max-width: 460px; padding: 2.25rem; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.4); border: 1px solid #E2E8F0;">
+    <div id="mandatoryChangePasswordModal" style="display: {{ session('must_change_password') ? 'flex' : 'none' }}; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.85); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(8px); padding: 1rem;">
+        <div style="background: #FFFFFF; border-radius: 24px; width: 100%; max-width: 480px; padding: 2.25rem; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.4); border: 1px solid #E2E8F0; position: relative;">
             <div style="text-align: center; margin-bottom: 1.25rem;">
-                <div style="width: 56px; height: 56px; border-radius: 50%; background-color: #FFF7ED; border: 2px solid #FFEDD5; color: #EA580C; font-size: 26px; line-height: 56px; margin: 0 auto 12px auto;">
+                <div style="width: 60px; height: 60px; border-radius: 50%; background-color: #FFF7ED; border: 2px solid #FFEDD5; color: #EA580C; font-size: 28px; line-height: 58px; margin: 0 auto 12px auto; display: flex; align-items: center; justify-content: center;">
                     🔒
                 </div>
-                <h3 style="font-size: 1.4rem; font-weight: 900; color: #0F172A; margin: 0 0 0.4rem 0;">
+                <h3 style="font-size: 1.45rem; font-weight: 900; color: #0F172A; margin: 0 0 0.4rem 0;">
                     Establecer Nueva Contraseña
                 </h3>
-                <p style="font-size: 0.875rem; color: #64748B; margin: 0; line-height: 1.4;">
-                    Has ingresado con una <strong>contraseña temporal</strong>. Por seguridad de tu cuenta, ingresa una nueva contraseña personalizada para continuar:
+                <p style="font-size: 0.875rem; color: #64748B; margin: 0; line-height: 1.45;">
+                    Has ingresado con una <strong>contraseña temporal</strong>. Por seguridad de tu cuenta, ingresa tu nueva contraseña personalizada para ingresar a tus boletos:
                 </p>
             </div>
 
-            <div id="mandatoryChangePassError" style="display: none; background: #FEF2F2; border: 1.5px solid #FCA5A5; color: #DC2626; padding: 0.85rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; margin-bottom: 1.25rem;"></div>
+            <div id="mandatoryChangePassError" style="display: none; background: #FEF2F2; border: 1.5px solid #FCA5A5; color: #DC2626; padding: 0.85rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; margin-bottom: 1.25rem; line-height: 1.4;"></div>
+            <div id="mandatoryChangePassSuccess" style="display: none; background: #F0FDF4; border: 1.5px solid #BBF7D0; color: #16A34A; padding: 0.85rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700; margin-bottom: 1.25rem; line-height: 1.4;"></div>
 
             <form onsubmit="submitMandatoryChangePassword(event)">
                 <div class="form-group" style="margin-bottom: 1.15rem;">
-                    <label class="form-label">Nueva Contraseña (mínimo 6 caracteres):</label>
+                    <label class="form-label" style="display: block; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; color: #334155; margin-bottom: 0.4rem;">Nueva Contraseña (mínimo 6 caracteres):</label>
                     <div class="input-box">
                         <svg class="input-icon-left" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                         </svg>
-                        <input type="password" id="mandatoryNewPassword" class="form-input" placeholder="••••••••••••" required minlength="6">
+                        <input type="password" id="mandatoryNewPassword" class="form-input" placeholder="••••••••••••" required minlength="6" autocomplete="new-password">
                         <button type="button" class="toggle-password-btn" onclick="togglePasswordVisibilityField('mandatoryNewPassword', this)" title="Mostrar / Ocultar">
                             👁️
                         </button>
@@ -811,28 +813,29 @@
                 </div>
 
                 <div class="form-group" style="margin-bottom: 1.75rem;">
-                    <label class="form-label">Confirmar Nueva Contraseña:</label>
+                    <label class="form-label" style="display: block; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; color: #334155; margin-bottom: 0.4rem;">Confirmar Nueva Contraseña:</label>
                     <div class="input-box">
                         <svg class="input-icon-left" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                         </svg>
-                        <input type="password" id="mandatoryConfirmPassword" class="form-input" placeholder="••••••••••••" required minlength="6">
+                        <input type="password" id="mandatoryConfirmPassword" class="form-input" placeholder="••••••••••••" required minlength="6" autocomplete="new-password">
                         <button type="button" class="toggle-password-btn" onclick="togglePasswordVisibilityField('mandatoryConfirmPassword', this)" title="Mostrar / Ocultar">
                             👁️
                         </button>
                     </div>
                 </div>
 
-                <button type="submit" id="btnSubmitMandatoryPass" class="btn-submit-main" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); box-shadow: 0 10px 24px rgba(16, 185, 129, 0.35);">
-                    💾 Guardar Nueva Contraseña y Continuar
+                <button type="submit" id="btnSubmitMandatoryPass" class="btn-submit-main" style="background: linear-gradient(135deg, #FF5500 0%, #EA580C 100%); box-shadow: 0 10px 24px rgba(255, 85, 0, 0.35); padding: 0.95rem; font-size: 0.95rem;">
+                    💾 Guardar Nueva Contraseña y Acceder
                 </button>
             </form>
         </div>
     </div>
-    @endif
 
     <script>
+        window.activeCsrfToken = '{{ csrf_token() }}';
+
         // Toggle visibilidad de contraseña del login principal
         const toggleBtn = document.getElementById('togglePasswordBtn');
         const passInput = document.getElementById('password');
@@ -851,7 +854,67 @@
             if (!input) return;
             const isPassword = input.type === 'password';
             input.type = isPassword ? 'text' : 'password';
-            btnEl.style.color = isPassword ? '#FF5500' : '#94A3B8';
+            btnEl.style.opacity = isPassword ? '1' : '0.6';
+        }
+
+        function submitLoginForm(e) {
+            e.preventDefault();
+            const loginInput = document.getElementById('login').value.trim();
+            const passInputVal = document.getElementById('password').value.trim();
+            const alertBox = document.getElementById('loginFormAlert');
+            const submitBtn = document.getElementById('btnSubmitLogin');
+
+            if (!loginInput || !passInputVal) return;
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Verificando credenciales...';
+            alertBox.style.display = 'none';
+
+            fetch("{{ route('web.login.submit') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': window.activeCsrfToken
+                },
+                body: JSON.stringify({
+                    login: loginInput,
+                    password: passInputVal
+                })
+            })
+            .then(async (res) => {
+                const data = await res.json().catch(() => ({}));
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🚀 Iniciar Sesión en Vive Go';
+
+                if (res.ok && data.success) {
+                    if (data.csrf_token) {
+                        window.activeCsrfToken = data.csrf_token;
+                    }
+
+                    // Si ingresó con contraseña temporal, abrir el modal de cambio obligatorio
+                    if (data.must_change_password) {
+                        document.getElementById('password').value = '';
+                        const modal = document.getElementById('mandatoryChangePasswordModal');
+                        modal.style.display = 'flex';
+                        document.getElementById('mandatoryNewPassword').focus();
+                        return;
+                    }
+
+                    // Si es login normal, redirigir al portal
+                    submitBtn.textContent = '✨ ¡Ingresando...';
+                    window.location.href = data.redirect_url || "{{ route('web.customer.tickets') }}";
+                } else {
+                    alertBox.textContent = data.message || 'Credenciales incorrectas. Verifica tu usuario/correo/DNI y contraseña.';
+                    alertBox.style.display = 'block';
+                }
+            })
+            .catch(err => {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🚀 Iniciar Sesión en Vive Go';
+                alertBox.textContent = 'Ocurrió un error al procesar el inicio de sesión. Por favor intenta de nuevo.';
+                alertBox.style.display = 'block';
+            });
         }
 
         function openLoginRecoveryModal() {
@@ -861,6 +924,9 @@
             }
             document.getElementById('recoveryModalAlert').style.display = 'none';
             document.getElementById('recoveryModal').style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById('recoveryIdentifierInput')?.focus();
+            }, 100);
         }
 
         function closeLoginRecoveryModal() {
@@ -876,7 +942,7 @@
             if (!identifier) return;
 
             btn.disabled = true;
-            btn.textContent = 'Verificando y enviando...';
+            btn.textContent = '⏳ Verificando y enviando...';
             alertBox.style.display = 'none';
 
             fetch("{{ route('web.password.recover') }}", {
@@ -884,7 +950,7 @@
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': window.activeCsrfToken
                 },
                 body: JSON.stringify({ identifier: identifier })
             })
@@ -931,7 +997,11 @@
             const newPassword = document.getElementById('mandatoryNewPassword').value;
             const confirmPassword = document.getElementById('mandatoryConfirmPassword').value;
             const errBox = document.getElementById('mandatoryChangePassError');
+            const succBox = document.getElementById('mandatoryChangePassSuccess');
             const btn = document.getElementById('btnSubmitMandatoryPass');
+
+            errBox.style.display = 'none';
+            succBox.style.display = 'none';
 
             if (newPassword.length < 6) {
                 errBox.textContent = 'La nueva contraseña debe tener al menos 6 caracteres.';
@@ -940,21 +1010,20 @@
             }
 
             if (newPassword !== confirmPassword) {
-                errBox.textContent = 'Las contraseñas no coinciden.';
+                errBox.textContent = 'Las contraseñas no coinciden. Por favor verifica e intenta de nuevo.';
                 errBox.style.display = 'block';
                 return;
             }
 
             btn.disabled = true;
-            btn.textContent = 'Guardando contraseña...';
-            errBox.style.display = 'none';
+            btn.textContent = '💾 Guardando contraseña...';
 
             fetch("{{ route('web.password.update_temp') }}", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': window.activeCsrfToken
                 },
                 body: JSON.stringify({
                     new_password: newPassword,
@@ -964,11 +1033,14 @@
             .then(async (res) => {
                 const data = await res.json().catch(() => ({}));
                 btn.disabled = false;
-                btn.textContent = '💾 Guardar Nueva Contraseña y Continuar';
+                btn.textContent = '💾 Guardar Nueva Contraseña y Acceder';
 
                 if (res.ok && data.success) {
-                    alert('¡Contraseña actualizada exitosamente!');
-                    location.reload();
+                    succBox.innerHTML = '✨ <strong>¡Contraseña Actualizada!</strong> Redirigiendo a tu cuenta...';
+                    succBox.style.display = 'block';
+                    setTimeout(() => {
+                        window.location.href = data.redirect_url || "{{ route('web.customer.tickets') }}";
+                    }, 800);
                 } else {
                     errBox.textContent = data.message || 'No se pudo actualizar la contraseña.';
                     errBox.style.display = 'block';
@@ -976,8 +1048,8 @@
             })
             .catch(err => {
                 btn.disabled = false;
-                btn.textContent = '💾 Guardar Nueva Contraseña y Continuar';
-                errBox.textContent = 'Error al actualizar contraseña.';
+                btn.textContent = '💾 Guardar Nueva Contraseña y Acceder';
+                errBox.textContent = 'Ocurrió un error al actualizar la contraseña.';
                 errBox.style.display = 'block';
             });
         }

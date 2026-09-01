@@ -117,7 +117,7 @@ class CustomerPortalController extends Controller
                 'must_change_password',
             ]);
 
-            $isTempPassword = str_starts_with($password, 'VG');
+            $isTempPassword = str_starts_with($passwordUpper, 'VG');
 
             session([
                 'customer_logged_in' => true,
@@ -134,7 +134,7 @@ class CustomerPortalController extends Controller
                 'role' => 'customer',
                 'must_change_password' => $isTempPassword,
                 'csrf_token' => csrf_token(),
-                'message' => $isTempPassword ? 'Has ingresado con una contraseña temporal. Por favor establece una nueva contraseña.' : ('¡Bienvenido, ' . $user->name . '!'),
+                'message' => $isTempPassword ? 'Has ingresado con una contraseña temporal. Por favor establece una nueva contraseña personalizada.' : ('¡Bienvenido, ' . $user->name . '!'),
                 'user' => [
                     'name' => $user->name,
                     'email' => $user->email,
@@ -163,6 +163,7 @@ class CustomerPortalController extends Controller
             'customer_email',
             'customer_dni',
             'customer_phone',
+            'must_change_password',
         ]);
 
         return redirect()->route('web.home')
@@ -174,6 +175,10 @@ class CustomerPortalController extends Controller
      */
     public function myTickets(): View|RedirectResponse
     {
+        if (session('must_change_password')) {
+            return redirect()->route('web.login')->with('warning', 'Por seguridad, debes actualizar tu contraseña temporal antes de acceder a tus boletos.');
+        }
+
         $customerId = session('customer_id');
         $customerEmail = session('customer_email');
         $customerDni = session('customer_dni');
@@ -212,6 +217,10 @@ class CustomerPortalController extends Controller
      */
     public function myReceipts(): View|RedirectResponse
     {
+        if (session('must_change_password')) {
+            return redirect()->route('web.login')->with('warning', 'Por seguridad, debes actualizar tu contraseña temporal antes de acceder a tus recibos.');
+        }
+
         $customerId = session('customer_id');
         $customerEmail = session('customer_email');
         $customerDni = session('customer_dni');

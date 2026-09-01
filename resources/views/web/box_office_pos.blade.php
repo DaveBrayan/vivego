@@ -313,6 +313,34 @@
             box-shadow: 0 4px 18px rgba(255, 85, 0, 0.15);
         }
 
+        /* GRID DE 3 COLUMNAS DEL MODAL POS */
+        .pos-modal-three-columns {
+            display: grid;
+            grid-template-columns: 1fr 1.08fr 1fr;
+            gap: 1.15rem;
+            align-items: start;
+            margin-bottom: 1.1rem;
+        }
+
+        @keyframes pulseGlow {
+            0% {
+                box-shadow: 0 0 0 0 rgba(255, 85, 0, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 8px rgba(255, 85, 0, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 85, 0, 0);
+            }
+        }
+
+        @media (max-width: 980px) {
+            .pos-modal-three-columns {
+                grid-template-columns: 1fr !important;
+                gap: 1.15rem !important;
+            }
+        }
+
         @media (max-width: 860px) {
             #posSaleModal .admin-modal-card {
                 padding: 1.25rem 0.9rem !important;
@@ -660,6 +688,10 @@
                                                     <span>🎟️</span>
                                                     <span>Entrada PDF</span>
                                                 </button>
+                                                <button type="button" class="btn btn-info btn-sm" onclick="emailPosSalePdf({{ $sale->id }})" title="Enviar Entrada al Correo" style="background: linear-gradient(135deg, #6366F1, #4F46E5); border: 1px solid rgba(99,102,241,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); cursor: pointer;">
+                                                    <span>✉️</span>
+                                                    <span>Enviar Correo</span>
+                                                </button>
                                                 <button type="button" class="btn btn-danger btn-sm" onclick="deletePosSale({{ $sale->id }})" title="Borrar Entrada" style="background: linear-gradient(135deg, #EF4444, #DC2626); border: 1px solid rgba(239,68,68,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); cursor: pointer;">
                                                     <span>🗑️</span>
                                                     <span>Borrar Entrada</span>
@@ -685,58 +717,57 @@
         </main>
     </div>
 
-    <!-- MODAL PUNTO DE VENTA (REGISTRAR VENTA POS) -->
+    <!-- MODAL PUNTO DE VENTA (REGISTRAR VENTA POS - 3 COLUMNAS COMPACTO) -->
     <div class="admin-modal-overlay" id="posSaleModal">
-        <div class="admin-modal-card" style="max-width: 1060px; width: 95%; max-height: 92vh; overflow-y: auto; padding: 2rem; border-radius: 28px; box-sizing: border-box;">
+        <div class="admin-modal-card" style="max-width: 1160px; width: 96%; max-height: 92vh; overflow-y: auto; padding: 1.5rem 1.65rem; border-radius: 24px; box-sizing: border-box; border: 1.5px solid rgba(255, 85, 0, 0.35); box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 30px rgba(255,85,0,0.1);">
             
-            <div class="admin-modal-header" style="margin-bottom: 1.25rem; padding-bottom: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
-                <div style="display: flex; align-items: center; gap: 0.75rem; min-width: 0; flex: 1;">
-                    <div class="card-header-icon" style="width: 42px; height: 42px; background: rgba(255, 85, 0, 0.15); border-color: rgba(255, 85, 0, 0.3); color: var(--color-primary-orange); display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 1.3rem; flex-shrink: 0;">🛒</div>
+            <div class="admin-modal-header" style="margin-bottom: 1rem; padding-bottom: 0.65rem; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0; flex: 1;">
+                    <div class="card-header-icon" style="width: 36px; height: 36px; background: rgba(255, 85, 0, 0.15); border-color: rgba(255, 85, 0, 0.3); color: var(--color-primary-orange); display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 1.15rem; flex-shrink: 0;">🛒</div>
                     <div style="min-width: 0; flex: 1;">
-                        <h3 class="card-header-title" style="font-size: 1.15rem; margin: 0; color: #FFFFFF; font-weight: 900; line-height: 1.25;">Nueva Venta de Taquilla (POS)</h3>
-                        <p class="card-header-subtitle" style="margin: 0; font-size: 0.8rem; color: #94A3B8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $event->title }}</p>
+                        <h3 class="card-header-title" style="font-size: 1.05rem; margin: 0; color: #FFFFFF; font-weight: 900; line-height: 1.2;">Nueva Venta de Taquilla (POS)</h3>
+                        <p class="card-header-subtitle" style="margin: 0; font-size: 0.775rem; color: #94A3B8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $event->title }} · Emisión inmediata de boletos</p>
                     </div>
                 </div>
-                <button type="button" class="admin-modal-close" onclick="closePosSaleModal()" style="font-size: 1.3rem; color: #94A3B8; background: transparent; border: none; cursor: pointer; flex-shrink: 0; padding: 0.25rem 0.5rem;" aria-label="Cerrar">✕</button>
+                <button type="button" class="admin-modal-close" onclick="closePosSaleModal()" style="font-size: 1.2rem; color: #94A3B8; background: transparent; border: none; cursor: pointer; flex-shrink: 0; padding: 0.2rem 0.4rem;" aria-label="Cerrar">✕</button>
             </div>
 
             <form id="posSaleForm" onsubmit="handlePosSaleSubmit(event)">
-                <!-- GRID DE 2 COLUMNAS PRINCIPALES -->
-                <div class="pos-modal-two-columns" style="display: grid; grid-template-columns: 1.15fr 1fr; gap: 1.5rem; align-items: start; margin-bottom: 1.25rem;">
+                <!-- GRID DE 3 COLUMNAS PRINCIPALES -->
+                <div class="pos-modal-three-columns">
                     
-                    <!-- COLUMNA 1: SELECCIÓN DE SECTORES / ZONAS EN CARDS + CANTIDAD + TOTAL A COBRAR -->
+                    <!-- COLUMNA 1: SECTOR / ZONA + CANTIDAD + TOTAL A COBRAR -->
                     <div>
-                        <!-- SECTORES / ZONAS EN CARDS INTERACTIVAS -->
-                        <div class="form-group-custom" style="margin-bottom: 1.25rem;">
-                            <label class="form-label-custom" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-size: 0.85rem;">
-                                <span>🎟️ Sector / Zona de Entrada <span class="required-star">*</span></span>
-                                <small style="color: #94A3B8; font-weight: 600;">Haz clic para seleccionar</small>
-                            </label>
-                            
-                            <div style="display: flex; flex-direction: column; gap: 0.6rem;" id="zoneCardsContainer">
+                        <div style="font-size: 0.78rem; font-weight: 800; color: var(--color-primary-orange); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.55rem; display: flex; align-items: center; gap: 0.35rem;">
+                            <span>🎟️</span> <span>1. Sector & Cantidad</span>
+                        </div>
+
+                        <!-- SECTORES / ZONAS EN CARDS INTERACTIVAS COMPACTAS -->
+                        <div class="form-group-custom" style="margin-bottom: 0.75rem;">
+                            <div style="display: flex; flex-direction: column; gap: 0.45rem; max-height: 210px; overflow-y: auto; padding-right: 0.2rem;" id="zoneCardsContainer">
                                 @foreach($zonesWithStats as $index => $z)
                                     <div class="zone-card-item {{ $index === 0 && $z['available'] > 0 ? 'active' : '' }} {{ $z['available'] <= 0 ? 'disabled' : '' }}"
                                          data-name="{{ $z['name'] }}"
                                          data-price="{{ $z['price'] }}"
                                          data-available="{{ $z['available'] }}"
-                                         onclick="selectZoneCard('{{ addslashes($z['name']) }}', {{ $z['price'] }}, {{ $z['available'] }}, this)">
-                                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.6rem;">
-                                            <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0; flex: 1;">
-                                                <div class="zone-radio-indicator"></div>
+                                         onclick="selectZoneCard('{{ addslashes($z['name']) }}', {{ $z['price'] }}, {{ $z['available'] }}, this)"
+                                         style="padding: 0.55rem 0.75rem; border-radius: 12px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+                                            <div style="display: flex; align-items: center; gap: 0.55rem; min-width: 0; flex: 1;">
+                                                <div class="zone-radio-indicator" style="width: 14px; height: 14px;"></div>
                                                 <div style="min-width: 0; flex: 1;">
-                                                    <strong class="zone-card-name" style="word-break: break-word;">{{ $z['name'] }}</strong>
-                                                    <div style="margin-top: 0.15rem;">
+                                                    <strong class="zone-card-name" style="font-size: 0.85rem; word-break: break-word;">{{ $z['name'] }}</strong>
+                                                    <div style="margin-top: 0.1rem;">
                                                         @if($z['available'] > 0)
-                                                            <span class="zone-stock-badge available">📦 Stock: {{ number_format($z['available']) }} libres</span>
+                                                            <span class="zone-stock-badge available" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">📦 {{ number_format($z['available']) }} libres</span>
                                                         @else
-                                                            <span class="zone-stock-badge sold-out">🚫 AGOTADO</span>
+                                                            <span class="zone-stock-badge sold-out" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">🚫 AGOTADO</span>
                                                         @endif
                                                     </div>
                                                 </div>
                                             </div>
                                             <div style="text-align: right; flex-shrink: 0;">
-                                                <span class="zone-card-price" style="white-space: nowrap;">S/ {{ number_format($z['price'], 2) }}</span>
-                                                <small style="display: block; font-size: 0.68rem; color: #94A3B8; white-space: nowrap;">por entrada</small>
+                                                <span class="zone-card-price" style="font-size: 0.95rem; white-space: nowrap;">S/ {{ number_format($z['price'], 2) }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -747,179 +778,153 @@
                         </div>
 
                         <!-- CANTIDAD DE ENTRADAS CON BOTONES NARANJAS Y QUICK PILLS -->
-                        <div class="form-group-custom" style="margin-bottom: 1.25rem; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); padding: 1rem; border-radius: 18px;">
-                            <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem;">
-                                <label class="form-label-custom" style="margin: 0; font-size: 0.85rem;">🎫 Cantidad de Entradas <span class="required-star">*</span></label>
-                                <div class="pos-quick-qty-pills" style="display: flex; gap: 0.35rem; width: 100%;">
-                                    <button type="button" class="pos-quick-btn active" id="btnQuickQty1" onclick="setPosQuantity(1)">1</button>
-                                    <button type="button" class="pos-quick-btn" id="btnQuickQty2" onclick="setPosQuantity(2)">2</button>
-                                    <button type="button" class="pos-quick-btn" id="btnQuickQty3" onclick="setPosQuantity(3)">3</button>
-                                    <button type="button" class="pos-quick-btn" id="btnQuickQty4" onclick="setPosQuantity(4)">4</button>
-                                    <button type="button" class="pos-quick-btn" id="btnQuickQty5" onclick="setPosQuantity(5)">5</button>
-                                    <button type="button" class="pos-quick-btn" id="btnQuickQty10" onclick="setPosQuantity(10)">10</button>
-                                </div>
+                        <div class="form-group-custom" style="margin-bottom: 0.75rem; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); padding: 0.65rem 0.75rem; border-radius: 14px;">
+                            <label class="form-label-custom" style="margin: 0 0 0.35rem 0; font-size: 0.775rem;">🎫 Cantidad de Boletos <span class="required-star">*</span></label>
+                            <div class="pos-quick-qty-pills" style="display: flex; gap: 0.25rem; width: 100%; margin-bottom: 0.45rem;">
+                                <button type="button" class="pos-quick-btn active" id="btnQuickQty1" onclick="setPosQuantity(1)" style="height: 30px; font-size: 0.75rem;">1</button>
+                                <button type="button" class="pos-quick-btn" id="btnQuickQty2" onclick="setPosQuantity(2)" style="height: 30px; font-size: 0.75rem;">2</button>
+                                <button type="button" class="pos-quick-btn" id="btnQuickQty3" onclick="setPosQuantity(3)" style="height: 30px; font-size: 0.75rem;">3</button>
+                                <button type="button" class="pos-quick-btn" id="btnQuickQty4" onclick="setPosQuantity(4)" style="height: 30px; font-size: 0.75rem;">4</button>
+                                <button type="button" class="pos-quick-btn" id="btnQuickQty5" onclick="setPosQuantity(5)" style="height: 30px; font-size: 0.75rem;">5</button>
+                                <button type="button" class="pos-quick-btn" id="btnQuickQty10" onclick="setPosQuantity(10)" style="height: 30px; font-size: 0.75rem;">10</button>
                             </div>
 
-                            <div style="display: flex; align-items: center; gap: 0.85rem; justify-content: center; margin-top: 0.5rem;">
-                                <button type="button" class="pos-stepper-btn orange-btn" onclick="stepPosQuantity(-1)" title="Restar una entrada">-</button>
-                                <input type="number" id="pos_quantity" class="form-input-custom pos-stepper-input" value="1" min="1" max="50" required oninput="calculatePosTotal()">
-                                <button type="button" class="pos-stepper-btn orange-btn" onclick="stepPosQuantity(1)" title="Sumar una entrada">+</button>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; justify-content: center;">
+                                <button type="button" class="pos-stepper-btn orange-btn" onclick="stepPosQuantity(-1)" title="Restar" style="width: 32px; height: 32px; font-size: 1.1rem;">-</button>
+                                <input type="number" id="pos_quantity" class="form-input-custom pos-stepper-input" value="1" min="1" max="50" required oninput="calculatePosTotal()" style="width: 65px; height: 34px; font-size: 1.1rem;">
+                                <button type="button" class="pos-stepper-btn orange-btn" onclick="stepPosQuantity(1)" title="Sumar" style="width: 32px; height: 32px; font-size: 1.1rem;">+</button>
                             </div>
                         </div>
 
-                        <!-- TOTAL A PAGAR RESALTADO PRO MAX -->
-                        <div class="pos-total-summary-card">
+                        <!-- TOTAL A PAGAR RESALTADO PRO COMPACTO -->
+                        <div class="pos-total-summary-card" style="padding: 0.7rem 0.9rem; border-radius: 14px;">
                             <div>
-                                <span style="font-size: 0.75rem; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; display: block;">Total a Cobrar</span>
-                                <small style="color: #FFFFFF; font-weight: 600; font-size: 0.85rem;" id="posUnitPriceDesc">1 entrada x S/ 0.00</small>
+                                <span style="font-size: 0.68rem; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; display: block;">Total a Cobrar</span>
+                                <small style="color: #FFFFFF; font-weight: 600; font-size: 0.775rem;" id="posUnitPriceDesc">1 entrada x S/ 0.00</small>
                             </div>
-                            <div style="font-size: 1.85rem; font-weight: 900; color: #10B981; text-shadow: 0 2px 12px rgba(16, 185, 129, 0.3); text-align: right;" id="posTotalAmountDisplay">
+                            <div style="font-size: 1.45rem; font-weight: 900; color: #10B981; text-shadow: 0 2px 12px rgba(16, 185, 129, 0.3); text-align: right;" id="posTotalAmountDisplay">
                                 S/ 0.00
                             </div>
                         </div>
                     </div>
 
-                    <!-- COLUMNA 2: DATOS DEL CLIENTE + MÉTODO DE PAGO + CALCULADORA DE VUELTO -->
+                    <!-- COLUMNA 2: DATOS DEL CLIENTE / COMPRADOR + AUTOCOMPLETADO DNI -->
                     <div>
-                        <!-- DATOS DEL CLIENTE / COMPRADOR CON CHECKBOX SIN DATOS -->
-                        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); padding: 1.15rem; border-radius: 18px; margin-bottom: 1.15rem;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
-                                <h4 style="font-size: 0.85rem; font-weight: 800; color: #FFFFFF; text-transform: uppercase; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
-                                    <span>👤</span> <span>Datos del Comprador</span>
-                                </h4>
-                                <label style="display: flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.75rem; font-weight: 800; color: var(--color-primary-orange); background: rgba(255,85,0,0.12); padding: 0.3rem 0.65rem; border-radius: 10px; border: 1px solid rgba(255,85,0,0.35); user-select: none;">
-                                    <input type="checkbox" id="chkAnonymousBuyer" onchange="toggleAnonymousBuyer(this)" style="cursor: pointer; width: 15px; height: 15px; accent-color: #FF5500;">
-                                    <span>Sin Datos (Venta Rápida)</span>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.55rem;">
+                            <div style="font-size: 0.78rem; font-weight: 800; color: var(--color-primary-orange); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 0.35rem;">
+                                <span>👤</span> <span>2. Datos del Cliente</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                <button type="button" 
+                                        onclick="clearPosClientFields()" 
+                                        title="Limpiar todos los datos del cliente" 
+                                        style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); color: #EF4444; font-size: 0.68rem; font-weight: 800; padding: 0.2rem 0.55rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem; transition: all 0.2s ease;">
+                                    <span>🗑️</span> <span>Limpiar</span>
+                                </button>
+                                <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; font-size: 0.7rem; font-weight: 800; color: var(--color-primary-orange); background: rgba(255,85,0,0.1); padding: 0.2rem 0.5rem; border-radius: 8px; border: 1px solid rgba(255,85,0,0.3); user-select: none;">
+                                    <input type="checkbox" id="chkAnonymousBuyer" onchange="toggleAnonymousBuyer(this)" style="cursor: pointer; width: 13px; height: 13px; accent-color: #FF5500;">
+                                    <span>Sin Datos</span>
                                 </label>
-                            </div>
-
-                            <!-- SELECTOR DESPLEGABLE CON BUSCADOR (PLEGADO POR DEFECTO) -->
-                            <div class="pos-client-picker" id="pos_sale_client_picker_container" style="position: relative; margin-bottom: 0.85rem;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                                    <label class="form-label-custom" style="margin: 0; font-size: 0.775rem; color: var(--color-primary-orange); display: flex; align-items: center; gap: 0.35rem; font-weight: 700;">
-                                        <span>👥</span> <span>Seleccionar Cliente Registrado (Opcional)</span>
-                                    </label>
-                                    <span id="saleClientSelectedBadge" style="display: none; font-size: 0.7rem; font-weight: 800; color: var(--color-primary-orange); background: rgba(255,85,0,0.15); border: 1px solid rgba(255,85,0,0.3); padding: 0.15rem 0.5rem; border-radius: 8px;">
-                                        ✓ Autocompletado
-                                    </span>
-                                </div>
-
-                                <!-- Botón Desplegable (Cerrado por defecto) -->
-                                <div style="display: flex; gap: 0.4rem; align-items: center;">
-                                    <button type="button" 
-                                            id="btnSaleClientDropdown" 
-                                            onclick="toggleSaleClientDropdown(event)" 
-                                            class="form-input-custom" 
-                                            style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; text-align: left; cursor: pointer; background: rgba(255, 85, 0, 0.05); border: 1.5px solid rgba(255, 85, 0, 0.35); padding: 0.6rem 0.85rem; border-radius: 12px; color: #94A3B8; font-weight: 600; font-size: 0.825rem; width: 100%;">
-                                        <span id="saleClientSelectedText" style="display: flex; align-items: center; gap: 0.45rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">
-                                            <span>🔍</span> <span>-- Seleccionar de clientes registrados --</span>
-                                        </span>
-                                        <span id="saleClientArrow" style="font-size: 0.75rem; color: var(--color-primary-orange); transition: transform 0.2s ease;">▼</span>
-                                    </button>
-                                    <button type="button" 
-                                            id="btnClearSaleClientSelection" 
-                                            onclick="clearSaleClientSelection(event)" 
-                                            title="Quitar cliente seleccionado" 
-                                            style="display: none; height: 38px; padding: 0 0.65rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 10px; color: #EF4444; font-size: 0.8rem; font-weight: 800; cursor: pointer; align-items: center; gap: 0.25rem; flex-shrink: 0;">
-                                        ✕
-                                    </button>
-                                </div>
-
-                                <!-- Panel Flotante con BUSCADOR ADENTRO -->
-                                <div id="saleClientDropdownPanel" 
-                                     style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #14141E; border: 1.5px solid rgba(255, 85, 0, 0.45); border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,0.95); z-index: 1000; padding: 0.65rem;">
-                                    
-                                    <!-- Buscador dentro del desplegable -->
-                                    <div style="position: relative; margin-bottom: 0.5rem;">
-                                        <span style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); font-size: 0.85rem; color: var(--color-primary-orange); pointer-events: none;">🔎</span>
-                                        <input type="text" 
-                                               id="pos_sale_client_search" 
-                                               class="form-input-custom" 
-                                               placeholder="Buscar por Nombre, DNI, Correo..." 
-                                               autocomplete="off"
-                                               style="padding-left: 2.2rem; font-size: 0.825rem; background: rgba(255,255,255,0.06); border-color: rgba(255, 85, 0, 0.35); height: 36px;"
-                                               oninput="filterSaleClients(this.value)">
-                                    </div>
-
-                                    <!-- Lista de Resultados -->
-                                    <div id="saleClientDropdownList" style="max-height: 200px; overflow-y: auto;">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="form-group-custom" style="margin-bottom: 0.8rem;">
-                                <label for="pos_buyer_dni" class="form-label-custom">DNI / Documento <span class="required-star" id="star_buyer_dni">*</span></label>
-                                <input type="text" id="pos_buyer_dni" class="form-input-custom" placeholder="Ej: 72819203" required style="font-weight: 700; letter-spacing: 0.5px;">
-                            </div>
-
-                            <div class="form-group-custom" style="margin-bottom: 0.8rem;">
-                                <label for="pos_buyer_name" class="form-label-custom">Nombre Completo <span class="required-star" id="star_buyer_name">*</span></label>
-                                <input type="text" id="pos_buyer_name" class="form-input-custom" placeholder="Ej: Juan Pérez Morales" required style="font-weight: 600;">
-                            </div>
-
-                            <div class="form-group-custom">
-                                <label for="pos_buyer_phone" class="form-label-custom">Teléfono / WhatsApp (Opcional)</label>
-                                <input type="text" id="pos_buyer_phone" class="form-input-custom" placeholder="Ej: +51 987654321">
                             </div>
                         </div>
 
-                        <!-- MÉTODO DE PAGO CON PILLS -->
-                        <div class="form-group-custom" style="margin-bottom: 1.15rem;">
-                            <label class="form-label-custom">Método de Pago <span class="required-star">*</span></label>
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 0.4rem;" id="paymentMethodsGroup">
-                                <div class="payment-method-pill active" onclick="selectPaymentMethod('Efectivo', this)">
+                        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); padding: 0.85rem; border-radius: 14px;">
+                            <!-- DNI CON BOTÓN "TRAER DATOS" CUANDO SE DETECTA CLIENTE -->
+                            <div class="form-group-custom" style="margin-bottom: 0.65rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                                    <label for="pos_buyer_dni" class="form-label-custom" style="margin: 0; font-size: 0.775rem;">
+                                        DNI / Documento <span class="required-star" id="star_buyer_dni">*</span>
+                                    </label>
+                                    <!-- Botón Desbloqueado "Traer Datos" cuando coincide con cliente registrado -->
+                                    <button type="button" 
+                                            id="btnFetchClientDni" 
+                                            onclick="fetchClientDataFromDni()" 
+                                            style="display: none; background: linear-gradient(135deg, #FF5500, #FF7733); border: none; color: #FFFFFF; font-size: 0.68rem; font-weight: 800; padding: 0.18rem 0.55rem; border-radius: 6px; cursor: pointer; align-items: center; gap: 0.3rem; box-shadow: 0 2px 8px rgba(255,85,0,0.4); animation: pulseGlow 1.5s infinite;">
+                                        <span>⚡</span> <span>Traer Datos</span>
+                                    </button>
+                                </div>
+                                <input type="text" id="pos_buyer_dni" class="form-input-custom" placeholder="Ej: 72819203" required style="font-weight: 700; font-size: 0.825rem; height: 36px; letter-spacing: 0.5px;" oninput="onDniInputPosSale(this.value)">
+                                <!-- Aviso visual cuando se detecta el cliente -->
+                                <div id="dniClientFoundBadge" style="display: none; font-size: 0.68rem; color: #10B981; font-weight: 700; margin-top: 0.25rem;">
+                                    ✓ Cliente encontrado: <span id="dniClientFoundName" style="color: #FFFFFF;"></span>
+                                </div>
+                            </div>
+
+                            <div class="form-group-custom" style="margin-bottom: 0.65rem;">
+                                <label for="pos_buyer_name" class="form-label-custom" style="margin-bottom: 0.25rem; font-size: 0.775rem;">Nombre Completo <span class="required-star" id="star_buyer_name">*</span></label>
+                                <input type="text" id="pos_buyer_name" class="form-input-custom" placeholder="Ej: Juan Pérez Morales" required style="font-weight: 600; font-size: 0.825rem; height: 36px;">
+                            </div>
+
+                            <div class="form-group-custom" style="margin-bottom: 0.65rem;">
+                                <label for="pos_buyer_email" class="form-label-custom" style="margin-bottom: 0.25rem; font-size: 0.775rem;">Correo Electrónico (Opcional - Enviar Entrada)</label>
+                                <input type="email" id="pos_buyer_email" class="form-input-custom" placeholder="Ej: cliente@correo.com" style="font-size: 0.8rem; height: 36px;">
+                            </div>
+
+                            <div class="form-group-custom" style="margin-bottom: 0;">
+                                <label for="pos_buyer_phone" class="form-label-custom" style="margin-bottom: 0.25rem; font-size: 0.775rem;">Teléfono / WhatsApp (Opcional)</label>
+                                <input type="text" id="pos_buyer_phone" class="form-input-custom" placeholder="Ej: +51 987654321" style="font-size: 0.8rem; height: 36px;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- COLUMNA 3: MÉTODO DE PAGO (SOLO EFECTIVO Y CULQI) + CALCULADORA DE VUELTO -->
+                    <div>
+                        <div style="font-size: 0.78rem; font-weight: 800; color: var(--color-primary-orange); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.55rem; display: flex; align-items: center; gap: 0.35rem;">
+                            <span>💳</span> <span>3. Método de Pago</span>
+                        </div>
+
+                        <!-- MÉTODO DE PAGO CON PILLS: SOLO EFECTIVO Y CULQI -->
+                        <div class="form-group-custom" style="margin-bottom: 0.75rem;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem;" id="paymentMethodsGroup">
+                                <div class="payment-method-pill active" onclick="selectPaymentMethod('Efectivo', this)" style="padding: 0.55rem 0.5rem; font-size: 0.825rem; border-radius: 10px;">
                                     <span>💵</span> <span>Efectivo</span>
                                 </div>
-                                <div class="payment-method-pill" onclick="selectPaymentMethod('Yape', this)">
-                                    <span>📱</span> <span>Yape</span>
-                                </div>
-                                <div class="payment-method-pill" onclick="selectPaymentMethod('Plin', this)">
-                                    <span>🟣</span> <span>Plin</span>
-                                </div>
-                                <div class="payment-method-pill" onclick="selectPaymentMethod('Tarjeta', this)">
-                                    <span>💳</span> <span>Tarjeta</span>
-                                </div>
-                                <div class="payment-method-pill" onclick="selectPaymentMethod('Transferencia', this)">
-                                    <span>🏦</span> <span>Transf.</span>
+                                <div class="payment-method-pill" onclick="selectPaymentMethod('Culqi', this)" style="padding: 0.55rem 0.5rem; font-size: 0.825rem; border-radius: 10px;">
+                                    <span>💳</span> <span>Culqi</span>
                                 </div>
                             </div>
                             <input type="hidden" id="pos_payment_method" value="Efectivo">
                         </div>
 
                         <!-- CALCULADORA DE VUELTO / CAMBIO (SOLO EN EFECTIVO) -->
-                        <div id="cashCalculatorBox" style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 18px; padding: 1rem 0.85rem; margin-bottom: 1.15rem;">
-                            <div style="display: flex; flex-direction: column; gap: 0.45rem; margin-bottom: 0.65rem;">
-                                <label class="form-label-custom" style="margin: 0; font-size: 0.85rem;">💵 Monto Recibido del Cliente <span class="required-star">*</span></label>
-                                <div style="display: flex; gap: 0.3rem; flex-wrap: wrap; width: 100%;">
-                                    <button type="button" class="pos-quick-btn" onclick="setCashPaid(10)">S/ 10</button>
-                                    <button type="button" class="pos-quick-btn" onclick="setCashPaid(20)">S/ 20</button>
-                                    <button type="button" class="pos-quick-btn" onclick="setCashPaid(50)">S/ 50</button>
-                                    <button type="button" class="pos-quick-btn" onclick="setCashPaid(100)">S/ 100</button>
-                                    <button type="button" class="pos-quick-btn" onclick="setCashPaid(200)">S/ 200</button>
-                                    <button type="button" class="pos-quick-btn" onclick="setCashPaid('exact')">Exacto</button>
-                                </div>
+                        <div id="cashCalculatorBox" style="background: rgba(255,255,255,0.02); border: 1.5px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 0.75rem; margin-bottom: 0.75rem;">
+                            <label class="form-label-custom" style="margin: 0 0 0.3rem 0; font-size: 0.775rem;">💵 Monto Recibido <span class="required-star">*</span></label>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.25rem; margin-bottom: 0.45rem;">
+                                <button type="button" class="pos-quick-btn" onclick="setCashPaid(10)" style="height: 28px; font-size: 0.725rem; min-width: 0;">S/ 10</button>
+                                <button type="button" class="pos-quick-btn" onclick="setCashPaid(20)" style="height: 28px; font-size: 0.725rem; min-width: 0;">S/ 20</button>
+                                <button type="button" class="pos-quick-btn" onclick="setCashPaid(50)" style="height: 28px; font-size: 0.725rem; min-width: 0;">S/ 50</button>
+                                <button type="button" class="pos-quick-btn" onclick="setCashPaid(100)" style="height: 28px; font-size: 0.725rem; min-width: 0;">S/ 100</button>
+                                <button type="button" class="pos-quick-btn" onclick="setCashPaid(200)" style="height: 28px; font-size: 0.725rem; min-width: 0;">S/ 200</button>
+                                <button type="button" class="pos-quick-btn" onclick="setCashPaid('exact')" style="height: 28px; font-size: 0.725rem; min-width: 0;">Exacto</button>
                             </div>
 
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; align-items: center;">
+                            <div style="display: flex; flex-direction: column; gap: 0.35rem;">
                                 <div>
-                                    <input type="number" id="pos_amount_paid" class="form-input-custom" step="0.50" min="0" placeholder="0.00" style="font-size: 1.15rem; font-weight: 800;" oninput="calculateChange()">
+                                    <input type="number" id="pos_amount_paid" class="form-input-custom" step="0.50" min="0" placeholder="0.00" style="font-size: 1.05rem; font-weight: 800; height: 35px;" oninput="calculateChange()">
                                 </div>
-                                <div style="background: rgba(0,0,0,0.5); padding: 0.55rem 0.75rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: right;">
-                                    <span style="font-size: 0.65rem; color: #94A3B8; font-weight: 700; display: block; text-transform: uppercase;">Cambio / Vuelto:</span>
-                                    <strong style="font-size: 1.15rem; font-weight: 900; color: #10B981;" id="posChangeAmountDisplay">S/ 0.00</strong>
+                                <div style="background: rgba(0,0,0,0.45); padding: 0.45rem 0.65rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 0.68rem; color: #94A3B8; font-weight: 700; text-transform: uppercase;">Vuelto:</span>
+                                    <strong style="font-size: 1.05rem; font-weight: 900; color: #10B981;" id="posChangeAmountDisplay">S/ 0.00</strong>
                                 </div>
                             </div>
                         </div>
 
+                        <!-- TARJETA INFORMATIVA COMPACTA -->
+                        <div style="background: rgba(255,85,0,0.04); border: 1px solid rgba(255,85,0,0.18); border-radius: 12px; padding: 0.55rem 0.7rem; font-size: 0.725rem; color: #94A3B8;">
+                            <div style="display: flex; align-items: center; gap: 0.35rem; color: var(--color-primary-orange); font-weight: 800; margin-bottom: 0.15rem;">
+                                <span>⚡</span> <span>Emisión Inmediata</span>
+                            </div>
+                            <div>Generación en vivo de recibo térmico y código QR de seguridad.</div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- BOTONES DE ACCIÓN DEL FOOTER -->
-                <div class="pos-modal-footer-actions" style="display: flex; gap: 0.75rem; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.15rem;">
-                    <button type="button" class="btn btn-secondary" onclick="closePosSaleModal()" style="padding: 0.75rem 1.4rem; font-weight: 700;">
+                <div class="pos-modal-footer-actions" style="display: flex; gap: 0.6rem; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.75rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closePosSaleModal()" style="padding: 0.55rem 1.15rem; font-size: 0.85rem; font-weight: 700; border-radius: 10px;">
                         Cancelar
                     </button>
-                    <button type="submit" id="btnSubmitPosSale" class="btn btn-primary btn-save-settings" style="padding: 0.75rem 1.8rem; font-size: 0.95rem; font-weight: 900; box-shadow: 0 6px 20px rgba(255, 85, 0, 0.45);">
+                    <button type="submit" id="btnSubmitPosSale" class="btn btn-primary btn-save-settings" style="padding: 0.55rem 1.45rem; font-size: 0.875rem; font-weight: 900; border-radius: 10px; box-shadow: 0 4px 14px rgba(255, 85, 0, 0.4);">
                         🧾 Confirmar Venta & Imprimir
                     </button>
                 </div>
@@ -1587,6 +1592,7 @@
 
             const dniInput = document.getElementById('pos_buyer_dni');
             const nameInput = document.getElementById('pos_buyer_name');
+            const emailInput = document.getElementById('pos_buyer_email');
             const phoneInput = document.getElementById('pos_buyer_phone');
             const textDisplay = document.getElementById('saleClientSelectedText');
             const badge = document.getElementById('saleClientSelectedBadge');
@@ -1594,6 +1600,7 @@
 
             if (dniInput) dniInput.value = client.dni || '';
             if (nameInput) nameInput.value = client.name || '';
+            if (emailInput) emailInput.value = client.email || '';
             if (phoneInput) phoneInput.value = client.phone || '';
 
             if (textDisplay) {
@@ -1605,7 +1612,7 @@
 
             closeSaleClientDropdown();
 
-            [dniInput, nameInput, phoneInput].forEach(inp => {
+            [dniInput, nameInput, emailInput, phoneInput].forEach(inp => {
                 if (inp) {
                     inp.style.transition = 'box-shadow 0.3s ease, border-color 0.3s ease';
                     inp.style.borderColor = 'var(--color-primary-orange)';
@@ -1627,15 +1634,133 @@
             const textDisplay = document.getElementById('saleClientSelectedText');
             const badge = document.getElementById('saleClientSelectedBadge');
             const btnClear = document.getElementById('btnClearSaleClientSelection');
+            const btnFetch = document.getElementById('btnFetchClientDni');
+            const badgeFound = document.getElementById('dniClientFoundBadge');
 
             if (searchInput) searchInput.value = '';
             if (textDisplay) {
-                textDisplay.innerHTML = `<span>🔍</span> <span>-- Seleccionar de clientes registrados --</span>`;
+                textDisplay.innerHTML = `<span>🔍</span> <span>Buscar cliente registrado...</span>`;
             }
             if (badge) badge.style.display = 'none';
             if (btnClear) btnClear.style.display = 'none';
+            if (btnFetch) btnFetch.style.display = 'none';
+            if (badgeFound) badgeFound.style.display = 'none';
+            posMatchedClientByDni = null;
 
             closeSaleClientDropdown();
+        }
+
+        // CONTROL DE DETECCIÓN Y BOTÓN "TRAER DATOS" POR DNI
+        let posMatchedClientByDni = null;
+
+        function onDniInputPosSale(val) {
+            const cleanDni = (val || '').trim().toLowerCase();
+            const btnFetch = document.getElementById('btnFetchClientDni');
+            const badgeFound = document.getElementById('dniClientFoundBadge');
+            const nameFound = document.getElementById('dniClientFoundName');
+
+            posMatchedClientByDni = null;
+
+            if (cleanDni && cleanDni.length >= 3 && cleanDni !== '00000000' && window.posExistingClients && Array.isArray(window.posExistingClients)) {
+                const match = window.posExistingClients.find(c => c.dni && c.dni.toLowerCase().trim() === cleanDni);
+                if (match) {
+                    posMatchedClientByDni = match;
+                    if (btnFetch) {
+                        btnFetch.style.display = 'inline-flex';
+                        const shortName = (match.name || '').split(' ')[0];
+                        btnFetch.innerHTML = `<span>⚡</span> <span>Traer Datos (${escapePosHtml(shortName)})</span>`;
+                        btnFetch.style.background = 'linear-gradient(135deg, #FF5500, #FF7733)';
+                    }
+                    if (badgeFound && nameFound) {
+                        nameFound.textContent = match.name;
+                        badgeFound.style.display = 'block';
+                    }
+                    return;
+                }
+            }
+
+            if (btnFetch) btnFetch.style.display = 'none';
+            if (badgeFound) badgeFound.style.display = 'none';
+        }
+
+        function fetchClientDataFromDni() {
+            if (!posMatchedClientByDni) return;
+            const client = posMatchedClientByDni;
+
+            const nameInput = document.getElementById('pos_buyer_name');
+            const emailInput = document.getElementById('pos_buyer_email');
+            const phoneInput = document.getElementById('pos_buyer_phone');
+            const textDisplay = document.getElementById('saleClientSelectedText');
+            const btnFetch = document.getElementById('btnFetchClientDni');
+
+            if (nameInput) nameInput.value = client.name || '';
+            if (emailInput) emailInput.value = client.email || '';
+            if (phoneInput) phoneInput.value = client.phone || '';
+
+            if (textDisplay) {
+                textDisplay.innerHTML = `<span style="color: var(--color-primary-orange); font-weight: 800;">👤 ${escapePosHtml(client.name)}</span>`;
+            }
+
+            if (btnFetch) {
+                btnFetch.innerHTML = `<span>✓</span> <span>Datos Cargados</span>`;
+                btnFetch.style.background = 'linear-gradient(135deg, #10B981, #059669)';
+                setTimeout(() => {
+                    if (btnFetch) btnFetch.style.display = 'none';
+                }, 2000);
+            }
+
+            [nameInput, emailInput, phoneInput].forEach(inp => {
+                if (inp) {
+                    inp.style.transition = 'box-shadow 0.3s ease, border-color 0.3s ease';
+                    inp.style.borderColor = 'var(--color-primary-orange)';
+                    inp.style.boxShadow = '0 0 12px rgba(255, 85, 0, 0.4)';
+                    setTimeout(() => {
+                        inp.style.borderColor = '';
+                        inp.style.boxShadow = '';
+                    }, 1200);
+                }
+            });
+        }
+
+        function clearPosClientFields() {
+            const dniInput = document.getElementById('pos_buyer_dni');
+            const nameInput = document.getElementById('pos_buyer_name');
+            const emailInput = document.getElementById('pos_buyer_email');
+            const phoneInput = document.getElementById('pos_buyer_phone');
+            const btnFetch = document.getElementById('btnFetchClientDni');
+            const badgeFound = document.getElementById('dniClientFoundBadge');
+            const chkAnon = document.getElementById('chkAnonymousBuyer');
+
+            if (chkAnon && chkAnon.checked) {
+                chkAnon.checked = false;
+                toggleAnonymousBuyer(chkAnon);
+            }
+
+            if (dniInput) {
+                dniInput.value = '';
+                dniInput.readOnly = false;
+                dniInput.style.opacity = '1';
+                dniInput.focus();
+            }
+            if (nameInput) {
+                nameInput.value = '';
+                nameInput.readOnly = false;
+                nameInput.style.opacity = '1';
+            }
+            if (emailInput) {
+                emailInput.value = '';
+                emailInput.readOnly = false;
+                emailInput.style.opacity = '1';
+            }
+            if (phoneInput) {
+                phoneInput.value = '';
+                phoneInput.readOnly = false;
+                phoneInput.style.opacity = '1';
+            }
+
+            if (btnFetch) btnFetch.style.display = 'none';
+            if (badgeFound) badgeFound.style.display = 'none';
+            posMatchedClientByDni = null;
         }
 
         // Cerrar dropdowns de autocompletado al hacer click fuera
@@ -1647,6 +1772,53 @@
                 closeSaleClientDropdown();
             }
         });
+
+        // Auto-detección inteligente al escribir DNI o Correo en los formularios POS
+        function setupPosClientAutoDetect() {
+            const bindAutoDetect = (dniId, nameId, emailId, phoneId) => {
+                const dniEl = document.getElementById(dniId);
+                const nameEl = document.getElementById(nameId);
+                const emailEl = document.getElementById(emailId);
+                const phoneEl = document.getElementById(phoneId);
+
+                const checkMatch = (val, type) => {
+                    if (!val || val.length < 3 || !window.posExistingClients || !Array.isArray(window.posExistingClients)) return;
+                    const cleanVal = val.toLowerCase().trim();
+                    let match = null;
+
+                    if (type === 'dni' && cleanVal !== '00000000') {
+                        match = window.posExistingClients.find(c => c.dni && c.dni.toLowerCase().trim() === cleanVal);
+                    } else if (type === 'email' && cleanVal.includes('@')) {
+                        match = window.posExistingClients.find(c => c.email && c.email.toLowerCase().trim() === cleanVal);
+                    }
+
+                    if (match) {
+                        if (nameEl && (!nameEl.value || nameEl.value === 'CLIENTE VARIOS')) nameEl.value = match.name || '';
+                        if (dniEl && (!dniEl.value || dniEl.value === '00000000') && match.dni) dniEl.value = match.dni;
+                        if (emailEl && !emailEl.value && match.email) emailEl.value = match.email;
+                        if (phoneEl && (!phoneEl.value || phoneEl.value === '-') && match.phone) phoneEl.value = match.phone;
+                    }
+                };
+
+                if (dniEl) {
+                    dniEl.addEventListener('blur', () => checkMatch(dniEl.value, 'dni'));
+                    dniEl.addEventListener('change', () => checkMatch(dniEl.value, 'dni'));
+                }
+                if (emailEl) {
+                    emailEl.addEventListener('blur', () => checkMatch(emailEl.value, 'email'));
+                    emailEl.addEventListener('change', () => checkMatch(emailEl.value, 'email'));
+                }
+            };
+
+            bindAutoDetect('pos_buyer_dni', 'pos_buyer_name', 'pos_buyer_email', 'pos_buyer_phone');
+            bindAutoDetect('pos_courtesy_dni', 'pos_courtesy_name', 'pos_courtesy_email', 'pos_courtesy_phone');
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupPosClientAutoDetect);
+        } else {
+            setupPosClientAutoDetect();
+        }
 
         let currentTotalToPay = 0;
         let selectedZoneName = "{{ $zonesWithStats[0]['name'] ?? '' }}";
@@ -1684,6 +1856,12 @@
                 modal.classList.add('active');
                 closeSaleClientDropdown();
                 
+                const btnFetch = document.getElementById('btnFetchClientDni');
+                const badgeFound = document.getElementById('dniClientFoundBadge');
+                if (btnFetch) btnFetch.style.display = 'none';
+                if (badgeFound) badgeFound.style.display = 'none';
+                posMatchedClientByDni = null;
+
                 // Auto-seleccionar primer sector disponible si ninguno está activo
                 const activeCard = document.querySelector('.zone-card-item.active') || document.querySelector('.zone-card-item:not(.disabled)');
                 if (activeCard) {
@@ -1694,6 +1872,10 @@
                 } else {
                     calculatePosTotal();
                 }
+
+                // Por defecto seleccionar Efectivo
+                const cashPill = document.querySelector('#paymentMethodsGroup .payment-method-pill');
+                if (cashPill) selectPaymentMethod('Efectivo', cashPill);
 
                 setTimeout(() => {
                     document.getElementById('pos_buyer_dni')?.focus();
@@ -1993,11 +2175,18 @@
             const isAnon = chk.checked;
             const dniInput = document.getElementById('pos_buyer_dni');
             const nameInput = document.getElementById('pos_buyer_name');
+            const emailInput = document.getElementById('pos_buyer_email');
             const phoneInput = document.getElementById('pos_buyer_phone');
             const starDni = document.getElementById('star_buyer_dni');
             const starName = document.getElementById('star_buyer_name');
+            const btnFetch = document.getElementById('btnFetchClientDni');
+            const badgeFound = document.getElementById('dniClientFoundBadge');
 
             if (isAnon) {
+                posMatchedClientByDni = null;
+                if (btnFetch) btnFetch.style.display = 'none';
+                if (badgeFound) badgeFound.style.display = 'none';
+
                 if (dniInput) {
                     dniInput.value = '00000000';
                     dniInput.readOnly = true;
@@ -2009,6 +2198,11 @@
                     nameInput.readOnly = true;
                     nameInput.style.opacity = '0.55';
                     nameInput.required = false;
+                }
+                if (emailInput) {
+                    emailInput.value = '';
+                    emailInput.readOnly = true;
+                    emailInput.style.opacity = '0.55';
                 }
                 if (phoneInput) {
                     phoneInput.value = '-';
@@ -2030,6 +2224,11 @@
                     nameInput.readOnly = false;
                     nameInput.style.opacity = '1';
                     nameInput.required = true;
+                }
+                if (emailInput) {
+                    emailInput.value = '';
+                    emailInput.readOnly = false;
+                    emailInput.style.opacity = '1';
                 }
                 if (phoneInput) {
                     phoneInput.value = '';
@@ -2192,19 +2391,41 @@
             }, 300);
         }
 
+        function getFullAssetUrl(urlStr) {
+            if (!urlStr || typeof urlStr !== 'string') return '';
+            if (urlStr.startsWith('data:')) return urlStr;
+
+            let clean = urlStr;
+            try {
+                if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) {
+                    const parsed = new URL(urlStr);
+                    clean = parsed.pathname;
+                }
+            } catch(e) {}
+
+            clean = clean.replace(/^\//, '');
+
+            if (clean.includes('storage/')) {
+                clean = 'storage/' + clean.split('storage/').pop();
+            } else if (clean.includes('images/')) {
+                clean = 'images/' + clean.split('images/').pop();
+            } else if (clean.startsWith('events/') || clean.startsWith('templates/') || clean.startsWith('media/') || clean.startsWith('uploads/')) {
+                clean = 'storage/' + clean;
+            } else if (clean.includes('media/')) {
+                clean = 'storage/media/' + clean.split('media/').pop();
+            }
+
+            return window.location.origin + '/' + clean;
+        }
+
         async function preloadPosImageAsDataUrl(url, type = 'banner') {
             if (!url || typeof url !== 'string' || url.trim() === '') return '';
             if (url.startsWith('data:')) return url;
+            
+            const targetUrl = getFullAssetUrl(url) || url;
+
             try {
-                if (url.startsWith('http://') || url.startsWith('https://')) {
-                    const parsed = new URL(url);
-                    if (parsed.origin !== window.location.origin) {
-                        return url;
-                    }
-                }
-            } catch(e) {}
-            try {
-                const response = await fetch(url, { mode: 'cors', cache: 'force-cache' });
+                const response = await fetch(targetUrl, { cache: 'force-cache' });
                 if (response.ok) {
                     const blob = await response.blob();
                     const dataUrl = await new Promise((resolve, reject) => {
@@ -2216,6 +2437,7 @@
                     if (dataUrl && dataUrl.startsWith('data:image')) return dataUrl;
                 }
             } catch (e) {}
+
             try {
                 const dataUrl = await new Promise((resolve, reject) => {
                     const img = new Image();
@@ -2232,12 +2454,12 @@
                             resolve(canvas.toDataURL('image/jpeg', 0.92));
                         } catch (err) { reject(err); }
                     };
-                    img.onerror = () => { clearTimeout(timeout); resolve(url); };
-                    img.src = url;
+                    img.onerror = () => { clearTimeout(timeout); resolve(targetUrl); };
+                    img.src = targetUrl;
                 });
-                return dataUrl || url;
+                return dataUrl || targetUrl;
             } catch (e) {
-                return url;
+                return targetUrl;
             }
         }
 
@@ -2598,6 +2820,176 @@
             `;
         }
 
+        // Generador base de documento PDF con Canva Studio (compartido)
+        async function generatePosTicketPdfDoc(sale) {
+            const eventTitle = "{{ addslashes($event->title) }}";
+            const eventVenue = "{{ addslashes($event->venue_name ?? '') }}";
+            const eventAddress = "{{ addslashes($event->address ?? '') }}";
+            const eventDate = "{{ !empty($event->event_date) ? (is_string($event->event_date) ? substr($event->event_date, 0, 10) : $event->event_date->format('d/m/Y')) : '' }}";
+            const eventTime = "{{ addslashes($event->event_time ?? '') }}";
+            const logoWhite = "{{ asset($settings->logo_white ?? 'images/logo-white.png') }}";
+
+            const template = @json($event->template ?? null) || { id: 1, name: 'Plantilla 1', bg_color: '#FFFFFF', positions: {}, elements: [] };
+            const bgColor = template.bg_color || '#FFFFFF';
+
+            function getFullAssetUrl(urlStr) {
+                if (!urlStr) return null;
+                if (urlStr.startsWith('data:')) return urlStr;
+                if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) {
+                    return urlStr;
+                }
+
+                let clean = urlStr.replace(/^\//, '');
+                if (clean.includes('storage/')) {
+                    clean = 'storage/' + clean.split('storage/').pop();
+                } else if (clean.includes('images/')) {
+                    clean = 'images/' + clean.split('images/').pop();
+                } else if (clean.startsWith('events/') || clean.startsWith('templates/') || clean.startsWith('media/') || clean.startsWith('uploads/')) {
+                    clean = 'storage/' + clean;
+                }
+
+                return window.location.origin + '/' + clean;
+            }
+
+            const bgImgSrc = template.background ? getFullAssetUrl(template.background) : (template.bg_image ? getFullAssetUrl(template.bg_image) : null);
+            const bannerImgSrc = "{{ !empty($event->banner_image) ? asset($event->banner_image) : '' }}";
+            const boletoSrc = getFullAssetUrl('/images/Boleto.jpg');
+
+            const [bgDataUrl, bannerDataUrl, logoDataUrl, boletoDataUrl] = await Promise.all([
+                bgImgSrc ? preloadPosImageAsDataUrl(bgImgSrc, 'bg') : Promise.resolve(''),
+                bannerImgSrc ? preloadPosImageAsDataUrl(bannerImgSrc, 'banner') : Promise.resolve(''),
+                logoWhite ? preloadPosImageAsDataUrl(logoWhite, 'logo') : Promise.resolve(''),
+                preloadPosImageAsDataUrl(boletoSrc, 'boleto')
+            ]);
+
+            const assetMap = {
+                bgDataUrl: bgDataUrl,
+                bannerDataUrl: bannerDataUrl,
+                logoDataUrl: logoDataUrl
+            };
+
+            let tplElements = template.elements || [];
+            if ((!Array.isArray(tplElements) || tplElements.length === 0) && template.positions) {
+                let rawPos = typeof template.positions === 'string' ? JSON.parse(template.positions) : template.positions;
+                tplElements = convertPositionsToElements(rawPos);
+            }
+
+            for (let el of tplElements) {
+                if (el.src) {
+                    const fullUrl = getFullAssetUrl(el.src);
+                    el.src = await preloadPosImageAsDataUrl(fullUrl, 'el_' + el.id);
+                }
+            }
+
+            const ticketsList = (sale.tickets_data && Array.isArray(sale.tickets_data) && sale.tickets_data.length > 0)
+                ? sale.tickets_data
+                : Array.from({ length: parseInt(sale.quantity || 1, 10) }, (_, i) => ({
+                    ticket_code: `TK-${sale.receipt_number}-${i + 1}`,
+                    ticket_number: i + 1,
+                    zone: sale.zone_name,
+                    price: sale.unit_price,
+                    validation_hash: null,
+                    qr_payload: null
+                }));
+
+            const jsPdfObj = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF || null);
+            let pdf = null;
+            if (jsPdfObj) {
+                pdf = new jsPdfObj({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+            }
+
+            for (let i = 0; i < ticketsList.length; i++) {
+                const tItem = ticketsList[i];
+                let numSeq = tItem.ticket_number || (sale.id ? (sale.id + i) : (i + 1));
+                if (typeof numSeq === 'string') {
+                    numSeq = parseInt(numSeq.replace(/[^0-9]/g, ''), 10) || (i + 1);
+                }
+                const ticketNumStr = 'N° ' + String(numSeq).padStart(5, '0');
+
+                let hashVal = tItem.validation_hash || sale.validation_hash;
+                if (!hashVal) {
+                    hashVal = 'VG' + String(Math.abs(((sale.receipt_number || 'REC') + '_' + (i + 1)).split('').reduce((a, b) => { a = ((a << 5) - a) + b.charCodeAt(0); return a & a; }, 0))).padStart(8, '0').substring(0, 8).toUpperCase();
+                }
+
+                const qrPayload = tItem.qr_payload || sale.qr_payload || `VIVEGO|${sale.receipt_number || 'REC'}|EVT-${sale.event_id || eventId}|DNI-${sale.buyer_dni || '00000000'}|TICK-${numSeq}|${hashVal}`;
+                const qrDataUrl = generateQrBase64(qrPayload);
+
+                const isCourtesy = (sale.payment_method === 'Cortesía' || sale.payment_method === 'cortesia' || tItem.is_courtesy);
+                const unitPriceVal = isCourtesy ? '0.00' : parseFloat(tItem.price || sale.unit_price || sale.total_amount).toFixed(2);
+                const priceDisplay = isCourtesy ? 'CORTESÍA' : ('S/ ' + unitPriceVal);
+
+                const dynamicData = {
+                    title: eventTitle,
+                    venue: eventVenue,
+                    city: eventAddress,
+                    date: eventDate,
+                    time: eventTime,
+                    zone: tItem.zone || sale.zone_name,
+                    price: priceDisplay,
+                    buyer_name: sale.buyer_name || (isCourtesy ? 'INVITADO DE CORTESÍA' : 'CLIENTE VARIOS'),
+                    buyer_dni: sale.buyer_dni || '00000000',
+                    ticket_number: ticketNumStr,
+                    hash: hashVal,
+                    qr_data_url: qrDataUrl
+                };
+
+                const canvasHtml = renderTicketCanvasContent({ ...template, elements: tplElements }, dynamicData, assetMap);
+
+                const pdfContainer = document.createElement('div');
+                pdfContainer.className = 'posPdfSingleCanvas';
+                pdfContainer.style.position = 'fixed';
+                pdfContainer.style.left = '-9999px';
+                pdfContainer.style.top = '0';
+                pdfContainer.style.width = '794px';
+                pdfContainer.style.height = '1123px';
+                pdfContainer.style.zIndex = '999999';
+                pdfContainer.style.backgroundImage = `url('${boletoDataUrl || boletoSrc}')`;
+                pdfContainer.style.backgroundSize = '100% 100%';
+                pdfContainer.style.backgroundPosition = 'center';
+                pdfContainer.style.fontFamily = "'Plus Jakarta Sans', sans-serif";
+                pdfContainer.style.boxSizing = 'border-box';
+                pdfContainer.style.overflow = 'hidden';
+
+                pdfContainer.innerHTML = `
+                    <div class="ticket-canvas-inner" style="width: 771px; height: 370px; position: absolute; top: 12px; left: 11.5px; background: ${bgColor}; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; border-radius: 18px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15); box-sizing: border-box;">
+                        ${canvasHtml}
+                    </div>
+                `;
+
+                document.body.appendChild(pdfContainer);
+
+                if (document.fonts && document.fonts.ready) {
+                    await document.fonts.ready;
+                }
+                await new Promise(r => setTimeout(r, 200));
+
+                console.log(`[CanvaStudio POS PDF] Rendering A4 page ${i + 1}/${ticketsList.length}...`);
+                const canvas = await html2canvas(pdfContainer, {
+                    scale: 2.5,
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#FFFFFF',
+                    logging: false
+                });
+
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                pdfContainer.remove();
+
+                if (pdf) {
+                    if (i > 0) {
+                        pdf.addPage('a4', 'portrait');
+                    }
+                    pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+                }
+            }
+
+            return { pdf, ticketsList };
+        }
+
         // Descargar PDF individual / multipágina para la venta en Taquilla (POS)
         async function downloadPosSalePdf(saleOrId) {
             const sale = getSaleObject(saleOrId);
@@ -2618,173 +3010,7 @@
             });
 
             try {
-                const eventTitle = "{{ addslashes($event->title) }}";
-                const eventVenue = "{{ addslashes($event->venue_name ?? '') }}";
-                const eventAddress = "{{ addslashes($event->address ?? '') }}";
-                const eventDate = "{{ !empty($event->event_date) ? (is_string($event->event_date) ? substr($event->event_date, 0, 10) : $event->event_date->format('d/m/Y')) : '' }}";
-                const eventTime = "{{ addslashes($event->event_time ?? '') }}";
-                const logoWhite = "{{ asset($settings->logo_white ?? 'images/logo-white.png') }}";
-
-                const template = @json($event->template ?? null) || { id: 1, name: 'Plantilla 1', bg_color: '#FFFFFF', positions: {}, elements: [] };
-                const bgColor = template.bg_color || '#FFFFFF';
-
-                function getFullAssetUrl(urlStr) {
-                    if (!urlStr) return null;
-                    if (urlStr.startsWith('data:')) return urlStr;
-                    if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) {
-                        return urlStr;
-                    }
-
-                    let clean = urlStr.replace(/^\//, '');
-                    if (clean.includes('storage/')) {
-                        clean = 'storage/' + clean.split('storage/').pop();
-                    } else if (clean.includes('images/')) {
-                        clean = 'images/' + clean.split('images/').pop();
-                    } else if (clean.startsWith('events/') || clean.startsWith('templates/') || clean.startsWith('media/') || clean.startsWith('uploads/')) {
-                        clean = 'storage/' + clean;
-                    }
-
-                    return window.location.origin + '/' + clean;
-                }
-
-                // Precargar imágenes base
-                const bgImgSrc = template.background ? getFullAssetUrl(template.background) : (template.bg_image ? getFullAssetUrl(template.bg_image) : null);
-                const bannerImgSrc = "{{ !empty($event->banner_image) ? asset($event->banner_image) : '' }}";
-                const boletoSrc = getFullAssetUrl('/images/Boleto.jpg');
-
-                const [bgDataUrl, bannerDataUrl, logoDataUrl, boletoDataUrl] = await Promise.all([
-                    bgImgSrc ? preloadPosImageAsDataUrl(bgImgSrc, 'bg') : Promise.resolve(''),
-                    bannerImgSrc ? preloadPosImageAsDataUrl(bannerImgSrc, 'banner') : Promise.resolve(''),
-                    logoWhite ? preloadPosImageAsDataUrl(logoWhite, 'logo') : Promise.resolve(''),
-                    preloadPosImageAsDataUrl(boletoSrc, 'boleto')
-                ]);
-
-                const assetMap = {
-                    bgDataUrl: bgDataUrl,
-                    bannerDataUrl: bannerDataUrl,
-                    logoDataUrl: logoDataUrl
-                };
-
-                // Pre-procesar URLs en los elementos de la plantilla
-                let tplElements = template.elements || [];
-                if ((!Array.isArray(tplElements) || tplElements.length === 0) && template.positions) {
-                    let rawPos = typeof template.positions === 'string' ? JSON.parse(template.positions) : template.positions;
-                    tplElements = convertPositionsToElements(rawPos);
-                }
-
-                // Precargar todas las imágenes individuales de los elementos (incluyendo banner ticket subidos)
-                for (let el of tplElements) {
-                    if (el.src) {
-                        const fullUrl = getFullAssetUrl(el.src);
-                        el.src = await preloadPosImageAsDataUrl(fullUrl, 'el_' + el.id);
-                    }
-                }
-
-                const ticketsList = (sale.tickets_data && Array.isArray(sale.tickets_data) && sale.tickets_data.length > 0)
-                    ? sale.tickets_data
-                    : Array.from({ length: parseInt(sale.quantity || 1, 10) }, (_, i) => ({
-                        ticket_code: `TK-${sale.receipt_number}-${i + 1}`,
-                        ticket_number: i + 1,
-                        zone: sale.zone_name,
-                        price: sale.unit_price,
-                        validation_hash: null,
-                        qr_payload: null
-                    }));
-
-                const jsPdfObj = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF || null);
-                let pdf = null;
-                if (jsPdfObj) {
-                    pdf = new jsPdfObj({
-                        orientation: 'portrait',
-                        unit: 'mm',
-                        format: 'a4'
-                    });
-                }
-
-                for (let i = 0; i < ticketsList.length; i++) {
-                    const tItem = ticketsList[i];
-                    let numSeq = tItem.ticket_number || (sale.id ? (sale.id + i) : (i + 1));
-                    if (typeof numSeq === 'string') {
-                        numSeq = parseInt(numSeq.replace(/[^0-9]/g, ''), 10) || (i + 1);
-                    }
-                    const ticketNumStr = 'N° ' + String(numSeq).padStart(5, '0');
-
-                    let hashVal = tItem.validation_hash || sale.validation_hash;
-                    if (!hashVal) {
-                        hashVal = 'VG' + String(Math.abs(((sale.receipt_number || 'REC') + '_' + (i + 1)).split('').reduce((a, b) => { a = ((a << 5) - a) + b.charCodeAt(0); return a & a; }, 0))).padStart(8, '0').substring(0, 8).toUpperCase();
-                    }
-
-                    const qrPayload = tItem.qr_payload || sale.qr_payload || `VIVEGO|${sale.receipt_number || 'REC'}|EVT-${sale.event_id || eventId}|DNI-${sale.buyer_dni || '00000000'}|TICK-${numSeq}|${hashVal}`;
-                    const qrDataUrl = generateQrBase64(qrPayload);
-
-                    const isCourtesy = (sale.payment_method === 'Cortesía' || sale.payment_method === 'cortesia' || tItem.is_courtesy);
-                    const unitPriceVal = isCourtesy ? '0.00' : parseFloat(tItem.price || sale.unit_price || sale.total_amount).toFixed(2);
-                    const priceDisplay = isCourtesy ? 'CORTESÍA' : ('S/ ' + unitPriceVal);
-
-                    const dynamicData = {
-                        title: eventTitle,
-                        venue: eventVenue,
-                        city: eventAddress,
-                        date: eventDate,
-                        time: eventTime,
-                        zone: tItem.zone || sale.zone_name,
-                        price: priceDisplay,
-                        buyer_name: sale.buyer_name || (isCourtesy ? 'INVITADO DE CORTESÍA' : 'CLIENTE VARIOS'),
-                        buyer_dni: sale.buyer_dni || '00000000',
-                        ticket_number: ticketNumStr,
-                        hash: hashVal,
-                        qr_data_url: qrDataUrl
-                    };
-
-                    const canvasHtml = renderTicketCanvasContent({ ...template, elements: tplElements }, dynamicData, assetMap);
-
-                    const pdfContainer = document.createElement('div');
-                    pdfContainer.className = 'posPdfSingleCanvas';
-                    pdfContainer.style.position = 'fixed';
-                    pdfContainer.style.left = '-9999px';
-                    pdfContainer.style.top = '0';
-                    pdfContainer.style.width = '794px';
-                    pdfContainer.style.height = '1123px';
-                    pdfContainer.style.zIndex = '999999';
-                    pdfContainer.style.backgroundImage = `url('${boletoDataUrl || boletoSrc}')`;
-                    pdfContainer.style.backgroundSize = '100% 100%';
-                    pdfContainer.style.backgroundPosition = 'center';
-                    pdfContainer.style.fontFamily = "'Plus Jakarta Sans', sans-serif";
-                    pdfContainer.style.boxSizing = 'border-box';
-                    pdfContainer.style.overflow = 'hidden';
-
-                    pdfContainer.innerHTML = `
-                        <div class="ticket-canvas-inner" style="width: 771px; height: 370px; position: absolute; top: 12px; left: 11.5px; background: ${bgColor}; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; border-radius: 18px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15); box-sizing: border-box;">
-                            ${canvasHtml}
-                        </div>
-                    `;
-
-                    document.body.appendChild(pdfContainer);
-
-                    if (document.fonts && document.fonts.ready) {
-                        await document.fonts.ready;
-                    }
-                    await new Promise(r => setTimeout(r, 200));
-
-                    console.log(`[CanvaStudio POS PDF] Rendering A4 page ${i + 1}/${ticketsList.length}...`);
-                    const canvas = await html2canvas(pdfContainer, {
-                        scale: 2.5,
-                        useCORS: true,
-                        allowTaint: true,
-                        backgroundColor: '#FFFFFF',
-                        logging: false
-                    });
-
-                    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-                    pdfContainer.remove();
-
-                    if (pdf) {
-                        if (i > 0) {
-                            pdf.addPage('a4', 'portrait');
-                        }
-                        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
-                    }
-                }
+                const { pdf, ticketsList } = await generatePosTicketPdfDoc(sale);
 
                 if (pdf) {
                     pdf.save(`Entradas_VIRTUAL_${sale.receipt_number}.pdf`);
@@ -2800,13 +3026,133 @@
                 });
             } catch (err) {
                 console.error('Error generando PDF de entrada:', err);
-                const el = document.getElementById('posPdfSingleCanvas');
+                const el = document.querySelector('.posPdfSingleCanvas');
                 if (el) el.remove();
 
                 Swal.fire({
                     title: 'Inconveniente con el PDF',
                     text: 'No se pudo procesar la entrada: ' + (err.message || 'error de renderizado'),
                     icon: 'error',
+                    confirmButtonColor: '#FF5500',
+                    background: '#14141E',
+                    color: '#FFFFFF'
+                });
+            }
+        }
+
+        // Enviar Entrada PDF oficial por correo desde Taquilla (POS)
+        async function emailPosSalePdf(saleOrId) {
+            const sale = getSaleObject(saleOrId);
+            if (!sale) {
+                console.error('[CanvaStudio POS Email] Venta no encontrada:', saleOrId);
+                return;
+            }
+
+            // 1. Buscar si el comprador ya tiene un correo registrado
+            let buyerEmail = '';
+            if (sale.buyer_email && sale.buyer_email.includes('@')) {
+                buyerEmail = sale.buyer_email.trim();
+            }
+
+            if (!buyerEmail && sale.tickets_data) {
+                const td = (typeof sale.tickets_data === 'string') ? JSON.parse(sale.tickets_data) : sale.tickets_data;
+                if (td) {
+                    const candidate = td.customer_email || td.buyer_email || td.email;
+                    if (candidate && candidate.includes('@')) {
+                        buyerEmail = candidate.trim();
+                    }
+                }
+            }
+
+            // Buscar en lista de clientes existentes por DNI o Nombre
+            if (!buyerEmail && window.posExistingClients && Array.isArray(window.posExistingClients)) {
+                const found = window.posExistingClients.find(c => (c.dni && sale.buyer_dni && c.dni === sale.buyer_dni && c.email && c.email.includes('@')) || (c.name && sale.buyer_name && c.name.toLowerCase().trim() === sale.buyer_name.toLowerCase().trim() && c.email && c.email.includes('@')));
+                if (found && found.email) {
+                    buyerEmail = found.email.trim();
+                }
+            }
+
+            // 2. Si NO tiene correo registrado, preguntar por SweetAlert (solo en caso de no existir)
+            if (!buyerEmail) {
+                const { value: emailInput } = await Swal.fire({
+                    title: '✉️ Enviar Entrada por Correo',
+                    text: `El cliente "${sale.buyer_name || 'Comprador'}" no tiene correo registrado. Ingresa el correo para enviar la entrada:`,
+                    input: 'email',
+                    inputPlaceholder: 'ejemplo@correo.com',
+                    showCancelButton: true,
+                    confirmButtonText: '📧 Enviar Boleto PDF',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#6366F1',
+                    background: '#14141E',
+                    color: '#FFFFFF',
+                    inputValidator: (value) => {
+                        if (!value || !value.includes('@') || !value.includes('.')) {
+                            return 'Por favor ingresa un correo electrónico válido';
+                        }
+                    }
+                });
+
+                if (!emailInput) return;
+                buyerEmail = emailInput.trim();
+            }
+
+            // 3. Compilar y enviar directamente sin preguntar si ya tenía correo
+            Swal.fire({
+                title: '📧 Enviando Entrada al Correo...',
+                html: `Compilando diseño oficial del boleto y enviándolo a <strong>${buyerEmail}</strong>...`,
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); },
+                background: '#14141E',
+                color: '#FFFFFF'
+            });
+
+            try {
+                const { pdf } = await generatePosTicketPdfDoc(sale);
+                const pdfBase64 = pdf ? pdf.output('datauristring') : '';
+
+                const res = await fetch(`/admin/taquilla/venta/${sale.id}/enviar-correo`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        email: buyerEmail,
+                        ticket_pdf_base64: pdfBase64
+                    })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    sale.buyer_email = buyerEmail;
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: '✉️ ¡Entrada Enviada con Éxito!',
+                        html: `Se ha enviado el boleto oficial en PDF adjunto a <strong>${buyerEmail}</strong>.`,
+                        confirmButtonColor: '#10B981',
+                        background: '#14141E',
+                        color: '#FFFFFF'
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'No se pudo enviar',
+                        text: data.message || 'Ocurrió un error al intentar enviar el correo.',
+                        confirmButtonColor: '#FF5500',
+                        background: '#14141E',
+                        color: '#FFFFFF'
+                    });
+                }
+            } catch (err) {
+                console.error('Error enviando PDF de entrada por correo:', err);
+                const el = document.querySelector('.posPdfSingleCanvas');
+                if (el) el.remove();
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de Envío',
+                    text: 'Inconveniente al procesar o enviar el PDF: ' + (err.message || 'Error de red'),
                     confirmButtonColor: '#FF5500',
                     background: '#14141E',
                     color: '#FFFFFF'
@@ -2849,7 +3195,7 @@
         }
 
         // Enviar nueva venta (REACTIVO EN VIVO SIN RECARGAR LA PÁGINA)
-        function handlePosSaleSubmit(e) {
+        async function handlePosSaleSubmit(e) {
             e.preventDefault();
 
             const zoneName = document.getElementById('pos_zone_select')?.value || selectedZoneName;
@@ -2857,6 +3203,7 @@
             const buyerName = document.getElementById('pos_buyer_name').value.trim();
             const buyerDni = document.getElementById('pos_buyer_dni').value.trim();
             const buyerPhone = document.getElementById('pos_buyer_phone').value.trim();
+            let buyerEmail = document.getElementById('pos_buyer_email')?.value.trim() || '';
             const paymentMethod = document.getElementById('pos_payment_method').value;
             const amountPaid = parseFloat(document.getElementById('pos_amount_paid').value) || currentTotalToPay;
 
@@ -2872,10 +3219,41 @@
                 return;
             }
 
+            // Auto-detectar correo si no se escribió pero el cliente existe en el sistema
+            if (!buyerEmail && window.posExistingClients && Array.isArray(window.posExistingClients)) {
+                const found = window.posExistingClients.find(c => (c.dni && buyerDni && c.dni === buyerDni && c.email && c.email.includes('@')) || (c.name && buyerName && c.name.toLowerCase().trim() === buyerName.toLowerCase().trim() && c.email && c.email.includes('@')));
+                if (found && found.email) {
+                    buyerEmail = found.email.trim();
+                }
+            }
+
             const btnSubmit = document.getElementById('btnSubmitPosSale');
             if (btnSubmit) {
                 btnSubmit.disabled = true;
                 btnSubmit.textContent = '⏳ Procesando venta y emitiendo boletos...';
+            }
+
+            // Pre-compilar PDF oficial de Canva Studio si hay correo para adjuntarlo al envío
+            let ticketPdfBase64 = null;
+            if (buyerEmail && buyerEmail.includes('@')) {
+                try {
+                    const simulatedSale = {
+                        receipt_number: 'REC-PENDING',
+                        buyer_name: buyerName,
+                        buyer_dni: buyerDni,
+                        buyer_email: buyerEmail,
+                        zone_name: zoneName,
+                        unit_price: selectedZonePrice,
+                        quantity: quantity,
+                        total_amount: currentTotalToPay,
+                        payment_method: paymentMethod,
+                        tickets_data: []
+                    };
+                    const { pdf } = await generatePosTicketPdfDoc(simulatedSale);
+                    if (pdf) ticketPdfBase64 = pdf.output('datauristring');
+                } catch (pdfErr) {
+                    console.warn('Compilación previa de PDF omitida:', pdfErr);
+                }
             }
 
             const payload = {
@@ -2884,8 +3262,10 @@
                 buyer_name: buyerName,
                 buyer_dni: buyerDni,
                 buyer_phone: buyerPhone,
+                buyer_email: buyerEmail || null,
                 payment_method: paymentMethod,
-                amount_paid: amountPaid
+                amount_paid: amountPaid,
+                ticket_pdf_base64: ticketPdfBase64
             };
 
             fetch("{{ route('web.box_office.store_sale', $event->id) }}", {
@@ -2977,6 +3357,10 @@
                                     <button type="button" class="btn btn-secondary btn-sm" onclick="downloadPosSalePdf(${data.sale.id})" title="Descargar Entrada PDF" style="background: linear-gradient(135deg, #06B6D4, #0284C7); border: 1px solid rgba(6,182,212,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3); cursor: pointer;">
                                         <span>🎟️</span>
                                         <span>Entrada PDF</span>
+                                    </button>
+                                    <button type="button" class="btn btn-info btn-sm" onclick="emailPosSalePdf(${data.sale.id})" title="Enviar Entrada al Correo" style="background: linear-gradient(135deg, #6366F1, #4F46E5); border: 1px solid rgba(99,102,241,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); cursor: pointer;">
+                                        <span>✉️</span>
+                                        <span>Enviar Correo</span>
                                     </button>
                                     <button type="button" class="btn btn-danger btn-sm" onclick="deletePosSale(${data.sale.id})" title="Borrar Entrada" style="background: linear-gradient(135deg, #EF4444, #DC2626); border: 1px solid rgba(239,68,68,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); cursor: pointer;">
                                         <span>🗑️</span>
@@ -3107,11 +3491,16 @@
                     }
 
                     // 6. Modal Interactivo de Confirmación (Recibo + Entrada PDF)
+                    const emailSentMsg = data.email_sent 
+                        ? `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #10B981; font-weight: 700; background: rgba(16,185,129,0.12); padding: 0.4rem 0.75rem; border-radius: 10px; border: 1px solid rgba(16,185,129,0.3);">✉️ Boleto oficial enviado a <strong>${escapePosHtml(data.recipient)}</strong></div>` 
+                        : '';
+
                     Swal.fire({
                         title: `🎉 ¡Venta Registrada Exitosamente!`,
                         html: `
                             <div style="font-size: 0.95rem; color: #CBD5E1; margin-bottom: 1.25rem;">
                                 N° Recibo: <b style="color: #FF5500; font-family: monospace;">${data.receipt.receipt_number}</b> | Monto: <b style="color: #10B981;">${data.receipt.total_amount_formatted}</b>
+                                ${emailSentMsg}
                             </div>
                             <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
                                 <button type="button" id="btnAlertPrintReceipt" class="btn btn-primary btn-sm" style="background: linear-gradient(135deg, #FF5500, #FF7733); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(255,85,0,0.3);">
@@ -3119,6 +3508,9 @@
                                 </button>
                                 <button type="button" id="btnAlertDownloadPdf" class="btn btn-secondary btn-sm" style="background: linear-gradient(135deg, #06B6D4, #0284C7); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(6,182,212,0.3);">
                                     <span>🎟️</span> Descargar Entrada PDF
+                                </button>
+                                <button type="button" id="btnAlertEmailPdf" class="btn btn-info btn-sm" style="background: linear-gradient(135deg, #6366F1, #4F46E5); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(99,102,241,0.3);">
+                                    <span>✉️</span> Enviar al Correo
                                 </button>
                             </div>
                         `,
@@ -3135,6 +3527,10 @@
                             const btnP = document.getElementById('btnAlertDownloadPdf');
                             if (btnP) btnP.addEventListener('click', () => {
                                 downloadPosSalePdf(data.sale.id);
+                            });
+                            const btnE = document.getElementById('btnAlertEmailPdf');
+                            if (btnE) btnE.addEventListener('click', () => {
+                                emailPosSalePdf(data.sale.id);
                             });
                         }
                     });
@@ -3164,16 +3560,24 @@
         }
 
         // Enviar nueva cortesía (REACTIVO EN VIVO)
-        function handlePosCourtesySubmit(e) {
+        async function handlePosCourtesySubmit(e) {
             e.preventDefault();
 
             const zoneName = document.getElementById('pos_courtesy_zone_select')?.value || selectedCourtesyZoneName;
             const quantity = parseInt(document.getElementById('pos_courtesy_quantity').value, 10) || 1;
             const buyerName = document.getElementById('pos_courtesy_name').value.trim() || 'INVITADO DE CORTESÍA';
             const buyerDni = document.getElementById('pos_courtesy_dni').value.trim() || '00000000';
-            const buyerEmail = document.getElementById('pos_courtesy_email')?.value.trim() || null;
+            let buyerEmail = document.getElementById('pos_courtesy_email')?.value.trim() || '';
             const buyerPhone = document.getElementById('pos_courtesy_phone').value.trim() || '-';
             const courtesyNote = document.getElementById('pos_courtesy_note')?.value || 'Cortesía Directa';
+
+            // Auto-detectar correo si no se escribió pero el invitado/beneficiario existe en el sistema
+            if (!buyerEmail && window.posExistingClients && Array.isArray(window.posExistingClients)) {
+                const found = window.posExistingClients.find(c => (c.dni && buyerDni && c.dni === buyerDni && c.email && c.email.includes('@')) || (c.name && buyerName && c.name.toLowerCase().trim() === buyerName.toLowerCase().trim() && c.email && c.email.includes('@')));
+                if (found && found.email) {
+                    buyerEmail = found.email.trim();
+                }
+            }
 
             const btnSubmit = document.getElementById('btnSubmitPosCourtesy');
             if (btnSubmit) {
@@ -3181,15 +3585,38 @@
                 btnSubmit.textContent = '⏳ Emitiendo cortesías y generando QR...';
             }
 
+            let ticketPdfBase64 = null;
+            if (buyerEmail && buyerEmail.includes('@')) {
+                try {
+                    const simulatedSale = {
+                        receipt_number: 'REC-PENDING',
+                        buyer_name: buyerName,
+                        buyer_dni: buyerDni,
+                        buyer_email: buyerEmail,
+                        zone_name: zoneName,
+                        unit_price: 0,
+                        quantity: quantity,
+                        total_amount: 0,
+                        payment_method: 'Cortesía',
+                        tickets_data: []
+                    };
+                    const { pdf } = await generatePosTicketPdfDoc(simulatedSale);
+                    if (pdf) ticketPdfBase64 = pdf.output('datauristring');
+                } catch (pdfErr) {
+                    console.warn('Compilación previa de PDF omitida:', pdfErr);
+                }
+            }
+
             const payload = {
                 zone_name: zoneName,
                 quantity: quantity,
                 buyer_name: buyerName,
                 buyer_dni: buyerDni,
-                buyer_email: buyerEmail,
+                buyer_email: buyerEmail || null,
                 buyer_phone: buyerPhone !== '-' ? `${buyerPhone} (${courtesyNote})` : courtesyNote,
                 payment_method: 'Cortesía',
-                amount_paid: 0.00
+                amount_paid: 0.00,
+                ticket_pdf_base64: ticketPdfBase64
             };
 
             fetch("{{ route('web.box_office.store_sale', $event->id) }}", {
@@ -3269,6 +3696,10 @@
                                     <button type="button" class="btn btn-secondary btn-sm" onclick="downloadPosSalePdf(${data.sale.id})" title="Descargar Entrada PDF" style="background: linear-gradient(135deg, #06B6D4, #0284C7); border: 1px solid rgba(6,182,212,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3); cursor: pointer;">
                                         <span>🎟️</span>
                                         <span>Entrada PDF</span>
+                                    </button>
+                                    <button type="button" class="btn btn-info btn-sm" onclick="emailPosSalePdf(${data.sale.id})" title="Enviar Entrada al Correo" style="background: linear-gradient(135deg, #6366F1, #4F46E5); border: 1px solid rgba(99,102,241,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); cursor: pointer;">
+                                        <span>✉️</span>
+                                        <span>Enviar Correo</span>
                                     </button>
                                     <button type="button" class="btn btn-danger btn-sm" onclick="deletePosSale(${data.sale.id})" title="Borrar Entrada" style="background: linear-gradient(135deg, #EF4444, #DC2626); border: 1px solid rgba(239,68,68,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); cursor: pointer;">
                                         <span>🗑️</span>
@@ -3381,19 +3812,27 @@
                     }
 
                     // 6. Modal flotante de confirmación y opciones rápidas
+                    const courtesyEmailSentMsg = data.email_sent 
+                        ? `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #10B981; font-weight: 700; background: rgba(16,185,129,0.12); padding: 0.4rem 0.75rem; border-radius: 10px; border: 1px solid rgba(16,185,129,0.3);">✉️ Pase oficial enviado a <strong>${escapePosHtml(data.recipient)}</strong></div>` 
+                        : '';
+
                     Swal.fire({
                         icon: 'success',
                         title: '¡Cortesía Emitida con Éxito!',
                         html: `
-                            <p style="color: #94A3B8; font-size: 0.95rem; margin-bottom: 1.25rem;">
-                                Se generó el pase oficial <strong>${data.receipt.receipt_number}</strong> para <strong>${buyerName}</strong> (${quantity} entrada(s) de cortesía).
-                            </p>
+                            <div style="color: #94A3B8; font-size: 0.95rem; margin-bottom: 1.25rem;">
+                                Se generó el pase oficial <strong>${data.receipt.receipt_number}</strong> para <strong>${escapePosHtml(buyerName)}</strong> (${quantity} entrada(s) de cortesía).
+                                ${courtesyEmailSentMsg}
+                            </div>
                             <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
                                 <button type="button" id="btnAlertPrintReceiptCourtesy" class="btn btn-primary btn-sm" style="background: linear-gradient(135deg, #10B981, #059669); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(16,185,129,0.3);">
                                     <span>🧾</span> Imprimir Recibo
                                 </button>
                                 <button type="button" id="btnAlertDownloadPdfCourtesy" class="btn btn-secondary btn-sm" style="background: linear-gradient(135deg, #06B6D4, #0284C7); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(6,182,212,0.3);">
                                     <span>🎟️</span> Descargar Entrada PDF
+                                </button>
+                                <button type="button" id="btnAlertEmailPdfCourtesy" class="btn btn-info btn-sm" style="background: linear-gradient(135deg, #6366F1, #4F46E5); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(99,102,241,0.3);">
+                                    <span>✉️</span> Enviar al Correo
                                 </button>
                             </div>
                         `,
@@ -3410,6 +3849,10 @@
                             const btnP = document.getElementById('btnAlertDownloadPdfCourtesy');
                             if (btnP) btnP.addEventListener('click', () => {
                                 downloadPosSalePdf(data.sale.id);
+                            });
+                            const btnE = document.getElementById('btnAlertEmailPdfCourtesy');
+                            if (btnE) btnE.addEventListener('click', () => {
+                                emailPosSalePdf(data.sale.id);
                             });
                         }
                     });

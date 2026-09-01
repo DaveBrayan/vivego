@@ -23,9 +23,12 @@ class AuthController extends Controller
         if (session('admin_logged_in') && session('admin_id')) {
             $admin = Administrator::find(session('admin_id'));
             if ($admin && $admin->status === 'Activo') {
-                return redirect()->route('web.dashboard');
+                if (!session('must_change_password')) {
+                    return redirect()->route('web.dashboard');
+                }
+            } else {
+                session()->forget(['admin_logged_in', 'admin_id', 'admin_name', 'admin_email', 'admin_role', 'admin_avatar', 'must_change_password']);
             }
-            session()->forget(['admin_logged_in', 'admin_id', 'admin_name', 'admin_email', 'admin_role', 'admin_avatar']);
         }
 
         // 2. Si ya tiene sesión activa como Cliente
@@ -34,9 +37,12 @@ class AuthController extends Controller
             $statusLower = strtolower(trim((string) ($user?->status ?? 'active')));
             $isInactive = in_array($statusLower, ['inactivo', 'inactive', 'bloqueado', 'blocked', 'suspendido', 'suspended', '0']);
             if ($user && !$isInactive) {
-                return redirect()->route('web.customer.tickets');
+                if (!session('must_change_password')) {
+                    return redirect()->route('web.customer.tickets');
+                }
+            } else {
+                session()->forget(['customer_logged_in', 'customer_id', 'customer_name', 'customer_email', 'customer_dni', 'customer_phone', 'must_change_password']);
             }
-            session()->forget(['customer_logged_in', 'customer_id', 'customer_name', 'customer_email', 'customer_dni', 'customer_phone']);
         }
 
         $settings = Setting::current();
@@ -117,9 +123,14 @@ class AuthController extends Controller
                     'success' => true,
                     'role' => 'admin',
                     'must_change_password' => $isTempPassword,
-                    'message' => "¡Bienvenido de nuevo, {$admin->full_name}!",
+                    'message' => $isTempPassword ? 'Has ingresado con una contraseña temporal. Por favor establece una nueva contraseña.' : "¡Bienvenido de nuevo, {$admin->full_name}!",
                     'redirect_url' => $targetUrl,
                 ]);
+            }
+
+            if ($isTempPassword) {
+                return redirect()->route('web.login')
+                    ->with('warning', 'Has ingresado con una contraseña temporal. Por tu seguridad, establece una nueva contraseña.');
             }
 
             return redirect($targetUrl)
@@ -165,7 +176,7 @@ class AuthController extends Controller
                 'must_change_password',
             ]);
 
-            $isTempPassword = str_starts_with($password, 'VG');
+            $isTempPassword = str_starts_with($passwordUpper, 'VG');
 
             session([
                 'customer_logged_in' => true,
@@ -190,7 +201,7 @@ class AuthController extends Controller
                     'role' => 'customer',
                     'must_change_password' => $isTempPassword,
                     'csrf_token' => csrf_token(),
-                    'message' => $isTempPassword ? 'Has ingresado con una contraseña temporal. Por favor establece una nueva contraseña.' : "¡Bienvenido, {$user->name}!",
+                    'message' => $isTempPassword ? 'Has ingresado con una contraseña temporal. Por favor establece una nueva contraseña personalizada para continuar.' : "¡Bienvenido, {$user->name}!",
                     'user' => [
                         'name' => $user->name,
                         'email' => $user->email,
@@ -199,6 +210,11 @@ class AuthController extends Controller
                     ],
                     'redirect_url' => $targetUrl,
                 ]);
+            }
+
+            if ($isTempPassword) {
+                return redirect()->route('web.login')
+                    ->with('warning', 'Has ingresado con una contraseña temporal. Por seguridad, debes establecer una nueva contraseña para acceder a tus boletos.');
             }
 
             return redirect($targetUrl)
@@ -333,11 +349,14 @@ class AuthController extends Controller
 
         session()->forget('must_change_password');
 
+        $targetUrl = $userId ? route('web.customer.tickets') : route('web.dashboard');
+
         $msg = '¡Tu nueva contraseña ha sido guardada exitosamente!';
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
                 'message' => $msg,
+                'redirect_url' => $targetUrl,
                 'user' => [
                     'name' => $account->name ?? $account->full_name,
                     'email' => $account->email,
@@ -347,7 +366,7 @@ class AuthController extends Controller
             ]);
         }
 
-        return redirect()->back()->with('success', $msg);
+        return redirect($targetUrl)->with('success', $msg);
     }
 
     /**

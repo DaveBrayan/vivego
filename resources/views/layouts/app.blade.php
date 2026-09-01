@@ -386,6 +386,106 @@
             if (overlay) overlay.addEventListener('click', closeDrawer);
         });
     </script>
+    @if(session('customer_logged_in') && session('must_change_password'))
+    <!-- MODAL GLOBAL DE CAMBIO OBLIGATORIO DE CONTRASEÑA PARA CLIENTE -->
+    <div id="globalMandatoryChangePassModal" style="display: flex; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.88); z-index: 999999; align-items: center; justify-content: center; backdrop-filter: blur(10px); padding: 1.25rem;">
+        <div style="background: #FFFFFF; border-radius: 24px; width: 100%; max-width: 460px; padding: 2.25rem; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.5); border: 1.5px solid #E2E8F0; text-align: left;">
+            <div style="text-align: center; margin-bottom: 1.25rem;">
+                <div style="width: 58px; height: 58px; border-radius: 50%; background-color: #FFF7ED; border: 2px solid #FFEDD5; color: #EA580C; font-size: 26px; line-height: 56px; margin: 0 auto 12px auto; display: flex; align-items: center; justify-content: center;">
+                    🔒
+                </div>
+                <h3 style="font-size: 1.4rem; font-weight: 900; color: #0F172A; margin: 0 0 0.4rem 0;">
+                    Establecer Nueva Contraseña
+                </h3>
+                <p style="font-size: 0.875rem; color: #64748B; margin: 0; line-height: 1.45;">
+                    Has ingresado con una <strong>contraseña temporal</strong>. Por seguridad de tu cuenta, debes establecer tu nueva contraseña personalizada para continuar.
+                </p>
+            </div>
+
+            <div id="globalMandatoryPassError" style="display: none; background: #FEF2F2; border: 1.5px solid #FCA5A5; color: #DC2626; padding: 0.85rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; margin-bottom: 1.25rem; line-height: 1.4;"></div>
+            <div id="globalMandatoryPassSuccess" style="display: none; background: #F0FDF4; border: 1.5px solid #BBF7D0; color: #16A34A; padding: 0.85rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700; margin-bottom: 1.25rem; line-height: 1.4;"></div>
+
+            <form onsubmit="submitGlobalMandatoryChangePassword(event)">
+                <div style="margin-bottom: 1.15rem;">
+                    <label style="display: block; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; color: #334155; margin-bottom: 0.4rem;">Nueva Contraseña (mínimo 6 caracteres):</label>
+                    <input type="password" id="globalMandatoryNewPass" required minlength="6" placeholder="••••••••••••" style="width: 100%; padding: 0.85rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 12px; font-size: 0.95rem; outline: none; box-sizing: border-box; background: #F8FAFC;">
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; color: #334155; margin-bottom: 0.4rem;">Confirmar Nueva Contraseña:</label>
+                    <input type="password" id="globalMandatoryConfirmPass" required minlength="6" placeholder="••••••••••••" style="width: 100%; padding: 0.85rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 12px; font-size: 0.95rem; outline: none; box-sizing: border-box; background: #F8FAFC;">
+                </div>
+
+                <button type="submit" id="btnSubmitGlobalMandatoryPass" style="width: 100%; padding: 0.95rem; background: linear-gradient(135deg, #FF5500 0%, #EA580C 100%); color: #FFFFFF; border: none; border-radius: 14px; font-weight: 800; font-size: 0.95rem; cursor: pointer; box-shadow: 0 10px 24px rgba(255, 85, 0, 0.35); transition: transform 0.2s;">
+                    💾 Guardar y Continuar
+                </button>
+            </form>
+        </div>
+    </div>
+    <script>
+        function submitGlobalMandatoryChangePassword(e) {
+            e.preventDefault();
+            const newPass = document.getElementById('globalMandatoryNewPass').value;
+            const confirmPass = document.getElementById('globalMandatoryConfirmPass').value;
+            const errBox = document.getElementById('globalMandatoryPassError');
+            const succBox = document.getElementById('globalMandatoryPassSuccess');
+            const btn = document.getElementById('btnSubmitGlobalMandatoryPass');
+
+            errBox.style.display = 'none';
+            succBox.style.display = 'none';
+
+            if (newPass.length < 6) {
+                errBox.textContent = 'La nueva contraseña debe tener al menos 6 caracteres.';
+                errBox.style.display = 'block';
+                return;
+            }
+
+            if (newPass !== confirmPass) {
+                errBox.textContent = 'Las contraseñas no coinciden. Intenta de nuevo.';
+                errBox.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '💾 Guardando contraseña...';
+
+            fetch("{{ route('web.password.update_temp') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    new_password: newPass,
+                    new_password_confirmation: confirmPass
+                })
+            })
+            .then(async (res) => {
+                const data = await res.json().catch(() => ({}));
+                btn.disabled = false;
+                btn.textContent = '💾 Guardar y Continuar';
+
+                if (res.ok && data.success) {
+                    succBox.innerHTML = '✨ <strong>¡Contraseña Actualizada!</strong> Recargando...';
+                    succBox.style.display = 'block';
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 800);
+                } else {
+                    errBox.textContent = data.message || 'No se pudo actualizar la contraseña.';
+                    errBox.style.display = 'block';
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.textContent = '💾 Guardar y Continuar';
+                errBox.textContent = 'Ocurrió un error al actualizar la contraseña.';
+                errBox.style.display = 'block';
+            });
+        }
+    </script>
+    @endif
     @stack('scripts')
 </body>
 
