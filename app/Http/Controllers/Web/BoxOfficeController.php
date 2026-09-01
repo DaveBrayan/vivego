@@ -594,7 +594,7 @@ class BoxOfficeController extends Controller
             }
         }
 
-        if (empty($effectiveEmail) && !empty($buyerName) && !in_array(strtoupper($buyerName), ['CLIENTE VARIOS', 'INVITADO DE CORTESÍA', 'INVITADO'])) {
+        if (empty($effectiveEmail) && !empty($buyerName) && !in_array(strtoupper($buyerName), ['CLIENTE VARIOS', 'INVITADO DE CORTESÍA', 'INVITADO DE CORTESIA', 'INVITADO'])) {
             $userFound = \App\Models\User::where('name', $buyerName)->whereNotNull('email')->first();
             if ($userFound && !empty($userFound->email)) {
                 $effectiveEmail = $userFound->email;
@@ -603,12 +603,33 @@ class BoxOfficeController extends Controller
 
         $emailSent = false;
         if (!empty($effectiveEmail) && filter_var($effectiveEmail, FILTER_VALIDATE_EMAIL)) {
+            $user = \App\Models\User::where('email', $effectiveEmail)->first();
+            $tempPassword = null;
+            $isNewUser = false;
+
+            if (!$user) {
+                try {
+                    $tempPassword = Str::random(8);
+                    $user = \App\Models\User::create([
+                        'name' => ($buyerName !== 'CLIENTE VARIOS' && $buyerName !== 'INVITADO DE CORTESÍA' && $buyerName !== 'INVITADO DE CORTESIA') ? $buyerName : explode('@', $effectiveEmail)[0],
+                        'email' => $effectiveEmail,
+                        'dni' => $buyerDni !== '00000000' ? $buyerDni : null,
+                        'phone' => $buyerPhone !== '-' ? $buyerPhone : null,
+                        'password' => bcrypt($tempPassword),
+                        'role' => 'client',
+                    ]);
+                    $isNewUser = true;
+                } catch (\Throwable $ex) {
+                    Log::warning("No se pudo crear usuario automático en Taquilla: " . $ex->getMessage());
+                }
+            }
+
             try {
-                Mail::to($effectiveEmail)->send(new TicketPurchaseMail($sale, null, false, $pdfBase64));
+                Mail::to($effectiveEmail)->send(new TicketPurchaseMail($sale, $tempPassword, $isNewUser, $pdfBase64));
                 $emailSent = true;
-                Log::info("Boleto oficial enviado automáticamente a {$effectiveEmail} tras venta en Taquilla POS");
+                Log::info("Boleto oficial enviado automáticamente a {$effectiveEmail} tras emisión en Taquilla POS");
             } catch (\Throwable $e) {
-                Log::warning("No se pudo enviar el correo tras registrar venta en Taquilla: " . $e->getMessage());
+                Log::warning("No se pudo enviar el correo tras registrar venta/cortesía en Taquilla: " . $e->getMessage());
             }
         }
 

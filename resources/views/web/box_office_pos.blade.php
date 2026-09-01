@@ -186,6 +186,29 @@
         #pos_zone_select {
             background-color: #14141E !important;
             color: #FFFFFF !important;
+            height: 42px !important;
+            min-height: 42px !important;
+            padding: 0 0.85rem !important;
+            font-size: 0.85rem !important;
+            font-weight: 600 !important;
+            line-height: 40px !important;
+            border-radius: 10px !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.15) !important;
+            box-sizing: border-box !important;
+            display: block !important;
+            width: 100% !important;
+            outline: none !important;
+            cursor: pointer !important;
+        }
+        #pos_courtesy_note {
+            border-color: rgba(16, 185, 129, 0.45) !important;
+            background-color: #14141E !important;
+            color: #FFFFFF !important;
+            font-weight: 700 !important;
+        }
+        #pos_courtesy_note:focus {
+            border-color: #10B981 !important;
+            box-shadow: 0 0 14px rgba(16, 185, 129, 0.4) !important;
         }
         select.form-input-custom option,
         select.form-select-custom option,
@@ -194,6 +217,8 @@
             background-color: #14141E !important;
             color: #FFFFFF !important;
             padding: 10px 14px !important;
+            font-size: 0.875rem !important;
+            font-weight: 600 !important;
         }
         .zone-card-item.active .zone-radio-indicator::after {
             content: '';
@@ -334,6 +359,18 @@
             }
         }
 
+        @keyframes pulseGlowGreen {
+            0% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
         @media (max-width: 980px) {
             .pos-modal-three-columns {
                 grid-template-columns: 1fr !important;
@@ -342,7 +379,8 @@
         }
 
         @media (max-width: 860px) {
-            #posSaleModal .admin-modal-card {
+            #posSaleModal .admin-modal-card,
+            #posCourtesyModal .admin-modal-card {
                 padding: 1.25rem 0.9rem !important;
                 width: 96% !important;
                 max-width: 96% !important;
@@ -933,35 +971,34 @@
         </div>
     </div>
 
-    <!-- MODAL PUNTO DE VENTA (NUEVA CORTESÍA POS) -->
+    <!-- MODAL PUNTO DE VENTA (NUEVA CORTESÍA POS EN 3 COLUMNAS COMPACTAS) -->
     <div class="admin-modal-overlay" id="posCourtesyModal">
-        <div class="admin-modal-card" style="max-width: 1060px; width: 95%; max-height: 92vh; overflow-y: auto; padding: 2rem; border-radius: 28px; box-sizing: border-box; border: 1.5px solid rgba(16, 185, 129, 0.4); box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 30px rgba(16,185,129,0.12);">
+        <div class="admin-modal-card" style="max-width: 1160px; width: 96%; max-height: 92vh; overflow-y: auto; padding: 1.4rem 1.6rem; border-radius: 24px; box-sizing: border-box; border: 1.5px solid rgba(16, 185, 129, 0.4); box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 30px rgba(16,185,129,0.12);">
             
-            <div class="admin-modal-header" style="margin-bottom: 1.25rem; padding-bottom: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
-                <div style="display: flex; align-items: center; gap: 0.75rem; min-width: 0; flex: 1;">
-                    <div class="card-header-icon" style="width: 42px; height: 42px; background: rgba(16, 185, 129, 0.15); border: 1.5px solid rgba(16, 185, 129, 0.35); color: #10B981; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 1.3rem; flex-shrink: 0;">🎁</div>
+            <div class="admin-modal-header" style="margin-bottom: 1rem; padding-bottom: 0.65rem; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0; flex: 1;">
+                    <div class="card-header-icon" style="width: 36px; height: 36px; background: rgba(16, 185, 129, 0.15); border: 1.5px solid rgba(16, 185, 129, 0.35); color: #10B981; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 1.15rem; flex-shrink: 0;">🎁</div>
                     <div style="min-width: 0; flex: 1;">
-                        <h3 class="card-header-title" style="font-size: 1.15rem; margin: 0; color: #FFFFFF; font-weight: 900; line-height: 1.25;">Nueva Entrada de Cortesía (Pase Free / Invitados)</h3>
-                        <p class="card-header-subtitle" style="margin: 0; font-size: 0.8rem; color: #94A3B8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $event->title }} · Emisión oficial autorizada a costo S/ 0.00</p>
+                        <h3 class="card-header-title" style="font-size: 1.05rem; margin: 0; color: #FFFFFF; font-weight: 900; line-height: 1.2;">Nueva Entrada de Cortesía (Pase Free / Invitados)</h3>
+                        <p class="card-header-subtitle" style="margin: 0; font-size: 0.75rem; color: #94A3B8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $event->title }} · Emisión oficial autorizada a costo S/ 0.00</p>
                     </div>
                 </div>
-                <button type="button" class="admin-modal-close" onclick="closePosCourtesyModal()" style="font-size: 1.3rem; color: #94A3B8; background: transparent; border: none; cursor: pointer; flex-shrink: 0; padding: 0.25rem 0.5rem;" aria-label="Cerrar">✕</button>
+                <button type="button" class="admin-modal-close" onclick="closePosCourtesyModal()" style="font-size: 1.2rem; color: #94A3B8; background: transparent; border: none; cursor: pointer; flex-shrink: 0; padding: 0.2rem 0.4rem;" aria-label="Cerrar">✕</button>
             </div>
 
             <form id="posCourtesyForm" onsubmit="handlePosCourtesySubmit(event)">
-                <!-- GRID DE 2 COLUMNAS PRINCIPALES -->
-                <div class="pos-modal-two-columns" style="display: grid; grid-template-columns: 1.15fr 1fr; gap: 1.5rem; align-items: start; margin-bottom: 1.25rem;">
+                <!-- GRID DE 3 COLUMNAS PRINCIPALES -->
+                <div class="pos-modal-three-columns">
                     
                     <!-- COLUMNA 1: SELECCIÓN DE SECTORES / ZONAS + CANTIDAD + TOTAL S/ 0.00 -->
                     <div>
+                        <div style="font-size: 0.78rem; font-weight: 800; color: #10B981; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.55rem; display: flex; align-items: center; gap: 0.35rem;">
+                            <span>🎟️</span> <span>1. Sector de Cortesía</span>
+                        </div>
+
                         <!-- SECTORES / ZONAS EN CARDS INTERACTIVAS DE CORTESÍA -->
-                        <div class="form-group-custom" style="margin-bottom: 1.25rem;">
-                            <label class="form-label-custom" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-size: 0.85rem;">
-                                <span>🎟️ Sector / Zona para la Cortesía <span class="required-star">*</span></span>
-                                <small style="color: #10B981; font-weight: 700;">Haz clic para asignar zona</small>
-                            </label>
-                            
-                            <div style="display: flex; flex-direction: column; gap: 0.6rem;" id="courtesyZoneCardsContainer">
+                        <div class="form-group-custom" style="margin-bottom: 0.75rem;">
+                            <div style="display: flex; flex-direction: column; gap: 0.45rem; max-height: 205px; overflow-y: auto; padding-right: 0.2rem;" id="courtesyZoneCardsContainer">
                                 @php
                                     $firstActiveIndex = null;
                                 @endphp
@@ -980,190 +1017,159 @@
                                          data-available="{{ $cAvail }}"
                                          data-regular-available="{{ $z['available'] }}"
                                          data-courtesy-enabled="{{ $cEnabled ? '1' : '0' }}"
-                                         onclick="selectCourtesyZoneCard('{{ addslashes($z['name']) }}', {{ $cAvail }}, this)">
-                                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.6rem;">
-                                            <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0; flex: 1;">
-                                                <div class="zone-radio-indicator" style="border-color: #10B981;"></div>
+                                         onclick="selectCourtesyZoneCard('{{ addslashes($z['name']) }}', {{ $cAvail }}, this)"
+                                         style="padding: 0.55rem 0.75rem; border-radius: 12px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+                                            <div style="display: flex; align-items: center; gap: 0.55rem; min-width: 0; flex: 1;">
+                                                <div class="zone-radio-indicator" style="width: 14px; height: 14px; border-color: #10B981;"></div>
                                                 <div style="min-width: 0; flex: 1;">
-                                                    <strong class="zone-card-name" style="word-break: break-word;">{{ $z['name'] }}</strong>
-                                                    <div style="margin-top: 0.15rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                                                    <strong class="zone-card-name" style="font-size: 0.85rem; word-break: break-word;">{{ $z['name'] }}</strong>
+                                                    <div style="margin-top: 0.1rem;">
                                                         @if(!$cEnabled)
-                                                            <span class="zone-stock-badge sold-out">🚫 NO HABILITADA PARA CORTESÍA</span>
+                                                            <span class="zone-stock-badge sold-out" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">🚫 DESHABILITADA</span>
                                                         @elseif($cAvail > 0)
-                                                            <span class="zone-stock-badge available">
-                                                                🎁 Cupo: {{ number_format($cAvail) }} libres {{ $cMaxStock !== null ? "(de {$cMaxStock} asignados)" : "(aforo libre)" }}
-                                                            </span>
+                                                            <span class="zone-stock-badge available" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">🎁 {{ number_format($cAvail) }} libres</span>
                                                         @else
-                                                            <span class="zone-stock-badge sold-out">🚫 CUPO CORTESÍA AGOTADO</span>
+                                                            <span class="zone-stock-badge sold-out" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">🚫 AGOTADO</span>
                                                         @endif
                                                     </div>
                                                 </div>
                                             </div>
                                             <div style="text-align: right; flex-shrink: 0;">
-                                                <span style="display: inline-block; background: rgba(16,185,129,0.15); color: #10B981; border: 1px solid rgba(16,185,129,0.35); font-weight: 800; font-size: 0.8rem; padding: 0.25rem 0.6rem; border-radius: 8px;">CORTESÍA</span>
-                                                <small style="display: block; font-size: 0.68rem; color: #94A3B8; margin-top: 2px;">Precio reg. S/ {{ number_format($z['price'], 2) }}</small>
+                                                <span style="display: inline-block; background: rgba(16,185,129,0.15); color: #10B981; border: 1px solid rgba(16,185,129,0.35); font-weight: 800; font-size: 0.72rem; padding: 0.15rem 0.45rem; border-radius: 6px;">FREE</span>
                                             </div>
                                         </div>
                                     </div>
                                 @endforeach
                             </div>
-                            <!-- Input oculto para guardar el sector de cortesía seleccionado -->
                             <input type="hidden" id="pos_courtesy_zone_select" value="{{ $zonesWithStats[$firstActiveIndex ?? 0]['name'] ?? ($zonesWithStats[0]['name'] ?? '') }}" required>
                         </div>
 
-                        <!-- CANTIDAD DE ENTRADAS DE CORTESÍA CON BOTONES VERDES Y QUICK PILLS -->
-                        <div class="form-group-custom" style="margin-bottom: 1.25rem; background: rgba(16, 185, 129, 0.03); border: 1px solid rgba(16, 185, 129, 0.18); padding: 1rem; border-radius: 18px;">
-                            <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem;">
-                                <label class="form-label-custom" style="margin: 0; font-size: 0.85rem; color: #10B981;">🎁 Cantidad de Entradas de Cortesía <span class="required-star">*</span></label>
-                                <div class="pos-quick-qty-pills" style="display: flex; gap: 0.35rem; width: 100%;">
-                                    <button type="button" class="pos-quick-btn active" id="btnCourtesyQuickQty1" onclick="setCourtesyQuantity(1)">1</button>
-                                    <button type="button" class="pos-quick-btn" id="btnCourtesyQuickQty2" onclick="setCourtesyQuantity(2)">2</button>
-                                    <button type="button" class="pos-quick-btn" id="btnCourtesyQuickQty3" onclick="setCourtesyQuantity(3)">3</button>
-                                    <button type="button" class="pos-quick-btn" id="btnCourtesyQuickQty4" onclick="setCourtesyQuantity(4)">4</button>
-                                    <button type="button" class="pos-quick-btn" id="btnCourtesyQuickQty5" onclick="setCourtesyQuantity(5)">5</button>
-                                    <button type="button" class="pos-quick-btn" id="btnCourtesyQuickQty10" onclick="setCourtesyQuantity(10)">10</button>
-                                </div>
+                        <!-- CANTIDAD DE ENTRADAS DE CORTESÍA -->
+                        <div class="form-group-custom" style="margin-bottom: 0.75rem; background: rgba(16, 185, 129, 0.02); border: 1px solid rgba(16, 185, 129, 0.15); padding: 0.65rem 0.75rem; border-radius: 14px;">
+                            <label class="form-label-custom" style="margin: 0 0 0.35rem 0; font-size: 0.775rem; color: #10B981;">🎁 Cantidad de Pases <span class="required-star">*</span></label>
+                            <div class="pos-quick-qty-pills" style="display: flex; gap: 0.25rem; width: 100%; margin-bottom: 0.45rem;">
+                                <button type="button" class="pos-quick-btn active" id="btnCourtesyQuickQty1" onclick="setCourtesyQuantity(1)" style="height: 30px; font-size: 0.75rem;">1</button>
+                                <button type="button" class="pos-quick-btn" id="btnCourtesyQuickQty2" onclick="setCourtesyQuantity(2)" style="height: 30px; font-size: 0.75rem;">2</button>
+                                <button type="button" class="pos-quick-btn" id="btnCourtesyQuickQty3" onclick="setCourtesyQuantity(3)" style="height: 30px; font-size: 0.75rem;">3</button>
+                                <button type="button" class="pos-quick-btn" id="btnCourtesyQuickQty4" onclick="setCourtesyQuantity(4)" style="height: 30px; font-size: 0.75rem;">4</button>
+                                <button type="button" class="pos-quick-btn" id="btnCourtesyQuickQty5" onclick="setCourtesyQuantity(5)" style="height: 30px; font-size: 0.75rem;">5</button>
+                                <button type="button" class="pos-quick-btn" id="btnCourtesyQuickQty10" onclick="setCourtesyQuantity(10)" style="height: 30px; font-size: 0.75rem;">10</button>
                             </div>
 
-                            <div style="display: flex; align-items: center; gap: 0.85rem; justify-content: center; margin-top: 0.5rem;">
-                                <button type="button" class="pos-stepper-btn" onclick="stepCourtesyQuantity(-1)" title="Restar una cortesía" style="width: 48px; height: 48px; border-radius: 14px; background: #10B981; color: #FFFFFF; border: none; font-size: 1.6rem; font-weight: 900; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);">-</button>
-                                <input type="number" id="pos_courtesy_quantity" class="form-input-custom pos-stepper-input" value="1" min="1" max="100" required style="border-color: rgba(16, 185, 129, 0.4); color: #10B981;" oninput="updateCourtesySummary()">
-                                <button type="button" class="pos-stepper-btn" onclick="stepCourtesyQuantity(1)" title="Sumar una cortesía" style="width: 48px; height: 48px; border-radius: 14px; background: #10B981; color: #FFFFFF; border: none; font-size: 1.6rem; font-weight: 900; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);">+</button>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; justify-content: center;">
+                                <button type="button" class="pos-stepper-btn" onclick="stepCourtesyQuantity(-1)" title="Restar" style="width: 32px; height: 32px; font-size: 1.1rem; background: #10B981; color: #FFFFFF; border: none; border-radius: 10px; font-weight: 900; cursor: pointer;">-</button>
+                                <input type="number" id="pos_courtesy_quantity" class="form-input-custom pos-stepper-input" value="1" min="1" max="100" required style="border-color: rgba(16, 185, 129, 0.4); color: #10B981; width: 65px; height: 34px; font-size: 1.1rem;" oninput="updateCourtesySummary()">
+                                <button type="button" class="pos-stepper-btn" onclick="stepCourtesyQuantity(1)" title="Sumar" style="width: 32px; height: 32px; font-size: 1.1rem; background: #10B981; color: #FFFFFF; border: none; border-radius: 10px; font-weight: 900; cursor: pointer;">+</button>
                             </div>
                         </div>
 
-                        <!-- TOTAL A COBRAR RESALTADO: S/ 0.00 CORTESÍA -->
-                        <div class="pos-total-summary-card" style="background: rgba(16, 185, 129, 0.08); border-color: #10B981; box-shadow: 0 4px 18px rgba(16, 185, 129, 0.2);">
+                        <!-- TOTAL CORTESÍA RESALTADO -->
+                        <div class="pos-total-summary-card" style="background: rgba(16, 185, 129, 0.08); border: 2px solid #10B981; padding: 0.7rem 0.9rem; border-radius: 14px; box-shadow: 0 4px 18px rgba(16, 185, 129, 0.2);">
                             <div>
-                                <span style="font-size: 0.75rem; font-weight: 800; color: #10B981; text-transform: uppercase; letter-spacing: 0.5px; display: block;">Monto Total de Emisión</span>
-                                <small style="color: #FFFFFF; font-weight: 600; font-size: 0.85rem;" id="courtesyQuantityDesc">1 entrada(s) de Cortesía (Free)</small>
+                                <span style="font-size: 0.68rem; font-weight: 800; color: #10B981; text-transform: uppercase; letter-spacing: 0.5px; display: block;">Costo de Emisión</span>
+                                <small style="color: #FFFFFF; font-weight: 600; font-size: 0.775rem;" id="courtesyQuantityDesc">1 entrada(s) de Cortesía (Free)</small>
                             </div>
-                            <div style="font-size: 1.85rem; font-weight: 900; color: #10B981; text-shadow: 0 2px 12px rgba(16, 185, 129, 0.4); text-align: right;">
+                            <div style="font-size: 1.45rem; font-weight: 900; color: #10B981; text-shadow: 0 2px 12px rgba(16, 185, 129, 0.4); text-align: right;">
                                 S/ 0.00
                             </div>
                         </div>
                     </div>
 
-                    <!-- COLUMNA 2: DATOS DEL BENEFICIARIO / INVITADO (SIN MÉTODOS DE PAGO) -->
+                    <!-- COLUMNA 2: DATOS DEL BENEFICIARIO / INVITADO -->
                     <div>
-                        <!-- DATOS DEL BENEFICIARIO -->
-                        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); padding: 1.15rem; border-radius: 18px; margin-bottom: 1.15rem;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
-                                <h4 style="font-size: 0.85rem; font-weight: 800; color: #FFFFFF; text-transform: uppercase; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
-                                    <span>🎁</span> <span>Beneficiario / Invitado</span>
-                                </h4>
-                                <label style="display: flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.75rem; font-weight: 800; color: #10B981; background: rgba(16,185,129,0.12); padding: 0.3rem 0.65rem; border-radius: 10px; border: 1px solid rgba(16,185,129,0.35); user-select: none;">
-                                    <input type="checkbox" id="chkAnonymousCourtesy" onchange="toggleAnonymousCourtesy(this)" style="cursor: pointer; width: 15px; height: 15px; accent-color: #10B981;">
-                                    <span>Sin Datos (Cortesía Rápida)</span>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.55rem;">
+                            <div style="font-size: 0.78rem; font-weight: 800; color: #10B981; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 0.35rem;">
+                                <span>👤</span> <span>2. Datos del Invitado</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                <button type="button" 
+                                        onclick="clearPosCourtesyFields()" 
+                                        title="Limpiar datos del invitado" 
+                                        style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); color: #EF4444; font-size: 0.68rem; font-weight: 800; padding: 0.2rem 0.55rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem; transition: all 0.2s ease;">
+                                    <span>🗑️</span> <span>Limpiar</span>
+                                </button>
+                                <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; font-size: 0.7rem; font-weight: 800; color: #10B981; background: rgba(16,185,129,0.1); padding: 0.2rem 0.5rem; border-radius: 8px; border: 1px solid rgba(16,185,129,0.3); user-select: none;">
+                                    <input type="checkbox" id="chkAnonymousCourtesy" onchange="toggleAnonymousCourtesy(this)" style="cursor: pointer; width: 13px; height: 13px; accent-color: #10B981;">
+                                    <span>Sin Datos</span>
                                 </label>
                             </div>
+                        </div>
 
-                            <!-- SELECTOR DESPLEGABLE CON BUSCADOR (PLEGADO POR DEFECTO) -->
-                            <div class="pos-client-picker" id="pos_courtesy_client_picker_container" style="position: relative; margin-bottom: 0.85rem;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                                    <label class="form-label-custom" style="margin: 0; font-size: 0.775rem; color: #10B981; display: flex; align-items: center; gap: 0.35rem; font-weight: 700;">
-                                        <span>👥</span> <span>Seleccionar Cliente / Beneficiario Existente (Opcional)</span>
+                        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); padding: 0.85rem; border-radius: 14px;">
+                            <!-- DNI CON BOTÓN "TRAER DATOS" -->
+                            <div class="form-group-custom" style="margin-bottom: 0.65rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                                    <label for="pos_courtesy_dni" class="form-label-custom" style="margin: 0; font-size: 0.775rem;">
+                                        DNI / Documento <span class="required-star" id="star_courtesy_dni">*</span>
                                     </label>
-                                    <span id="courtesyClientSelectedBadge" style="display: none; font-size: 0.7rem; font-weight: 800; color: #10B981; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); padding: 0.15rem 0.5rem; border-radius: 8px;">
-                                        ✓ Autocompletado
-                                    </span>
-                                </div>
-
-                                <!-- Botón Desplegable (Cerrado por defecto) -->
-                                <div style="display: flex; gap: 0.4rem; align-items: center;">
+                                    <!-- Botón Desbloqueado "Traer Datos" cuando coincide con cliente registrado -->
                                     <button type="button" 
-                                            id="btnCourtesyClientDropdown" 
-                                            onclick="toggleCourtesyClientDropdown(event)" 
-                                            class="form-input-custom" 
-                                            style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; text-align: left; cursor: pointer; background: rgba(16, 185, 129, 0.05); border: 1.5px solid rgba(16, 185, 129, 0.3); padding: 0.6rem 0.85rem; border-radius: 12px; color: #94A3B8; font-weight: 600; font-size: 0.825rem; width: 100%;">
-                                        <span id="courtesyClientSelectedText" style="display: flex; align-items: center; gap: 0.45rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">
-                                            <span>🔍</span> <span>-- Seleccionar cliente / invitado existente --</span>
-                                        </span>
-                                        <span id="courtesyClientArrow" style="font-size: 0.75rem; color: #10B981; transition: transform 0.2s ease;">▼</span>
-                                    </button>
-                                    <button type="button" 
-                                            id="btnClearCourtesyClientSelection" 
-                                            onclick="clearCourtesyClientSelection(event)" 
-                                            title="Quitar cliente seleccionado" 
-                                            style="display: none; height: 38px; padding: 0 0.65rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 10px; color: #EF4444; font-size: 0.8rem; font-weight: 800; cursor: pointer; align-items: center; gap: 0.25rem; flex-shrink: 0;">
-                                        ✕
+                                            id="btnFetchCourtesyClientDni" 
+                                            onclick="fetchCourtesyClientDataFromDni()" 
+                                            style="display: none; background: linear-gradient(135deg, #10B981, #059669); border: none; color: #FFFFFF; font-size: 0.68rem; font-weight: 800; padding: 0.18rem 0.55rem; border-radius: 6px; cursor: pointer; align-items: center; gap: 0.3rem; box-shadow: 0 2px 8px rgba(16,185,129,0.4); animation: pulseGlowGreen 1.5s infinite;">
+                                        <span>⚡</span> <span>Traer Datos</span>
                                     </button>
                                 </div>
-
-                                <!-- Panel Flotante con BUSCADOR ADENTRO -->
-                                <div id="courtesyClientDropdownPanel" 
-                                     style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #14141E; border: 1.5px solid rgba(16, 185, 129, 0.45); border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,0.95); z-index: 1000; padding: 0.65rem;">
-                                    
-                                    <!-- Buscador dentro del desplegable -->
-                                    <div style="position: relative; margin-bottom: 0.5rem;">
-                                        <span style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); font-size: 0.85rem; color: #10B981; pointer-events: none;">🔎</span>
-                                        <input type="text" 
-                                               id="pos_courtesy_client_search" 
-                                               class="form-input-custom" 
-                                               placeholder="Buscar por Nombre, DNI, Correo..." 
-                                               autocomplete="off"
-                                               style="padding-left: 2.2rem; font-size: 0.825rem; background: rgba(255,255,255,0.06); border-color: rgba(16, 185, 129, 0.35); height: 36px;"
-                                               oninput="filterCourtesyClients(this.value)">
-                                    </div>
-
-                                    <!-- Lista de Resultados -->
-                                    <div id="courtesyClientDropdownList" style="max-height: 200px; overflow-y: auto;">
-                                    </div>
+                                <input type="text" id="pos_courtesy_dni" class="form-input-custom" placeholder="Ej: 72819203" required style="font-weight: 700; font-size: 0.825rem; height: 36px; letter-spacing: 0.5px;" oninput="onDniInputPosCourtesy(this.value)">
+                                <!-- Aviso visual cuando se detecta el cliente -->
+                                <div id="dniCourtesyFoundBadge" style="display: none; font-size: 0.68rem; color: #10B981; font-weight: 700; margin-top: 0.25rem;">
+                                    ✓ Cliente encontrado: <span id="dniCourtesyFoundName" style="color: #FFFFFF;"></span>
                                 </div>
                             </div>
 
-                            <div class="form-group-custom" style="margin-bottom: 0.8rem;">
-                                <label for="pos_courtesy_dni" class="form-label-custom">DNI / Documento <span class="required-star" id="star_courtesy_dni">*</span></label>
-                                <input type="text" id="pos_courtesy_dni" class="form-input-custom" placeholder="Ej: 72819203" required style="font-weight: 700; letter-spacing: 0.5px;">
+                            <div class="form-group-custom" style="margin-bottom: 0.65rem;">
+                                <label for="pos_courtesy_name" class="form-label-custom" style="margin-bottom: 0.25rem; font-size: 0.775rem;">Nombre Completo del Invitado <span class="required-star" id="star_courtesy_name">*</span></label>
+                                <input type="text" id="pos_courtesy_name" class="form-input-custom" placeholder="Ej: Juan Pérez Morales" required style="font-weight: 600; font-size: 0.825rem; height: 36px;">
                             </div>
 
-                            <div class="form-group-custom" style="margin-bottom: 0.8rem;">
-                                <label for="pos_courtesy_name" class="form-label-custom">Nombre Completo del Invitado <span class="required-star" id="star_courtesy_name">*</span></label>
-                                <input type="text" id="pos_courtesy_name" class="form-input-custom" placeholder="Ej: Juan Pérez Morales" required style="font-weight: 600;">
+                            <div class="form-group-custom" style="margin-bottom: 0.65rem;">
+                                <label for="pos_courtesy_email" class="form-label-custom" style="margin-bottom: 0.25rem; font-size: 0.775rem;">Correo Electrónico (Opcional - Enviar Pase)</label>
+                                <input type="email" id="pos_courtesy_email" class="form-input-custom" placeholder="Ej: invitado@correo.com" style="font-size: 0.8rem; height: 36px;">
                             </div>
 
-                            <div class="form-group-custom" style="margin-bottom: 0.8rem;">
-                                <label for="pos_courtesy_email" class="form-label-custom">Correo Electrónico (Opcional)</label>
-                                <input type="email" id="pos_courtesy_email" class="form-input-custom" placeholder="Ej: invitado@correo.com" style="font-size: 0.85rem;">
+                            <div class="form-group-custom" style="margin-bottom: 0;">
+                                <label for="pos_courtesy_phone" class="form-label-custom" style="margin-bottom: 0.25rem; font-size: 0.775rem;">Teléfono / WhatsApp (Opcional)</label>
+                                <input type="text" id="pos_courtesy_phone" class="form-input-custom" placeholder="Ej: +51 987654321" style="font-size: 0.8rem; height: 36px;">
                             </div>
+                        </div>
+                    </div>
 
-                            <div class="form-group-custom" style="margin-bottom: 0.8rem;">
-                                <label for="pos_courtesy_phone" class="form-label-custom">Teléfono / WhatsApp (Opcional)</label>
-                                <input type="text" id="pos_courtesy_phone" class="form-input-custom" placeholder="Ej: +51 987654321">
-                            </div>
+                    <!-- COLUMNA 3: MOTIVO / AUTORIZACIÓN DE CORTESÍA -->
+                    <div>
+                        <div style="font-size: 0.78rem; font-weight: 800; color: #10B981; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.55rem; display: flex; align-items: center; gap: 0.35rem;">
+                            <span>🎁</span> <span>3. Motivo & Emisión</span>
+                        </div>
 
-                            <div class="form-group-custom">
-                                <label for="pos_courtesy_note" class="form-label-custom">Motivo / Tipo de Cortesía (Opcional)</label>
-                                <select id="pos_courtesy_note" class="form-input-custom" style="font-size: 0.85rem; font-weight: 600; background-color: #14141E; color: #FFFFFF;">
+                        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); padding: 0.85rem; border-radius: 14px; margin-bottom: 0.75rem;">
+                            <div class="form-group-custom" style="margin-bottom: 0.65rem;">
+                                <label for="pos_courtesy_note" class="form-label-custom" style="margin-bottom: 0.35rem; font-size: 0.775rem;">Motivo / Tipo de Cortesía <span class="required-star">*</span></label>
+                                <select id="pos_courtesy_note" class="form-input-custom" style="font-size: 0.85rem !important; font-weight: 700 !important; height: 42px !important; min-height: 42px !important; padding: 0 0.85rem !important; line-height: 40px !important; background-color: #14141E !important; color: #FFFFFF !important; border: 1.5px solid rgba(16, 185, 129, 0.45) !important; border-radius: 10px !important; width: 100% !important; box-sizing: border-box !important;">
+                                    <option value="Cortesía Directa" selected style="background-color: #14141E; color: #FFFFFF;">🎁 Cortesía Administrador</option>
                                     <option value="Invitado Especial" style="background-color: #14141E; color: #FFFFFF;">⭐ Invitado Especial / VIP</option>
-                                    <option value="Prensa / Medios" style="background-color: #14141E; color: #FFFFFF;">📰 Prensa / Medios de Comunicación</option>
+                                    <option value="Prensa / Medios" style="background-color: #14141E; color: #FFFFFF;">📰 Prensa / Medios</option>
                                     <option value="Auspiciador / Sponsor" style="background-color: #14141E; color: #FFFFFF;">🤝 Auspiciador / Patrocinador</option>
                                     <option value="Staff / Producción" style="background-color: #14141E; color: #FFFFFF;">🛠️ Staff / Producción</option>
-                                    <option value="Cortesía Directa" selected style="background-color: #14141E; color: #FFFFFF;">🎁 Cortesía Administrador</option>
                                 </select>
                             </div>
-                        </div>
 
-                        <!-- PANEL INFORMATIVO DE CORTESÍA -->
-                        <div style="background: rgba(16, 185, 129, 0.08); border: 1.5px dashed rgba(16, 185, 129, 0.35); border-radius: 16px; padding: 1rem 1.15rem; display: flex; align-items: flex-start; gap: 0.75rem;">
-                            <span style="font-size: 1.4rem; flex-shrink: 0;">🛡️</span>
-                            <div>
-                                <strong style="color: #10B981; font-size: 0.85rem; display: block;">Emisión de Pases 100% Gratuitos</strong>
-                                <p style="margin: 0.2rem 0 0 0; font-size: 0.775rem; color: #94A3B8; line-height: 1.45;">
-                                    Las entradas se registrarán con método <strong>Cortesía</strong> a costo <strong>S/ 0.00</strong>, generarán su QR oficial y descontarán aforo en tiempo real.
-                                </p>
+                            <div style="background: rgba(16, 185, 129, 0.08); border: 1px dashed rgba(16, 185, 129, 0.35); border-radius: 12px; padding: 0.65rem 0.75rem; font-size: 0.725rem; color: #94A3B8;">
+                                <div style="display: flex; align-items: center; gap: 0.35rem; color: #10B981; font-weight: 800; margin-bottom: 0.15rem;">
+                                    <span>🛡️</span> <span>Emisión 100% Gratuita</span>
+                                </div>
+                                <div>Pase oficial con QR de seguridad, sin costo de cobro ni caja.</div>
                             </div>
                         </div>
-
                     </div>
+
                 </div>
 
                 <!-- BOTONES DE ACCIÓN DEL FOOTER CORTESÍA -->
-                <div class="pos-modal-footer-actions" style="display: flex; gap: 0.75rem; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.15rem;">
-                    <button type="button" class="btn btn-secondary" onclick="closePosCourtesyModal()" style="padding: 0.75rem 1.4rem; font-weight: 700;">
+                <div class="pos-modal-footer-actions" style="display: flex; gap: 0.6rem; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.75rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closePosCourtesyModal()" style="padding: 0.55rem 1.15rem; font-size: 0.85rem; font-weight: 700; border-radius: 10px;">
                         Cancelar
                     </button>
-                    <button type="submit" id="btnSubmitPosCourtesy" class="btn" style="background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; border: none; padding: 0.75rem 1.8rem; font-size: 0.95rem; font-weight: 900; border-radius: 14px; box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45); cursor: pointer;">
+                    <button type="submit" id="btnSubmitPosCourtesy" class="btn" style="background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; border: none; padding: 0.55rem 1.45rem; font-size: 0.875rem; font-weight: 900; border-radius: 10px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.45); cursor: pointer;">
                         🎁 Emitir Cortesía & Imprimir
                     </button>
                 </div>
@@ -1763,6 +1769,112 @@
             posMatchedClientByDni = null;
         }
 
+        // CONTROL DE DETECCIÓN Y BOTÓN "TRAER DATOS" POR DNI PARA CORTESÍA
+        let posMatchedCourtesyClientByDni = null;
+
+        function onDniInputPosCourtesy(val) {
+            const cleanDni = (val || '').trim().toLowerCase();
+            const btnFetch = document.getElementById('btnFetchCourtesyClientDni');
+            const badgeFound = document.getElementById('dniCourtesyFoundBadge');
+            const nameFound = document.getElementById('dniCourtesyFoundName');
+
+            posMatchedCourtesyClientByDni = null;
+
+            if (cleanDni && cleanDni.length >= 3 && cleanDni !== '00000000' && window.posExistingClients && Array.isArray(window.posExistingClients)) {
+                const match = window.posExistingClients.find(c => c.dni && c.dni.toLowerCase().trim() === cleanDni);
+                if (match) {
+                    posMatchedCourtesyClientByDni = match;
+                    if (btnFetch) {
+                        btnFetch.style.display = 'inline-flex';
+                        const shortName = (match.name || '').split(' ')[0];
+                        btnFetch.innerHTML = `<span>⚡</span> <span>Traer Datos (${escapePosHtml(shortName)})</span>`;
+                    }
+                    if (badgeFound && nameFound) {
+                        nameFound.textContent = match.name;
+                        badgeFound.style.display = 'block';
+                    }
+                    return;
+                }
+            }
+
+            if (btnFetch) btnFetch.style.display = 'none';
+            if (badgeFound) badgeFound.style.display = 'none';
+        }
+
+        function fetchCourtesyClientDataFromDni() {
+            if (!posMatchedCourtesyClientByDni) return;
+            const client = posMatchedCourtesyClientByDni;
+
+            const nameInput = document.getElementById('pos_courtesy_name');
+            const emailInput = document.getElementById('pos_courtesy_email');
+            const phoneInput = document.getElementById('pos_courtesy_phone');
+            const btnFetch = document.getElementById('btnFetchCourtesyClientDni');
+
+            if (nameInput) nameInput.value = client.name || '';
+            if (emailInput) emailInput.value = client.email || '';
+            if (phoneInput) phoneInput.value = client.phone || '';
+
+            if (btnFetch) {
+                btnFetch.innerHTML = `<span>✓</span> <span>Datos Cargados</span>`;
+                setTimeout(() => {
+                    if (btnFetch) btnFetch.style.display = 'none';
+                }, 2000);
+            }
+
+            [nameInput, emailInput, phoneInput].forEach(inp => {
+                if (inp) {
+                    inp.style.transition = 'box-shadow 0.3s ease, border-color 0.3s ease';
+                    inp.style.borderColor = '#10B981';
+                    inp.style.boxShadow = '0 0 12px rgba(16, 185, 129, 0.4)';
+                    setTimeout(() => {
+                        inp.style.borderColor = '';
+                        inp.style.boxShadow = '';
+                    }, 1200);
+                }
+            });
+        }
+
+        function clearPosCourtesyFields() {
+            const dniInput = document.getElementById('pos_courtesy_dni');
+            const nameInput = document.getElementById('pos_courtesy_name');
+            const emailInput = document.getElementById('pos_courtesy_email');
+            const phoneInput = document.getElementById('pos_courtesy_phone');
+            const btnFetch = document.getElementById('btnFetchCourtesyClientDni');
+            const badgeFound = document.getElementById('dniCourtesyFoundBadge');
+            const chkAnon = document.getElementById('chkAnonymousCourtesy');
+
+            if (chkAnon && chkAnon.checked) {
+                chkAnon.checked = false;
+                toggleAnonymousCourtesy(chkAnon);
+            }
+
+            if (dniInput) {
+                dniInput.value = '';
+                dniInput.readOnly = false;
+                dniInput.style.opacity = '1';
+                dniInput.focus();
+            }
+            if (nameInput) {
+                nameInput.value = '';
+                nameInput.readOnly = false;
+                nameInput.style.opacity = '1';
+            }
+            if (emailInput) {
+                emailInput.value = '';
+                emailInput.readOnly = false;
+                emailInput.style.opacity = '1';
+            }
+            if (phoneInput) {
+                phoneInput.value = '';
+                phoneInput.readOnly = false;
+                phoneInput.style.opacity = '1';
+            }
+
+            if (btnFetch) btnFetch.style.display = 'none';
+            if (badgeFound) badgeFound.style.display = 'none';
+            posMatchedCourtesyClientByDni = null;
+        }
+
         // Cerrar dropdowns de autocompletado al hacer click fuera
         document.addEventListener('click', function (e) {
             if (!e.target.closest('#pos_courtesy_client_picker_container')) {
@@ -1900,6 +2012,12 @@
             if (modal) {
                 modal.classList.add('active');
                 closeCourtesyClientDropdown();
+
+                const btnFetch = document.getElementById('btnFetchCourtesyClientDni');
+                const badgeFound = document.getElementById('dniCourtesyFoundBadge');
+                if (btnFetch) btnFetch.style.display = 'none';
+                if (badgeFound) badgeFound.style.display = 'none';
+                posMatchedCourtesyClientByDni = null;
 
                 // Auto-seleccionar primer sector de cortesía disponible si ninguno está activo
                 const activeCard = document.querySelector('.courtesy-zone-card.active:not(.disabled)') || document.querySelector('.courtesy-zone-card:not(.disabled)');
@@ -2195,6 +2313,76 @@
                 }
                 if (nameInput) {
                     nameInput.value = 'CLIENTE VARIOS';
+                    nameInput.readOnly = true;
+                    nameInput.style.opacity = '0.55';
+                    nameInput.required = false;
+                }
+                if (emailInput) {
+                    emailInput.value = '';
+                    emailInput.readOnly = true;
+                    emailInput.style.opacity = '0.55';
+                }
+                if (phoneInput) {
+                    phoneInput.value = '-';
+                    phoneInput.readOnly = true;
+                    phoneInput.style.opacity = '0.55';
+                }
+                if (starDni) starDni.style.display = 'none';
+                if (starName) starName.style.display = 'none';
+            } else {
+                if (dniInput) {
+                    dniInput.value = '';
+                    dniInput.readOnly = false;
+                    dniInput.style.opacity = '1';
+                    dniInput.required = true;
+                    dniInput.focus();
+                }
+                if (nameInput) {
+                    nameInput.value = '';
+                    nameInput.readOnly = false;
+                    nameInput.style.opacity = '1';
+                    nameInput.required = true;
+                }
+                if (emailInput) {
+                    emailInput.value = '';
+                    emailInput.readOnly = false;
+                    emailInput.style.opacity = '1';
+                }
+                if (phoneInput) {
+                    phoneInput.value = '';
+                    phoneInput.readOnly = false;
+                    phoneInput.style.opacity = '1';
+                }
+                if (starDni) starDni.style.display = '';
+                if (starName) starName.style.display = '';
+            }
+        }
+
+        // Manejar checkbox de Invitado Anónimo / Sin Datos en Cortesía
+        function toggleAnonymousCourtesy(chk) {
+            const isAnon = chk.checked;
+            const dniInput = document.getElementById('pos_courtesy_dni');
+            const nameInput = document.getElementById('pos_courtesy_name');
+            const emailInput = document.getElementById('pos_courtesy_email');
+            const phoneInput = document.getElementById('pos_courtesy_phone');
+            const starDni = document.getElementById('star_courtesy_dni');
+            const starName = document.getElementById('star_courtesy_name');
+            const btnFetch = document.getElementById('btnFetchCourtesyClientDni');
+            const badgeFound = document.getElementById('dniCourtesyFoundBadge');
+
+            if (isAnon) {
+                posMatchedCourtesyClientByDni = null;
+                if (btnFetch) btnFetch.style.display = 'none';
+                if (badgeFound) badgeFound.style.display = 'none';
+
+                if (dniInput) {
+                    dniInput.value = '00000000';
+                    dniInput.readOnly = true;
+                    dniInput.style.opacity = '0.55';
+                    dniInput.required = false;
+                }
+                if (nameInput) {
+                    nameInput.value = 'INVITADO DE CORTESIA';
                     nameInput.readOnly = true;
                     nameInput.style.opacity = '0.55';
                     nameInput.required = false;

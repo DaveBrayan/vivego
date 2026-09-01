@@ -132,7 +132,7 @@
                                         <td>
                                             <div style="display: flex; align-items: center; gap: 0.9rem;">
                                                 <div style="width: 54px; height: 54px; border-radius: 14px; overflow: hidden; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.15); background: #0A0A10;">
-                                                    <img src="{{ $evt['image'] }}" alt="{{ $evt['title'] }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                                    <img src="{{ $evt['image'] ?? ($evt['banner_image'] ?? '') }}" alt="{{ $evt['title'] }}" style="width: 100%; height: 100%; object-fit: cover;">
                                                 </div>
                                                 <div>
                                                     <a href="{{ route('web.attendees.scanner', $evt['id']) }}" class="dash-event-name" style="display: block; font-size: 0.95rem; font-weight: 800;" title="{{ $evt['title'] }}">{{ $evt['title'] }}</a>
@@ -150,7 +150,7 @@
                                         <td>
                                             <div style="display: flex; flex-direction: column; gap: 0.15rem;">
                                                 <span style="font-weight: 700; color: #FFFFFF;">🗓️ {{ $evt['date_formatted'] }}</span>
-                                                <small style="color: #94A3B8; font-weight: 600;">📍 {{ $evt['venue'] }}</small>
+                                                <small style="color: #94A3B8; font-weight: 600;">📍 {{ $evt['venue'] ?? ($evt['venue_name'] ?? 'Recinto Principal') }}</small>
                                             </div>
                                         </td>
                                         <td>

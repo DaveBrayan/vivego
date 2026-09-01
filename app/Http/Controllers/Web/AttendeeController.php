@@ -42,6 +42,9 @@ class AttendeeController extends Controller
             $pendingCount = max(0, $ticketsIssued - $checkedInCount);
             $attendanceRate = $ticketsIssued > 0 ? min(100, round(($checkedInCount / $ticketsIssued) * 100, 1)) : 0;
 
+            $bannerImg = $ev->banner_image ?: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=1200&q=80';
+            $venueName = $ev->venue_name ?: 'Recinto Principal';
+
             // Formatear fecha
             $events[] = [
                 'id' => $ev->id,
@@ -51,9 +54,12 @@ class AttendeeController extends Controller
                     ? $ev->event_date->format('d M, Y') 
                     : (is_string($ev->event_date) ? date('d M, Y', strtotime($ev->event_date)) : 'Fecha por confirmar'),
                 'time_formatted' => $ev->event_time ?: '20:00 HRS',
-                'venue_name' => $ev->venue_name ?: 'Recinto Principal',
+                'venue_name' => $venueName,
+                'venue' => $venueName,
                 'address' => $ev->address ?: 'Ubicación Oficial',
-                'banner_image' => $ev->banner_image ?: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=1200&q=80',
+                'banner_image' => $bannerImg,
+                'image' => $bannerImg,
+                'sales_type' => $ev->sales_type ?? 'fisica',
                 'status' => $ev->status,
                 'total_capacity' => $totalCapacity,
                 'tickets_sold' => $ticketsSold,
@@ -66,7 +72,7 @@ class AttendeeController extends Controller
             ];
         }
 
-        return view('web.attendees_index', compact('events', 'settings', 'organizer'));
+        return view('web.attendees', compact('events', 'settings', 'organizer'));
     }
 
     /**
