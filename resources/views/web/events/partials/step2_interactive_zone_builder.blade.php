@@ -4,14 +4,14 @@
         <div class="card-header-icon" style="background: rgba(255, 85, 0, 0.15); border-color: rgba(255, 85, 0, 0.3); color: #FF5500; font-size: 1.1rem; width: 38px; height: 38px;">⚙️</div>
         <div>
             <strong style="color: #FFFFFF; font-size: 0.95rem; display: block;">Modo de Configuración de Zonas</strong>
-            <span style="color: #94A3B8; font-size: 0.775rem;">Elige entre la tabla estándar de tarifas o el constructor visual interactivo con plano</span>
+            <span style="color: #94A3B8; font-size: 0.775rem;">Elige entre el mapa estándar con imagen referencial o el diseñador interactivo de zonas & butacas</span>
         </div>
     </div>
 
     <!-- Pestañas Conmutadoras de Modo -->
     <div class="step2-mode-tabs" style="display: inline-flex; gap: 0.35rem; background: rgba(15, 23, 42, 0.7); padding: 4px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.12);">
         <button type="button" class="btn-step2-tab active" id="btnStep2ModeStandard" onclick="switchStep2Mode('standard')">
-            📋 Modo Estándar (Tabla)
+            🖼️ Modo Estándar (Imagen)
         </button>
         <button type="button" class="btn-step2-tab" id="btnStep2ModeInteractive" onclick="switchStep2Mode('interactive')">
             🗺️ Modo Interactivo (Zonas & Butacas)

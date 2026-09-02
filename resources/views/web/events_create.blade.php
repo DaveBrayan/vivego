@@ -2882,38 +2882,68 @@
                 return;
             }
 
-            const zones = [];
-            document.querySelectorAll('#zonesTableBody .zone-row').forEach(row => {
-                const presaleRow = row.nextElementSibling;
-                let isPresaleEnabled = false;
-                let presaleDiscount = 0;
-                let presalePrice = null;
-                let presaleStart = null;
-                let presaleEnd = null;
-                let presaleStock = null;
+            let zones = [];
+            const currentMode = (typeof window.currentStep2ZoneMode !== 'undefined') ? window.currentStep2ZoneMode : 'standard';
 
-                if (presaleRow && presaleRow.classList.contains('zone-presale-row')) {
-                    isPresaleEnabled = presaleRow.querySelector('.zone-presale-enabled')?.checked || false;
-                    presaleDiscount = parseFloat(presaleRow.querySelector('.zone-presale-discount')?.value) || 0;
-                    presalePrice = parseFloat(presaleRow.querySelector('.zone-presale-price')?.value) || null;
-                    presaleStart = presaleRow.querySelector('.zone-presale-start')?.value || null;
-                    presaleEnd = presaleRow.querySelector('.zone-presale-end')?.value || null;
-                    presaleStock = parseInt(presaleRow.querySelector('.zone-presale-stock')?.value) || null;
+            if (currentMode === 'interactive') {
+                if (typeof SeatMapEditor !== 'undefined' && SeatMapEditor.zones && SeatMapEditor.zones.length > 0) {
+                    zones = SeatMapEditor.getExportZones();
+                } else {
+                    Swal.fire({
+                        title: 'Atención',
+                        text: 'Debes configurar al menos una zona o sector en el Modo Interactivo.',
+                        icon: 'warning',
+                        background: '#14141E',
+                        color: '#FFFFFF'
+                    });
+                    goToStep(2);
+                    return;
                 }
+            } else {
+                document.querySelectorAll('#zonesTableBody .zone-row').forEach(row => {
+                    const presaleRow = row.nextElementSibling;
+                    let isPresaleEnabled = false;
+                    let presaleDiscount = 0;
+                    let presalePrice = null;
+                    let presaleStart = null;
+                    let presaleEnd = null;
+                    let presaleStock = null;
 
-                zones.push({
-                    capacity_type: row.querySelector('.zone-capacity-type').value,
-                    name: row.querySelector('.zone-name-input').value,
-                    capacity: parseInt(row.querySelector('.zone-capacity-input').value) || 0,
-                    price: parseFloat(row.querySelector('.zone-price-input').value) || 0,
-                    has_presale: isPresaleEnabled && presaleDiscount > 0,
-                    presale_discount: isPresaleEnabled ? presaleDiscount : 0,
-                    presale_price: isPresaleEnabled ? presalePrice : null,
-                    presale_start_date: isPresaleEnabled ? presaleStart : null,
-                    presale_end_date: isPresaleEnabled ? presaleEnd : null,
-                    presale_stock: isPresaleEnabled ? presaleStock : null
+                    if (presaleRow && presaleRow.classList.contains('zone-presale-row')) {
+                        isPresaleEnabled = presaleRow.querySelector('.zone-presale-enabled')?.checked || false;
+                        presaleDiscount = parseFloat(presaleRow.querySelector('.zone-presale-discount')?.value) || 0;
+                        presalePrice = parseFloat(presaleRow.querySelector('.zone-presale-price')?.value) || null;
+                        presaleStart = presaleRow.querySelector('.zone-presale-start')?.value || null;
+                        presaleEnd = presaleRow.querySelector('.zone-presale-end')?.value || null;
+                        presaleStock = parseInt(presaleRow.querySelector('.zone-presale-stock')?.value) || null;
+                    }
+
+                    zones.push({
+                        capacity_type: row.querySelector('.zone-capacity-type').value,
+                        name: row.querySelector('.zone-name-input').value,
+                        capacity: parseInt(row.querySelector('.zone-capacity-input').value) || 0,
+                        price: parseFloat(row.querySelector('.zone-price-input').value) || 0,
+                        has_presale: isPresaleEnabled && presaleDiscount > 0,
+                        presale_discount: isPresaleEnabled ? presaleDiscount : 0,
+                        presale_price: isPresaleEnabled ? presalePrice : null,
+                        presale_start_date: isPresaleEnabled ? presaleStart : null,
+                        presale_end_date: isPresaleEnabled ? presaleEnd : null,
+                        presale_stock: isPresaleEnabled ? presaleStock : null
+                    });
                 });
-            });
+
+                if (zones.length === 0) {
+                    Swal.fire({
+                        title: 'Atención',
+                        text: 'Debes configurar al menos una zona en la tabla estándar.',
+                        icon: 'warning',
+                        background: '#14141E',
+                        color: '#FFFFFF'
+                    });
+                    goToStep(2);
+                    return;
+                }
+            }
 
             const tags = [];
             document.querySelectorAll('#tagsWrapper .tag-chip').forEach(c => {

@@ -74,6 +74,13 @@ class EventDetailController extends Controller
             if (!empty($zones)) {
                 foreach ($zones as $idx => $zone) {
                     $zoneName = $zone['name'] ?? $zone['capacity_type'] ?? ('Zona ' . ($idx + 1));
+                    $cleanZoneName = strtoupper(trim($zoneName));
+
+                    // Omitir elementos decorativos o no comercializables (Escenario / Tarima)
+                    if ($cleanZoneName === 'ESCENARIO' || $cleanZoneName === 'TARIMA' || ($zone['capacity_type'] ?? '') === 'Escenario' || ($zone['type'] ?? '') === 'stage') {
+                        continue;
+                    }
+
                     $regularPrice = isset($zone['price']) ? (float)$zone['price'] : 50.00;
                     $capacityVal = isset($zone['capacity']) ? (int)$zone['capacity'] : 100;
 
@@ -343,6 +350,21 @@ class EventDetailController extends Controller
                     'email' => $company?->email ?: 'contacto@vivego.pe',
                 ],
                 'tags' => $tags,
+                'zones' => $zones,
+                'interactive_zones' => array_values(array_filter($zones, function($z) {
+                    $name = strtoupper(trim($z['name'] ?? ''));
+                    if ($name === 'ESCENARIO' || $name === 'TARIMA' || ($z['capacity_type'] ?? '') === 'Escenario' || ($z['type'] ?? '') === 'stage') {
+                        return false;
+                    }
+                    return !empty($z['points']) && is_array($z['points']) && count($z['points']) >= 3;
+                })),
+                'has_interactive_zones' => !empty(array_filter($zones, function($z) {
+                    $name = strtoupper(trim($z['name'] ?? ''));
+                    if ($name === 'ESCENARIO' || $name === 'TARIMA' || ($z['capacity_type'] ?? '') === 'Escenario' || ($z['type'] ?? '') === 'stage') {
+                        return false;
+                    }
+                    return !empty($z['points']) && is_array($z['points']) && count($z['points']) >= 3;
+                })),
             ];
 
             $izipay = \App\Models\PaymentGateway::getIzipay();

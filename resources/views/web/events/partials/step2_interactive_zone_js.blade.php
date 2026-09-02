@@ -101,20 +101,16 @@
         },
 
         loadInitialZonesFromDom: function() {
-            const rows = document.querySelectorAll('#zonesTableBody .zone-row');
+            const phpInitialZones = @json($eventData['zones'] ?? ($zones ?? []));
+            const defaultColors = ['#10B981', '#2563EB', '#38BDF8', '#78350F', '#F59E0B', '#EC4899', '#8B5CF6', '#FF5500'];
+            
+            let hasInteractiveZones = false;
             this.zones = [];
 
-            if (rows.length > 0) {
-                const defaultColors = ['#10B981', '#2563EB', '#38BDF8', '#78350F', '#F59E0B', '#EC4899', '#8B5CF6', '#FF5500'];
-                rows.forEach((row, idx) => {
-                    const capType = row.querySelector('.zone-capacity-type')?.value || 'Campo';
-                    const name = row.querySelector('.zone-name-input')?.value?.trim() || capType;
-                    const cap = parseInt(row.querySelector('.zone-capacity-input')?.value) || 100;
-                    const price = parseFloat(row.querySelector('.zone-price-input')?.value) || 50;
-                    
-                    const presaleRow = row.nextElementSibling;
-                    const isPresale = presaleRow?.querySelector('.zone-presale-enabled')?.checked || false;
-                    const presaleDisc = parseFloat(presaleRow?.querySelector('.zone-presale-discount')?.value) || 20;
+            if (Array.isArray(phpInitialZones) && phpInitialZones.length > 0) {
+                phpInitialZones.forEach((pz, idx) => {
+                    const hasPts = Array.isArray(pz.points) && pz.points.length >= 3;
+                    if (hasPts) hasInteractiveZones = true;
 
                     const yOffset = 70 + (idx * 105);
                     const defaultPoints = [
@@ -125,24 +121,248 @@
                     ];
 
                     this.zones.push({
-                        id: 'zone_' + Date.now() + '_' + idx,
-                        name: name,
-                        capacity: cap,
-                        price: price,
-                        capacity_type: capType,
-                        color: defaultColors[idx % defaultColors.length],
-                        presale_enabled: isPresale,
-                        presale_discount: presaleDisc,
-                        points: defaultPoints,
-                        seats: []
+                        id: pz.id || ('zone_' + Date.now() + '_' + idx),
+                        name: pz.name || ('Zona ' + (idx + 1)),
+                        capacity: parseInt(pz.capacity) || 100,
+                        price: parseFloat(pz.price) || 50,
+                        capacity_type: pz.capacity_type || 'Aforo General',
+                        color: pz.color || defaultColors[idx % defaultColors.length],
+                        presale_enabled: !!(pz.has_presale || pz.presale_enabled),
+                        presale_discount: parseFloat(pz.presale_discount) || 20,
+                        presale_price: parseFloat(pz.presale_price) || null,
+                        presale_start_date: pz.presale_start_date || null,
+                        presale_end_date: pz.presale_end_date || null,
+                        presale_stock: parseInt(pz.presale_stock) || null,
+                        points: hasPts ? pz.points : defaultPoints,
+                        seats: Array.isArray(pz.seats) ? pz.seats : []
                     });
                 });
             } else {
-                this.zones = [];
+                const rows = document.querySelectorAll('#zonesTableBody .zone-row');
+                if (rows.length > 0) {
+                    rows.forEach((row, idx) => {
+                        const capType = row.querySelector('.zone-capacity-type')?.value || 'Aforo General';
+                        const name = row.querySelector('.zone-name-input')?.value?.trim() || capType;
+                        const cap = parseInt(row.querySelector('.zone-capacity-input')?.value) || 100;
+                        const price = parseFloat(row.querySelector('.zone-price-input')?.value) || 50;
+                        
+                        const presaleRow = row.nextElementSibling;
+                        const isPresale = presaleRow?.querySelector('.zone-presale-enabled')?.checked || false;
+                        const presaleDisc = parseFloat(presaleRow?.querySelector('.zone-presale-discount')?.value) || 20;
+                        const presaleStart = presaleRow?.querySelector('.zone-presale-start')?.value || null;
+                        const presaleEnd = presaleRow?.querySelector('.zone-presale-end')?.value || null;
+                        const presaleStock = parseInt(presaleRow?.querySelector('.zone-presale-stock')?.value) || null;
+
+                        const yOffset = 70 + (idx * 105);
+                        const defaultPoints = [
+                            { x: 348, y: yOffset },
+                            { x: 652, y: yOffset },
+                            { x: 652, y: yOffset + 80 },
+                            { x: 348, y: yOffset + 80 }
+                        ];
+
+                        this.zones.push({
+                            id: 'zone_' + Date.now() + '_' + idx,
+                            name: name,
+                            capacity: cap,
+                            price: price,
+                            capacity_type: capType,
+                            color: defaultColors[idx % defaultColors.length],
+                            presale_enabled: isPresale,
+                            presale_discount: presaleDisc,
+                            presale_start_date: presaleStart,
+                            presale_end_date: presaleEnd,
+                            presale_stock: presaleStock,
+                            points: defaultPoints,
+                            seats: []
+                        });
+                    });
+                }
             }
 
             this.selectedZoneId = this.zones.length > 0 ? this.zones[0].id : null;
             this.selectedPointIdx = null;
+
+            // Determinar modo activo según zonas guardadas
+            if (hasInteractiveZones) {
+                window.currentStep2ZoneMode = 'interactive';
+                switchStep2Mode('interactive');
+            } else {
+                window.currentStep2ZoneMode = 'standard';
+                switchStep2Mode('standard');
+            }
+        },
+
+        syncToStandardTable: function() {
+            const tbody = document.getElementById('zonesTableBody');
+            if (!tbody) return;
+
+            if (this.zones && this.zones.length > 0) {
+                tbody.innerHTML = '';
+                const todayStr = new Date().toISOString().split('T')[0];
+                const futureDate = new Date();
+                futureDate.setDate(futureDate.getDate() + 15);
+                const futureStr = futureDate.toISOString().split('T')[0];
+
+                const escapeStr = (str) => {
+                    const p = document.createElement('p');
+                    p.textContent = str || '';
+                    return p.innerHTML;
+                };
+
+                this.zones.forEach((z) => {
+                    const row = document.createElement('tr');
+                    row.className = 'zone-row';
+                    row.innerHTML = `
+                        <td>
+                            <select class="form-select-custom zone-capacity-type" style="font-size: 0.85rem; padding: 0.55rem;">
+                                <option value="Aforo VIP" ${z.capacity_type === 'Aforo VIP' ? 'selected' : ''}>🏟️ Aforo VIP</option>
+                                <option value="Aforo Preferencial" ${z.capacity_type === 'Aforo Preferencial' ? 'selected' : ''}>🏟️ Aforo Preferencial</option>
+                                <option value="Aforo General" ${(!z.capacity_type || z.capacity_type === 'Aforo General') ? 'selected' : ''}>🏟️ Aforo General</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input type="text" class="form-input-custom zone-name-input" value="${escapeStr(z.name || '')}" style="font-size: 0.85rem; padding: 0.55rem;" oninput="if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable()">
+                        </td>
+                        <td>
+                            <input type="number" class="form-input-custom zone-capacity-input" value="${z.capacity || 100}" min="1" style="font-size: 0.85rem; padding: 0.55rem;" oninput="if(typeof recalculateTotalCapacity==='function') recalculateTotalCapacity(); if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable();">
+                        </td>
+                        <td>
+                            <input type="number" step="0.50" class="form-input-custom zone-price-input" value="${(parseFloat(z.price) || 0).toFixed(2)}" min="0" style="font-size: 0.85rem; padding: 0.55rem; color: #10B981; font-weight: 800;" oninput="if(typeof updateZonePresaleCalc==='function') updateZonePresaleCalc(this); if(typeof recalculateTotalCapacity==='function') recalculateTotalCapacity(); if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable();">
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-toggle-presale" style="background: rgba(255,85,0,0.15); border: 1.5px solid #FF5500; color: #FF5500; font-size: 0.775rem; font-weight: 800; padding: 0.45rem 0.65rem; border-radius: 8px; width: 100%; text-align: center;" onclick="if(typeof toggleZonePresaleBox==='function') toggleZonePresaleBox(this)">
+                                🔥 Configurar
+                            </button>
+                        </td>
+                        <td style="text-align: center;">
+                            <button type="button" class="dash-btn-icon-action btn-delete-action" onclick="if(typeof removeZoneRow==='function') removeZoneRow(this)" title="Eliminar Zona">🗑️</button>
+                        </td>
+                    `;
+
+                    const presaleRow = document.createElement('tr');
+                    presaleRow.className = 'zone-presale-row';
+                    presaleRow.style.display = z.presale_enabled ? 'table-row' : 'none';
+                    presaleRow.style.background = 'rgba(255, 85, 0, 0.03)';
+                    const discPrice = z.price ? (z.price * (1 - (z.presale_discount || 0) / 100)) : 0;
+
+                    presaleRow.innerHTML = `
+                        <td colspan="6" style="padding: 0.85rem 1.25rem; border-bottom: 1.5px solid rgba(255,85,0,0.25);">
+                            <div style="background: rgba(15,23,42,0.8); border: 1.5px dashed rgba(255,85,0,0.4); border-radius: 12px; padding: 1rem 1.25rem;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin: 0;">
+                                        <input type="checkbox" class="zone-presale-enabled" ${z.presale_enabled ? 'checked' : ''} onchange="if(typeof togglePresaleInputs==='function') togglePresaleInputs(this)" style="accent-color: #FF5500; width: 18px; height: 18px;">
+                                        <strong style="color: #FF5500; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px;">🔥 Activar Preventa para esta Zona</strong>
+                                    </label>
+                                    <span class="presale-preview-badge" style="font-size: 0.75rem; font-weight: 800; color: ${z.presale_enabled ? '#38BDF8' : '#94A3B8'}; background: rgba(255,255,255,0.08); padding: 3px 10px; border-radius: 6px;">
+                                        ${z.presale_enabled ? 'Preventa Activa' : 'Preventa Inactiva'}
+                                    </span>
+                                </div>
+                                <div class="zone-presale-inputs-grid" style="display: grid; grid-template-columns: 1fr 1.2fr 1.5fr 1.5fr 1.2fr; gap: 0.75rem; ${z.presale_enabled ? '' : 'opacity: 0.4; pointer-events: none;'}">
+                                    <div>
+                                        <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">% DESCUENTO</label>
+                                        <input type="number" class="form-input-custom zone-presale-discount" value="${z.presale_discount || 20}" min="0" max="99" style="font-size: 0.825rem; padding: 0.45rem;" oninput="if(typeof updateZonePresaleCalc==='function') updateZonePresaleCalc(this)">
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">PRECIO PREVENTA (S/)</label>
+                                        <input type="number" step="0.50" class="form-input-custom zone-presale-price" value="${discPrice.toFixed(2)}" min="0" style="font-size: 0.825rem; padding: 0.45rem; color: #38BDF8; font-weight: 800;" readonly>
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">FECHA INICIO</label>
+                                        <input type="date" class="form-input-custom zone-presale-start" value="${z.presale_start_date || todayStr}" style="font-size: 0.825rem; padding: 0.45rem;">
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">FECHA FIN (LÍMITE)</label>
+                                        <input type="date" class="form-input-custom zone-presale-end" value="${z.presale_end_date || futureStr}" style="font-size: 0.825rem; padding: 0.45rem;">
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">STOCK PREVENTA</label>
+                                        <input type="number" class="form-input-custom zone-presale-stock" value="${z.presale_stock || ''}" min="0" style="font-size: 0.825rem; padding: 0.45rem;" placeholder="Hasta agotar">
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    `;
+
+                    tbody.appendChild(row);
+                    tbody.appendChild(presaleRow);
+                });
+            }
+
+            if (typeof recalculateTotalCapacity === 'function') recalculateTotalCapacity();
+            if (typeof syncCourtesyZonesTable === 'function') syncCourtesyZonesTable();
+        },
+
+        syncFromStandardTable: function() {
+            const rows = document.querySelectorAll('#zonesTableBody .zone-row');
+            if (rows.length === 0) return;
+
+            const defaultColors = ['#10B981', '#2563EB', '#38BDF8', '#78350F', '#F59E0B', '#EC4899', '#8B5CF6', '#FF5500'];
+            const updatedZones = [];
+
+            rows.forEach((row, idx) => {
+                const capType = row.querySelector('.zone-capacity-type')?.value || 'Aforo General';
+                const name = row.querySelector('.zone-name-input')?.value?.trim() || ('Zona ' + (idx + 1));
+                const cap = parseInt(row.querySelector('.zone-capacity-input')?.value) || 100;
+                const price = parseFloat(row.querySelector('.zone-price-input')?.value) || 50;
+                
+                const presaleRow = row.nextElementSibling;
+                const isPresale = presaleRow?.querySelector('.zone-presale-enabled')?.checked || false;
+                const presaleDisc = parseFloat(presaleRow?.querySelector('.zone-presale-discount')?.value) || 20;
+                const presaleStart = presaleRow?.querySelector('.zone-presale-start')?.value || null;
+                const presaleEnd = presaleRow?.querySelector('.zone-presale-end')?.value || null;
+                const presaleStock = parseInt(presaleRow?.querySelector('.zone-presale-stock')?.value) || null;
+
+                const existing = this.zones ? this.zones.find(ez => ez.name === name || ez.id === ('zone_' + idx)) : null;
+
+                const yOffset = 70 + (idx * 105);
+                const defaultPoints = [
+                    { x: 348, y: yOffset },
+                    { x: 652, y: yOffset },
+                    { x: 652, y: yOffset + 80 },
+                    { x: 348, y: yOffset + 80 }
+                ];
+
+                updatedZones.push({
+                    id: existing ? existing.id : ('zone_' + Date.now() + '_' + idx),
+                    name: name,
+                    capacity: cap,
+                    price: price,
+                    capacity_type: capType,
+                    color: existing ? existing.color : defaultColors[idx % defaultColors.length],
+                    presale_enabled: isPresale,
+                    presale_discount: presaleDisc,
+                    presale_start_date: presaleStart,
+                    presale_end_date: presaleEnd,
+                    presale_stock: presaleStock,
+                    points: (existing && Array.isArray(existing.points) && existing.points.length >= 3) ? existing.points : defaultPoints,
+                    seats: existing ? (existing.seats || []) : []
+                });
+            });
+
+            this.zones = updatedZones;
+            if (!this.selectedZoneId && this.zones.length > 0) {
+                this.selectedZoneId = this.zones[0].id;
+            }
+        },
+
+        getExportZones: function() {
+            return (this.zones || []).map(z => ({
+                id: z.id,
+                name: z.name || 'Zona',
+                capacity_type: z.capacity_type || 'Aforo General',
+                capacity: parseInt(z.capacity) || 0,
+                price: parseFloat(z.price) || 0,
+                color: z.color || '#FF5500',
+                points: Array.isArray(z.points) ? z.points : [],
+                has_presale: !!z.presale_enabled,
+                presale_discount: parseFloat(z.presale_discount) || 0,
+                presale_price: z.price ? parseFloat((z.price * (1 - (parseFloat(z.presale_discount) || 0) / 100)).toFixed(2)) : 0,
+                presale_start_date: z.presale_start_date || null,
+                presale_end_date: z.presale_end_date || null,
+                presale_stock: parseInt(z.presale_stock) || null,
+                seats: Array.isArray(z.seats) ? z.seats : []
+            }));
         },
 
         setTool: function(toolName) {
@@ -2147,6 +2367,7 @@
     };
 
     function switchStep2Mode(mode) {
+        window.currentStep2ZoneMode = mode;
         const btnStandard = document.getElementById('btnStep2ModeStandard');
         const btnInteractive = document.getElementById('btnStep2ModeInteractive');
         const standardContainer = document.getElementById('step2StandardContainer');

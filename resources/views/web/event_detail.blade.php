@@ -56,12 +56,8 @@
                 <img id="artistHeroImg" src="{{ $artistImgSrc }}" alt="{{ $event['title'] }}" style="width: 100%; max-width: 860px; height: auto; object-fit: contain; display: block; margin: 0 auto; filter: drop-shadow(0 15px 35px rgba(0,0,0,0.7));">
             </div>
 
-            <!-- 2. IMAGEN DE ZONAS / RECINTO DIRECTA CON SEPARACIÓN LIMPIA (SIN SOMBRA NI BORDES) -->
-            @if(!empty($event['reference_image']))
-                <div style="width: 100%; text-align: center; display: flex; justify-content: center; margin-top: 0.5rem;">
-                    <img src="{{ $event['reference_image'] }}" alt="Zonas del Evento" style="width: 100%; max-width: 860px; height: auto; object-fit: contain; display: block; margin: 0 auto; box-shadow: none !important; border: none !important; border-radius: 0 !important; filter: none !important;">
-                </div>
-            @endif
+            <!-- 2. MAPA INTERACTIVO DE ZONAS O IMAGEN DE REFERENCIA -->
+            @include('web.events.partials.public_interactive_seat_map')
 
             <!-- 3. SELECCIÓN DE ENTRADAS Y COMPRA (TEMA BLANCO) -->
             <div class="template2-booking-card" style="width: 100%; max-width: 860px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 1.75rem 1.5rem; box-shadow: 0 15px 40px rgba(0,0,0,0.18);">
@@ -297,27 +293,8 @@
 
                     <hr class="event-section-divider detail-order-8">
 
-                    @if(!empty($event['reference_image']))
-                        <!-- Sección: Imagen de Referencia / Plano de Zonas y Distribución -->
-                        <section class="event-info-block animate-fade-in detail-order-8" style="margin-bottom: 2rem;">
-                            <div class="info-block-header">
-                                <div class="info-block-icon">🗺️</div>
-                                <h2>Mapa de Zonas y Referencia</h2>
-                            </div>
-
-                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; margin-top: 0.5rem;">
-                                <div style="position: relative; display: inline-block; max-width: 100%; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); border: 1px solid rgba(0, 0, 0, 0.08);">
-                                    <img src="{{ $event['reference_image'] }}" alt="Mapa de Zonas y Referencia - {{ $event['title'] }}" style="max-height: 340px; width: auto; max-width: 100%; object-fit: contain; display: block; margin: 0 auto; border-radius: 14px;">
-                                    
-                                    <a href="{{ $event['reference_image'] }}" target="_blank" style="position: absolute; bottom: 8px; right: 8px; background: rgba(15, 23, 42, 0.8); color: #FFFFFF; font-size: 0.725rem; font-weight: 700; padding: 4px 10px; border-radius: 6px; text-decoration: none; border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(6px); display: inline-flex; align-items: center; gap: 0.3rem;" title="Abrir imagen en tamaño completo">
-                                        <span>🔍</span> Ver completo
-                                    </a>
-                                </div>
-                            </div>
-                        </section>
-
-                        <hr class="event-section-divider detail-order-8">
-                    @endif
+                    <!-- Sección: Mapa Interactivo de Zonas o Imagen de Referencia -->
+                    @include('web.events.partials.public_interactive_seat_map')
 
                     <!-- Sección: Detalles del Evento (Columna Izquierda Principal) -->
                     <section class="event-info-block animate-fade-in detail-order-9">
@@ -801,7 +778,30 @@
                 if (totalPriceDisplay) {
                     totalPriceDisplay.textContent = 'S/ ' + currentGrandTotal.toFixed(2);
                 }
+
+                // Sincronizar zonas resaltadas en el mapa interactivo
+                const selectedNames = selectedTicketsArray.map(item => item.name.toLowerCase());
+                document.querySelectorAll('.svg-public-zone').forEach(poly => {
+                    const zName = (poly.getAttribute('data-zone-name') || '').toLowerCase();
+                    const isSelected = selectedNames.some(sn => sn.includes(zName) || zName.includes(sn));
+                    if (isSelected) {
+                        poly.classList.add('selected');
+                    } else {
+                        poly.classList.remove('selected');
+                    }
+                });
+                document.querySelectorAll('.public-zone-legend-pill').forEach(pill => {
+                    const zName = (pill.getAttribute('data-zone-name') || '').toLowerCase();
+                    const isSelected = selectedNames.some(sn => sn.includes(zName) || zName.includes(sn));
+                    if (isSelected) {
+                        pill.classList.add('active');
+                    } else {
+                        pill.classList.remove('active');
+                    }
+                });
             }
+
+            window.recalculateTicketTotal = recalculateTotal;
 
             ticketRows.forEach(row => {
                 const isAvailable = row.getAttribute('data-available') !== 'false';
