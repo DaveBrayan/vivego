@@ -3012,6 +3012,51 @@
             `;
         }
 
+        function cleanZoneNameJs(name) {
+            if (!name || typeof name !== 'string') return '';
+            let m = name.match(/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?(.+)/i);
+            return m ? m[1].trim() : name.trim();
+        }
+
+        function formatShortSeatCodeJs(seat) {
+            if (!seat) return '';
+            if (typeof seat === 'object') {
+                if (seat.row && (seat.number || seat.col)) {
+                    return `${String(seat.row).toUpperCase()}${seat.number || seat.col}`;
+                }
+                seat = seat.label || seat.number || seat.code || '';
+            }
+            seat = String(seat).trim();
+            if (!seat) return '';
+
+            // "Fila A - Asiento 1" o "Fila A - Columna 1"
+            let m = seat.match(/Fila\s*([A-Za-z0-9]+)\s*-\s*(?:Asiento|Columna)\s*([0-9]+)/i);
+            if (m) return `${m[1].toUpperCase()}${m[2]}`;
+
+            // "Fila A Asiento 1"
+            m = seat.match(/Fila\s*([A-Za-z0-9]+)\s*(?:Asiento|Columna)\s*([0-9]+)/i);
+            if (m) return `${m[1].toUpperCase()}${m[2]}`;
+
+            // "A-1" o "A 1"
+            m = seat.match(/^([A-Za-z]+)[-\s]+([0-9]+)$/);
+            if (m) return `${m[1].toUpperCase()}${m[2]}`;
+
+            // Código directo tipo "A1"
+            m = seat.match(/([A-Za-z]+[0-9]+)$/);
+            if (m) return m[1].toUpperCase();
+
+            return seat;
+        }
+
+        function formatZoneWithSeatJs(zoneName, seat) {
+            let clean = cleanZoneNameJs(zoneName || '');
+            let shortSeat = formatShortSeatCodeJs(seat);
+            if (!shortSeat) return clean;
+            if (clean.includes(`(${shortSeat})`)) return clean;
+            let base = clean.replace(/\s*\([^)]*\)$/, '').trim();
+            return `${base} (${shortSeat})`;
+        }
+
         // Generador base de documento PDF con Canva Studio (compartido)
         async function generatePosTicketPdfDoc(sale) {
             const eventTitle = "{{ addslashes($event->title) }}";
@@ -3073,16 +3118,95 @@
                 }
             }
 
-            const ticketsList = (sale.tickets_data && Array.isArray(sale.tickets_data) && sale.tickets_data.length > 0)
-                ? sale.tickets_data
-                : Array.from({ length: parseInt(sale.quantity || 1, 10) }, (_, i) => ({
-                    ticket_code: `TK-${sale.receipt_number}-${i + 1}`,
-                    ticket_number: i + 1,
-                    zone: sale.zone_name,
-                    price: sale.unit_price,
-                    validation_hash: null,
-                    qr_payload: null
-                }));
+            let ticketsDataParsed = sale.tickets_data;
+            if (typeof ticketsDataParsed === 'string') {
+                try { ticketsDataParsed = JSON.parse(ticketsDataParsed); } catch(e) {}
+            }
+
+            const isCourtesy = (sale.payment_method === 'Cortesía' || sale.payment_method === 'cortesia');
+
+            let ticketsList = [];
+
+            // 1. Si la venta ya tiene event_tickets cargados con su zone_name (ej: "Butacas Numeradas (A1)")
+            if (sale.event_tickets && Array.isArray(sale.event_tickets) && sale.event_tickets.length > 0) {
+                sale.event_tickets.forEach((et, i) => {
+                    ticketsList.push({
+                        ticket_code: et.ticket_code || `TK-${sale.receipt_number}-${i + 1}`,
+                        ticket_number: et.ticket_number || (i + 1),
+                        zone: et.zone_name || sale.zone_name,
+                        price: et.unit_price || sale.unit_price,
+                        is_courtesy: isCourtesy,
+                        validation_hash: et.validation_hash || null,
+                        qr_payload: et.qr_payload || null
+                    });
+                });
+            } else if (sale.eventTickets && Array.isArray(sale.eventTickets) && sale.eventTickets.length > 0) {
+                sale.eventTickets.forEach((et, i) => {
+                    ticketsList.push({
+                        ticket_code: et.ticket_code || `TK-${sale.receipt_number}-${i + 1}`,
+                        ticket_number: et.ticket_number || (i + 1),
+                        zone: et.zone_name || sale.zone_name,
+                        price: et.unit_price || sale.unit_price,
+                        is_courtesy: isCourtesy,
+                        validation_hash: et.validation_hash || null,
+                        qr_payload: et.qr_payload || null
+                    });
+                });
+            } else if (ticketsDataParsed && ticketsDataParsed.items && Array.isArray(ticketsDataParsed.items) && ticketsDataParsed.items.length > 0) {
+                ticketsDataParsed.items.forEach((it, idx) => {
+                    const qty = parseInt(it.quantity || 1, 10);
+                    const rawZoneName = it.zone_name || it.name || sale.zone_name;
+                    const price = it.price || it.regular_price || sale.unit_price;
+                    let seats = it.seats || [];
+                    if (typeof seats === 'string') {
+                        try { seats = JSON.parse(seats); } catch(e) { seats = []; }
+                    }
+                    if (!Array.isArray(seats)) seats = [];
+
+                    for (let q = 0; q < qty; q++) {
+                        const st = seats[q] || null;
+                        const effectiveZone = formatZoneWithSeatJs(rawZoneName, st);
+                        ticketsList.push({
+                            ticket_code: it.ticket_code || `TK-${sale.receipt_number}-${ticketsList.length + 1}`,
+                            ticket_number: ticketsList.length + 1,
+                            zone: effectiveZone,
+                            seat: formatShortSeatCodeJs(st),
+                            price: price,
+                            is_courtesy: isCourtesy || it.is_courtesy,
+                            validation_hash: it.validation_hash || null,
+                            qr_payload: it.qr_payload || null
+                        });
+                    }
+                });
+            } else if (Array.isArray(ticketsDataParsed) && ticketsDataParsed.length > 0) {
+                ticketsDataParsed.forEach((tItem, i) => {
+                    const st = tItem.seat || tItem.seat_number || (tItem.seats && tItem.seats[0]) || null;
+                    const rawZoneName = tItem.zone || tItem.zone_name || sale.zone_name;
+                    ticketsList.push({
+                        ticket_code: tItem.ticket_code || `TK-${sale.receipt_number}-${i + 1}`,
+                        ticket_number: tItem.ticket_number || (i + 1),
+                        zone: formatZoneWithSeatJs(rawZoneName, st),
+                        seat: formatShortSeatCodeJs(st),
+                        price: tItem.price || sale.unit_price,
+                        is_courtesy: isCourtesy || tItem.is_courtesy,
+                        validation_hash: tItem.validation_hash || null,
+                        qr_payload: tItem.qr_payload || null
+                    });
+                });
+            } else {
+                const qty = parseInt(sale.quantity || 1, 10);
+                for (let q = 0; q < qty; q++) {
+                    ticketsList.push({
+                        ticket_code: `TK-${sale.receipt_number}-${q + 1}`,
+                        ticket_number: q + 1,
+                        zone: sale.zone_name,
+                        price: sale.unit_price,
+                        is_courtesy: isCourtesy,
+                        validation_hash: null,
+                        qr_payload: null
+                    });
+                }
+            }
 
             const jsPdfObj = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF || null);
             let pdf = null;
@@ -3110,9 +3234,9 @@
                 const qrPayload = tItem.qr_payload || sale.qr_payload || `VIVEGO|${sale.receipt_number || 'REC'}|EVT-${sale.event_id || eventId}|DNI-${sale.buyer_dni || '00000000'}|TICK-${numSeq}|${hashVal}`;
                 const qrDataUrl = generateQrBase64(qrPayload);
 
-                const isCourtesy = (sale.payment_method === 'Cortesía' || sale.payment_method === 'cortesia' || tItem.is_courtesy);
-                const unitPriceVal = isCourtesy ? '0.00' : parseFloat(tItem.price || sale.unit_price || sale.total_amount).toFixed(2);
-                const priceDisplay = isCourtesy ? 'CORTESÍA' : ('S/ ' + unitPriceVal);
+                const isCourtesyTicket = isCourtesy || tItem.is_courtesy;
+                const unitPriceVal = isCourtesyTicket ? '0.00' : parseFloat(tItem.price || sale.unit_price || sale.total_amount).toFixed(2);
+                const priceDisplay = isCourtesyTicket ? 'CORTESÍA' : ('S/ ' + unitPriceVal);
 
                 const dynamicData = {
                     title: eventTitle,
@@ -3120,9 +3244,9 @@
                     city: eventAddress,
                     date: eventDate,
                     time: eventTime,
-                    zone: tItem.zone || sale.zone_name,
+                    zone: cleanZoneNameJs(tItem.zone || sale.zone_name),
                     price: priceDisplay,
-                    buyer_name: sale.buyer_name || (isCourtesy ? 'INVITADO DE CORTESÍA' : 'CLIENTE VARIOS'),
+                    buyer_name: sale.buyer_name || (isCourtesyTicket ? 'INVITADO DE CORTESÍA' : 'CLIENTE VARIOS'),
                     buyer_dni: sale.buyer_dni || '00000000',
                     ticket_number: ticketNumStr,
                     hash: hashVal,

@@ -93,15 +93,46 @@
                     @endif
 
                     @foreach($items as $t)
-                        <div style="display: flex; justify-content: space-between; font-size: 0.95rem; color: #1E293B; margin-bottom: 0.4rem;">
-                            <span>🎟️ <strong>{{ $t['quantity'] ?? 1 }}x</strong> {{ $cleanZoneName($t['zone_name'] ?? ($t['name'] ?? ''), $sale->zone_name) }}</span>
-                            <strong style="color: #0F172A;">
-                                @if($sale->is_upgrade)
-                                    <span style="font-size: 0.85rem; color: #6366F1;">+S/ {{ number_format(($t['subtotal'] ?? (($t['price'] ?? 0) * ($t['quantity'] ?? 1))), 2) }}</span>
-                                @else
-                                    S/ {{ number_format(($t['subtotal'] ?? (($t['price'] ?? 0) * ($t['quantity'] ?? 1))), 2) }}
-                                @endif
-                            </strong>
+                        @php
+                            $tSeats = !empty($t['seats']) ? (is_array($t['seats']) ? $t['seats'] : json_decode($t['seats'], true)) : [];
+                            if (empty($tSeats) && $sale->eventTickets && $sale->eventTickets->count() > 0) {
+                                $zoneBase = $cleanZoneName($t['zone_name'] ?? ($t['name'] ?? ''), $sale->zone_name);
+                                foreach ($sale->eventTickets as $et) {
+                                    if (str_contains($et->zone_name, $zoneBase) && preg_match('/\(([^)]+)\)/', $et->zone_name, $sm)) {
+                                        $tSeats[] = $sm[1];
+                                    }
+                                }
+                            }
+                            $formattedSeats = array_filter(array_map('formatShortSeatCode', (array)$tSeats));
+                        @endphp
+                        <div style="margin-bottom: 0.65rem; padding-bottom: 0.55rem; border-bottom: 1px dashed #E2E8F0;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.95rem; color: #1E293B; margin-bottom: 0.25rem;">
+                                <span>
+                                    🎟️ <strong>{{ $t['quantity'] ?? 1 }}x</strong> {{ $cleanZoneName($t['zone_name'] ?? ($t['name'] ?? ''), $sale->zone_name) }}
+                                    @if(function_exists('isSalePresale') && (isSalePresale($t) || isSalePresale($sale)))
+                                        <span style="background: rgba(255, 85, 0, 0.12); color: #FF5500; border: 1.5px solid rgba(255, 85, 0, 0.35); font-size: 0.72rem; font-weight: 900; padding: 2px 7px; border-radius: 6px; text-transform: uppercase; margin-left: 0.4rem;">🔥 Tarifa Preventa</span>
+                                    @endif
+                                </span>
+                                <strong style="color: #0F172A;">
+                                    @if($sale->is_upgrade)
+                                        <span style="font-size: 0.85rem; color: #6366F1;">+S/ {{ number_format(($t['subtotal'] ?? (($t['price'] ?? 0) * ($t['quantity'] ?? 1))), 2) }}</span>
+                                    @else
+                                        S/ {{ number_format(($t['subtotal'] ?? (($t['price'] ?? 0) * ($t['quantity'] ?? 1))), 2) }}
+                                    @endif
+                                </strong>
+                            </div>
+                            @if(!empty($formattedSeats))
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; padding-left: 1.5rem; margin-top: 0.2rem;">
+                                    <span style="font-size: 0.75rem; font-weight: 800; color: #059669; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                        🪑 Butacas Asignadas:
+                                    </span>
+                                    @foreach($formattedSeats as $fs)
+                                        <span style="background: rgba(16, 185, 129, 0.12); color: #047857; border: 1.5px solid rgba(16, 185, 129, 0.35); font-size: 0.75rem; font-weight: 900; padding: 2px 8px; border-radius: 6px; box-shadow: 0 1px 3px rgba(16,185,129,0.08);">
+                                            {{ $fs }}
+                                        </span>
+                                    @endforeach
+                                </div>
+                            @endif
                         </div>
                     @endforeach
 

@@ -1331,7 +1331,14 @@
             const discEl = document.getElementById('inspectorZonePresaleDiscount');
             z.presale_discount = discEl ? (parseFloat(discEl.value) || 0) : 20;
 
+            const pStartEl = document.getElementById('inspectorZonePresaleStartDate');
+            z.presale_start_date = pStartEl && pStartEl.value ? pStartEl.value : null;
+
+            const pEndEl = document.getElementById('inspectorZonePresaleEndDate');
+            z.presale_end_date = pEndEl && pEndEl.value ? pEndEl.value : null;
+
             const pPrice = Math.max(0, z.price * (1 - (z.presale_discount / 100)));
+            z.presale_price = pPrice;
             const presaleDisp = document.getElementById('inspectorZonePresalePriceDisplay');
             if (presaleDisp) presaleDisp.value = `S/ ${pPrice.toFixed(2)}`;
 
@@ -1345,6 +1352,19 @@
             this.syncToStandardTable();
         },
 
+        updateSeatNomenclaturePreview: function() {
+            const previewEl = document.getElementById('seatNomenclaturePreview');
+            if (!previewEl) return;
+
+            const rowType = document.getElementById('seatGenRowType')?.value || 'letters';
+            const colType = document.getElementById('seatGenColType')?.value || 'numbers';
+
+            const rowSample = rowType === 'numbers' ? '1' : 'A';
+            const colSample = colType === 'letters' ? 'A' : '1';
+
+            previewEl.textContent = `Fila ${rowSample} - Asiento ${colSample} (${rowSample}-${colSample})`;
+        },
+
         generateSeatsForSelectedZone: function() {
             const z = this.getSelectedZone();
             if (!z || !z.points || z.points.length < 3) {
@@ -1354,6 +1374,8 @@
 
             const numRows = parseInt(document.getElementById('seatGenRows')?.value) || 5;
             const numCols = parseInt(document.getElementById('seatGenCols')?.value) || 10;
+            const rowType = document.getElementById('seatGenRowType')?.value || 'letters';
+            const colType = document.getElementById('seatGenColType')?.value || 'numbers';
 
             const xs = z.points.map(p => p.x);
             const ys = z.points.map(p => p.y);
@@ -1372,16 +1394,38 @@
             const seats = [];
 
             for (let r = 0; r < numRows; r++) {
-                const rowLabel = alphabet[r % alphabet.length];
+                let rowCode, rowTitle;
+                if (rowType === 'numbers') {
+                    rowCode = String(r + 1);
+                    rowTitle = `Fila ${r + 1}`;
+                } else {
+                    rowCode = alphabet[r % alphabet.length];
+                    rowTitle = `Fila ${rowCode}`;
+                }
+
                 const curY = minY + (r * yStep);
+
                 for (let c = 0; c < numCols; c++) {
-                    const seatNum = c + 1;
+                    let colCode, seatTitle;
+                    if (colType === 'letters') {
+                        colCode = alphabet[c % alphabet.length];
+                        seatTitle = `Asiento ${colCode}`;
+                    } else {
+                        colCode = String(c + 1);
+                        seatTitle = `Asiento ${colCode}`;
+                    }
+
                     const curX = minX + (c * xStep);
+                    const shortCode = `${rowCode}-${colCode}`;
+                    const fullLabel = `${rowTitle} - ${seatTitle}`;
+
                     seats.push({
-                        id: `${z.id}_${rowLabel}_${seatNum}`,
-                        row: rowLabel,
-                        number: seatNum,
-                        label: `${rowLabel}-${seatNum}`,
+                        id: `${z.id}_${rowCode}_${colCode}`,
+                        row: rowCode,
+                        col: colCode,
+                        number: shortCode,
+                        label: fullLabel,
+                        display_name: fullLabel,
                         x: Math.round(curX),
                         y: Math.round(curY),
                         status: 'available'
@@ -1392,16 +1436,40 @@
             z.seats = seats;
             z.capacity = seats.length;
             z.capacity_type = 'Butacas Numeradas';
-            z.name = 'Butacas Numeradas';
+            if (!z.name || z.name === 'Zona' || z.name === 'Nueva Zona') {
+                z.name = 'Butacas Numeradas';
+            }
             
             const nameEl = document.getElementById('inspectorZoneName');
-            if (nameEl) nameEl.value = z.name;
+            if (nameEl && (!nameEl.value || nameEl.value === 'Zona' || nameEl.value === 'Nueva Zona')) {
+                nameEl.value = z.name;
+            }
             const capEl = document.getElementById('inspectorZoneCapacity');
             if (capEl) capEl.value = z.capacity;
             const capTypeEl = document.getElementById('inspectorZoneCapacityType');
             if (capTypeEl) capTypeEl.value = z.capacity_type;
             const badgeEl = document.getElementById('inspectorSeatsBadge');
             if (badgeEl) badgeEl.textContent = `✓ ${seats.length} butacas generadas (${numRows} filas × ${numCols} asientos)`;
+
+            this.render();
+            this.syncToStandardTable();
+        },
+
+        clearSeatsForSelectedZone: function() {
+            const z = this.getSelectedZone();
+            if (!z) return;
+
+            if (!confirm(`¿Deseas quitar todas las butacas numeradas del sector "${z.name}" y dejarlo como aforo general?`)) {
+                return;
+            }
+
+            z.seats = [];
+            z.capacity_type = 'General';
+
+            const badgeEl = document.getElementById('inspectorSeatsBadge');
+            if (badgeEl) badgeEl.textContent = '';
+            const btnRemove = document.getElementById('btnRemoveSeats');
+            if (btnRemove) btnRemove.style.display = 'none';
 
             this.render();
             this.syncToStandardTable();
@@ -1927,15 +1995,28 @@
                 presaleGrid.style.pointerEvents = isPresale ? 'auto' : 'none';
             }
 
+            const pStartEl = document.getElementById('inspectorZonePresaleStartDate');
+            if (pStartEl) pStartEl.value = z.presale_start_date ? z.presale_start_date.split('T')[0].split(' ')[0] : '';
+
+            const pEndEl = document.getElementById('inspectorZonePresaleEndDate');
+            if (pEndEl) pEndEl.value = z.presale_end_date ? z.presale_end_date.split('T')[0].split(' ')[0] : '';
+
             const seatsCount = Array.isArray(z.seats) ? z.seats.length : 0;
             const badgeSeats = document.getElementById('inspectorSeatsBadge');
             if (badgeSeats) badgeSeats.textContent = seatsCount > 0 ? `✓ ${seatsCount} butacas numeradas activas` : '';
+
+            const btnRemove = document.getElementById('btnRemoveSeats');
+            if (btnRemove) btnRemove.style.display = seatsCount > 0 ? 'block' : 'none';
+
+            this.updateSeatNomenclaturePreview();
         },
 
         renderZonesList: function() {
             const list = document.getElementById('zonesListContainer');
             const badge = document.getElementById('zonesCountBadge');
             const navBadge = document.getElementById('navInteractiveZoneCountBadge');
+            const inspectorCard = document.getElementById('zoneInspectorCard');
+            const inspectorEmpty = document.getElementById('zoneInspectorEmpty');
 
             if (badge) badge.textContent = this.zones.length;
             if (navBadge) navBadge.textContent = this.zones.length;
@@ -1944,28 +2025,60 @@
             list.innerHTML = '';
 
             if (this.zones.length === 0) {
-                list.innerHTML = `<span style="font-size: 0.75rem; color: #94A3B8; text-align: center; display: block; padding: 0.75rem;">No hay zonas creadas aún.</span>`;
+                list.innerHTML = `<span style="font-size: 0.75rem; color: #94A3B8; text-align: center; display: block; padding: 0.85rem; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); border-radius: 10px;">No hay sectores creados aún. Usa las herramientas arriba para crear uno.</span>`;
+                if (inspectorCard) inspectorCard.style.display = 'none';
+                if (inspectorEmpty) inspectorEmpty.style.display = 'none';
                 return;
             }
 
+            let foundSelected = false;
+
             this.zones.forEach((z) => {
                 const isSelected = (z.id === this.selectedZoneId);
+                if (isSelected) foundSelected = true;
+
                 const item = document.createElement('div');
                 item.className = `zone-list-card ${isSelected ? 'active' : ''}`;
-                item.onclick = () => this.selectZone(z.id);
+                item.onclick = () => {
+                    if (this.selectedZoneId === z.id) {
+                        this.selectedZoneId = null;
+                        this.render();
+                    } else {
+                        this.selectZone(z.id);
+                    }
+                };
+
+                const hasSeats = Array.isArray(z.seats) && z.seats.length > 0;
 
                 item.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <span style="width: 12px; height: 12px; border-radius: 4px; background: ${z.color}; flex-shrink: 0;"></span>
-                        <div>
-                            <strong style="color: #FFFFFF; font-size: 0.8rem; display: block;">${z.name}</strong>
-                            <span style="color: #94A3B8; font-size: 0.7rem;">${z.capacity_type} • ${z.capacity} entradas • S/ ${z.price.toFixed(2)}</span>
+                    <div style="display: flex; align-items: center; gap: 0.6rem; min-width: 0;">
+                        <span style="width: 14px; height: 14px; border-radius: 4px; background: ${z.color}; flex-shrink: 0; box-shadow: 0 0 8px ${z.color}88;"></span>
+                        <div style="min-width: 0;">
+                            <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
+                                <strong style="color: #FFFFFF; font-size: 0.825rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 155px;">${z.name}</strong>
+                                ${hasSeats ? '<span style="font-size: 0.625rem; background: rgba(16,185,129,0.2); color: #10B981; padding: 1px 5px; border-radius: 4px; font-weight: 800;">🪑 ' + z.seats.length + ' butacas</span>' : ''}
+                                ${z.presale_enabled ? '<span style="font-size: 0.625rem; background: rgba(255,85,0,0.2); color: #FF5500; padding: 1px 4px; border-radius: 4px; font-weight: 800;">🔥 Preventa</span>' : ''}
+                            </div>
+                            <span style="color: #94A3B8; font-size: 0.7rem; display: block; margin-top: 2px;">${z.capacity} entradas • S/ ${z.price.toFixed(2)}</span>
                         </div>
                     </div>
-                    <button type="button" class="dash-btn-icon-action btn-delete-action" style="padding: 2px 4px; font-size: 0.75rem;" onclick="event.stopPropagation(); SeatMapEditor.deleteZoneById('${z.id}')" title="Eliminar (o pulsa Supr)">🗑️</button>
+                    <div style="display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0;">
+                        <span style="font-size: 0.7rem; font-weight: 700; color: ${isSelected ? '#FF5500' : '#64748B'};">${isSelected ? '▲ Cerrar' : '▼ Editar'}</span>
+                        <button type="button" class="dash-btn-icon-action btn-delete-action" style="padding: 3px 5px; font-size: 0.75rem;" onclick="event.stopPropagation(); SeatMapEditor.deleteZoneById('${z.id}')" title="Eliminar Sector">🗑️</button>
+                    </div>
                 `;
                 list.appendChild(item);
+
+                // Si esta zona está seleccionada, colocar el inspector de propiedades directamente debajo de este card
+                if (isSelected && inspectorCard) {
+                    list.appendChild(inspectorCard);
+                    inspectorCard.style.display = 'block';
+                }
             });
+
+            if (inspectorEmpty) {
+                inspectorEmpty.style.display = foundSelected ? 'none' : 'block';
+            }
         },
 
         deleteZoneById: function(id) {
@@ -2046,11 +2159,11 @@
                                 </div>
                                 <div>
                                     <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">FECHA INICIO</label>
-                                    <input type="date" class="form-input-custom zone-presale-start" value="${new Date().toISOString().slice(0,10)}" style="font-size: 0.825rem; padding: 0.45rem;">
+                                    <input type="date" class="form-input-custom zone-presale-start" value="${z.presale_start_date ? z.presale_start_date.split('T')[0].split(' ')[0] : new Date().toISOString().slice(0,10)}" style="font-size: 0.825rem; padding: 0.45rem;">
                                 </div>
                                 <div>
                                     <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">FECHA FIN (LÍMITE)</label>
-                                    <input type="date" class="form-input-custom zone-presale-end" value="${new Date(Date.now() + 15*86400000).toISOString().slice(0,10)}" style="font-size: 0.825rem; padding: 0.45rem;">
+                                    <input type="date" class="form-input-custom zone-presale-end" value="${z.presale_end_date ? z.presale_end_date.split('T')[0].split(' ')[0] : new Date(Date.now() + 15*86400000).toISOString().slice(0,10)}" style="font-size: 0.825rem; padding: 0.45rem;">
                                 </div>
                                 <div>
                                     <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">STOCK PREVENTA</label>

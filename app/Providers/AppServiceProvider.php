@@ -20,6 +20,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        require_once app_path('Helpers/SeatHelper.php');
+
         $isHttps = request()->secure() 
             || request()->header('x-forwarded-proto') === 'https' 
             || request()->server('HTTP_X_FORWARDED_PROTO') === 'https'

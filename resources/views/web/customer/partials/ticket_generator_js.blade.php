@@ -555,6 +555,51 @@
         }
     }
 
+    function cleanZoneNameJs(name) {
+        if (!name || typeof name !== 'string') return '';
+        let m = name.match(/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?(.+)/i);
+        return m ? m[1].trim() : name.trim();
+    }
+
+    function formatShortSeatCodeJs(seat) {
+        if (!seat) return '';
+        if (typeof seat === 'object') {
+            if (seat.row && (seat.number || seat.col)) {
+                return `${String(seat.row).toUpperCase()}${seat.number || seat.col}`;
+            }
+            seat = seat.label || seat.number || seat.code || '';
+        }
+        seat = String(seat).trim();
+        if (!seat) return '';
+
+        // "Fila A - Asiento 1" o "Fila A - Columna 1"
+        let m = seat.match(/Fila\s*([A-Za-z0-9]+)\s*-\s*(?:Asiento|Columna)\s*([0-9]+)/i);
+        if (m) return `${m[1].toUpperCase()}${m[2]}`;
+
+        // "Fila A Asiento 1"
+        m = seat.match(/Fila\s*([A-Za-z0-9]+)\s*(?:Asiento|Columna)\s*([0-9]+)/i);
+        if (m) return `${m[1].toUpperCase()}${m[2]}`;
+
+        // "A-1" o "A 1"
+        m = seat.match(/^([A-Za-z]+)[-\s]+([0-9]+)$/);
+        if (m) return `${m[1].toUpperCase()}${m[2]}`;
+
+        // Código directo tipo "A1"
+        m = seat.match(/([A-Za-z]+[0-9]+)$/);
+        if (m) return m[1].toUpperCase();
+
+        return seat;
+    }
+
+    function formatZoneWithSeatJs(zoneName, seat) {
+        let clean = cleanZoneNameJs(zoneName || '');
+        let shortSeat = formatShortSeatCodeJs(seat);
+        if (!shortSeat) return clean;
+        if (clean.includes(`(${shortSeat})`)) return clean;
+        let base = clean.replace(/\s*\([^)]*\)$/, '').trim();
+        return `${base} (${shortSeat})`;
+    }
+
     // Generador principal de documento PDF (compartido para descarga y envío por correo)
     async function generateTicketPdfDoc(sale) {
         const event = sale.event || {};
@@ -624,11 +669,20 @@
                 const qty = parseInt(it.quantity || 1, 10);
                 const zoneName = cleanZoneNameJs(it.zone_name || it.name || sale.zone_name);
                 const price = it.price || it.regular_price || sale.unit_price;
+                let seats = it.seats || [];
+                if (typeof seats === 'string') {
+                    try { seats = JSON.parse(seats); } catch(e) { seats = []; }
+                }
+                if (!Array.isArray(seats)) seats = [];
+
                 for (let q = 0; q < qty; q++) {
+                    const st = seats[q] || null;
+                    const effectiveZone = formatZoneWithSeatJs(zoneName, st);
                     ticketsList.push({
                         ticket_code: it.ticket_code || `TK-${sale.receipt_number || 'REC'}-${ticketsList.length + 1}`,
                         ticket_number: ticketsList.length + 1,
-                        zone: zoneName,
+                        zone: effectiveZone,
+                        seat: formatShortSeatCodeJs(st),
                         price: price,
                         is_courtesy: isCourtesy || it.is_courtesy,
                         validation_hash: it.validation_hash || null,
@@ -638,10 +692,12 @@
             });
         } else if (Array.isArray(ticketsDataParsed) && ticketsDataParsed.length > 0) {
             ticketsDataParsed.forEach((tItem, i) => {
+                const st = tItem.seat || tItem.seat_number || (tItem.seats && tItem.seats[0]) || null;
                 ticketsList.push({
                     ticket_code: tItem.ticket_code || `TK-${sale.receipt_number || 'REC'}-${i + 1}`,
                     ticket_number: tItem.ticket_number || (i + 1),
-                    zone: cleanZoneNameJs(tItem.zone || tItem.zone_name || sale.zone_name),
+                    zone: formatZoneWithSeatJs(tItem.zone || tItem.zone_name || sale.zone_name, st),
+                    seat: formatShortSeatCodeJs(st),
                     price: tItem.price || sale.unit_price,
                     is_courtesy: isCourtesy || tItem.is_courtesy,
                     validation_hash: tItem.validation_hash || null,

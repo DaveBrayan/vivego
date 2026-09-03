@@ -93,8 +93,30 @@
                 </div>
             </div>
 
-            <!-- 3. SECCIÓN: INSPECTOR DE PROPIEDADES (ZONA SELECCIONADA) -->
-            <div id="zoneInspectorCard" style="background: rgba(255, 255, 255, 0.03); border: 1.5px solid rgba(255, 85, 0, 0.35); border-radius: 16px; padding: 1.15rem; display: none;">
+            <!-- 3. SECCIÓN: LISTA DE SECTORES CREADOS -->
+            <div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="font-size: 0.725rem; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px;">
+                        🎟️ Sectores Creados (<span id="zonesCountBadge">0</span>)
+                    </span>
+                    <button type="button" class="btn btn-link" style="font-size: 0.7rem; color: #EF4444; padding: 0; text-decoration: none;" onclick="SeatMapEditor.clearAllZones()">
+                        Limpiar Todo
+                    </button>
+                </div>
+                <div id="zonesListContainer" style="display: flex; flex-direction: column; gap: 0.55rem;">
+                    <!-- Se llena dinámicamente con los cards de sectores -->
+                </div>
+            </div>
+
+            <!-- Mensaje cuando NO hay zona seleccionada -->
+            <div id="zoneInspectorEmpty" style="background: rgba(255, 255, 255, 0.02); border: 1.5px dashed rgba(255, 255, 255, 0.12); border-radius: 16px; padding: 1.5rem 1rem; text-align: center;">
+                <span style="font-size: 1.8rem; display: block; margin-bottom: 0.35rem;">👆</span>
+                <strong style="color: #E2E8F0; font-size: 0.85rem; display: block;">Ningún Sector Seleccionado</strong>
+                <p style="color: #94A3B8; font-size: 0.75rem; margin: 0.25rem 0 0 0;">Haz clic en un sector de la lista o en el plano para ver y editar sus propiedades.</p>
+            </div>
+
+            <!-- 4. SECCIÓN: INSPECTOR DE PROPIEDADES (Se inserta dinámicamente debajo del card correspondiente en Sectores Creados) -->
+            <div id="zoneInspectorCard" style="background: rgba(255, 255, 255, 0.03); border: 1.5px solid rgba(255, 85, 0, 0.4); border-radius: 14px; padding: 1.15rem; display: none; width: 100%; box-sizing: border-box;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem;">
                     <strong style="color: #FF5500; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 0.35rem;">
                         <span>✏️</span> <span>Propiedades de Zona</span>
@@ -131,24 +153,13 @@
                         </div>
                     </div>
 
-                    <!-- Tipo de Aforo y Color -->
-                    <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 0.65rem;">
-                        <div>
-                            <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">TIPO DE AFORO</label>
-                            <select id="inspectorZoneCapacityType" class="form-select-custom" style="font-size: 0.825rem; padding: 0.45rem;" onchange="SeatMapEditor.onCapacityTypeChange()">
-                                @foreach($capacityTypes as $ct)
-                                    <option value="{{ is_array($ct) ? $ct['name'] : $ct->name }}">
-                                        🏟️ {{ is_array($ct) ? $ct['name'] : $ct->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div>
-                            <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">COLOR ZONA</label>
-                            <div style="display: flex; align-items: center; gap: 0.4rem;">
-                                <input type="color" id="inspectorZoneColor" value="#FF5500" style="width: 36px; height: 34px; border: none; border-radius: 8px; cursor: pointer; background: transparent; padding: 0;" onchange="SeatMapEditor.updateSelectedZoneProps()">
-                                <span id="inspectorZoneColorHex" style="font-size: 0.75rem; font-family: monospace; color: #94A3B8;">#FF5500</span>
-                            </div>
+                    <!-- Color de Zona -->
+                    <input type="hidden" id="inspectorZoneCapacityType" value="General">
+                    <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 0.5rem 0.75rem; width: 100%; box-sizing: border-box;">
+                        <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; margin: 0;">COLOR DE LA ZONA</label>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="color" id="inspectorZoneColor" value="#FF5500" style="width: 34px; height: 30px; border: none; border-radius: 6px; cursor: pointer; background: transparent; padding: 0;" onchange="SeatMapEditor.updateSelectedZoneProps()">
+                            <span id="inspectorZoneColorHex" style="font-size: 0.75rem; font-family: monospace; color: #94A3B8; font-weight: 700;">#FF5500</span>
                         </div>
                     </div>
 
@@ -169,37 +180,49 @@
                     </div>
 
                     <!-- Precio Regular y Aforo -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem;">
-                        <div>
+                    <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.65rem; width: 100%; box-sizing: border-box;">
+                        <div style="min-width: 0;">
                             <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">PRECIO REGULAR (S/)</label>
-                            <input type="number" step="0.50" id="inspectorZonePrice" class="form-input-custom" value="50.00" min="0" style="font-size: 0.85rem; padding: 0.45rem; color: #10B981; font-weight: 800;" oninput="SeatMapEditor.updateSelectedZoneProps()">
+                            <input type="number" step="0.50" id="inspectorZonePrice" class="form-input-custom" value="50.00" min="0" style="width: 100%; box-sizing: border-box; font-size: 0.85rem; padding: 0.45rem; color: #10B981; font-weight: 800;" oninput="SeatMapEditor.updateSelectedZoneProps()">
                         </div>
-                        <div>
+                        <div style="min-width: 0;">
                             <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">AFORO (STOCK)</label>
-                            <input type="number" id="inspectorZoneCapacity" class="form-input-custom" value="100" min="1" style="font-size: 0.85rem; padding: 0.45rem;" oninput="SeatMapEditor.updateSelectedZoneProps()">
+                            <input type="number" id="inspectorZoneCapacity" class="form-input-custom" value="100" min="1" style="width: 100%; box-sizing: border-box; font-size: 0.85rem; padding: 0.45rem;" oninput="SeatMapEditor.updateSelectedZoneProps()">
                         </div>
                     </div>
 
                     <!-- Preventa Rápida -->
-                    <div style="background: rgba(255,85,0,0.05); border: 1px dashed rgba(255,85,0,0.3); border-radius: 10px; padding: 0.65rem;">
+                    <div style="background: rgba(255,85,0,0.05); border: 1px dashed rgba(255,85,0,0.3); border-radius: 10px; padding: 0.65rem; width: 100%; box-sizing: border-box;">
                         <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; margin: 0 0 0.4rem 0;">
                             <input type="checkbox" id="inspectorZonePresaleEnabled" class="orange-checkbox" onchange="SeatMapEditor.updateSelectedZoneProps()">
                             <span style="font-size: 0.75rem; font-weight: 800; color: #FF5500;">🔥 Activar Preventa</span>
                         </label>
-                        <div id="inspectorPresaleGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; opacity: 0.5; pointer-events: none;">
-                            <div>
-                                <label style="font-size: 0.65rem; color: #94A3B8;">% DCTO.</label>
-                                <input type="number" id="inspectorZonePresaleDiscount" class="form-input-custom" value="20" min="1" max="99" style="font-size: 0.775rem; padding: 0.35rem;" oninput="SeatMapEditor.updateSelectedZoneProps()">
+                        <div id="inspectorPresaleGrid" style="display: flex; flex-direction: column; gap: 0.45rem; opacity: 0.5; pointer-events: none; width: 100%; box-sizing: border-box;">
+                            <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.5rem; width: 100%; box-sizing: border-box;">
+                                <div style="min-width: 0;">
+                                    <label style="font-size: 0.65rem; color: #94A3B8;">% DCTO.</label>
+                                    <input type="number" id="inspectorZonePresaleDiscount" class="form-input-custom" value="20" min="1" max="99" style="width: 100%; box-sizing: border-box; font-size: 0.775rem; padding: 0.35rem;" oninput="SeatMapEditor.updateSelectedZoneProps()">
+                                </div>
+                                <div style="min-width: 0;">
+                                    <label style="font-size: 0.65rem; color: #94A3B8;">PRECIO PREVENTA</label>
+                                    <input type="text" id="inspectorZonePresalePriceDisplay" class="form-input-custom" value="S/ 40.00" readonly style="width: 100%; box-sizing: border-box; font-size: 0.775rem; padding: 0.35rem; color: #38BDF8; font-weight: 800;">
+                                </div>
                             </div>
-                            <div>
-                                <label style="font-size: 0.65rem; color: #94A3B8;">PRECIO PREVENTA</label>
-                                <input type="text" id="inspectorZonePresalePriceDisplay" class="form-input-custom" value="S/ 40.00" readonly style="font-size: 0.775rem; padding: 0.35rem; color: #38BDF8; font-weight: 800;">
+                            <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.5rem; width: 100%; box-sizing: border-box;">
+                                <div style="min-width: 0;">
+                                    <label style="font-size: 0.65rem; color: #94A3B8;">FECHA INICIO</label>
+                                    <input type="date" id="inspectorZonePresaleStartDate" class="form-input-custom" style="width: 100%; box-sizing: border-box; font-size: 0.75rem; padding: 0.35rem; color: #E2E8F0;" onchange="SeatMapEditor.updateSelectedZoneProps()">
+                                </div>
+                                <div style="min-width: 0;">
+                                    <label style="font-size: 0.65rem; color: #94A3B8;">FECHA FIN</label>
+                                    <input type="date" id="inspectorZonePresaleEndDate" class="form-input-custom" style="width: 100%; box-sizing: border-box; font-size: 0.75rem; padding: 0.35rem; color: #E2E8F0;" onchange="SeatMapEditor.updateSelectedZoneProps()">
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Generador de Butacas Numeradas (Acordeón) -->
-                    <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 0.75rem;">
+                    <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 0.75rem; width: 100%; box-sizing: border-box;">
                         <div style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;" onclick="document.getElementById('seatGenAccordionBody').classList.toggle('open');">
                             <strong style="font-size: 0.775rem; color: #E2E8F0; display: flex; align-items: center; gap: 0.35rem;">
                                 <span>🪑</span> <span>Generar Butacas Numeradas</span>
@@ -207,44 +230,53 @@
                             <span style="font-size: 0.75rem; color: #94A3B8;">▼</span>
                         </div>
                         <div id="seatGenAccordionBody" class="seat-gen-accordion" style="display: none; padding-top: 0.65rem; margin-top: 0.5rem; border-top: 1px dashed rgba(255,255,255,0.1);">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                <div>
-                                    <label style="font-size: 0.675rem; color: #94A3B8;">N° DE FILAS (A, B...)</label>
-                                    <input type="number" id="seatGenRows" class="form-input-custom" value="5" min="1" max="26" style="font-size: 0.775rem; padding: 0.35rem;">
+                            <!-- Dimensiones de cuadrícula -->
+                            <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.5rem; margin-bottom: 0.55rem; width: 100%; box-sizing: border-box;">
+                                <div style="min-width: 0;">
+                                    <label style="font-size: 0.675rem; color: #94A3B8; display: block; margin-bottom: 0.2rem;">CANTIDAD DE FILAS</label>
+                                    <input type="number" id="seatGenRows" class="form-input-custom" value="5" min="1" max="26" style="width: 100%; box-sizing: border-box; font-size: 0.775rem; padding: 0.35rem;" oninput="SeatMapEditor.updateSeatNomenclaturePreview()">
                                 </div>
-                                <div>
-                                    <label style="font-size: 0.675rem; color: #94A3B8;">ASIENTOS X FILA</label>
-                                    <input type="number" id="seatGenCols" class="form-input-custom" value="10" min="1" max="50" style="font-size: 0.775rem; padding: 0.35rem;">
+                                <div style="min-width: 0;">
+                                    <label style="font-size: 0.675rem; color: #94A3B8; display: block; margin-bottom: 0.2rem;">ASIENTOS X FILA</label>
+                                    <input type="number" id="seatGenCols" class="form-input-custom" value="10" min="1" max="50" style="width: 100%; box-sizing: border-box; font-size: 0.775rem; padding: 0.35rem;" oninput="SeatMapEditor.updateSeatNomenclaturePreview()">
                                 </div>
                             </div>
+
+                            <!-- Nomenclatura configurable: Filas y Columnas -->
+                            <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.5rem; margin-bottom: 0.55rem; width: 100%; box-sizing: border-box;">
+                                <div style="min-width: 0;">
+                                    <label style="font-size: 0.675rem; color: #94A3B8; display: block; margin-bottom: 0.2rem;">NOMBRAR FILAS</label>
+                                    <select id="seatGenRowType" class="form-select-custom" style="width: 100%; box-sizing: border-box; font-size: 0.75rem; padding: 0.35rem;" onchange="SeatMapEditor.updateSeatNomenclaturePreview()">
+                                        <option value="letters">Letras (A, B, C...)</option>
+                                        <option value="numbers">Números (1, 2, 3...)</option>
+                                    </select>
+                                </div>
+                                <div style="min-width: 0;">
+                                    <label style="font-size: 0.675rem; color: #94A3B8; display: block; margin-bottom: 0.2rem;">NOMBRAR ASIENTOS</label>
+                                    <select id="seatGenColType" class="form-select-custom" style="width: 100%; box-sizing: border-box; font-size: 0.75rem; padding: 0.35rem;" onchange="SeatMapEditor.updateSeatNomenclaturePreview()">
+                                        <option value="numbers">Números (1, 2, 3...)</option>
+                                        <option value="letters">Letras (A, B, C...)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Previsualización de Nomenclatura -->
+                            <div style="background: rgba(0, 240, 255, 0.05); border: 1px dashed rgba(0, 240, 255, 0.3); border-radius: 8px; padding: 0.45rem 0.6rem; margin-bottom: 0.65rem;">
+                                <div style="font-size: 0.65rem; color: #94A3B8; margin-bottom: 0.15rem;">CÓDIGO DE BUTACA:</div>
+                                <div id="seatNomenclaturePreview" style="font-size: 0.75rem; font-weight: 800; color: #00F0FF; font-family: monospace;">
+                                    Fila A - Asiento 1 (A-1)
+                                </div>
+                            </div>
+
                             <button type="button" class="btn btn-sm" onclick="SeatMapEditor.generateSeatsForSelectedZone()" style="width: 100%; background: rgba(16, 185, 129, 0.15); border: 1.5px solid #10B981; color: #10B981; font-weight: 800; font-size: 0.75rem; padding: 0.45rem; border-radius: 8px; cursor: pointer;">
                                 🪑 Poblar Zona con Butacas
+                            </button>
+                            <button type="button" id="btnRemoveSeats" class="btn btn-sm" onclick="SeatMapEditor.clearSeatsForSelectedZone()" style="width: 100%; margin-top: 0.45rem; background: rgba(239, 68, 68, 0.15); border: 1.5px solid #EF4444; color: #F87171; font-weight: 800; font-size: 0.75rem; padding: 0.45rem; border-radius: 8px; cursor: pointer; display: none;">
+                                🗑️ Quitar Butacas
                             </button>
                             <span id="inspectorSeatsBadge" style="display: block; font-size: 0.7rem; color: #10B981; margin-top: 0.4rem; text-align: center; font-weight: 700;"></span>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Mensaje cuando NO hay zona seleccionada -->
-            <div id="zoneInspectorEmpty" style="background: rgba(255, 255, 255, 0.02); border: 1.5px dashed rgba(255, 255, 255, 0.12); border-radius: 16px; padding: 1.75rem 1rem; text-align: center;">
-                <span style="font-size: 2rem; display: block; margin-bottom: 0.35rem;">👆</span>
-                <strong style="color: #E2E8F0; font-size: 0.85rem; display: block;">Ninguna Zona Seleccionada</strong>
-                <p style="color: #94A3B8; font-size: 0.75rem; margin: 0.25rem 0 0.75rem 0;">Haz clic sobre cualquier zona en el lienzo de la derecha para moverla, editar sus esquinas o cambiar sus tarifas.</p>
-            </div>
-
-            <!-- 4. SECCIÓN: LISTA DE ZONAS CREADAS -->
-            <div>
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-                    <span style="font-size: 0.725rem; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px;">
-                        🎟️ Sectores Creados (<span id="zonesCountBadge">0</span>)
-                    </span>
-                    <button type="button" class="btn btn-link" style="font-size: 0.7rem; color: #EF4444; padding: 0; text-decoration: none;" onclick="SeatMapEditor.clearAllZones()">
-                        Limpiar Todo
-                    </button>
-                </div>
-                <div id="zonesListContainer" style="display: flex; flex-direction: column; gap: 0.45rem;">
-                    <!-- Se llena dinámicamente -->
                 </div>
             </div>
         </div>
@@ -567,5 +599,17 @@
     .ctx-menu-item.item-danger:hover {
         background: rgba(239, 68, 68, 0.15);
         color: #F87171;
+    }
+
+    #zoneInspectorCard {
+        box-sizing: border-box !important;
+        max-width: 100% !important;
+    }
+    #zoneInspectorCard input,
+    #zoneInspectorCard select,
+    #zoneInspectorCard .form-input-custom,
+    #zoneInspectorCard .form-select-custom {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
     }
 </style>

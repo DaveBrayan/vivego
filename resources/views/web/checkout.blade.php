@@ -125,13 +125,19 @@
                                 $regPrice = !empty($item['regular_price']) ? (float)$item['regular_price'] : (float)$item['price'];
                                 $curPrice = (float)$item['price'];
                                 $discountVal = $item['presale_discount'] ?? 0;
+                                $itemSeats = !empty($item['seats']) ? (is_array($item['seats']) ? $item['seats'] : json_decode($item['seats'], true)) : [];
                             @endphp
                             <div class="cart-row-item" data-price="{{ $item['price'] }}" style="{{ $isItemUpgrade ? 'border: 2px solid #818CF8; background: #FAF5FF;' : ($hasCamp ? 'border: 1.5px solid rgba(255, 85, 0, 0.35); background: #FFFBF8;' : ($isPresale ? 'border: 1.5px solid rgba(255, 85, 0, 0.3); background: #FFFBF8;' : '')) }}">
                                 <div class="cart-row-main">
-                                    <span class="cart-item-emoji">{{ $isItemUpgrade ? '⭐' : '🎟️' }}</span>
+                                    <span class="cart-item-emoji">{{ $isItemUpgrade ? '⭐' : (!empty($itemSeats) ? '🪑' : '🎟️') }}</span>
                                     <div class="cart-item-text-box" style="flex: 1; min-width: 0;">
                                         <div class="cart-item-header-wrap" style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
                                             <h4 class="cart-item-title" style="margin: 0; font-size: 1rem; font-weight: 800; color: #0F172A;">{{ $item['name'] }}</h4>
+                                            @if(!empty($itemSeats))
+                                                <span style="background: rgba(16, 185, 129, 0.12); color: #059669; border: 1.5px solid rgba(16, 185, 129, 0.35); font-size: 0.685rem; font-weight: 900; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.4px;">
+                                                    🪑 {{ count($itemSeats) }} {{ count($itemSeats) === 1 ? 'Butaca Numerada' : 'Butacas Numeradas' }}
+                                                </span>
+                                            @endif
                                             @if($isItemUpgrade)
                                                 <span style="background: linear-gradient(135deg, #6366F1, #4F46E5); color: #FFFFFF; font-size: 0.65rem; font-weight: 900; padding: 2px 8px; border-radius: 6px; box-shadow: 0 2px 5px rgba(99,102,241,0.25); text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap;">
                                                     ⭐ UPGRADE ACTIVO
@@ -165,6 +171,24 @@
                                                 @endif
                                             @endif
                                         </div>
+
+                                        @if(!empty($itemSeats))
+                                            <div style="margin-top: 0.55rem; background: #F0FDF4; border: 1.5px dashed #86EFAC; border-radius: 10px; padding: 0.45rem 0.75rem;">
+                                                <div style="font-size: 0.725rem; font-weight: 800; color: #166534; margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.35rem;">
+                                                    <span>🪑</span> Butacas Asignadas en el Plano:
+                                                </div>
+                                                <div style="display: flex; flex-wrap: wrap; gap: 0.35rem;">
+                                                    @foreach($itemSeats as $st)
+                                                        @php
+                                                            $stLabel = is_array($st) ? ($st['label'] ?? $st['number'] ?? 'Butaca') : $st;
+                                                        @endphp
+                                                        <span style="background: #FFFFFF; border: 1.5px solid #10B981; color: #047857; font-size: 0.75rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; box-shadow: 0 1px 3px rgba(16,185,129,0.15); display: inline-flex; align-items: center; gap: 0.3rem;">
+                                                            <span style="color: #10B981;">●</span> {{ $stLabel }}
+                                                        </span>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
 
@@ -172,6 +196,10 @@
                                     @if($isItemUpgrade)
                                         <div style="background: #EEF2FF; border: 1px solid #C7D2FE; border-radius: 10px; padding: 0.35rem 0.75rem; font-weight: 800; font-size: 0.85rem; color: #4F46E5;">
                                             {{ $item['quantity'] }}x entradas
+                                        </div>
+                                    @elseif(!empty($itemSeats))
+                                        <div style="background: #ECFDF5; border: 1.5px solid #A7F3D0; border-radius: 10px; padding: 0.35rem 0.85rem; font-weight: 900; font-size: 0.85rem; color: #065F46; white-space: nowrap;">
+                                            {{ count($itemSeats) }}x butacas
                                         </div>
                                     @else
                                         <div class="light-qty-counter">
@@ -254,23 +282,22 @@
                             </div>
                         </div>
                         @if(!session('customer_logged_in'))
-                            <button type="button" onclick="openFastLoginModal()" style="background: #F1F5F9; border: 1.5px solid #CBD5E1; color: #0F172A; font-weight: 800; font-size: 0.8rem; padding: 0.45rem 0.85rem; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;">
+                            <button type="button" id="btnOpenFastLoginModal" onclick="openFastLoginModal()" style="background: #F1F5F9; border: 1.5px solid #CBD5E1; color: #0F172A; font-weight: 800; font-size: 0.8rem; padding: 0.45rem 0.85rem; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; transition: background 0.2s;">
                                 <span>🔑</span>
                                 <span>¿Ya tienes cuenta? Iniciar Sesión</span>
                             </button>
                         @endif
                     </div>
 
-                    @if(session('customer_logged_in'))
-                        <div style="background: #ECFDF5; border: 1.5px solid #A7F3D0; border-radius: 12px; padding: 0.75rem 1rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
-                            <div style="font-size: 0.875rem; color: #065F46; font-weight: 700;">
-                                👤 Comprando como: <strong>{{ session('customer_name') }}</strong> ({{ session('customer_email') }})
-                            </div>
-                            <a href="{{ route('web.customer.tickets') }}" target="_blank" style="color: #059669; font-size: 0.8rem; font-weight: 800; text-decoration: underline;">
-                                Mis Boletos ➔
-                            </a>
+                    <div id="customerLoggedInBanner" style="display: {{ session('customer_logged_in') ? 'flex' : 'none' }}; background: linear-gradient(135deg, #ECFDF5, #F0FDF4); border: 1.5px solid #10B981; border-radius: 14px; padding: 0.85rem 1.15rem; margin-bottom: 1rem; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(16,185,129,0.1);">
+                        <div id="customerLoggedInBannerText" style="font-size: 0.875rem; color: #065F46; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-size: 1.15rem;">👤</span>
+                            <span>Comprando como: <strong style="color: #047857;">{{ session('customer_name') }}</strong> ({{ session('customer_email') }})</span>
                         </div>
-                    @endif
+                        <a href="{{ route('web.customer.tickets') }}" target="_blank" style="color: #059669; font-size: 0.8rem; font-weight: 800; text-decoration: underline; white-space: nowrap;">
+                            Mis Boletos ➔
+                        </a>
+                    </div>
 
                     <form id="checkoutCustomerForm" class="customer-fields-grid" onsubmit="event.preventDefault(); proceedSelectedPayment();">
                         <div class="form-fields-2col">
@@ -545,6 +572,45 @@
                         </div>
 
                         <div class="light-divider"></div>
+
+                        <!-- Resumen compacto de Entradas y Butacas -->
+                        <div style="background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 14px; padding: 0.85rem; margin-bottom: 1.15rem;">
+                            <span style="font-size: 0.72rem; font-weight: 900; color: #475569; text-transform: uppercase; letter-spacing: 0.6px; display: block; margin-bottom: 0.5rem;">
+                                🎟️ Entradas & Butacas ({{ count($cartItems) }})
+                            </span>
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                @foreach($cartItems as $cItem)
+                                    @php
+                                        $cSeats = !empty($cItem['seats']) ? (is_array($cItem['seats']) ? $cItem['seats'] : json_decode($cItem['seats'], true)) : [];
+                                        $isItemPresale = function_exists('isSalePresale') ? isSalePresale($cItem) : (!empty($cItem['is_presale_active']) || !empty($cItem['is_presale']));
+                                    @endphp
+                                    <div style="padding-bottom: 0.45rem; border-bottom: 1px dashed #E2E8F0;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.825rem;">
+                                            <div>
+                                                <strong style="color: #0F172A;">{{ $cItem['quantity'] }}x {{ $cItem['name'] }}</strong>
+                                                @if($isItemPresale)
+                                                    <span style="font-size: 0.65rem; background: rgba(255,85,0,0.12); color: #FF5500; border: 1px solid rgba(255,85,0,0.3); padding: 1px 5px; border-radius: 4px; font-weight: 900; margin-left: 0.3rem;">🔥 PREVENTA</span>
+                                                @endif
+                                            </div>
+                                            <span style="font-weight: 800; color: #FF5500;">S/ {{ number_format(($cItem['price'] * $cItem['quantity']), 2) }}</span>
+                                        </div>
+                                        @if(!empty($cSeats))
+                                            <div style="display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.3rem;">
+                                                @foreach($cSeats as $cs)
+                                                    @php
+                                                        $csLabel = is_array($cs) ? ($cs['label'] ?? $cs['number'] ?? 'Butaca') : $cs;
+                                                        $csShort = function_exists('formatShortSeatCode') ? formatShortSeatCode($csLabel) : $csLabel;
+                                                    @endphp
+                                                    <span style="background: rgba(16, 185, 129, 0.1); color: #047857; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.675rem; font-weight: 800; padding: 1px 6px; border-radius: 5px;">
+                                                        🪑 {{ $csShort }}
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
 
                         <!-- Sección Cupón Promocional Interactiva -->
                         <div class="coupon-section-box" style="margin-bottom: 1.25rem; background: #F8FAFC; border: 1.5px dashed #CBD5E1; border-radius: 14px; padding: 0.95rem;">
@@ -1349,6 +1415,15 @@
             text-align: right;
         }
     }
+
+    @keyframes fastModalFadeIn {
+        from { opacity: 0; transform: scale(0.95) translateY(12px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes fastSpin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
 </style>
 @endpush
 
@@ -1372,6 +1447,10 @@
     <script src="https://checkout.culqi.com/js/v4"></script>
 
     <script>
+        function getCsrfToken() {
+            return window.activeCsrfToken || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+        }
+
         let cartItems = @json($cartItems);
         let eventData = @json($eventData);
         let activeCampaign = @json($activeCampaign);
@@ -1567,7 +1646,7 @@
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': getCsrfToken()
                 },
                 body: JSON.stringify({
                     code: code,
@@ -1769,7 +1848,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        'X-CSRF-TOKEN': getCsrfToken()
                     },
                     body: JSON.stringify({
                         event_id: eventData.id || 1,
@@ -1839,7 +1918,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': getCsrfToken()
                 },
                 body: JSON.stringify({
                     amount: currentGrandTotal,
@@ -1897,8 +1976,8 @@
 
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
-                    title: '🎉 ¡Pago Confirmado!',
-                    html: 'Izipay ha procesado tu transacción con éxito.<br>Compilando tus entradas oficiales con código QR y creando tu perfil...',
+                    title: '✅ ¡Verificación Exitosa!',
+                    html: 'Tu transacción ha sido validada y confirmada correctamente.<br>Generando tus entradas oficiales con código QR...',
                     allowOutsideClick: false,
                     didOpen: () => { Swal.showLoading(); },
                     background: '#14141E',
@@ -1950,7 +2029,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': getCsrfToken()
                 },
                 body: JSON.stringify({
                     'kr-answer': rawAnswer,
@@ -2025,7 +2104,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': getCsrfToken()
                 },
                 body: JSON.stringify({
                     amount: currentGrandTotal,
@@ -2177,7 +2256,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': getCsrfToken()
                 },
                 body: JSON.stringify({ order_id: currentCulqiOrderId })
             })
@@ -2264,7 +2343,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        'X-CSRF-TOKEN': getCsrfToken()
                     },
                     body: JSON.stringify({ order_id: orderId })
                 })
@@ -2286,8 +2365,8 @@
 
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
-                    title: '🎉 ¡Pago Aprobado con Culqi!',
-                    html: 'Tu transacción ha sido validada con éxito.<br>Generando tus entradas oficiales con código QR y creando tu cuenta...',
+                    title: '✅ ¡Verificación Exitosa!',
+                    html: 'Tu transacción ha sido validada y confirmada correctamente.<br>Generando tus entradas oficiales con código QR...',
                     allowOutsideClick: false,
                     didOpen: () => { Swal.showLoading(); },
                     background: '#14141E',
@@ -2326,7 +2405,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': getCsrfToken()
                 },
                 body: JSON.stringify({
                     token_id: payload.token_id || null,
@@ -2638,7 +2717,7 @@
             document.getElementById('fastChangePasswordError').style.display = 'none';
         }
 
-        // Login con soporte de contraseña temporal
+        // Login con soporte de contraseña temporal y actualización dinámica (Sin 419 Page Expired)
         function submitFastLogin(e) {
             e.preventDefault();
             const email = document.getElementById('fastLoginEmail').value.trim();
@@ -2647,7 +2726,7 @@
             const btn = document.getElementById('btnSubmitFastLogin');
 
             btn.disabled = true;
-            btn.textContent = 'Iniciando sesión...';
+            btn.innerHTML = '<span style="display:inline-block; width:15px; height:15px; border:2px solid #FFF; border-top-color:transparent; border-radius:50%; animation:spin 0.6s linear infinite; vertical-align:middle; margin-right:8px;"></span> Iniciando sesión...';
             errBox.style.display = 'none';
 
             fetch("{{ route('web.customer.login') }}", {
@@ -2655,19 +2734,25 @@
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': getCsrfToken()
                 },
                 body: JSON.stringify({ email: email, password: password })
             })
             .then(async (res) => {
                 const data = await res.json().catch(() => ({}));
                 btn.disabled = false;
-                btn.textContent = 'Ingresar a mi Cuenta';
+                btn.innerHTML = '<span>Ingresar a mi Cuenta</span> <span>➔</span>';
 
                 if (res.ok && data.success) {
+                    // 1. Sincronizar nuevo token CSRF generado por regenerate()
                     if (data.csrf_token) {
                         window.activeCsrfToken = data.csrf_token;
+                        const metaCsrf = document.querySelector('meta[name="csrf-token"]');
+                        if (metaCsrf) metaCsrf.setAttribute('content', data.csrf_token);
+                        document.querySelectorAll('input[name="_token"]').forEach(input => input.value = data.csrf_token);
                     }
+
+                    // 2. Autocompletar datos del comprador en Paso 2
                     if (data.user) {
                         if (document.getElementById('buyerFullName')) document.getElementById('buyerFullName').value = data.user.name || '';
                         if (document.getElementById('buyerEmail')) document.getElementById('buyerEmail').value = data.user.email || '';
@@ -2675,15 +2760,50 @@
                         if (data.user.phone && document.getElementById('buyerPhone')) document.getElementById('buyerPhone').value = data.user.phone;
                     }
 
-                    // Si inició con contraseña temporal, exigir cambio obligatorio
+                    // 3. Si inició con contraseña temporal, exigir cambio obligatorio
                     if (data.must_change_password) {
                         showFastChangePasswordView();
                         return;
                     }
 
+                    // 4. Cerrar el modal
                     closeFastLoginModal();
-                    alert('¡Sesión iniciada con éxito! Tus datos se han autocompletado.');
-                    location.reload();
+
+                    // 5. Ocultar botón de login y mostrar banner verde en Paso 2
+                    const openLoginBtn = document.getElementById('btnOpenFastLoginModal');
+                    if (openLoginBtn) openLoginBtn.style.display = 'none';
+
+                    const loggedBanner = document.getElementById('customerLoggedInBanner');
+                    const loggedBannerText = document.getElementById('customerLoggedInBannerText');
+                    if (loggedBanner) {
+                        if (loggedBannerText) {
+                            loggedBannerText.innerHTML = `
+                                <span style="font-size: 1.15rem;">👤</span>
+                                <span>Comprando como: <strong style="color: #047857;">${data.user?.name || 'Cliente'}</strong> (${data.user?.email || ''})</span>
+                            `;
+                        }
+                        loggedBanner.style.display = 'flex';
+                    }
+
+                    // 6. SweetAlert2 Premium para dar feedback visual sin recargar la página (evita 419)
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: `¡Bienvenido(a), ${data.user?.name || 'Cliente'}!`,
+                            html: `
+                                <div style="text-align: center; padding: 0.5rem 0;">
+                                    <div style="background: rgba(16, 185, 129, 0.1); border: 1.5px dashed #10B981; border-radius: 12px; padding: 0.75rem 1rem; margin-bottom: 0.85rem; color: #065F46; font-size: 0.875rem; font-weight: 700;">
+                                        ✅ Sesión iniciada correctamente
+                                    </div>
+                                    <p style="font-size: 0.9rem; color: #64748B; margin: 0; line-height: 1.5;">
+                                        Tus datos personales y documento se han autocompletado en el formulario. Tus boletos oficiales quedarán asociados a tu cuenta.
+                                    </p>
+                                </div>
+                            `,
+                            confirmButtonColor: '#FF5500',
+                            confirmButtonText: 'Continuar con el Pago ➔'
+                        });
+                    }
                 } else {
                     errBox.textContent = data.message || 'Credenciales inválidas. Verifica tu correo o DNI y contraseña.';
                     errBox.style.display = 'block';
@@ -2691,8 +2811,8 @@
             })
             .catch(err => {
                 btn.disabled = false;
-                btn.textContent = 'Ingresar a mi Cuenta';
-                errBox.textContent = 'Error al conectar con el servidor.';
+                btn.innerHTML = '<span>Ingresar a mi Cuenta</span> <span>➔</span>';
+                errBox.textContent = 'Error al conectar con el servidor. Intenta nuevamente.';
                 errBox.style.display = 'block';
             });
         }
@@ -2707,7 +2827,7 @@
             if (!identifier) return;
 
             btn.disabled = true;
-            btn.textContent = 'Verificando y enviando...';
+            btn.innerHTML = '<span style="display:inline-block; width:15px; height:15px; border:2px solid #FFF; border-top-color:transparent; border-radius:50%; animation:spin 0.6s linear infinite; vertical-align:middle; margin-right:8px;"></span> Verificando y enviando...';
             alertBox.style.display = 'none';
 
             fetch("{{ route('web.password.recover') }}", {
@@ -2715,14 +2835,14 @@
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': getCsrfToken()
                 },
                 body: JSON.stringify({ identifier: identifier })
             })
             .then(async (res) => {
                 const data = await res.json().catch(() => ({}));
                 btn.disabled = false;
-                btn.textContent = 'Enviar Contraseña Temporal a mi Correo';
+                btn.innerHTML = '<span>Enviar Contraseña Temporal</span> <span>➔</span>';
 
                 alertBox.style.display = 'block';
                 if (res.ok && data.success) {
@@ -2754,7 +2874,7 @@
             })
             .catch(err => {
                 btn.disabled = false;
-                btn.textContent = 'Enviar Contraseña Temporal a mi Correo';
+                btn.innerHTML = '<span>Enviar Contraseña Temporal</span> <span>➔</span>';
                 alertBox.style.display = 'block';
                 alertBox.style.background = '#FEF2F2';
                 alertBox.style.borderColor = '#FCA5A5';
@@ -2784,16 +2904,15 @@
             }
 
             btn.disabled = true;
-            btn.textContent = 'Guardando nueva contraseña...';
+            btn.innerHTML = '<span style="display:inline-block; width:15px; height:15px; border:2px solid #FFF; border-top-color:transparent; border-radius:50%; animation:spin 0.6s linear infinite; vertical-align:middle; margin-right:8px;"></span> Guardando contraseña...';
             errBox.style.display = 'none';
 
-            const csrfHeader = window.activeCsrfToken || '{{ csrf_token() }}';
             fetch("{{ route('web.password.update_temp') }}", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'X-CSRF-TOKEN': csrfHeader
+                    'X-CSRF-TOKEN': getCsrfToken()
                 },
                 body: JSON.stringify({
                     new_password: newPassword,
@@ -2803,21 +2922,36 @@
             .then(async (res) => {
                 const data = await res.json().catch(() => ({}));
                 btn.disabled = false;
-                btn.textContent = '💾 Guardar Contraseña y Continuar';
+                btn.innerHTML = '💾 Guardar Nueva Contraseña y Continuar';
 
                 if (res.ok && data.success) {
+                    if (data.csrf_token) {
+                        window.activeCsrfToken = data.csrf_token;
+                        const metaCsrf = document.querySelector('meta[name="csrf-token"]');
+                        if (metaCsrf) metaCsrf.setAttribute('content', data.csrf_token);
+                        document.querySelectorAll('input[name="_token"]').forEach(input => input.value = data.csrf_token);
+                    }
                     closeFastLoginModal();
+
+                    const openLoginBtn = document.getElementById('btnOpenFastLoginModal');
+                    if (openLoginBtn) openLoginBtn.style.display = 'none';
+
+                    const loggedBanner = document.getElementById('customerLoggedInBanner');
+                    if (loggedBanner) loggedBanner.style.display = 'flex';
+
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({
                             icon: 'success',
                             title: '¡Contraseña Actualizada!',
-                            text: 'Tu contraseña definitiva se ha guardado exitosamente.',
-                            confirmButtonColor: '#FF5500'
+                            html: `
+                                <p style="font-size: 0.9rem; color: #64748B; margin: 0; line-height: 1.5;">
+                                    Tu contraseña definitiva se ha guardado exitosamente. Ya puedes continuar con tu compra de entradas oficiales.
+                                </p>
+                            `,
+                            confirmButtonColor: '#FF5500',
+                            confirmButtonText: 'Continuar con el Pago ➔'
                         });
-                    } else {
-                        alert('¡Contraseña actualizada exitosamente!');
                     }
-                    location.reload();
                 } else {
                     errBox.textContent = data.message || 'No se pudo actualizar la contraseña.';
                     errBox.style.display = 'block';
@@ -2825,7 +2959,7 @@
             })
             .catch(err => {
                 btn.disabled = false;
-                btn.textContent = '💾 Guardar Contraseña y Continuar';
+                btn.innerHTML = '💾 Guardar Nueva Contraseña y Continuar';
                 errBox.textContent = 'Error al actualizar contraseña.';
                 errBox.style.display = 'block';
             });
@@ -2833,119 +2967,157 @@
     </script>
 
     <!-- MODAL INTEGRAL DE INICIO DE SESIÓN, RECUPERACIÓN Y CAMBIO DE CONTRASEÑA -->
-    <div id="fastLoginModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(6px);">
-        <div style="background: #FFFFFF; border-radius: 24px; width: 95%; max-width: 440px; padding: 2rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3); border: 1px solid #E2E8F0; position: relative;">
+    <div id="fastLoginModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.78); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 1rem;">
+        <div style="background: #FFFFFF; border-radius: 28px; width: 100%; max-width: 460px; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,85,0,0.12); position: relative; overflow: hidden; animation: fastModalFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
             
-            <!-- VISTA 1: INICIAR SESIÓN -->
-            <div id="fastLoginView">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h3 style="font-size: 1.3rem; font-weight: 900; color: #0F172A; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
-                        <span>🔑</span> Iniciar Sesión
-                    </h3>
-                    <button type="button" onclick="closeFastLoginModal()" style="background: #F1F5F9; border: none; color: #64748B; width: 32px; height: 32px; border-radius: 8px; font-weight: 800; cursor: pointer;">✕</button>
-                </div>
-                <p style="font-size: 0.85rem; color: #64748B; margin: 0 0 1.25rem 0;">Ingresa tu correo/DNI y contraseña para cargar tus datos y asociar tus boletos.</p>
+            <!-- Barra superior decorativa con gradiente de marca ViveGo -->
+            <div style="height: 5px; width: 100%; background: linear-gradient(90deg, #FF5500, #FF1E3C, #00F0FF);"></div>
 
-                <div id="fastLoginError" style="display: none; background: #FEF2F2; border: 1px solid #FCA5A5; color: #DC2626; padding: 0.75rem; border-radius: 10px; font-size: 0.85rem; font-weight: 600; margin-bottom: 1rem;"></div>
-
-                <form onsubmit="submitFastLogin(event)">
-                    <div style="margin-bottom: 1rem;">
-                        <label class="field-dark-label" style="display: block; font-size: 0.8rem; font-weight: 800; color: #334155; margin-bottom: 0.4rem; text-transform: uppercase;">Correo Electrónico o DNI:</label>
-                        <input type="text" id="fastLoginEmail" class="input-dark-text" placeholder="tu.correo@ejemplo.com o DNI" required style="width: 100%; padding: 0.8rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 12px; font-size: 0.95rem; outline: none; background: #F8FAFC;">
+            <div style="padding: 2.25rem 2rem 2rem 2rem;">
+                <!-- VISTA 1: INICIAR SESIÓN -->
+                <div id="fastLoginView">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+                        <div>
+                            <div style="display: inline-flex; align-items: center; gap: 0.35rem; background: rgba(255, 85, 0, 0.1); color: #FF5500; font-size: 0.725rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.6px; padding: 3px 10px; border-radius: 20px; margin-bottom: 0.5rem;">
+                                <span>🔥</span>
+                                <span>ACCESO CLIENTE VIVEGO</span>
+                            </div>
+                            <h3 style="font-size: 1.45rem; font-weight: 900; color: #0F172A; margin: 0; letter-spacing: -0.5px;">
+                                Iniciar Sesión
+                            </h3>
+                        </div>
+                        <button type="button" onclick="closeFastLoginModal()" style="background: #F1F5F9; border: none; color: #64748B; width: 36px; height: 36px; border-radius: 50%; font-size: 1rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='#E2E8F0'; this.style.color='#0F172A';" onmouseout="this.style.background='#F1F5F9'; this.style.color='#64748B';">✕</button>
                     </div>
-                    
-                    <div style="margin-bottom: 0.75rem;">
-                        <label class="field-dark-label" style="display: block; font-size: 0.8rem; font-weight: 800; color: #334155; margin-bottom: 0.4rem; text-transform: uppercase;">Contraseña:</label>
-                        <div style="position: relative; display: flex; align-items: center;">
-                            <input type="password" id="fastLoginPassword" class="input-dark-text" placeholder="••••••••••••" required style="width: 100%; padding: 0.8rem 2.75rem 0.8rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 12px; font-size: 0.95rem; outline: none; background: #F8FAFC;">
-                            <button type="button" onclick="toggleFastPasswordVisibility('fastLoginPassword', this)" style="position: absolute; right: 10px; background: none; border: none; color: #94A3B8; cursor: pointer; padding: 4px; display: flex; align-items: center; font-size: 1.1rem;" title="Mostrar / Ocultar Contraseña">
-                                👁️
-                            </button>
+                    <p style="font-size: 0.875rem; color: #64748B; margin: 0 0 1.35rem 0; line-height: 1.45;">
+                        Ingresa con tu correo o DNI para autocompletar tus datos y asociar automáticamente tus boletos oficiales.
+                    </p>
+
+                    <div id="fastLoginError" style="display: none; background: #FEF2F2; border: 1.5px solid #FCA5A5; color: #DC2626; padding: 0.85rem 1rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700; margin-bottom: 1.25rem; line-height: 1.4;"></div>
+
+                    <form onsubmit="submitFastLogin(event)">
+                        <div style="margin-bottom: 1.15rem;">
+                            <label class="field-dark-label" style="display: block; font-size: 0.78rem; font-weight: 800; color: #334155; margin-bottom: 0.45rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                                ✉️ Correo Electrónico o DNI:
+                            </label>
+                            <input type="text" id="fastLoginEmail" class="input-dark-text" placeholder="ejemplo@correo.com o DNI de 8 dígitos" required style="width: 100%; padding: 0.85rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 14px; font-size: 0.95rem; outline: none; background: #F8FAFC; transition: border-color 0.2s, box-shadow 0.2s;" onfocus="this.style.borderColor='#FF5500'; this.style.boxShadow='0 0 0 3px rgba(255,85,0,0.15)'; this.style.background='#FFFFFF';" onblur="this.style.borderColor='#CBD5E1'; this.style.boxShadow='none'; this.style.background='#F8FAFC';">
+                        </div>
+                        
+                        <div style="margin-bottom: 0.75rem;">
+                            <label class="field-dark-label" style="display: block; font-size: 0.78rem; font-weight: 800; color: #334155; margin-bottom: 0.45rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                                🔒 Contraseña:
+                            </label>
+                            <div style="position: relative; display: flex; align-items: center;">
+                                <input type="password" id="fastLoginPassword" class="input-dark-text" placeholder="••••••••••••" required style="width: 100%; padding: 0.85rem 2.85rem 0.85rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 14px; font-size: 0.95rem; outline: none; background: #F8FAFC; transition: border-color 0.2s, box-shadow 0.2s;" onfocus="this.style.borderColor='#FF5500'; this.style.boxShadow='0 0 0 3px rgba(255,85,0,0.15)'; this.style.background='#FFFFFF';" onblur="this.style.borderColor='#CBD5E1'; this.style.boxShadow='none'; this.style.background='#F8FAFC';">
+                                <button type="button" onclick="toggleFastPasswordVisibility('fastLoginPassword', this)" style="position: absolute; right: 12px; background: none; border: none; color: #64748B; cursor: pointer; padding: 4px; display: flex; align-items: center; font-size: 1.15rem; transition: color 0.2s;" title="Mostrar / Ocultar Contraseña" onmouseover="this.style.color='#0F172A'" onmouseout="this.style.color='#64748B'">
+                                    👁️
+                                </button>
+                            </div>
+                        </div>
+
+                        <div style="text-align: right; margin-bottom: 1.35rem;">
+                            <a href="javascript:void(0)" onclick="showFastRecoveryView()" style="color: #FF5500; font-size: 0.825rem; font-weight: 800; text-decoration: none; transition: color 0.2s ease;" onmouseover="this.style.textDecoration='underline';" onmouseout="this.style.textDecoration='none';">
+                                ¿Olvidaste tu contraseña?
+                            </a>
+                        </div>
+
+                        <button type="submit" id="btnSubmitFastLogin" style="width: 100%; background: linear-gradient(135deg, #FF5500, #E64A00); color: #FFF; border: none; padding: 0.95rem; border-radius: 14px; font-size: 0.95rem; font-weight: 900; cursor: pointer; box-shadow: 0 4px 16px rgba(255,85,0,0.35); display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: transform 0.15s, box-shadow 0.15s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 20px rgba(255,85,0,0.45)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 16px rgba(255,85,0,0.35)';">
+                            <span>Ingresar a mi Cuenta</span>
+                            <span>➔</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- VISTA 2: RECUPERAR CONTRASEÑA POR CORREO O DNI -->
+                <div id="fastRecoveryView" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+                        <div>
+                            <div style="display: inline-flex; align-items: center; gap: 0.35rem; background: rgba(59, 130, 246, 0.1); color: #2563EB; font-size: 0.725rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.6px; padding: 3px 10px; border-radius: 20px; margin-bottom: 0.5rem;">
+                                <span>🛡️</span>
+                                <span>RECUPERAR ACCESO</span>
+                            </div>
+                            <h3 style="font-size: 1.45rem; font-weight: 900; color: #0F172A; margin: 0; letter-spacing: -0.5px;">
+                                Restablecer Clave
+                            </h3>
+                        </div>
+                        <button type="button" onclick="closeFastLoginModal()" style="background: #F1F5F9; border: none; color: #64748B; width: 36px; height: 36px; border-radius: 50%; font-size: 1rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='#E2E8F0'; this.style.color='#0F172A';" onmouseout="this.style.background='#F1F5F9'; this.style.color='#64748B';">✕</button>
+                    </div>
+                    <p style="font-size: 0.875rem; color: #64748B; margin: 0 0 1.35rem 0; line-height: 1.45;">
+                        Ingresa tu <strong>Correo Electrónico</strong> o <strong>DNI</strong> registrado. Te enviaremos una contraseña temporal de acceso inmediato.
+                    </p>
+
+                    <div id="fastRecoveryAlert" style="display: none; padding: 0.85rem 1rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700; margin-bottom: 1.25rem; border-width: 1.5px; border-style: solid; line-height: 1.4;"></div>
+
+                    <form onsubmit="submitFastRecovery(event)">
+                        <div style="margin-bottom: 1.35rem;">
+                            <label class="field-dark-label" style="display: block; font-size: 0.78rem; font-weight: 800; color: #334155; margin-bottom: 0.45rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                                ✉️ Correo Electrónico o DNI:
+                            </label>
+                            <input type="text" id="fastRecoveryIdentifier" placeholder="ejemplo@correo.com o DNI de 8 dígitos" required style="width: 100%; padding: 0.85rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 14px; font-size: 0.95rem; outline: none; background: #F8FAFC; transition: border-color 0.2s, box-shadow 0.2s;" onfocus="this.style.borderColor='#FF5500'; this.style.boxShadow='0 0 0 3px rgba(255,85,0,0.15)'; this.style.background='#FFFFFF';" onblur="this.style.borderColor='#CBD5E1'; this.style.boxShadow='none'; this.style.background='#F8FAFC';">
+                        </div>
+
+                        <button type="submit" id="btnSubmitFastRecovery" style="width: 100%; background: linear-gradient(135deg, #FF5500, #E64A00); color: #FFF; border: none; padding: 0.95rem; border-radius: 14px; font-size: 0.925rem; font-weight: 900; cursor: pointer; box-shadow: 0 4px 16px rgba(255,85,0,0.35); margin-bottom: 1.15rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: transform 0.15s, box-shadow 0.15s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 20px rgba(255,85,0,0.45)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 16px rgba(255,85,0,0.35)';">
+                            <span>Enviar Contraseña Temporal</span>
+                            <span>➔</span>
+                        </button>
+
+                        <div style="text-align: center;">
+                            <a href="javascript:void(0)" onclick="showFastLoginView()" style="color: #64748B; font-size: 0.825rem; font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; transition: color 0.2s;" onmouseover="this.style.color='#FF5500';" onmouseout="this.style.color='#64748B';">
+                                <span>←</span>
+                                <span>Volver a Iniciar Sesión</span>
+                            </a>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- VISTA 3: CAMBIO OBLIGATORIO DE CONTRASEÑA TEMPORAL -->
+                <div id="fastChangePasswordView" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                        <div>
+                            <div style="display: inline-flex; align-items: center; gap: 0.35rem; background: rgba(245, 158, 11, 0.1); color: #D97706; font-size: 0.725rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.6px; padding: 3px 10px; border-radius: 20px; margin-bottom: 0.5rem;">
+                                <span>🔒</span>
+                                <span>SEGURIDAD REQUERIDA</span>
+                            </div>
+                            <h3 style="font-size: 1.4rem; font-weight: 900; color: #0F172A; margin: 0; letter-spacing: -0.5px;">
+                                Nueva Contraseña
+                            </h3>
                         </div>
                     </div>
-
-                    <div style="text-align: right; margin-bottom: 1.25rem;">
-                        <a href="javascript:void(0)" onclick="showFastRecoveryView()" style="color: #FF5500; font-size: 0.825rem; font-weight: 700; text-decoration: none; transition: color 0.2s ease;">
-                            ¿Olvidaste tu contraseña?
-                        </a>
+                    <div style="background: #FFF7ED; border: 1.5px solid #FED7AA; color: #EA580C; padding: 0.85rem 1rem; border-radius: 14px; font-size: 0.835rem; font-weight: 700; margin-bottom: 1.25rem; line-height: 1.45;">
+                        ⚠️ Has ingresado con una <strong>contraseña temporal</strong>. Por tu seguridad, define tu contraseña definitiva para continuar:
                     </div>
 
-                    <button type="submit" id="btnSubmitFastLogin" style="width: 100%; background: linear-gradient(135deg, #FF5500, #E64A00); color: #FFF; border: none; padding: 0.9rem; border-radius: 12px; font-size: 0.95rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 14px rgba(255,85,0,0.35);">
-                        Ingresar a mi Cuenta
-                    </button>
-                </form>
-            </div>
+                    <div id="fastChangePasswordError" style="display: none; background: #FEF2F2; border: 1.5px solid #FCA5A5; color: #DC2626; padding: 0.85rem 1rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700; margin-bottom: 1.25rem; line-height: 1.4;"></div>
 
-            <!-- VISTA 2: RECUPERAR CONTRASEÑA POR CORREO O DNI -->
-            <div id="fastRecoveryView" style="display: none;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h3 style="font-size: 1.3rem; font-weight: 900; color: #0F172A; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
-                        <span>🛡️</span> Recuperar Acceso
-                    </h3>
-                    <button type="button" onclick="closeFastLoginModal()" style="background: #F1F5F9; border: none; color: #64748B; width: 32px; height: 32px; border-radius: 8px; font-weight: 800; cursor: pointer;">✕</button>
-                </div>
-                <p style="font-size: 0.85rem; color: #64748B; margin: 0 0 1.25rem 0;">
-                    Ingresa tu <strong>Correo Electrónico</strong> o <strong>DNI</strong> registrado. Te enviaremos una contraseña temporal de acceso inmediato.
-                </p>
-
-                <div id="fastRecoveryAlert" style="display: none; padding: 0.85rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; margin-bottom: 1rem; border-width: 1.5px; border-style: solid; line-height: 1.4;"></div>
-
-                <form onsubmit="submitFastRecovery(event)">
-                    <div style="margin-bottom: 1.25rem;">
-                        <label class="field-dark-label" style="display: block; font-size: 0.8rem; font-weight: 800; color: #334155; margin-bottom: 0.4rem; text-transform: uppercase;">Correo Electrónico o DNI:</label>
-                        <input type="text" id="fastRecoveryIdentifier" placeholder="ejemplo@correo.com o DNI de 8 dígitos" required style="width: 100%; padding: 0.8rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 12px; font-size: 0.95rem; outline: none; background: #F8FAFC;">
-                    </div>
-
-                    <button type="submit" id="btnSubmitFastRecovery" style="width: 100%; background: linear-gradient(135deg, #FF5500, #E64A00); color: #FFF; border: none; padding: 0.9rem; border-radius: 12px; font-size: 0.925rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 14px rgba(255,85,0,0.35); margin-bottom: 1rem;">
-                        Enviar Contraseña Temporal a mi Correo
-                    </button>
-
-                    <div style="text-align: center;">
-                        <a href="javascript:void(0)" onclick="showFastLoginView()" style="color: #64748B; font-size: 0.825rem; font-weight: 700; text-decoration: underline;">
-                            ← Volver al formulario de inicio de sesión
-                        </a>
-                    </div>
-                </form>
-            </div>
-
-            <!-- VISTA 3: CAMBIO OBLIGATORIO DE CONTRASEÑA TEMPORAL -->
-            <div id="fastChangePasswordView" style="display: none;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h3 style="font-size: 1.25rem; font-weight: 900; color: #0F172A; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
-                        <span>🔒</span> Establecer Nueva Contraseña
-                    </h3>
-                </div>
-                <div style="background: #FFF7ED; border: 1.5px solid #FED7AA; color: #EA580C; padding: 0.75rem; border-radius: 12px; font-size: 0.825rem; font-weight: 600; margin-bottom: 1.25rem; line-height: 1.4;">
-                    ⚠️ Has ingresado con una <strong>contraseña temporal</strong>. Por seguridad, ingresa una nueva contraseña definitiva para tu cuenta:
-                </div>
-
-                <div id="fastChangePasswordError" style="display: none; background: #FEF2F2; border: 1px solid #FCA5A5; color: #DC2626; padding: 0.75rem; border-radius: 10px; font-size: 0.85rem; font-weight: 600; margin-bottom: 1rem;"></div>
-
-                <form onsubmit="submitFastChangePassword(event)">
-                    <div style="margin-bottom: 1rem;">
-                        <label class="field-dark-label" style="display: block; font-size: 0.8rem; font-weight: 800; color: #334155; margin-bottom: 0.4rem; text-transform: uppercase;">Nueva Contraseña (mínimo 6 caracteres):</label>
-                        <div style="position: relative; display: flex; align-items: center;">
-                            <input type="password" id="fastNewPassword" placeholder="••••••••••••" required minlength="6" style="width: 100%; padding: 0.8rem 2.75rem 0.8rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 12px; font-size: 0.95rem; outline: none; background: #F8FAFC;">
-                            <button type="button" onclick="toggleFastPasswordVisibility('fastNewPassword', this)" style="position: absolute; right: 10px; background: none; border: none; color: #94A3B8; cursor: pointer; padding: 4px; display: flex; align-items: center; font-size: 1.1rem;" title="Mostrar / Ocultar">
-                                👁️
-                            </button>
+                    <form onsubmit="submitFastChangePassword(event)">
+                        <div style="margin-bottom: 1.1rem;">
+                            <label class="field-dark-label" style="display: block; font-size: 0.78rem; font-weight: 800; color: #334155; margin-bottom: 0.45rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                                🔑 Nueva Contraseña (mínimo 6 caracteres):
+                            </label>
+                            <div style="position: relative; display: flex; align-items: center;">
+                                <input type="password" id="fastNewPassword" placeholder="••••••••••••" required minlength="6" style="width: 100%; padding: 0.85rem 2.85rem 0.85rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 14px; font-size: 0.95rem; outline: none; background: #F8FAFC; transition: border-color 0.2s, box-shadow 0.2s;" onfocus="this.style.borderColor='#FF5500'; this.style.boxShadow='0 0 0 3px rgba(255,85,0,0.15)'; this.style.background='#FFFFFF';" onblur="this.style.borderColor='#CBD5E1'; this.style.boxShadow='none'; this.style.background='#F8FAFC';">
+                                <button type="button" onclick="toggleFastPasswordVisibility('fastNewPassword', this)" style="position: absolute; right: 12px; background: none; border: none; color: #64748B; cursor: pointer; padding: 4px; display: flex; align-items: center; font-size: 1.15rem; transition: color 0.2s;" title="Mostrar / Ocultar" onmouseover="this.style.color='#0F172A'" onmouseout="this.style.color='#64748B'">
+                                    👁️
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
-                    <div style="margin-bottom: 1.5rem;">
-                        <label class="field-dark-label" style="display: block; font-size: 0.8rem; font-weight: 800; color: #334155; margin-bottom: 0.4rem; text-transform: uppercase;">Confirmar Nueva Contraseña:</label>
-                        <div style="position: relative; display: flex; align-items: center;">
-                            <input type="password" id="fastConfirmPassword" placeholder="••••••••••••" required minlength="6" style="width: 100%; padding: 0.8rem 2.75rem 0.8rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 12px; font-size: 0.95rem; outline: none; background: #F8FAFC;">
-                            <button type="button" onclick="toggleFastPasswordVisibility('fastConfirmPassword', this)" style="position: absolute; right: 10px; background: none; border: none; color: #94A3B8; cursor: pointer; padding: 4px; display: flex; align-items: center; font-size: 1.1rem;" title="Mostrar / Ocultar">
-                                👁️
-                            </button>
+                        <div style="margin-bottom: 1.5rem;">
+                            <label class="field-dark-label" style="display: block; font-size: 0.78rem; font-weight: 800; color: #334155; margin-bottom: 0.45rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                                🔒 Confirmar Nueva Contraseña:
+                            </label>
+                            <div style="position: relative; display: flex; align-items: center;">
+                                <input type="password" id="fastConfirmPassword" placeholder="••••••••••••" required minlength="6" style="width: 100%; padding: 0.85rem 2.85rem 0.85rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 14px; font-size: 0.95rem; outline: none; background: #F8FAFC; transition: border-color 0.2s, box-shadow 0.2s;" onfocus="this.style.borderColor='#FF5500'; this.style.boxShadow='0 0 0 3px rgba(255,85,0,0.15)'; this.style.background='#FFFFFF';" onblur="this.style.borderColor='#CBD5E1'; this.style.boxShadow='none'; this.style.background='#F8FAFC';">
+                                <button type="button" onclick="toggleFastPasswordVisibility('fastConfirmPassword', this)" style="position: absolute; right: 12px; background: none; border: none; color: #64748B; cursor: pointer; padding: 4px; display: flex; align-items: center; font-size: 1.15rem; transition: color 0.2s;" title="Mostrar / Ocultar" onmouseover="this.style.color='#0F172A'" onmouseout="this.style.color='#64748B'">
+                                    👁️
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
-                    <button type="submit" id="btnSubmitFastChangePassword" style="width: 100%; background: linear-gradient(135deg, #10B981, #059669); color: #FFF; border: none; padding: 0.9rem; border-radius: 12px; font-size: 0.95rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 14px rgba(16,185,129,0.35);">
-                        💾 Guardar Nueva Contraseña y Continuar
-                    </button>
-                </form>
+                        <button type="submit" id="btnSubmitFastChangePassword" style="width: 100%; background: linear-gradient(135deg, #10B981, #059669); color: #FFF; border: none; padding: 0.95rem; border-radius: 14px; font-size: 0.95rem; font-weight: 900; cursor: pointer; box-shadow: 0 4px 16px rgba(16,185,129,0.35); display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: transform 0.15s, box-shadow 0.15s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 20px rgba(16,185,129,0.45)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 16px rgba(16,185,129,0.35)';">
+                            <span>💾 Guardar Nueva Contraseña y Continuar</span>
+                        </button>
+                    </form>
+                </div>
             </div>
 
         </div>

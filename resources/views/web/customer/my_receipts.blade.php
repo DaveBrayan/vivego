@@ -132,10 +132,18 @@
                                         <div style="font-size: 0.8rem; color: #64748B;">
                                             @if(count($items) > 0)
                                                 @foreach($items as $idx => $it)
-                                                    <span>{{ $it['quantity'] ?? 1 }}x {{ $cleanZoneName($it['zone_name'] ?? ($it['name'] ?? ''), $sale->zone_name) }}{{ $idx < count($items) - 1 ? ' • ' : '' }}</span>
+                                                    <span>{{ $it['quantity'] ?? 1 }}x {{ $cleanZoneName($it['zone_name'] ?? ($it['name'] ?? ''), $sale->zone_name) }}
+                                                        @if(function_exists('isSalePresale') && (isSalePresale($it) || isSalePresale($sale)))
+                                                            <span style="background: rgba(255,85,0,0.12); color: #FF5500; font-size: 0.65rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; margin-left: 0.2rem;">🔥 Preventa</span>
+                                                        @endif
+                                                    {{ $idx < count($items) - 1 ? ' • ' : '' }}</span>
                                                 @endforeach
                                             @else
-                                                <span>{{ $sale->quantity }}x {{ $cleanZoneName($sale->zone_name) }}</span>
+                                                <span>{{ $sale->quantity }}x {{ $cleanZoneName($sale->zone_name) }}
+                                                    @if(function_exists('isSalePresale') && isSalePresale($sale))
+                                                        <span style="background: rgba(255,85,0,0.12); color: #FF5500; font-size: 0.65rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; margin-left: 0.2rem;">🔥 Preventa</span>
+                                                    @endif
+                                                </span>
                                             @endif
                                         </div>
                                     </td>

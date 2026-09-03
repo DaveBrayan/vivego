@@ -146,6 +146,12 @@
                             <!-- Gradient Protection Overlay -->
                             <div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(15,23,42,0.8) 0%, transparent 60%);"></div>
                             
+                            @if(function_exists('isSalePresale') && isSalePresale($sale))
+                                <span style="position: absolute; top: 12px; left: 12px; background: linear-gradient(135deg, #FF5500, #FF1E3C); color: #FFFFFF; font-size: 0.72rem; font-weight: 900; padding: 0.35rem 0.85rem; border-radius: 20px; box-shadow: 0 4px 12px rgba(255,85,0,0.35); text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid rgba(255,255,255,0.3);">
+                                    🔥 PREVENTA
+                                </span>
+                            @endif
+
                             <!-- Status Badge -->
                             @if($isUpgraded)
                                 <span style="position: absolute; top: 12px; right: 12px; background: linear-gradient(135deg, #6366F1, #4F46E5); color: #FFFFFF; font-size: 0.72rem; font-weight: 900; padding: 0.35rem 0.85rem; border-radius: 20px; box-shadow: 0 4px 12px rgba(99,102,241,0.35); text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid #A5B4FC;">
@@ -259,21 +265,45 @@
                                         @foreach($items as $t)
                                             @php
                                                 $tDisplayName = $cleanZoneName($t['zone_name'] ?? ($t['name'] ?? ''), $sale->zone_name);
+                                                $tSeats = !empty($t['seats']) ? (is_array($t['seats']) ? $t['seats'] : json_decode($t['seats'], true)) : [];
+                                                if (empty($tSeats) && $sale->eventTickets && $sale->eventTickets->count() > 0) {
+                                                    foreach ($sale->eventTickets as $et) {
+                                                        if (str_contains($et->zone_name, $tDisplayName) && preg_match('/\(([^)]+)\)/', $et->zone_name, $sm)) {
+                                                            $tSeats[] = $sm[1];
+                                                        }
+                                                    }
+                                                }
+                                                $formattedSeats = array_filter(array_map('formatShortSeatCode', (array)$tSeats));
                                             @endphp
-                                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 0.45rem 0.75rem;">
-                                                <span style="font-weight: 800; color: #0F172A;">
-                                                    <span style="background: rgba(255,85,0,0.12); color: #FF5500; padding: 2px 6px; border-radius: 6px; font-weight: 900;">{{ $t['quantity'] ?? 1 }}x</span>
-                                                    {{ $tDisplayName }}
-                                                </span>
-                                                <span style="font-weight: 800; color: #059669; font-size: 0.85rem;">
-                                                    @if($isCourtesy)
-                                                        Gratis
-                                                    @elseif($sale->is_upgrade)
-                                                        <span style="font-size: 0.78rem; color: #6366F1; font-weight: 800;">+S/ {{ number_format(($t['subtotal'] ?? (($t['price'] ?? 0) * ($t['quantity'] ?? 1))), 2) }}</span>
-                                                    @else
-                                                        S/ {{ number_format(($t['subtotal'] ?? (($t['price'] ?? 0) * ($t['quantity'] ?? 1))), 2) }}
-                                                    @endif
-                                                </span>
+                                            <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 0.5rem 0.75rem;">
+                                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem;">
+                                                    <span style="font-weight: 800; color: #0F172A;">
+                                                        <span style="background: rgba(255,85,0,0.12); color: #FF5500; padding: 2px 6px; border-radius: 6px; font-weight: 900;">{{ $t['quantity'] ?? 1 }}x</span>
+                                                        {{ $tDisplayName }}
+                                                        @if(function_exists('isSalePresale') && (isSalePresale($t) || isSalePresale($sale)))
+                                                            <span style="background: rgba(255,85,0,0.12); color: #FF5500; border: 1px solid rgba(255,85,0,0.3); font-size: 0.65rem; font-weight: 900; padding: 1px 5px; border-radius: 4px; margin-left: 0.3rem;">🔥 PREVENTA</span>
+                                                        @endif
+                                                    </span>
+                                                    <span style="font-weight: 800; color: #059669; font-size: 0.85rem;">
+                                                        @if($isCourtesy)
+                                                            Gratis
+                                                        @elseif($sale->is_upgrade)
+                                                            <span style="font-size: 0.78rem; color: #6366F1; font-weight: 800;">+S/ {{ number_format(($t['subtotal'] ?? (($t['price'] ?? 0) * ($t['quantity'] ?? 1))), 2) }}</span>
+                                                        @else
+                                                            S/ {{ number_format(($t['subtotal'] ?? (($t['price'] ?? 0) * ($t['quantity'] ?? 1))), 2) }}
+                                                        @endif
+                                                    </span>
+                                                </div>
+                                                @if(!empty($formattedSeats))
+                                                    <div style="display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed #F1F5F9;">
+                                                        <span style="font-size: 0.72rem; font-weight: 800; color: #059669;">🪑 Butacas:</span>
+                                                        @foreach($formattedSeats as $fs)
+                                                            <span style="background: rgba(16, 185, 129, 0.12); color: #047857; border: 1.5px solid rgba(16, 185, 129, 0.3); font-size: 0.72rem; font-weight: 900; padding: 1px 6px; border-radius: 5px;">
+                                                                {{ $fs }}
+                                                            </span>
+                                                        @endforeach
+                                                    </div>
+                                                @endif
                                             </div>
                                         @endforeach
                                     @else
@@ -324,8 +354,27 @@
                                         </svg>
                                     </button>
 
-                                    @if(!$isCourtesy)
-                                        <!-- Botón Mejorar Entrada (Habilitado con cálculo de diferencia) -->
+                                    @php
+                                        $eventZones = is_array($sale->event?->zones) ? $sale->event->zones : (json_decode($sale->event?->zones ?? '[]', true) ?: []);
+                                        $currentUnitPrice = (float)($sale->unit_price ?? 0);
+                                        if ($currentUnitPrice <= 0 && (float)$sale->total_amount > 0 && (int)$sale->quantity > 0) {
+                                            $currentUnitPrice = round((float)$sale->total_amount / (int)$sale->quantity, 2);
+                                        }
+
+                                        $hasHigherTierZone = false;
+                                        foreach ($eventZones as $ez) {
+                                            $zPrice = (float)($ez['price'] ?? 0);
+                                            $zCap = (int)($ez['capacity'] ?? 0);
+                                            // La zona debe ser de mayor precio que el boleto actual y tener aforo disponible
+                                            if ($zPrice > $currentUnitPrice && $zCap > 0) {
+                                                $hasHigherTierZone = true;
+                                                break;
+                                            }
+                                        }
+                                    @endphp
+
+                                    @if(!$isCourtesy && $hasHigherTierZone)
+                                        <!-- Botón Mejorar Entrada (Habilitado únicamente si existe una zona de mayor precio) -->
                                         <button type="button" class="btn-mejorar-boleto" onclick="openTicketUpgradeModal({{ $sale->id }})" style="width: 100%; border: 1.5px solid #6366F1; cursor: pointer; box-sizing: border-box; background: linear-gradient(135deg, #F5F3FF 0%, #EEF2FF 100%); color: #4F46E5; text-align: center; padding: 0.7rem 1rem; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.12); transition: all 0.2s;">
                                             <div style="display: flex; align-items: center; gap: 0.45rem;">
                                                 <span style="font-size: 0.92rem; font-weight: 900;">⭐ Mejorar mi Entrada</span>

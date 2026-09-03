@@ -155,8 +155,8 @@ class CheckoutController extends Controller
 
         // 1. Obtener Evento si no se definió por el upgrade
         if (!$event) {
-            $eventId = $request->input('event_id');
-            $eventSlug = $request->input('event_slug');
+            $eventId = $request->input('event_id') ?: session('checkout_event_id');
+            $eventSlug = $request->input('event_slug') ?: session('checkout_event_slug');
 
             if ($eventId) {
                 $event = Event::with('template')->find($eventId);
@@ -167,6 +167,13 @@ class CheckoutController extends Controller
             if (!$event) {
                 $event = Event::with('template')->latest()->first();
             }
+        }
+
+        if ($event) {
+            session([
+                'checkout_event_id' => $event->id,
+                'checkout_event_slug' => $event->slug,
+            ]);
         }
 
         if ($event && ($event->status === 'Borrador' || $event->status === 'draft') && !auth()->check()) {
@@ -583,6 +590,7 @@ class CheckoutController extends Controller
             }
             $t['name'] = $rawZ;
             $t['zone_name'] = $rawZ;
+            $t['is_presale'] = function_exists('isSalePresale') ? isSalePresale($t) : (!empty($t['is_presale_active']) || !empty($t['is_presale']));
         }
         unset($t);
 
@@ -610,6 +618,7 @@ class CheckoutController extends Controller
             'upgrade_difference' => !empty($upgradeSaleId) ? $orderTotal : 0.00,
             'tickets_data' => [
                 'items' => $ticketsData,
+                'is_presale' => function_exists('isSalePresale') ? isSalePresale(['items' => $ticketsData]) : false,
                 'sub_method' => $subMethod,
                 'customer_email' => $buyerEmail,
                 'izipay_order_id' => $orderId,
@@ -949,6 +958,7 @@ class CheckoutController extends Controller
             }
             $t['name'] = $rawZ;
             $t['zone_name'] = $rawZ;
+            $t['is_presale'] = function_exists('isSalePresale') ? isSalePresale($t) : (!empty($t['is_presale_active']) || !empty($t['is_presale']));
         }
         unset($t);
 
@@ -977,6 +987,7 @@ class CheckoutController extends Controller
             'upgrade_difference' => !empty($upgradeSaleId) ? $orderTotal : 0.00,
             'tickets_data' => [
                 'items' => $ticketsData,
+                'is_presale' => function_exists('isSalePresale') ? isSalePresale(['items' => $ticketsData]) : false,
                 'sub_method' => $subMethod,
                 'customer_email' => $buyerEmail,
                 'culqi_transaction_id' => $transactionId,
@@ -1206,32 +1217,8 @@ class CheckoutController extends Controller
             'seller_name' => 'Web Cortesía ViveGo',
         ]);
 
-        // Registrar boletos individuales en la tabla event_tickets
-        $lastTicket = \App\Models\EventTicket::where('event_id', $event->id)->orderBy('id', 'desc')->first();
-        $startSeq = $lastTicket ? ((int) preg_replace('/[^0-9]/', '', $lastTicket->ticket_number) + 1) : 1;
-
-        for ($i = 1; $i <= $totalQty; $i++) {
-            $currentSeq = $startSeq + ($i - 1);
-            $ticketCode = 'TK-' . strtoupper(substr(\Illuminate\Support\Str::slug($event->title), 0, 3)) . '-' . str_pad($currentSeq, 5, '0', STR_PAD_LEFT);
-            $validationHash = 'VG' . strtoupper(substr(md5($sale->receipt_number . $i . $sale->id), 0, 8));
-            $qrPayload = "VIVEGO|{$sale->receipt_number}|EVT-{$sale->event_id}|DNI-{$sale->buyer_dni}|TICK-{$currentSeq}|{$validationHash}";
-
-            \App\Models\EventTicket::create([
-                'event_id' => $event->id,
-                'ticket_sale_id' => $sale->id,
-                'ticket_code' => $ticketCode,
-                'ticket_number' => $currentSeq,
-                'zone_name' => $sale->zone_name,
-                'unit_price' => 0.00,
-                'qr_payload' => $qrPayload,
-                'validation_hash' => $validationHash,
-                'buyer_name' => $buyerName,
-                'buyer_dni' => $buyerDni,
-                'source' => 'web_courtesy',
-                'is_used' => false,
-                'status' => 'valid',
-            ]);
-        }
+        // Registrar boletos individuales en la tabla event_tickets y vincular butacas
+        $this->processSaleCompletionAndTickets($sale, $event, $totalQty, null, $ticketsData);
 
         // Crear o sincronizar cuenta de Cliente para que pueda ver "Mis Boletos" y "Mis Recibos"
         $isNewUser = false;
@@ -1355,19 +1342,62 @@ class CheckoutController extends Controller
             $lastTicket = \App\Models\EventTicket::where('event_id', $targetEvent->id)->orderBy('id', 'desc')->first();
             $startSeq = $lastTicket ? ((int) preg_replace('/[^0-9]/', '', (string) $lastTicket->ticket_number) + 1) : 1;
 
-            for ($i = 1; $i <= $totalQty; $i++) {
-                $currentSeq = $startSeq + ($i - 1);
+            $itemsToProcess = [];
+            if (!empty($ticketsData) && is_array($ticketsData)) {
+                $rawItems = isset($ticketsData['items']) && is_array($ticketsData['items']) ? $ticketsData['items'] : $ticketsData;
+                foreach ($rawItems as $tItem) {
+                    $itemQty = (int)($tItem['quantity'] ?? 1);
+                    $rawItemZone = $tItem['zone_name'] ?? ($tItem['name'] ?? $sale->zone_name);
+                    $cleanItemZone = $rawItemZone;
+                    if (preg_match('/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?(.+)/iu', $cleanItemZone, $m)) {
+                        $cleanItemZone = trim($m[1]);
+                    }
+                    $itemPrice = (float)($tItem['price'] ?? $sale->unit_price);
+                    $rawSeats = $tItem['seats'] ?? [];
+                    if (is_string($rawSeats)) {
+                        $rawSeats = json_decode($rawSeats, true) ?: [];
+                    }
+                    $itemSeats = is_array($rawSeats) ? array_values($rawSeats) : [];
+
+                    for ($q = 0; $q < $itemQty; $q++) {
+                        $seatVal = $itemSeats[$q] ?? null;
+                        $itemsToProcess[] = [
+                            'zone' => $cleanItemZone,
+                            'price' => $itemPrice,
+                            'seat' => $seatVal ? formatShortSeatCode($seatVal) : null,
+                        ];
+                    }
+                }
+            }
+
+            // Fallback si no había items detallados en ticketsData
+            if (empty($itemsToProcess)) {
+                for ($i = 1; $i <= $totalQty; $i++) {
+                    $itemsToProcess[] = [
+                        'zone' => $sale->zone_name,
+                        'price' => $sale->unit_price,
+                        'seat' => null,
+                    ];
+                }
+            }
+
+            $currentIdx = 0;
+            foreach ($itemsToProcess as $entry) {
+                $currentIdx++;
+                $currentSeq = $startSeq + ($currentIdx - 1);
                 $ticketCode = 'TK-' . strtoupper(substr(\Illuminate\Support\Str::slug($targetEvent->title), 0, 3)) . '-' . str_pad($currentSeq, 5, '0', STR_PAD_LEFT);
-                $validationHash = 'VG' . strtoupper(substr(md5($sale->receipt_number . $i . $sale->id), 0, 8));
+                $validationHash = 'VG' . strtoupper(substr(md5($sale->receipt_number . $currentIdx . $sale->id), 0, 8));
                 $qrPayload = "VIVEGO|{$sale->receipt_number}|EVT-{$sale->event_id}|DNI-{$sale->buyer_dni}|TICK-{$currentSeq}|{$validationHash}";
+
+                $effectiveZone = formatZoneWithSeat($entry['zone'], $entry['seat']);
 
                 \App\Models\EventTicket::create([
                     'event_id' => $targetEvent->id,
                     'ticket_sale_id' => $sale->id,
                     'ticket_code' => $ticketCode,
                     'ticket_number' => $currentSeq,
-                    'zone_name' => $sale->zone_name,
-                    'unit_price' => $sale->unit_price,
+                    'zone_name' => $effectiveZone,
+                    'unit_price' => $entry['price'],
                     'qr_payload' => $qrPayload,
                     'validation_hash' => $validationHash,
                     'buyer_name' => $sale->buyer_name,

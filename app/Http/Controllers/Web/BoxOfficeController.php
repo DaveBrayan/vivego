@@ -191,7 +191,7 @@ class BoxOfficeController extends Controller
             ];
         }
 
-        $sales = $event->sales ?? collect([]);
+        $sales = $event->sales()->with('eventTickets')->latest()->get();
         $totalRevenue = $sales->sum('total_amount');
         $cashRevenue = $sales->where('payment_method', 'Efectivo')->sum('total_amount');
         $digitalRevenue = $totalRevenue - $cashRevenue;
@@ -757,6 +757,7 @@ class BoxOfficeController extends Controller
         }
 
         $pdfBase64 = $request->input('ticket_pdf_base64');
+        $sale->loadMissing(['eventTickets', 'event']);
 
         try {
             Mail::to($recipient)->send(new TicketPurchaseMail($sale, null, false, $pdfBase64));

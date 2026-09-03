@@ -154,10 +154,35 @@
                                                 };
                                             @endphp
                                             @foreach($items as $t)
+                                                @php
+                                                    $tSeats = !empty($t['seats']) ? (is_array($t['seats']) ? $t['seats'] : json_decode($t['seats'], true)) : [];
+                                                    if (empty($tSeats) && $sale->eventTickets && $sale->eventTickets->count() > 0) {
+                                                        $zoneBase = $cleanZoneName($t['zone_name'] ?? ($t['name'] ?? ''), $sale->zone_name);
+                                                        foreach ($sale->eventTickets as $et) {
+                                                            if (str_contains($et->zone_name, $zoneBase) && preg_match('/\(([^)]+)\)/', $et->zone_name, $sm)) {
+                                                                $tSeats[] = $sm[1];
+                                                            }
+                                                        }
+                                                    }
+                                                    $formattedSeats = array_filter(array_map('formatShortSeatCode', (array)$tSeats));
+                                                @endphp
                                                 <tr>
-                                                    <td style="font-size: 13px; color: #0F172A; font-weight: 700;">🎟️ {{ $cleanZoneName($t['zone_name'] ?? ($t['name'] ?? ''), $sale->zone_name) }}</td>
-                                                    <td align="center" style="font-size: 13px; color: #475569;">{{ $t['quantity'] ?? 1 }}</td>
-                                                    <td align="right" style="font-size: 13px; color: {{ $sale->is_upgrade ? '#4F46E5' : '#059669' }}; font-weight: 800;">
+                                                    <td style="font-size: 13px; color: #0F172A; font-weight: 700; padding: 7px 8px; border-bottom: 1px dashed #E2E8F0;">
+                                                        🎟️ {{ $cleanZoneName($t['zone_name'] ?? ($t['name'] ?? ''), $sale->zone_name) }}
+                                                        @if(function_exists('isSalePresale') && (isSalePresale($t) || isSalePresale($sale)))
+                                                            <span style="display: inline-block; background-color: #FFF7ED; border: 1px solid #FFEDD5; color: #EA580C; font-size: 11px; font-weight: 900; padding: 2px 7px; border-radius: 4px; margin-left: 4px; vertical-align: middle;">🔥 PREVENTA</span>
+                                                        @endif
+                                                        @if(!empty($formattedSeats))
+                                                            <div style="margin-top: 5px; font-size: 11px; color: #059669; font-weight: 800;">
+                                                                <span style="color: #64748B;">🪑 Butacas:</span>
+                                                                @foreach($formattedSeats as $fs)
+                                                                    <span style="display: inline-block; background-color: #ECFDF5; border: 1px solid #A7F3D0; color: #065F46; padding: 2px 6px; border-radius: 4px; margin-right: 3px; font-weight: 900;">{{ $fs }}</span>
+                                                                @endforeach
+                                                            </div>
+                                                        @endif
+                                                    </td>
+                                                    <td align="center" style="font-size: 13px; color: #475569; padding: 7px 8px; border-bottom: 1px dashed #E2E8F0;">{{ $t['quantity'] ?? 1 }}</td>
+                                                    <td align="right" style="font-size: 13px; color: {{ $sale->is_upgrade ? '#4F46E5' : '#059669' }}; font-weight: 800; padding: 7px 8px; border-bottom: 1px dashed #E2E8F0;">
                                                         {{ $sale->is_upgrade ? '+ ' : '' }}S/ {{ number_format(($t['subtotal'] ?? (($t['price'] ?? 0) * ($t['quantity'] ?? 1))), 2) }}
                                                     </td>
                                                 </tr>

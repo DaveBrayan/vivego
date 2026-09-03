@@ -59,21 +59,38 @@
     }
 
     .svg-public-zone {
-        cursor: pointer;
         transition: all 0.2s ease;
         filter: drop-shadow(0 3px 12px rgba(0, 0, 0, 0.05));
     }
 
-    .svg-public-zone:hover {
+    .svg-public-zone.no-seats {
+        cursor: pointer;
+    }
+
+    .svg-public-zone.no-seats:hover {
         filter: drop-shadow(0 6px 18px rgba(255, 85, 0, 0.35));
         stroke: #FF5500 !important;
         stroke-width: 2.2 !important;
     }
 
-    .svg-public-zone.selected {
+    .svg-public-zone.no-seats.selected {
         filter: drop-shadow(0 6px 22px rgba(255, 85, 0, 0.55));
         stroke: #FF5500 !important;
         stroke-width: 2.5 !important;
+    }
+
+    .svg-public-zone.has-seats {
+        cursor: default;
+    }
+
+    .svg-public-zone.has-seats:hover {
+        filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.08));
+    }
+
+    .svg-public-zone.has-seats.selected {
+        filter: drop-shadow(0 6px 22px rgba(255, 85, 0, 0.45));
+        stroke: #FF5500 !important;
+        stroke-width: 2.2 !important;
     }
 
     .svg-public-zone-badge {
@@ -292,7 +309,8 @@
                     zoneSurface.setAttribute('stroke-linejoin', 'round');
                 }
 
-                zoneSurface.setAttribute('class', 'svg-public-zone' + (this.selectedZoneName === z.name ? ' selected' : ''));
+                const zoneClass = 'svg-public-zone ' + (hasSeats ? 'has-seats' : 'no-seats') + (this.selectedZoneName === z.name ? ' selected' : '');
+                zoneSurface.setAttribute('class', zoneClass);
                 zoneSurface.setAttribute('fill', '#FFFFFF');
                 zoneSurface.setAttribute('stroke', color);
                 zoneSurface.setAttribute('stroke-width', '1.6');
@@ -302,10 +320,25 @@
                 zoneSurface.addEventListener('mouseenter', (e) => this.onZoneMouseEnter(e, z));
                 zoneSurface.addEventListener('mousemove', (e) => this.onZoneMouseMove(e));
                 zoneSurface.addEventListener('mouseleave', () => this.onZoneMouseLeave());
-                zoneSurface.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.selectZoneByName(z.name);
-                });
+
+                if (hasSeats) {
+                    zoneSurface.style.cursor = 'default';
+                    zoneSurface.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const hintEl = document.getElementById('tooltipZoneActionHint');
+                        if (hintEl) {
+                            hintEl.textContent = '👇 Haz clic en una butaca para elegirla';
+                            hintEl.style.background = 'rgba(255,85,0,0.25)';
+                            hintEl.style.color = '#FF5500';
+                        }
+                    });
+                } else {
+                    zoneSurface.style.cursor = 'pointer';
+                    zoneSurface.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.selectGeneralZone(z.name);
+                    });
+                }
 
                 zoneGroup.appendChild(zoneSurface);
 
@@ -389,7 +422,7 @@
                         rect.setAttribute('fill', isOccupied ? '#EF4444' : (color || '#10B981'));
                         rect.setAttribute('stroke', isOccupied ? '#DC2626' : '#FFFFFF');
                         rect.setAttribute('stroke-width', '1.2');
-                        rect.setAttribute('data-seat-id', seat.id || seat.number || '');
+                        rect.setAttribute('data-seat-id', seat.label || seat.display_name || seat.number || seat.id || '');
                         rect.setAttribute('data-zone-name', z.name);
 
                         // Eventos sobre butaca individual
@@ -445,6 +478,8 @@
             const hintEl = document.getElementById('tooltipZoneActionHint');
             if (!tooltip) return;
 
+            const hasSeats = Array.isArray(z.seats) && z.seats.length > 0;
+
             if (titleEl) titleEl.textContent = z.name || 'Zona';
             if (priceEl) {
                 priceEl.textContent = 'S/ ' + (parseFloat(z.price) || 0).toFixed(2);
@@ -452,9 +487,15 @@
             }
             if (capEl) capEl.textContent = `Aforo: ${z.capacity || 'General'}`;
             if (hintEl) {
-                hintEl.textContent = '👉 Clic para seleccionar zona';
-                hintEl.style.background = 'rgba(255,85,0,0.2)';
-                hintEl.style.color = '#FF8800';
+                if (hasSeats) {
+                    hintEl.textContent = '🪑 Selecciona tus butacas en el mapa';
+                    hintEl.style.background = 'rgba(16, 185, 129, 0.2)';
+                    hintEl.style.color = '#10B981';
+                } else {
+                    hintEl.textContent = '👉 Clic para seleccionar zona';
+                    hintEl.style.background = 'rgba(255,85,0,0.2)';
+                    hintEl.style.color = '#FF8800';
+                }
             }
 
             tooltip.style.display = 'block';
@@ -469,7 +510,7 @@
             const hintEl = document.getElementById('tooltipZoneActionHint');
             if (!tooltip) return;
 
-            const seatLabel = seat.number ? `Butaca ${seat.number}` : (seat.id ? `Butaca ${seat.id}` : 'Asiento');
+            const seatLabel = seat.label || seat.display_name || (seat.number ? `Butaca ${seat.number}` : (seat.id ? `Butaca ${seat.id}` : 'Asiento'));
             if (titleEl) titleEl.textContent = `${z.name} (${seatLabel})`;
             
             if (priceEl) {
@@ -482,12 +523,26 @@
                 }
             }
             
-            if (capEl) capEl.textContent = isOccupied ? 'No disponible para venta' : 'Asiento libre / disponible';
+            const isCurrentlySelected = (e.target && e.target.classList && e.target.classList.contains('selected'));
+
+            if (capEl) {
+                if (isOccupied) {
+                    capEl.textContent = 'No disponible para venta';
+                } else if (isCurrentlySelected) {
+                    capEl.textContent = '✅ Butaca seleccionada';
+                } else {
+                    capEl.textContent = 'Asiento libre / disponible';
+                }
+            }
 
             if (hintEl) {
                 if (isOccupied) {
                     hintEl.textContent = '❌ Butaca no disponible';
                     hintEl.style.background = 'rgba(239,68,68,0.2)';
+                    hintEl.style.color = '#EF4444';
+                } else if (isCurrentlySelected) {
+                    hintEl.textContent = '🔄 Clic para desmarcar butaca';
+                    hintEl.style.background = 'rgba(239,68,68,0.15)';
                     hintEl.style.color = '#EF4444';
                 } else {
                     hintEl.textContent = '👉 Clic para elegir esta butaca';
@@ -515,7 +570,156 @@
             }
 
             rect.classList.toggle('selected');
-            this.selectZoneByName(z.name);
+            this.syncZoneSeatCount(z.name);
+        },
+
+        syncZoneSeatCount: function(zoneName) {
+            const z = this.zones.find(item => this.isZoneMatch(item.name, zoneName));
+            const actualName = z ? z.name : zoneName;
+
+            // 1. Obtener todas las butacas seleccionadas actualmente en esta zona
+            const selectedRects = Array.from(document.querySelectorAll(`.public-seat-rect.selected[data-zone-name="${actualName}"]`));
+            const selectedCount = selectedRects.length;
+            const seatCodes = selectedRects.map(r => r.getAttribute('data-seat-id') || 'Asiento').filter(Boolean);
+
+            // 2. Resaltar la zona completa si tiene al menos 1 butaca seleccionada
+            document.querySelectorAll(`.svg-public-zone[data-zone-name="${actualName}"]`).forEach(poly => {
+                if (selectedCount > 0) {
+                    poly.classList.add('selected');
+                } else {
+                    poly.classList.remove('selected');
+                }
+            });
+
+            // 3. Sincronizar el contador exacto en la lista de entradas
+            const matchedRows = this.getTicketRowsForZone(actualName);
+            matchedRows.forEach(row => {
+                const countEl = row.querySelector('.ticket-count-val');
+                if (countEl) {
+                    countEl.textContent = selectedCount;
+                }
+                row.setAttribute('data-selected-seats', JSON.stringify(seatCodes));
+
+                // Mostrar etiquetas visuales de butacas seleccionadas bajo la entrada
+                let seatContainer = row.querySelector('.selected-seat-tags-box');
+                if (!seatContainer) {
+                    seatContainer = document.createElement('div');
+                    seatContainer.className = 'selected-seat-tags-box';
+                    seatContainer.style.cssText = 'display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.45rem;';
+                    const targetParent = row.firstElementChild || row;
+                    targetParent.appendChild(seatContainer);
+                }
+
+                if (seatCodes.length > 0) {
+                    seatContainer.innerHTML = seatCodes.map(code => 
+                        `<span style="background: rgba(255, 85, 0, 0.1); border: 1px solid rgba(255, 85, 0, 0.35); color: #FF5500; font-size: 0.685rem; font-weight: 800; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem;">🪑 ${code}</span>`
+                    ).join('');
+                } else {
+                    seatContainer.innerHTML = '';
+                }
+
+                if (selectedCount > 0) {
+                    row.classList.add('map-highlighted');
+                    setTimeout(() => row.classList.remove('map-highlighted'), 800);
+                }
+            });
+
+            if (matchedRows.length > 0 && selectedCount > 0) {
+                matchedRows[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            // 4. Recalcular precio total inmediatamente
+            if (typeof window.recalculateTicketTotal === 'function') {
+                window.recalculateTicketTotal();
+            }
+        },
+
+        selectNextAvailableSeat: function(zoneName) {
+            const z = this.zones.find(item => this.isZoneMatch(item.name, zoneName));
+            const actualName = z ? z.name : zoneName;
+
+            const availableRect = document.querySelector(`.public-seat-rect[data-zone-name="${actualName}"]:not(.occupied):not(.selected)`);
+            if (!availableRect) return false;
+
+            availableRect.classList.add('selected');
+            this.syncZoneSeatCount(actualName);
+            return true;
+        },
+
+        unselectLastSeat: function(zoneName) {
+            const z = this.zones.find(item => this.isZoneMatch(item.name, zoneName));
+            const actualName = z ? z.name : zoneName;
+
+            const selectedRects = Array.from(document.querySelectorAll(`.public-seat-rect.selected[data-zone-name="${actualName}"]`));
+            if (selectedRects.length === 0) return false;
+
+            const lastRect = selectedRects[selectedRects.length - 1];
+            lastRect.classList.remove('selected');
+            this.syncZoneSeatCount(actualName);
+            return true;
+        },
+
+        hasSeatsInZone: function(zoneName) {
+            const z = this.zones.find(item => this.isZoneMatch(item.name, zoneName));
+            return !!(z && Array.isArray(z.seats) && z.seats.length > 0);
+        },
+
+        selectGeneralZone: function(zoneName) {
+            this.selectedZoneName = zoneName;
+
+            document.querySelectorAll('.svg-public-zone').forEach(poly => {
+                if (this.isZoneMatch(poly.getAttribute('data-zone-name'), zoneName)) {
+                    poly.classList.add('selected');
+                } else {
+                    poly.classList.remove('selected');
+                }
+            });
+
+            const matchedRows = this.getTicketRowsForZone(zoneName);
+            matchedRows.forEach(row => {
+                const countEl = row.querySelector('.ticket-count-val');
+                const btnPlus = row.querySelector('.btn-ticket-plus');
+                if (countEl) {
+                    let currentQty = parseInt(countEl.textContent) || 0;
+                    if (currentQty === 0 && btnPlus) {
+                        btnPlus.click();
+                    }
+                }
+                row.classList.add('map-highlighted');
+                setTimeout(() => row.classList.remove('map-highlighted'), 800);
+            });
+
+            if (matchedRows.length > 0) {
+                matchedRows[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            if (typeof window.recalculateTicketTotal === 'function') {
+                window.recalculateTicketTotal();
+            }
+        },
+
+        getTicketRowsForZone: function(zoneName) {
+            const rows = [];
+            const cleanTarget = (zoneName || '').toLowerCase().replace(/zona|sector/gi, '').trim();
+
+            document.querySelectorAll('.ticket-type-row').forEach(row => {
+                const rowZone = (row.getAttribute('data-zone-name') || '').toLowerCase().replace(/zona|sector/gi, '').trim();
+                const nameEl = row.querySelector('.ticket-name');
+                const rowName = nameEl ? nameEl.textContent.replace('🎟️', '').replace('🎁', '').toLowerCase().replace(/zona|sector/gi, '').trim() : '';
+
+                if (rowZone === cleanTarget || rowName === cleanTarget ||
+                    (cleanTarget && (rowZone.includes(cleanTarget) || cleanTarget.includes(rowZone) || rowName.includes(cleanTarget) || cleanTarget.includes(rowName)))) {
+                    rows.push(row);
+                }
+            });
+            return rows;
+        },
+
+        isZoneMatch: function(name1, name2) {
+            if (!name1 || !name2) return false;
+            const n1 = name1.toLowerCase().replace(/zona|sector/gi, '').trim();
+            const n2 = name2.toLowerCase().replace(/zona|sector/gi, '').trim();
+            return n1 === n2 || n1.includes(n2) || n2.includes(n1);
         },
 
         onZoneMouseMove: function(e) {
@@ -534,52 +738,14 @@
         onZoneMouseLeave: function() {
             const tooltip = document.getElementById('publicZoneTooltip');
             if (tooltip) tooltip.style.display = 'none';
-        },
-
-        selectZoneByName: function(zoneName) {
-            this.selectedZoneName = zoneName;
-
-            // 1. Resaltar polígono en SVG
-            document.querySelectorAll('.svg-public-zone').forEach(poly => {
-                if (poly.getAttribute('data-zone-name') === zoneName) {
-                    poly.classList.add('selected');
-                } else {
-                    poly.classList.remove('selected');
-                }
-            });
-
-            // 2. Buscar la fila de entrada en la barra lateral de compra
-            const ticketRows = document.querySelectorAll('.ticket-type-row');
-            let matchedRow = null;
-
-            ticketRows.forEach(row => {
-                const nameEl = row.querySelector('.ticket-name');
-                const rowName = nameEl ? nameEl.textContent.replace('🎟️', '').replace('🎁', '').trim() : '';
-                if (rowName.toLowerCase().includes(zoneName.toLowerCase()) || zoneName.toLowerCase().includes(rowName.toLowerCase())) {
-                    matchedRow = row;
-                }
-            });
-
-            if (matchedRow) {
-                const countEl = matchedRow.querySelector('.ticket-count-val');
-                const btnPlus = matchedRow.querySelector('.btn-ticket-plus');
-                if (countEl) {
-                    let currentQty = parseInt(countEl.textContent) || 0;
-                    if (currentQty === 0 && btnPlus) {
-                        btnPlus.click();
-                    }
-                }
-
-                // Efecto de pulso y scroll
-                matchedRow.classList.add('map-highlighted');
-                setTimeout(() => matchedRow.classList.remove('map-highlighted'), 1200);
-
-                matchedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
         }
     };
 
-    document.addEventListener('DOMContentLoaded', () => {
+    window.PublicSeatMap = PublicSeatMap;
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => PublicSeatMap.init());
+    } else {
         PublicSeatMap.init();
-    });
+    }
 </script>

@@ -108,6 +108,7 @@
                             $hasCamp = !empty($ticket['has_campaign']);
                         @endphp
                         <div class="ticket-type-row" 
+                             data-zone-name="{{ $ticket['name'] }}"
                              data-price="{{ $ticket['price'] }}"
                              data-regular-price="{{ $ticket['regular_price'] }}"
                              data-is-presale="{{ $ticket['is_presale_active'] ? 'true' : 'false' }}"
@@ -762,6 +763,7 @@
 
                     if (qty > 0) {
                         currentGrandTotal += price * qty;
+                        const seatCodes = row.getAttribute('data-selected-seats');
                         selectedTicketsArray.push({
                             name: name,
                             price: price,
@@ -770,7 +772,8 @@
                             presale_discount: presaleDiscount,
                             is_courtesy: isCourtesy,
                             quantity: qty,
-                            subtotal: price * qty
+                            subtotal: price * qty,
+                            seats: seatCodes ? JSON.parse(seatCodes) : []
                         });
                     }
                 });
@@ -814,9 +817,16 @@
                 const btnPlus = row.querySelector('.btn-ticket-plus');
                 const countEl = row.querySelector('.ticket-count-val');
 
+                const rowZoneName = row.getAttribute('data-zone-name') || (row.querySelector('.ticket-name')?.textContent.replace('🎟️', '').replace('🎁', '').trim() || '');
+
                 if (btnMinus && btnPlus && countEl) {
                     btnMinus.addEventListener('click', function (e) {
                         e.preventDefault();
+                        if (window.PublicSeatMap && typeof window.PublicSeatMap.hasSeatsInZone === 'function' && window.PublicSeatMap.hasSeatsInZone(rowZoneName)) {
+                            window.PublicSeatMap.unselectLastSeat(rowZoneName);
+                            return;
+                        }
+
                         let currentQuantity = parseInt(countEl.textContent) || 0;
                         if (currentQuantity > 0) {
                             currentQuantity--;
@@ -840,6 +850,21 @@
                             }
                             return;
                         }
+
+                        if (window.PublicSeatMap && typeof window.PublicSeatMap.hasSeatsInZone === 'function' && window.PublicSeatMap.hasSeatsInZone(rowZoneName)) {
+                            const selected = window.PublicSeatMap.selectNextAvailableSeat(rowZoneName);
+                            if (!selected && typeof Swal !== 'undefined') {
+                                Swal.fire({
+                                    title: 'Butacas Agotadas',
+                                    text: 'No quedan más butacas libres en esta zona.',
+                                    icon: 'warning',
+                                    confirmButtonColor: '#FF5500',
+                                    confirmButtonText: 'Entendido'
+                                });
+                            }
+                            return;
+                        }
+
                         currentQuantity++;
                         countEl.textContent = currentQuantity;
                         recalculateTotal();

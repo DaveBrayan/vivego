@@ -164,6 +164,24 @@
             } else {
                 $zoneName = $rawZone;
             }
+
+            // Detectar y formatear butaca asignada para este ticket individual
+            $seatAssigned = null;
+            if ($ticketItem && !empty($ticketItem['seats'])) {
+                $itemSeats = is_array($ticketItem['seats']) ? $ticketItem['seats'] : (json_decode($ticketItem['seats'], true) ?: []);
+                $seatAssigned = $itemSeats[$i] ?? null;
+            }
+            if (!$seatAssigned && $sale->eventTickets && isset($sale->eventTickets[$i])) {
+                $et = $sale->eventTickets[$i];
+                if (!empty($et->zone_name)) {
+                    $zoneName = $et->zone_name;
+                    $seatAssigned = null;
+                }
+            }
+            if ($seatAssigned) {
+                $zoneName = formatZoneWithSeat($zoneName, $seatAssigned);
+            }
+
             $ticketPrice = $ticketItem['regular_price'] ?? ($ticketItem['price'] ?? $sale->unit_price);
             $numSeq = $sale->id ? ($sale->id + $i) : ($i + 1);
             $ticketNumStr = 'N° ' . str_pad($numSeq, 5, '0', STR_PAD_LEFT);
