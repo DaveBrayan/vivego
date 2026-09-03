@@ -1661,6 +1661,14 @@
 
         function goToStep(step) {
             console.log(`[ViveGo Stepper] 🚀 Navegando hacia el Paso ${step}...`);
+
+            // Si intenta avanzar más allá del paso 2 (zonas), validar que no hayan butacas pendientes de poblar
+            if (step > 2 && typeof SeatMapEditor !== 'undefined' && typeof SeatMapEditor.validateUnpopulatedSeats === 'function') {
+                if (!SeatMapEditor.validateUnpopulatedSeats()) {
+                    return false;
+                }
+            }
+
             try {
                 if (typeof SeatMapEditor !== 'undefined' && typeof SeatMapEditor.syncToStandardTable === 'function') {
                     SeatMapEditor.syncToStandardTable();
@@ -2893,6 +2901,12 @@
             const currentMode = (typeof window.currentStep2ZoneMode !== 'undefined') ? window.currentStep2ZoneMode : 'standard';
 
             if (currentMode === 'interactive') {
+                if (typeof SeatMapEditor !== 'undefined' && typeof SeatMapEditor.validateUnpopulatedSeats === 'function') {
+                    if (!SeatMapEditor.validateUnpopulatedSeats()) {
+                        goToStep(2);
+                        return;
+                    }
+                }
                 if (typeof SeatMapEditor !== 'undefined' && SeatMapEditor.zones && SeatMapEditor.zones.length > 0) {
                     zones = SeatMapEditor.getExportZones();
                 } else {

@@ -524,16 +524,23 @@
                         </div>
                     </div>
 
-                    <!-- BOTONES PRINCIPALES DE TAQUILLA (VENTA + CORTESÍA) -->
+                    <!-- BOTONES PRINCIPALES DE TAQUILLA (VENTA + CORTESÍA O PLANCHA) -->
                     <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
                         <button type="button" class="btn btn-primary" onclick="openPosSaleModal()" style="font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 22px rgba(255, 85, 0, 0.45); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer;">
                             <span style="font-size: 1.25rem;">🛒</span>
                             <span>+ REGISTRAR VENTA (F1)</span>
                         </button>
-                        <button type="button" class="btn" onclick="openPosCourtesyModal()" style="background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 22px rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer; border: none; transition: all 0.2s ease;">
-                            <span style="font-size: 1.25rem;">🎁</span>
-                            <span>+ NUEVA CORTESÍA (F2)</span>
-                        </button>
+                        @if(($event->sales_type ?? 'fisica') === 'fisica')
+                            <button type="button" class="btn" onclick="openPlanchaModalCurrentEvent()" style="background: linear-gradient(135deg, #2563EB, #1D4ED8); color: #FFFFFF; font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 22px rgba(37, 99, 235, 0.4); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer; border: none; transition: all 0.2s ease;">
+                                <span style="font-size: 1.25rem;">🖨️</span>
+                                <span>+ GENERAR PLANCHA PDF</span>
+                            </button>
+                        @else
+                            <button type="button" class="btn" onclick="openPosCourtesyModal()" style="background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 22px rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer; border: none; transition: all 0.2s ease;">
+                                <span style="font-size: 1.25rem;">🎁</span>
+                                <span>+ NUEVA CORTESÍA (F2)</span>
+                            </button>
+                        @endif
                     </div>
                 </div>
 
@@ -1181,6 +1188,9 @@
     <!-- CONTENEDOR OCULTO PARA IMPRESIÓN DEL RECIBO TÉRMICO (80MM POS) -->
     <div id="thermalReceiptContainer" style="display: none;"></div>
 
+    <!-- MODAL DE GENERACIÓN DE PLANCHA DE IMPRENTA -->
+    @include('web.partials.plancha_ticket_modal')
+
 @endsection
 
 @push('scripts')
@@ -1195,6 +1205,30 @@
     <script>
         const eventId = {{ $event->id }};
         const csrfToken = "{{ csrf_token() }}";
+
+        function openPlanchaModalCurrentEvent() {
+            const evtData = {
+                id: {{ $event->id }},
+                title: {!! json_encode($event->title) !!},
+                slug: {!! json_encode($event->slug) !!},
+                venue_name: {!! json_encode($event->venue_name ?? $event->address ?? 'Recinto Oficial') !!},
+                address: {!! json_encode($event->address ?? '') !!},
+                event_date: {!! json_encode(!empty($event->event_date) ? (is_string($event->event_date) ? substr($event->event_date, 0, 10) : $event->event_date->format('Y-m-d')) : '') !!},
+                event_time: {!! json_encode($event->event_time ?? '19:00') !!},
+                banner_image: {!! json_encode($event->banner_image ?? '') !!},
+                sales_type: {!! json_encode($event->sales_type ?? 'fisica') !!},
+                template: {!! json_encode($event->template ?? null) !!},
+                zones: {!! json_encode($zonesWithStats ?? ($zones ?? [])) !!},
+                raw_zones: {!! json_encode(is_array($event->zones) ? $event->zones : (json_decode($event->zones ?? '[]', true) ?: [])) !!}
+            };
+            if (typeof openPlanchaModal === 'function') {
+                openPlanchaModal(evtData);
+            } else if (typeof window.openPlanchaModal === 'function') {
+                window.openPlanchaModal(evtData);
+            } else {
+                console.error('[Plancha] openPlanchaModal no está definido');
+            }
+        }
 
         // Función para anular / borrar una venta de entrada y restaurar aforo
         async function deletePosSale(saleId) {
@@ -2836,6 +2870,18 @@
                 const type = el.type || 'text';
                 const field = el.field || 'custom';
 
+                // Si es impresión de plancha física, omitir completamente campos de comprador y DNI
+                if (dynamicData.is_plancha_print) {
+                    if (type === 'buyer_name' || type === 'buyer_dni' || type === 'buyer' ||
+                        field === 'buyer_name' || field === 'buyer_dni' || field === 'buyer' ||
+                        el.id === 'canvaElBuyer' || el.id === 'canvaElBuyerName' || el.id === 'canvaElBuyerDni' ||
+                        (el.id && /buyer|comprador|dni/i.test(String(el.id))) ||
+                        /Comprador/i.test(el.content || el.html || el.text || '') ||
+                        /DNI/i.test(el.content || el.html || el.text || '')) {
+                        return;
+                    }
+                }
+
                 const x = parseFloat(el.x) || 0;
                 const y = parseFloat(el.y) || 0;
 
@@ -2882,6 +2928,11 @@
                         rawTxt = rawTxt.replace(/<span class="ql-cursor">.*?<\/span>/gi, '').replace(/\uFEFF/g, '');
                     }
 
+                    // En plancha física ocultar cualquier etiqueta residual de Comprador o DNI
+                    if (dynamicData.is_plancha_print && (/Comprador/i.test(rawTxt) || /DNI/i.test(rawTxt))) {
+                        return;
+                    }
+
                     if (field === 'title' || el.id === 'canvaElTitle') {
                         if (dynamicData.title) {
                             rawTxt = (rawTxt && (rawTxt.includes('<') || rawTxt.includes('>')))
@@ -2896,6 +2947,21 @@
                             rawTxt = rawTxt.includes('<') ? rawTxt.replace(/([^>]+)(?=<|$)/, zVal) : zVal;
                         } else {
                             rawTxt = `<span style="font-size: inherit; font-weight: inherit; color: inherit; text-transform: uppercase;">ZONA: ${zVal}</span>`;
+                        }
+                    } else if (field === 'seat' || field === 'butaca' || el.id === 'canvaElSeat' || el.id === 'canvaElButaca' || /BUTACA/i.test(rawTxt) || /ASIENTO/i.test(rawTxt)) {
+                        const sVal = dynamicData.seat || '';
+                        if (sVal) {
+                            if (/BUTACA/i.test(rawTxt)) {
+                                rawTxt = replaceDynamicValueInHtml(rawTxt, 'BUTACA', sVal);
+                            } else if (/ASIENTO/i.test(rawTxt)) {
+                                rawTxt = replaceDynamicValueInHtml(rawTxt, 'ASIENTO', sVal);
+                            } else if (rawTxt && rawTxt.trim().length > 0) {
+                                rawTxt = rawTxt.includes('<') ? rawTxt.replace(/([^>]+)(?=<|$)/, sVal) : sVal;
+                            } else {
+                                rawTxt = `<div style="text-align: inherit; width: 100%;"><span style="font-size: 0.75em; font-weight: 900; display: block;">BUTACA:</span><span style="font-size: 1.1em; font-weight: 900; display: block; color: #F59E0B;">${sVal}</span></div>`;
+                            }
+                        } else {
+                            rawTxt = '';
                         }
                     } else if (field === 'price' || el.id === 'canvaElPrice' || /PRECIO/i.test(rawTxt)) {
                         const pVal = dynamicData.price ? (String(dynamicData.price).startsWith('S/') ? dynamicData.price : 'S/ ' + dynamicData.price) : 'S/ 0.00';

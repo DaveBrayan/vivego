@@ -234,11 +234,11 @@
                             <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.5rem; margin-bottom: 0.55rem; width: 100%; box-sizing: border-box;">
                                 <div style="min-width: 0;">
                                     <label style="font-size: 0.675rem; color: #94A3B8; display: block; margin-bottom: 0.2rem;">CANTIDAD DE FILAS</label>
-                                    <input type="number" id="seatGenRows" class="form-input-custom" value="5" min="1" max="26" style="width: 100%; box-sizing: border-box; font-size: 0.775rem; padding: 0.35rem;" oninput="SeatMapEditor.updateSeatNomenclaturePreview()">
+                                    <input type="number" id="seatGenRows" class="form-input-custom" value="5" min="1" max="26" style="width: 100%; box-sizing: border-box; font-size: 0.775rem; padding: 0.35rem;" oninput="SeatMapEditor.updateSeatNomenclaturePreview(); SeatMapEditor.onSeatGenDimensionsChange();">
                                 </div>
                                 <div style="min-width: 0;">
                                     <label style="font-size: 0.675rem; color: #94A3B8; display: block; margin-bottom: 0.2rem;">ASIENTOS X FILA</label>
-                                    <input type="number" id="seatGenCols" class="form-input-custom" value="10" min="1" max="50" style="width: 100%; box-sizing: border-box; font-size: 0.775rem; padding: 0.35rem;" oninput="SeatMapEditor.updateSeatNomenclaturePreview()">
+                                    <input type="number" id="seatGenCols" class="form-input-custom" value="10" min="1" max="50" style="width: 100%; box-sizing: border-box; font-size: 0.775rem; padding: 0.35rem;" oninput="SeatMapEditor.updateSeatNomenclaturePreview(); SeatMapEditor.onSeatGenDimensionsChange();">
                                 </div>
                             </div>
 
@@ -246,14 +246,14 @@
                             <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.5rem; margin-bottom: 0.55rem; width: 100%; box-sizing: border-box;">
                                 <div style="min-width: 0;">
                                     <label style="font-size: 0.675rem; color: #94A3B8; display: block; margin-bottom: 0.2rem;">NOMBRAR FILAS</label>
-                                    <select id="seatGenRowType" class="form-select-custom" style="width: 100%; box-sizing: border-box; font-size: 0.75rem; padding: 0.35rem;" onchange="SeatMapEditor.updateSeatNomenclaturePreview()">
+                                    <select id="seatGenRowType" class="form-select-custom" style="width: 100%; box-sizing: border-box; font-size: 0.75rem; padding: 0.35rem;" onchange="SeatMapEditor.updateSeatNomenclaturePreview(); SeatMapEditor.onSeatGenDimensionsChange();">
                                         <option value="letters">Letras (A, B, C...)</option>
                                         <option value="numbers">Números (1, 2, 3...)</option>
                                     </select>
                                 </div>
                                 <div style="min-width: 0;">
                                     <label style="font-size: 0.675rem; color: #94A3B8; display: block; margin-bottom: 0.2rem;">NOMBRAR ASIENTOS</label>
-                                    <select id="seatGenColType" class="form-select-custom" style="width: 100%; box-sizing: border-box; font-size: 0.75rem; padding: 0.35rem;" onchange="SeatMapEditor.updateSeatNomenclaturePreview()">
+                                    <select id="seatGenColType" class="form-select-custom" style="width: 100%; box-sizing: border-box; font-size: 0.75rem; padding: 0.35rem;" onchange="SeatMapEditor.updateSeatNomenclaturePreview(); SeatMapEditor.onSeatGenDimensionsChange();">
                                         <option value="numbers">Números (1, 2, 3...)</option>
                                         <option value="letters">Letras (A, B, C...)</option>
                                     </select>

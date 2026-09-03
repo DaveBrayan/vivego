@@ -153,6 +153,16 @@ class Event extends Model
         return asset($clean);
     }
 
+    protected static function booted(): void
+    {
+        static::deleting(function (Event $event) {
+            // Eliminar en cascada todos los boletos y códigos QR registrados del evento (físicos, plancha y ventas)
+            $event->tickets()->delete();
+            // Eliminar las ventas asociadas al evento
+            $event->sales()->delete();
+        });
+    }
+
     public function template()
     {
         return $this->belongsTo(TicketTemplate::class, 'template_id');

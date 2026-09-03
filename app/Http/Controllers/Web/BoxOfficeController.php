@@ -262,6 +262,8 @@ class BoxOfficeController extends Controller
                 'courtesy_max_stock' => $zCourtesyMaxStock,
                 'courtesy_sold' => $zCourtesySold,
                 'courtesy_available' => $zCourtesyAvailable,
+                'capacity_type' => $z['capacity_type'] ?? null,
+                'seats' => $z['seats'] ?? [],
             ];
         }
 

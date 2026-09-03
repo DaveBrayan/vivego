@@ -120,6 +120,15 @@
                         { x: 348, y: yOffset + 80 }
                     ];
 
+                    let sRows = parseInt(pz.seat_rows || pz.rows) || null;
+                    let sCols = parseInt(pz.seat_cols || pz.cols) || null;
+                    if ((!sRows || !sCols) && Array.isArray(pz.seats) && pz.seats.length > 0) {
+                        const uniqueR = new Set(pz.seats.map(s => s.row).filter(Boolean));
+                        const uniqueC = new Set(pz.seats.map(s => s.col).filter(Boolean));
+                        if (uniqueR.size > 0) sRows = uniqueR.size;
+                        if (uniqueC.size > 0) sCols = uniqueC.size;
+                    }
+
                     this.zones.push({
                         id: pz.id || ('zone_' + Date.now() + '_' + idx),
                         name: pz.name || ('Zona ' + (idx + 1)),
@@ -134,7 +143,15 @@
                         presale_end_date: pz.presale_end_date || null,
                         presale_stock: parseInt(pz.presale_stock) || null,
                         points: hasPts ? pz.points : defaultPoints,
-                        seats: Array.isArray(pz.seats) ? pz.seats : []
+                        seats: Array.isArray(pz.seats) ? pz.seats : [],
+                        seat_rows: sRows,
+                        seat_cols: sCols,
+                        rows: sRows,
+                        cols: sCols,
+                        seat_row_type: pz.seat_row_type || pz.row_type || 'letters',
+                        seat_col_type: pz.seat_col_type || pz.col_type || 'numbers',
+                        row_type: pz.seat_row_type || pz.row_type || 'letters',
+                        col_type: pz.seat_col_type || pz.col_type || 'numbers'
                     });
                 });
             } else {
@@ -336,7 +353,15 @@
                     presale_end_date: presaleEnd,
                     presale_stock: presaleStock,
                     points: (existing && Array.isArray(existing.points) && existing.points.length >= 3) ? existing.points : defaultPoints,
-                    seats: existing ? (existing.seats || []) : []
+                    seats: existing ? (existing.seats || []) : [],
+                    seat_rows: existing ? (existing.seat_rows || existing.rows) : null,
+                    seat_cols: existing ? (existing.seat_cols || existing.cols) : null,
+                    rows: existing ? (existing.rows || existing.seat_rows) : null,
+                    cols: existing ? (existing.cols || existing.seat_cols) : null,
+                    seat_row_type: existing ? (existing.seat_row_type || existing.row_type) : null,
+                    seat_col_type: existing ? (existing.seat_col_type || existing.col_type) : null,
+                    row_type: existing ? (existing.row_type || existing.seat_row_type) : null,
+                    col_type: existing ? (existing.col_type || existing.seat_col_type) : null
                 });
             });
 
@@ -361,7 +386,15 @@
                 presale_start_date: z.presale_start_date || null,
                 presale_end_date: z.presale_end_date || null,
                 presale_stock: parseInt(z.presale_stock) || null,
-                seats: Array.isArray(z.seats) ? z.seats : []
+                seats: Array.isArray(z.seats) ? z.seats : [],
+                seat_rows: parseInt(z.seat_rows || z.rows) || null,
+                seat_cols: parseInt(z.seat_cols || z.cols) || null,
+                rows: parseInt(z.seat_rows || z.rows) || null,
+                cols: parseInt(z.seat_cols || z.cols) || null,
+                seat_row_type: z.seat_row_type || z.row_type || null,
+                seat_col_type: z.seat_col_type || z.col_type || null,
+                row_type: z.seat_row_type || z.row_type || null,
+                col_type: z.seat_col_type || z.col_type || null
             }));
         },
 
@@ -1239,7 +1272,15 @@
                 presale_enabled: z.presale_enabled,
                 presale_discount: z.presale_discount,
                 points: newPoints,
-                seats: []
+                seats: [],
+                seat_rows: z.seat_rows || z.rows || null,
+                seat_cols: z.seat_cols || z.cols || null,
+                rows: z.rows || z.seat_rows || null,
+                cols: z.cols || z.seat_cols || null,
+                seat_row_type: z.seat_row_type || z.row_type || null,
+                seat_col_type: z.seat_col_type || z.col_type || null,
+                row_type: z.row_type || z.seat_row_type || null,
+                col_type: z.col_type || z.seat_col_type || null
             };
 
             this.zones.push(dupZone);
@@ -1365,6 +1406,36 @@
             previewEl.textContent = `Fila ${rowSample} - Asiento ${colSample} (${rowSample}-${colSample})`;
         },
 
+        onSeatGenDimensionsChange: function() {
+            const numRows = parseInt(document.getElementById('seatGenRows')?.value) || 0;
+            const numCols = parseInt(document.getElementById('seatGenCols')?.value) || 0;
+            const rowType = document.getElementById('seatGenRowType')?.value || 'letters';
+            const colType = document.getElementById('seatGenColType')?.value || 'numbers';
+            const autoCap = numRows * numCols;
+            
+            const z = this.getSelectedZone();
+            if (z) {
+                z.seat_rows = numRows;
+                z.seat_cols = numCols;
+                z.rows = numRows;
+                z.cols = numCols;
+                z.seat_row_type = rowType;
+                z.seat_col_type = colType;
+                z.row_type = rowType;
+                z.col_type = colType;
+                if (autoCap > 0) {
+                    z.capacity = autoCap;
+                }
+            }
+
+            const capEl = document.getElementById('inspectorZoneCapacity');
+            if (capEl && autoCap > 0) {
+                capEl.value = autoCap;
+            }
+
+            this.syncToStandardTable();
+        },
+
         generateSeatsForSelectedZone: function() {
             const z = this.getSelectedZone();
             if (!z || !z.points || z.points.length < 3) {
@@ -1436,6 +1507,15 @@
             z.seats = seats;
             z.capacity = seats.length;
             z.capacity_type = 'Butacas Numeradas';
+            z.seat_rows = numRows;
+            z.seat_cols = numCols;
+            z.rows = numRows;
+            z.cols = numCols;
+            z.seat_row_type = rowType;
+            z.seat_col_type = colType;
+            z.row_type = rowType;
+            z.col_type = colType;
+
             if (!z.name || z.name === 'Zona' || z.name === 'Nueva Zona') {
                 z.name = 'Butacas Numeradas';
             }
@@ -1449,7 +1529,10 @@
             const capTypeEl = document.getElementById('inspectorZoneCapacityType');
             if (capTypeEl) capTypeEl.value = z.capacity_type;
             const badgeEl = document.getElementById('inspectorSeatsBadge');
-            if (badgeEl) badgeEl.textContent = `✓ ${seats.length} butacas generadas (${numRows} filas × ${numCols} asientos)`;
+            if (badgeEl) badgeEl.textContent = `✓ ${seats.length} butacas numeradas activas`;
+
+            const btnRemove = document.getElementById('btnRemoveSeats');
+            if (btnRemove) btnRemove.style.display = 'block';
 
             this.render();
             this.syncToStandardTable();
@@ -1465,6 +1548,10 @@
 
             z.seats = [];
             z.capacity_type = 'General';
+            z.seat_rows = null;
+            z.seat_cols = null;
+            z.rows = null;
+            z.cols = null;
 
             const badgeEl = document.getElementById('inspectorSeatsBadge');
             if (badgeEl) badgeEl.textContent = '';
@@ -1473,6 +1560,86 @@
 
             this.render();
             this.syncToStandardTable();
+        },
+
+        validateUnpopulatedSeats: function() {
+            // 1. Validar la zona activa actualmente en el inspector si tiene butacas o si se editaron filas/asientos
+            const z = this.getSelectedZone();
+            const rowsInput = document.getElementById('seatGenRows');
+            const colsInput = document.getElementById('seatGenCols');
+            if (z && rowsInput && colsInput) {
+                const numRows = parseInt(rowsInput.value) || 0;
+                const numCols = parseInt(colsInput.value) || 0;
+                const expected = numRows * numCols;
+                const actualSeats = Array.isArray(z.seats) ? z.seats.length : 0;
+                const isNumbered = (z.capacity_type === 'Butacas Numeradas') || (actualSeats > 0) || (z.name && /butaca/i.test(z.name));
+
+                if (isNumbered && expected > 0 && expected !== actualSeats) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: '¡Butacas pendientes de poblar!',
+                            html: `Has configurado <b>${numRows} filas × ${numCols} asientos (${expected} butacas)</b> en la zona <b>"${z.name}"</b>, pero actualmente hay <b>${actualSeats} butacas generadas</b>.<br><br><span style="color: #10B981; font-weight: 800;">Por favor presiona el botón "🪑 Poblar Zona con Butacas"</span> para generar los asientos antes de continuar.`,
+                            confirmButtonColor: '#10B981',
+                            confirmButtonText: 'Entendido',
+                            background: '#14141E',
+                            color: '#FFFFFF'
+                        });
+                    } else {
+                        alert(`Has configurado ${numRows} filas × ${numCols} asientos (${expected} butacas) en la zona "${z.name}", pero hay ${actualSeats} butacas generadas. Por favor pulsa "Poblar Zona con Butacas" antes de continuar.`);
+                    }
+                    return false;
+                }
+            }
+
+            // 2. Validar que ninguna zona de tipo 'Butacas Numeradas' se quede sin butacas o desfasada
+            if (Array.isArray(this.zones)) {
+                for (let i = 0; i < this.zones.length; i++) {
+                    const zone = this.zones[i];
+                    const actual = Array.isArray(zone.seats) ? zone.seats.length : 0;
+                    const isNumbered = (zone.capacity_type === 'Butacas Numeradas') || (actual > 0);
+
+                    if (isNumbered) {
+                        if (actual === 0) {
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Zona sin butacas',
+                                    html: `La zona <b>"${zone.name}"</b> está configurada como Butacas Numeradas pero no tiene asientos generados.<br><br>Selecciona la zona en el plano y pulsa <b style="color: #10B981;">"🪑 Poblar Zona con Butacas"</b>.`,
+                                    confirmButtonColor: '#10B981',
+                                    confirmButtonText: 'Entendido',
+                                    background: '#14141E',
+                                    color: '#FFFFFF'
+                                });
+                            } else {
+                                alert(`La zona "${zone.name}" no tiene butacas generadas. Por favor pulsa "Poblar Zona con Butacas".`);
+                            }
+                            return false;
+                        }
+
+                        const rows = parseInt(zone.seat_rows || zone.rows) || 0;
+                        const cols = parseInt(zone.seat_cols || zone.cols) || 0;
+                        if (rows > 0 && cols > 0 && (rows * cols !== actual)) {
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: '¡Butacas pendientes de poblar!',
+                                    html: `En la zona <b>"${zone.name}"</b> configuraste <b>${rows} filas × ${cols} asientos (${rows * cols} butacas)</b> pero actualmente hay <b>${actual} butacas generadas</b>.<br><br>Selecciona la zona en el plano y presiona <b style="color: #10B981;">"🪑 Poblar Zona con Butacas"</b> antes de continuar.`,
+                                    confirmButtonColor: '#10B981',
+                                    confirmButtonText: 'Entendido',
+                                    background: '#14141E',
+                                    color: '#FFFFFF'
+                                });
+                            } else {
+                                alert(`En la zona "${zone.name}" hay butacas desfasadas. Por favor pulsa "Poblar Zona con Butacas".`);
+                            }
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            return true;
         },
 
         render: function() {
@@ -2007,6 +2174,41 @@
 
             const btnRemove = document.getElementById('btnRemoveSeats');
             if (btnRemove) btnRemove.style.display = seatsCount > 0 ? 'block' : 'none';
+
+            // Restaurar configuración de filas y asientos para la zona seleccionada
+            const rowsInput = document.getElementById('seatGenRows');
+            const colsInput = document.getElementById('seatGenCols');
+            const rowTypeSelect = document.getElementById('seatGenRowType');
+            const colTypeSelect = document.getElementById('seatGenColType');
+
+            let savedRows = parseInt(z.seat_rows || z.rows) || null;
+            let savedCols = parseInt(z.seat_cols || z.cols) || null;
+
+            // Si no tiene rows/cols explícitos pero tiene asientos en z.seats, deducirlos automáticamente
+            if ((!savedRows || !savedCols) && Array.isArray(z.seats) && z.seats.length > 0) {
+                const uniqueRows = new Set(z.seats.map(s => s.row).filter(Boolean));
+                const uniqueCols = new Set(z.seats.map(s => s.col).filter(Boolean));
+                if (uniqueRows.size > 0) savedRows = uniqueRows.size;
+                if (uniqueCols.size > 0) savedCols = uniqueCols.size;
+                z.seat_rows = savedRows;
+                z.seat_cols = savedCols;
+                z.rows = savedRows;
+                z.cols = savedCols;
+            }
+
+            if (rowsInput) {
+                rowsInput.value = savedRows || 5;
+            }
+            if (colsInput) {
+                colsInput.value = savedCols || 10;
+            }
+
+            if (rowTypeSelect) {
+                rowTypeSelect.value = z.seat_row_type || z.row_type || 'letters';
+            }
+            if (colTypeSelect) {
+                colTypeSelect.value = z.seat_col_type || z.col_type || 'numbers';
+            }
 
             this.updateSeatNomenclaturePreview();
         },

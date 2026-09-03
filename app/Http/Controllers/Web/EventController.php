@@ -632,20 +632,23 @@ class EventController extends Controller
     }
 
     /**
-     * Elimina un evento de la Base de Datos.
+     * Elimina un evento de la Base de Datos junto con todos sus boletos y códigos QR asociados.
      */
     public function destroy(Event $event): JsonResponse|RedirectResponse
     {
+        // Eliminar en cascada todos los boletos, QR generados y ventas del evento
+        $event->tickets()->delete();
+        $event->sales()->delete();
         $event->delete();
 
         if (request()->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => '¡Evento eliminado exitosamente de la base de datos!',
+                'message' => '¡Evento y todos sus boletos/QR eliminados exitosamente de la base de datos!',
             ]);
         }
 
-        return redirect()->back()->with('success', '¡Evento eliminado de la Base de Datos!');
+        return redirect()->back()->with('success', '¡Evento y sus boletos eliminados de la Base de Datos!');
     }
 
     /**
@@ -735,22 +738,49 @@ class EventController extends Controller
         $insertedCount = 0;
         \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $event, &$insertedCount) {
             foreach ($validated['tickets'] as $t) {
-                \App\Models\EventTicket::updateOrCreate(
-                    [
+                // Buscar si este boleto ya fue registrado para este evento (por código de boleto o por payload)
+                $ticketCode = $t['ticket_code'] ?? null;
+                $qrPayload = $t['qr_payload'] ?? null;
+
+                $existing = \App\Models\EventTicket::where('event_id', $event->id)
+                    ->where(function ($q) use ($ticketCode, $qrPayload) {
+                        if ($ticketCode) {
+                            $q->where('ticket_code', $ticketCode);
+                        }
+                        if ($qrPayload) {
+                            $q->orWhere('qr_payload', $qrPayload);
+                        }
+                    })
+                    ->first();
+
+                if ($existing) {
+                    // Si ya existe, NO mutamos ni su qr_payload ni su validation_hash para no invalidar impresiones previas
+                    $existing->update([
+                        'ticket_code' => $ticketCode ?: $existing->ticket_code,
+                        'ticket_number' => $t['ticket_number'] ?? $existing->ticket_number,
+                        'zone_name' => $t['zone_name'] ?? $existing->zone_name,
+                        'unit_price' => $t['unit_price'] ?? $existing->unit_price,
+                        'buyer_name' => $t['buyer_name'] ?? $existing->buyer_name,
+                        'buyer_dni' => $t['buyer_dni'] ?? $existing->buyer_dni,
+                        'source' => 'pdf_batch',
+                    ]);
+                } else {
+                    // Si es nuevo (aumento de aforo o primera tanda), registrar con sus claves únicas
+                    \App\Models\EventTicket::create([
                         'event_id' => $event->id,
-                        'qr_payload' => $t['qr_payload'],
-                    ],
-                    [
-                        'ticket_code' => $t['ticket_code'],
+                        'ticket_code' => $ticketCode,
                         'ticket_number' => $t['ticket_number'] ?? 1,
-                        'zone_name' => $t['zone_name'],
+                        'zone_name' => $t['zone_name'] ?? 'General',
                         'unit_price' => $t['unit_price'] ?? 0.00,
                         'validation_hash' => $t['validation_hash'] ?? null,
+                        'qr_payload' => $qrPayload,
                         'buyer_name' => $t['buyer_name'] ?? 'Impresión de Evento',
                         'buyer_dni' => $t['buyer_dni'] ?? '00000000',
                         'source' => 'pdf_batch',
-                    ]
-                );
+                        'is_used' => false,
+                        'status' => 'valid',
+                    ]);
+                }
                 $insertedCount++;
             }
         });
@@ -775,19 +805,19 @@ class EventController extends Controller
             ->values()
             ->map(function ($t, $index) use ($event) {
                 $num = (int) $t->ticket_number > 0 ? (int) $t->ticket_number : ($index + 1);
-                $formattedCode = 'N° ' . str_pad($num, 5, '0', STR_PAD_LEFT);
-                $valHash = $t->validation_hash ?: strtoupper(\Illuminate\Support\Str::random(10));
-                $secHash = strtoupper(substr(hash_hmac('sha256', "VIVEGO_ENC_{$event->id}_{$t->id}_{$valHash}", config('app.key', 'ViveGoSecretKey2026')), 0, 24));
-                $qrEncrypted = ($t->qr_payload && str_starts_with($t->qr_payload, 'VGENC:')) ? $t->qr_payload : "VGENC:{$secHash}";
+                $formattedCode = $t->ticket_code ?: ('N° ' . str_pad($num, 5, '0', STR_PAD_LEFT));
+                $valHash = $t->validation_hash ?: ('VG' . strtoupper(substr(md5($event->id . '_' . $num . '_' . $t->id), 0, 8)));
+                $qrPayload = $t->qr_payload ?: "VIVEGO|EVT-{$event->id}|TICK-{$num}|HASH-{$valHash}";
 
                 return [
+                    'id' => $t->id,
                     'ticketNumberVal' => $num,
                     'ticketCode' => $formattedCode,
                     'zoneName' => $t->zone_name,
                     'zonePrice' => number_format((float) $t->unit_price, 2, '.', ''),
                     'validationHash' => $valHash,
-                    'qrPayload' => $qrEncrypted,
-                    'buyerName' => $t->buyer_name ?: 'Público General',
+                    'qrPayload' => $qrPayload,
+                    'buyerName' => $t->buyer_name ?: 'Impresión de Evento',
                     'buyerDni' => $t->buyer_dni ?: '00000000',
                     'source' => $t->source,
                 ];
