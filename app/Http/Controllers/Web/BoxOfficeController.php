@@ -583,6 +583,9 @@ class BoxOfficeController extends Controller
             ];
         }
 
+        $totalCapacity = (int) array_sum(array_column($zonesWithStats, 'capacity'));
+        $remainingStock = (int) array_sum(array_column($zonesWithStats, 'available'));
+
         // Envío automático de correo con el PDF si se proporcionó o detectó un email válido
         $pdfBase64 = $request->input('ticket_pdf_base64');
         $effectiveEmail = $buyerEmail;

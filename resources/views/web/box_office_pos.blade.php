@@ -2587,6 +2587,10 @@
             try {
                 if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) {
                     const parsed = new URL(urlStr);
+                    const isLocal = parsed.hostname === window.location.hostname || parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
+                    if (!isLocal && !urlStr.includes('/storage/') && !urlStr.includes('/images/') && !urlStr.includes('/media/')) {
+                        return urlStr;
+                    }
                     clean = parsed.pathname;
                 }
             } catch(e) {}
