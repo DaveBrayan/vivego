@@ -700,16 +700,51 @@
 
         getTicketRowsForZone: function(zoneName) {
             const rows = [];
-            const cleanTarget = (zoneName || '').toLowerCase().replace(/zona|sector/gi, '').trim();
+            const rawTarget = (zoneName || '').trim();
+            if (!rawTarget) return rows;
+
+            const cleanTarget = rawTarget.toLowerCase().replace(/zona|sector/gi, '').trim();
 
             document.querySelectorAll('.ticket-type-row').forEach(row => {
-                const rowZone = (row.getAttribute('data-zone-name') || '').toLowerCase().replace(/zona|sector/gi, '').trim();
+                const rawRowZone = (row.getAttribute('data-zone-name') || '').trim();
                 const nameEl = row.querySelector('.ticket-name');
-                const rowName = nameEl ? nameEl.textContent.replace('🎟️', '').replace('🎁', '').toLowerCase().replace(/zona|sector/gi, '').trim() : '';
+                const rawRowName = nameEl ? nameEl.textContent.replace('🎟️', '').replace('🎁', '').trim() : '';
 
-                if (rowZone === cleanTarget || rowName === cleanTarget ||
-                    (cleanTarget && (rowZone.includes(cleanTarget) || cleanTarget.includes(rowZone) || rowName.includes(cleanTarget) || cleanTarget.includes(rowName)))) {
+                // 1. Coincidencia exacta estricta
+                if (rawRowZone && rawRowZone.toLowerCase() === rawTarget.toLowerCase()) {
                     rows.push(row);
+                    return;
+                }
+                if (rawRowName && rawRowName.toLowerCase() === rawTarget.toLowerCase()) {
+                    rows.push(row);
+                    return;
+                }
+
+                // 2. Coincidencia limpia sin "zona" ni "sector"
+                const cleanRowZone = rawRowZone.toLowerCase().replace(/zona|sector/gi, '').trim();
+                const cleanRowName = rawRowName.toLowerCase().replace(/zona|sector/gi, '').trim();
+
+                if (cleanTarget && cleanRowZone && cleanRowZone === cleanTarget) {
+                    rows.push(row);
+                    return;
+                }
+                if (cleanTarget && cleanRowName && cleanRowName === cleanTarget) {
+                    rows.push(row);
+                    return;
+                }
+
+                // 3. Coincidencia parcial sólo si ambas cadenas son significativas (mínimo 4 caracteres)
+                if (cleanTarget.length >= 4 && cleanRowZone.length >= 4) {
+                    if (cleanRowZone.includes(cleanTarget) || cleanTarget.includes(cleanRowZone)) {
+                        rows.push(row);
+                        return;
+                    }
+                }
+                if (cleanTarget.length >= 4 && cleanRowName.length >= 4) {
+                    if (cleanRowName.includes(cleanTarget) || cleanTarget.includes(cleanRowName)) {
+                        rows.push(row);
+                        return;
+                    }
                 }
             });
             return rows;
@@ -717,9 +752,19 @@
 
         isZoneMatch: function(name1, name2) {
             if (!name1 || !name2) return false;
-            const n1 = name1.toLowerCase().replace(/zona|sector/gi, '').trim();
-            const n2 = name2.toLowerCase().replace(/zona|sector/gi, '').trim();
-            return n1 === n2 || n1.includes(n2) || n2.includes(n1);
+            const r1 = name1.trim().toLowerCase();
+            const r2 = name2.trim().toLowerCase();
+            if (r1 === r2) return true;
+
+            const n1 = r1.replace(/zona|sector/gi, '').trim();
+            const n2 = r2.replace(/zona|sector/gi, '').trim();
+            if (!n1 || !n2) return false;
+            if (n1 === n2) return true;
+
+            if (n1.length >= 4 && n2.length >= 4) {
+                return n1.includes(n2) || n2.includes(n1);
+            }
+            return false;
         },
 
         onZoneMouseMove: function(e) {

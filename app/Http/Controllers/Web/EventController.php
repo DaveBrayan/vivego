@@ -238,7 +238,7 @@ class EventController extends Controller
             'template_id' => 'nullable|integer',
             'zones' => 'nullable|array',
             'courtesy_settings' => 'nullable|array',
-            'sales_type' => 'nullable|string|in:fisica,virtual',
+            'sales_type' => 'nullable|string|in:fisica,virtual,ambos',
         ]);
 
         $bannerImage = $this->saveBase64Image($validated['banner_image'] ?? null, 'events', 'event_banner');
@@ -305,7 +305,11 @@ class EventController extends Controller
 
             $tpl = TicketTemplate::create([
                 'name' => 'Boleto: ' . $validated['title'],
-                'category' => (($validated['sales_type'] ?? 'virtual') === 'virtual' ? 'Virtual: E-Ticket Evento' : 'Física: Taquilla Evento'),
+                'category' => match($validated['sales_type'] ?? 'virtual') {
+                    'ambos' => 'Híbrida: Físico & Virtual',
+                    'virtual' => 'Virtual: E-Ticket Evento',
+                    default => 'Física: Taquilla Evento',
+                },
                 'type' => $validated['sales_type'] ?? 'virtual',
                 'bg_color' => $customTicket['bg_color'] ?? '#FFFFFF',
                 'bg_image' => $bgImage,
@@ -492,7 +496,7 @@ class EventController extends Controller
             'zones' => 'nullable|array',
             'courtesy_settings' => 'nullable|array',
             'status' => 'nullable|string',
-            'sales_type' => 'nullable|string|in:fisica,virtual',
+            'sales_type' => 'nullable|string|in:fisica,virtual,ambos',
         ]);
 
         $event = Event::find($id);
@@ -596,10 +600,15 @@ class EventController extends Controller
             }
 
             $existingTemplate = $event->template_id ? TicketTemplate::find($event->template_id) : null;
+            $catLabel = match($validated['sales_type'] ?? 'virtual') {
+                'ambos' => 'Híbrida: Físico & Virtual',
+                'virtual' => 'Virtual: E-Ticket Evento',
+                default => 'Física: Taquilla Evento',
+            };
             if ($existingTemplate && str_starts_with($existingTemplate->name, 'Boleto:')) {
                 $existingTemplate->update([
                     'name' => 'Boleto: ' . $validated['title'],
-                    'category' => (($validated['sales_type'] ?? 'virtual') === 'virtual' ? 'Virtual: E-Ticket Evento' : 'Física: Taquilla Evento'),
+                    'category' => $catLabel,
                     'type' => $validated['sales_type'] ?? $event->sales_type ?? 'virtual',
                     'bg_color' => $customTicket['bg_color'] ?? $existingTemplate->bg_color,
                     'bg_image' => $bgImage ?? $existingTemplate->bg_image,
@@ -610,7 +619,7 @@ class EventController extends Controller
             } else {
                 $tpl = TicketTemplate::create([
                     'name' => 'Boleto: ' . $validated['title'],
-                    'category' => (($validated['sales_type'] ?? 'virtual') === 'virtual' ? 'Virtual: E-Ticket Evento' : 'Física: Taquilla Evento'),
+                    'category' => $catLabel,
                     'type' => $validated['sales_type'] ?? $event->sales_type ?? 'virtual',
                     'bg_color' => $customTicket['bg_color'] ?? '#FFFFFF',
                     'bg_image' => $bgImage,

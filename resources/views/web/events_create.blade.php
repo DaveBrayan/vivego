@@ -422,24 +422,52 @@
 
                                     <div class="form-group-custom">
                                         <label class="form-label-custom">Modalidad de Venta de Entradas <span class="required-star">*</span></label>
-                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                                            <label style="border: 2px solid var(--color-primary-orange); background: rgba(255, 85, 0, 0.08); padding: 0.85rem 1.15rem; border-radius: 14px; display: flex; align-items: center; gap: 0.75rem; cursor: pointer;" id="labelSalesFisica">
-                                                <input type="radio" name="event_sales_type" id="salesTypeFisica" value="fisica" checked style="accent-color: #FF5500; width: 18px; height: 18px;">
+                                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+                                            <label style="border: 2px solid var(--color-primary-orange); background: rgba(255, 85, 0, 0.08); padding: 0.85rem 1.15rem; border-radius: 14px; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; transition: all 0.2s ease;" id="labelSalesFisica">
+                                                <input type="radio" name="event_sales_type" id="salesTypeFisica" value="fisica" checked onchange="updateSalesTypeStyles()" style="accent-color: #FF5500; width: 18px; height: 18px;">
                                                 <div>
                                                     <strong style="display: block; font-size: 0.95rem; color: #FFFFFF;">🎫 Venta Física (Taquilla)</strong>
                                                     <span style="font-size: 0.78rem; color: #94A3B8;">Boletos físicos / Punto de venta POS</span>
                                                 </div>
                                             </label>
                                             
-                                            <label style="border: 2px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02); padding: 0.85rem 1.15rem; border-radius: 14px; display: flex; align-items: center; gap: 0.75rem; cursor: pointer;" id="labelSalesVirtual">
-                                                <input type="radio" name="event_sales_type" id="salesTypeVirtual" value="virtual" style="accent-color: #FF5500; width: 18px; height: 18px;">
+                                            <label style="border: 2px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02); padding: 0.85rem 1.15rem; border-radius: 14px; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; transition: all 0.2s ease;" id="labelSalesVirtual">
+                                                <input type="radio" name="event_sales_type" id="salesTypeVirtual" value="virtual" onchange="updateSalesTypeStyles()" style="accent-color: #00F0FF; width: 18px; height: 18px;">
                                                 <div>
                                                     <strong style="display: block; font-size: 0.95rem; color: #FFFFFF;">🌐 Venta Virtual (Online)</strong>
                                                     <span style="font-size: 0.78rem; color: #94A3B8;">Venta exclusiva web con ticket digital</span>
                                                 </div>
                                             </label>
+
+                                            <label style="border: 2px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02); padding: 0.85rem 1.15rem; border-radius: 14px; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; transition: all 0.2s ease;" id="labelSalesAmbos">
+                                                <input type="radio" name="event_sales_type" id="salesTypeAmbos" value="ambos" onchange="updateSalesTypeStyles()" style="accent-color: #A855F7; width: 18px; height: 18px;">
+                                                <div>
+                                                    <strong style="display: block; font-size: 0.95rem; color: #FFFFFF;">🎫🌐 Venta Híbrida (Ambos)</strong>
+                                                    <span style="font-size: 0.78rem; color: #94A3B8;">Taquilla POS y web sincronizados</span>
+                                                </div>
+                                            </label>
                                         </div>
                                     </div>
+                                    <script>
+                                        function updateSalesTypeStyles() {
+                                            const selected = document.querySelector('input[name="event_sales_type"]:checked')?.value || 'fisica';
+                                            const lFisica = document.getElementById('labelSalesFisica');
+                                            const lVirtual = document.getElementById('labelSalesVirtual');
+                                            const lAmbos = document.getElementById('labelSalesAmbos');
+                                            if (lFisica) {
+                                                lFisica.style.border = selected === 'fisica' ? '2px solid var(--color-primary-orange)' : '2px solid rgba(255,255,255,0.1)';
+                                                lFisica.style.background = selected === 'fisica' ? 'rgba(255, 85, 0, 0.08)' : 'rgba(255,255,255,0.02)';
+                                            }
+                                            if (lVirtual) {
+                                                lVirtual.style.border = selected === 'virtual' ? '2px solid #00F0FF' : '2px solid rgba(255,255,255,0.1)';
+                                                lVirtual.style.background = selected === 'virtual' ? 'rgba(0, 240, 255, 0.08)' : 'rgba(255,255,255,0.02)';
+                                            }
+                                            if (lAmbos) {
+                                                lAmbos.style.border = selected === 'ambos' ? '2px solid #A855F7' : '2px solid rgba(255,255,255,0.1)';
+                                                lAmbos.style.background = selected === 'ambos' ? 'rgba(168, 85, 247, 0.12)' : 'rgba(255,255,255,0.02)';
+                                            }
+                                        }
+                                    </script>
                                 </div>
                             </div>
 

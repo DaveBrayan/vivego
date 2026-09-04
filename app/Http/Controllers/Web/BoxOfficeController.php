@@ -141,8 +141,8 @@ class BoxOfficeController extends Controller
             'tickets_sold' => $globalTicketsSold,
             'total_capacity' => $globalTotalCapacity,
             'active_events' => count($events),
-            'physical_count' => count(array_filter($events, fn($e) => ($e['sales_type'] ?? 'fisica') === 'fisica')),
-            'virtual_count' => count(array_filter($events, fn($e) => ($e['sales_type'] ?? 'fisica') === 'virtual')),
+            'physical_count' => count(array_filter($events, fn($e) => in_array($e['sales_type'] ?? 'fisica', ['fisica', 'ambos']))),
+            'virtual_count' => count(array_filter($events, fn($e) => in_array($e['sales_type'] ?? 'fisica', ['virtual', 'ambos']))),
         ];
 
         return view('web.box_office', compact('events', 'kpis', 'settings', 'organizer'));

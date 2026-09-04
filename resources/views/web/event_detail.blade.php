@@ -370,6 +370,7 @@
                                         $maxQty = !empty($ticket['max_quantity']) ? $ticket['max_quantity'] : 99;
                                     @endphp
                                     <div class="ticket-type-row" 
+                                         data-zone-name="{{ $ticket['name'] }}"
                                          data-price="{{ $ticket['price'] }}"
                                          data-regular-price="{{ $ticket['regular_price'] }}"
                                          data-is-presale="{{ $ticket['is_presale_active'] ? 'true' : 'false' }}"

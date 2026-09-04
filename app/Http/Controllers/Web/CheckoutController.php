@@ -1382,30 +1382,164 @@ class CheckoutController extends Controller
             }
 
             $currentIdx = 0;
+            $matchedPhysicalTickets = [];
+
             foreach ($itemsToProcess as $entry) {
                 $currentIdx++;
-                $currentSeq = $startSeq + ($currentIdx - 1);
-                $ticketCode = 'TK-' . strtoupper(substr(\Illuminate\Support\Str::slug($targetEvent->title), 0, 3)) . '-' . str_pad($currentSeq, 5, '0', STR_PAD_LEFT);
-                $validationHash = 'VG' . strtoupper(substr(md5($sale->receipt_number . $currentIdx . $sale->id), 0, 8));
-                $qrPayload = "VIVEGO|{$sale->receipt_number}|EVT-{$sale->event_id}|DNI-{$sale->buyer_dni}|TICK-{$currentSeq}|{$validationHash}";
+                $cleanBaseZone = preg_replace('/\s*\([^)]*\)$/', '', trim($entry['zone']));
+                $seatCode = !empty($entry['seat']) ? formatShortSeatCode($entry['seat']) : null;
+                $zoneWithSeat = $seatCode ? formatZoneWithSeat($entry['zone'], $seatCode) : $entry['zone'];
 
-                $effectiveZone = formatZoneWithSeat($entry['zone'], $entry['seat']);
+                $physicalTicket = null;
 
-                \App\Models\EventTicket::create([
-                    'event_id' => $targetEvent->id,
-                    'ticket_sale_id' => $sale->id,
-                    'ticket_code' => $ticketCode,
-                    'ticket_number' => $currentSeq,
-                    'zone_name' => $effectiveZone,
-                    'unit_price' => $entry['price'],
-                    'qr_payload' => $qrPayload,
-                    'validation_hash' => $validationHash,
-                    'buyer_name' => $sale->buyer_name,
-                    'buyer_dni' => $sale->buyer_dni,
-                    'source' => $sale->seller_name ?: 'web_checkout',
-                    'is_used' => false,
-                    'status' => 'valid',
-                ]);
+                if ($seatCode) {
+                    // Caso Butacas Numeradas: buscar boleto físico pre-generado para esta butaca específica
+                    $seatDigits = preg_replace('/[^0-9]/', '', $seatCode);
+                    $seatLetter = preg_replace('/[^A-Za-z]/', '', $seatCode);
+
+                    $physicalTicket = \App\Models\EventTicket::where('event_id', $targetEvent->id)
+                        ->where(function ($q) {
+                            $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
+                        })
+                        ->whereNotIn('id', array_keys($matchedPhysicalTickets))
+                        ->where(function ($q) use ($entry, $cleanBaseZone, $seatCode, $seatDigits, $seatLetter) {
+                            $q->where('zone_name', $entry['zone'])
+                              ->orWhere('zone_name', 'LIKE', "%{$seatCode}%")
+                              ->orWhere('zone_name', 'LIKE', "%({$seatLetter}-{$seatDigits})%")
+                              ->orWhere('zone_name', 'LIKE', "%({$seatLetter} {$seatDigits})%");
+                        })
+                        ->orderBy('id', 'asc')
+                        ->first();
+                } else {
+                    // Caso Zona General: buscar el siguiente boleto pre-impreso disponible del pool
+                    $physicalTicket = \App\Models\EventTicket::where('event_id', $targetEvent->id)
+                        ->where(function ($q) {
+                            $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
+                        })
+                        ->whereNotIn('id', array_keys($matchedPhysicalTickets))
+                        ->where(function ($q) use ($entry, $cleanBaseZone) {
+                            $q->where('zone_name', $entry['zone'])
+                              ->orWhere('zone_name', 'LIKE', $cleanBaseZone . '%');
+                        })
+                        ->where('zone_name', 'NOT LIKE', '%(%')
+                        ->orderBy('ticket_number', 'asc')
+                        ->orderBy('id', 'asc')
+                        ->first();
+
+                    if (!$physicalTicket) {
+                        $physicalTicket = \App\Models\EventTicket::where('event_id', $targetEvent->id)
+                            ->where(function ($q) {
+                                $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
+                            })
+                            ->whereNotIn('id', array_keys($matchedPhysicalTickets))
+                            ->where(function ($q) use ($entry, $cleanBaseZone) {
+                                $q->where('zone_name', $entry['zone'])
+                                  ->orWhere('zone_name', 'LIKE', $cleanBaseZone . '%');
+                            })
+                            ->orderBy('ticket_number', 'asc')
+                            ->orderBy('id', 'asc')
+                            ->first();
+                    }
+                }
+
+                if ($physicalTicket) {
+                    // USAR EL MISMO BOLETO FÍSICO QUE SE IMPRIMIÓ EN LA PLANCHA (Mismo QR, Hash y Código)
+                    $matchedPhysicalTickets[$physicalTicket->id] = $physicalTicket;
+                    $physicalTicket->update([
+                        'ticket_sale_id' => $sale->id,
+                        'buyer_name' => $sale->buyer_name,
+                        'buyer_dni' => $sale->buyer_dni,
+                        'unit_price' => $entry['price'],
+                        'status' => 'valid',
+                        'is_used' => false,
+                    ]);
+                } else {
+                    // Fallback: Generar nuevo código único virtual solo si no existe boleto físico pre-impreso
+                    $currentSeq = $startSeq + ($currentIdx - 1);
+                    $ticketCode = 'TK-' . strtoupper(substr(\Illuminate\Support\Str::slug($targetEvent->title), 0, 3)) . '-' . str_pad($currentSeq, 5, '0', STR_PAD_LEFT);
+                    $validationHash = 'VG' . strtoupper(substr(md5($sale->receipt_number . $currentIdx . $sale->id), 0, 8));
+                    $qrPayload = "VIVEGO|{$sale->receipt_number}|EVT-{$sale->event_id}|DNI-{$sale->buyer_dni}|TICK-{$currentSeq}|{$validationHash}";
+
+                    \App\Models\EventTicket::create([
+                        'event_id' => $targetEvent->id,
+                        'ticket_sale_id' => $sale->id,
+                        'ticket_code' => $ticketCode,
+                        'ticket_number' => $currentSeq,
+                        'zone_name' => $zoneWithSeat,
+                        'unit_price' => $entry['price'],
+                        'qr_payload' => $qrPayload,
+                        'validation_hash' => $validationHash,
+                        'buyer_name' => $sale->buyer_name,
+                        'buyer_dni' => $sale->buyer_dni,
+                        'source' => $sale->seller_name ?: 'web_checkout',
+                        'is_used' => false,
+                        'status' => 'valid',
+                    ]);
+                }
+            }
+
+            // 3. Sincronizar capacidad de zonas y estado de butacas ocupadas en el evento
+            $zones = is_array($targetEvent->zones) ? $targetEvent->zones : (is_string($targetEvent->zones) ? json_decode($targetEvent->zones, true) : []);
+            if (!empty($zones) && is_array($zones)) {
+                $zonesUpdated = false;
+
+                // Si fue upgrade, reponer cupo en la zona anterior
+                if ($upgradeSaleId && !empty($origSale)) {
+                    $origZKey = strtoupper(trim(preg_replace('/\s*\([^)]*\)$/', '', (string) $origSale->zone_name)));
+                    foreach ($zones as &$oz) {
+                        $ozName = strtoupper(trim($oz['name'] ?? $oz['capacity_type'] ?? ''));
+                        $cleanOz = preg_replace('/\s*\([^)]*\)$/', '', $ozName);
+                        if ($cleanOz === $origZKey || $ozName === $origZKey) {
+                            $oz['capacity'] = (int) ($oz['capacity'] ?? 0) + (int) ($origSale->quantity ?? 1);
+                            $zonesUpdated = true;
+                            break;
+                        }
+                    }
+                    unset($oz);
+                }
+
+                // Agrupar cantidades y butacas seleccionadas por zona
+                $qtyPerZone = [];
+                $seatsPerZone = [];
+                foreach ($itemsToProcess as $entry) {
+                    $zKey = strtoupper(trim(preg_replace('/\s*\([^)]*\)$/', '', (string) $entry['zone'])));
+                    $qtyPerZone[$zKey] = ($qtyPerZone[$zKey] ?? 0) + 1;
+                    if (!empty($entry['seat'])) {
+                        $seatsPerZone[$zKey][] = formatShortSeatCode($entry['seat']);
+                    }
+                }
+
+                foreach ($zones as &$z) {
+                    $zName = strtoupper(trim($z['name'] ?? $z['capacity_type'] ?? ''));
+                    $cleanZName = preg_replace('/\s*\([^)]*\)$/', '', $zName);
+
+                    // Descontar aforo de la zona
+                    if (isset($qtyPerZone[$cleanZName]) || isset($qtyPerZone[$zName])) {
+                        $deductQty = $qtyPerZone[$cleanZName] ?? $qtyPerZone[$zName];
+                        $currentCap = isset($z['capacity']) ? (int) $z['capacity'] : 0;
+                        $z['capacity'] = max(0, $currentCap - $deductQty);
+                        $zonesUpdated = true;
+                    }
+
+                    // Marcar butacas seleccionadas como ocupadas
+                    $targetSeats = $seatsPerZone[$cleanZName] ?? ($seatsPerZone[$zName] ?? []);
+                    if (!empty($targetSeats) && !empty($z['seats']) && is_array($z['seats'])) {
+                        foreach ($z['seats'] as &$seatItem) {
+                            $sCode = formatShortSeatCode($seatItem);
+                            if (in_array($sCode, $targetSeats)) {
+                                $seatItem['status'] = 'occupied';
+                                $zonesUpdated = true;
+                            }
+                        }
+                        unset($seatItem);
+                    }
+                }
+                unset($z);
+
+                if ($zonesUpdated) {
+                    $targetEvent->zones = $zones;
+                    $targetEvent->save();
+                }
             }
         }
     }

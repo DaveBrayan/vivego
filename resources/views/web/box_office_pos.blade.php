@@ -558,7 +558,9 @@
                         <div>
                             <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.35rem;">
                                 <a href="{{ route('web.box_office') }}" class="dash-badge-custom badge-blue" style="text-decoration: none; font-size: 0.75rem;">← Volver a Taquillas</a>
-                                @if(($event->sales_type ?? 'fisica') === 'fisica')
+                                @if(($event->sales_type ?? 'fisica') === 'ambos')
+                                    <span class="dash-badge-custom badge-purple" style="font-size: 0.75rem; background: rgba(168, 85, 247, 0.15); color: #C084FC; border: 1px solid rgba(168, 85, 247, 0.4);">🎫🌐 Venta Híbrida (Taquilla + Online)</span>
+                                @elseif(($event->sales_type ?? 'fisica') === 'fisica')
                                     <span class="dash-badge-custom badge-orange" style="font-size: 0.75rem;">🎫 Venta Física (Taquilla)</span>
                                 @else
                                     <span class="dash-badge-custom badge-cyan" style="font-size: 0.75rem; color: #00F0FF; border: 1px solid rgba(0,240,255,0.4); background: rgba(0,240,255,0.1);">🌐 Venta Virtual (Online)</span>
@@ -580,12 +582,13 @@
                             <span style="font-size: 1.25rem;">🛒</span>
                             <span>+ REGISTRAR VENTA (F1)</span>
                         </button>
-                        @if(($event->sales_type ?? 'fisica') === 'fisica')
+                        @if(in_array(($event->sales_type ?? 'fisica'), ['fisica', 'ambos']))
                             <button type="button" class="btn" onclick="openPlanchaModalCurrentEvent()" style="background: linear-gradient(135deg, #2563EB, #1D4ED8); color: #FFFFFF; font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 22px rgba(37, 99, 235, 0.4); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer; border: none; transition: all 0.2s ease;">
                                 <span style="font-size: 1.25rem;">🖨️</span>
                                 <span>+ GENERAR PLANCHA PDF</span>
                             </button>
-                        @else
+                        @endif
+                        @if(in_array(($event->sales_type ?? 'fisica'), ['virtual', 'ambos']))
                             <button type="button" class="btn" onclick="openPosCourtesyModal()" style="background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 22px rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer; border: none; transition: all 0.2s ease;">
                                 <span style="font-size: 1.25rem;">🎁</span>
                                 <span>+ NUEVA CORTESÍA (F2)</span>

@@ -84,13 +84,17 @@ class EventDetailController extends Controller
                     $regularPrice = isset($zone['price']) ? (float)$zone['price'] : 50.00;
                     $capacityVal = isset($zone['capacity']) ? (int)$zone['capacity'] : 100;
 
-                    // Calcular ventas registradas si existe la tabla
+                    // Calcular ventas registradas si existe la tabla (SOLO boletos con venta efectiva asociada)
                     $soldCount = 0;
                     try {
                         if (\Illuminate\Support\Facades\Schema::hasTable('event_tickets')) {
                             $soldCount = (int) \Illuminate\Support\Facades\DB::table('event_tickets')
                                 ->where('event_id', $eventModel->id)
-                                ->where('zone_name', $zoneName)
+                                ->where(function($q) use ($zoneName) {
+                                    $q->where('zone_name', $zoneName)
+                                      ->orWhere('zone_name', 'LIKE', $zoneName . ' (%');
+                                })
+                                ->whereNotNull('ticket_sale_id')
                                 ->where('status', '!=', 'upgraded')
                                 ->where('status', '!=', 'cancelled')
                                 ->count();
@@ -110,8 +114,10 @@ class EventDetailController extends Controller
                         $soldCount = 0;
                     }
 
-                    $remainingCapacity = max(0, $capacityVal - $soldCount);
-                    $isAvailable = $capacityVal > 0 && $remainingCapacity > 0;
+                    // La capacidad restante real corresponde a la capacidad disponible descontada de la zona
+                    $remainingCapacity = max(0, $capacityVal);
+                    $totalCapacityVal = $remainingCapacity + $soldCount;
+                    $isAvailable = $remainingCapacity > 0;
 
                     // Datos de Preventa
                     $hasPresale = !empty($zone['has_presale']) || (!empty($zone['presale_discount']) && (float)$zone['presale_discount'] > 0);
@@ -181,7 +187,7 @@ class EventDetailController extends Controller
                         'presale_end_date' => $presaleEnd,
                         'presale_stock' => $presaleStock,
                         'capacity' => $remainingCapacity,
-                        'total_capacity' => $capacityVal,
+                        'total_capacity' => $totalCapacityVal,
                         'available' => $isAvailable,
                     ];
                 }
