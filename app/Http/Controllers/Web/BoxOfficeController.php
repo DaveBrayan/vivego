@@ -344,6 +344,8 @@ class BoxOfficeController extends Controller
             'quantity' => 'required|integer|min:1',
             'payment_method' => 'required|string|in:Efectivo,Culqi,culqi,Yape,Plin,Tarjeta,Transferencia,Cortesía,cortesia',
             'amount_paid' => 'required|numeric|min:0',
+            'selected_seats' => 'nullable|array',
+            'selected_seats.*' => 'string|max:50',
         ]);
 
         $buyerName = !empty(trim($validated['buyer_name'] ?? '')) ? trim($validated['buyer_name']) : 'CLIENTE VARIOS';
@@ -444,6 +446,19 @@ class BoxOfficeController extends Controller
 
         // Descontar stock de la zona y actualizar evento
         $zones[$targetZoneIndex]['capacity'] = max(0, $currentCapacity - $validated['quantity']);
+
+        // Marcar butacas seleccionadas como ocupadas si corresponde
+        $selectedSeats = is_array($validated['selected_seats'] ?? null) ? array_values($validated['selected_seats']) : [];
+        if (!empty($selectedSeats) && !empty($zones[$targetZoneIndex]['seats']) && is_array($zones[$targetZoneIndex]['seats'])) {
+            foreach ($zones[$targetZoneIndex]['seats'] as &$seatItem) {
+                $sCode = formatShortSeatCode($seatItem);
+                if (in_array($sCode, $selectedSeats)) {
+                    $seatItem['status'] = 'occupied';
+                }
+            }
+            unset($seatItem);
+        }
+
         $event->zones = $zones;
         $event->save();
 
@@ -452,22 +467,90 @@ class BoxOfficeController extends Controller
         $nextNum = $lastSale ? ($lastSale->id + 1) : 1;
         $receiptNumber = 'REC-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
 
-        // Obtener la secuencia inicial de boletos para el evento
+        // Obtener la secuencia inicial de boletos para el evento como fallback
         $lastTicket = \App\Models\EventTicket::where('event_id', $event->id)->orderBy('id', 'desc')->first();
         $startSeq = $lastTicket ? ((int) preg_replace('/[^0-9]/', '', $lastTicket->ticket_number) + 1) : 1;
 
-        // Generar códigos únicos e información para cada boleto individual
+        // Generar códigos e información para cada boleto, reutilizando boletos físicos ya pre-impresos
         $ticketsData = [];
+        $matchedPhysicalTickets = [];
+        $cleanBaseZone = preg_replace('/\s*\([^)]*\)$/', '', trim($validated['zone_name']));
+
         for ($i = 1; $i <= $validated['quantity']; $i++) {
-            $currentSeq = $startSeq + ($i - 1);
-            $ticketCode = 'TK-' . strtoupper(substr(Str::slug($event->title), 0, 3)) . '-' . str_pad($currentSeq, 5, '0', STR_PAD_LEFT);
-            $validationHash = strtoupper(Str::random(10));
-
-            // Hash encriptado de alta seguridad exclusivo para el scanner móvil del evento
-            $encryptedToken = strtoupper(substr(hash_hmac('sha256', "VIVEGO_ENC_{$event->id}_{$receiptNumber}_{$validationHash}_{$i}", config('app.key', 'ViveGoSecretKey2026')), 0, 24));
-            $qrPayload = "VGENC:{$encryptedToken}";
-
             $effectiveTicketPrice = $isCourtesy ? 0.00 : $unitPrice;
+            $seatCode = !empty($selectedSeats[$i - 1]) ? formatShortSeatCode($selectedSeats[$i - 1]) : null;
+            $zoneWithSeat = $seatCode ? formatZoneWithSeat($validated['zone_name'], $seatCode) : $validated['zone_name'];
+
+            $physicalTicket = null;
+
+            if ($seatCode) {
+                // Caso Butacas Numeradas: buscar el boleto físico pre-generado para esta butaca específica
+                $seatDigits = preg_replace('/[^0-9]/', '', $seatCode);
+                $seatLetter = preg_replace('/[^A-Za-z]/', '', $seatCode);
+
+                $physicalTicket = \App\Models\EventTicket::where('event_id', $event->id)
+                    ->where(function($q) {
+                        $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
+                    })
+                    ->whereNotIn('id', array_keys($matchedPhysicalTickets))
+                    ->where(function ($q) use ($zoneWithSeat, $seatCode, $seatLetter, $seatDigits) {
+                        $q->where('zone_name', $zoneWithSeat)
+                          ->orWhere('zone_name', 'LIKE', "%({$seatCode})%")
+                          ->orWhere('zone_name', 'LIKE', "%({$seatLetter}-{$seatDigits})%")
+                          ->orWhere('zone_name', 'LIKE', "%({$seatLetter} {$seatDigits})%");
+                    })
+                    ->orderBy('id', 'asc')
+                    ->first();
+            } else {
+                // Caso Zona General: buscar el siguiente boleto físico pre-impreso disponible en orden
+                $physicalTicket = \App\Models\EventTicket::where('event_id', $event->id)
+                    ->where(function($q) {
+                        $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
+                    })
+                    ->whereNotIn('id', array_keys($matchedPhysicalTickets))
+                    ->where(function ($q) use ($validated, $cleanBaseZone) {
+                        $q->where('zone_name', $validated['zone_name'])
+                          ->orWhere('zone_name', 'LIKE', $cleanBaseZone . '%');
+                    })
+                    ->where('zone_name', 'NOT LIKE', '%(%')
+                    ->orderBy('ticket_number', 'asc')
+                    ->orderBy('id', 'asc')
+                    ->first();
+
+                if (!$physicalTicket) {
+                    $physicalTicket = \App\Models\EventTicket::where('event_id', $event->id)
+                        ->where(function($q) {
+                            $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
+                        })
+                        ->whereNotIn('id', array_keys($matchedPhysicalTickets))
+                        ->where(function ($q) use ($validated, $cleanBaseZone) {
+                            $q->where('zone_name', $validated['zone_name'])
+                              ->orWhere('zone_name', 'LIKE', $cleanBaseZone . '%');
+                        })
+                        ->orderBy('ticket_number', 'asc')
+                        ->orderBy('id', 'asc')
+                        ->first();
+                }
+            }
+
+            if ($physicalTicket) {
+                // USAR EL MISMO BOLETO FÍSICO QUE SE IMPRIMIÓ EN LA PLANCHA (Mismo QR, Hash y Código)
+                $ticketCode = $physicalTicket->ticket_code;
+                $currentSeq = $physicalTicket->ticket_number;
+                $validationHash = $physicalTicket->validation_hash;
+                $qrPayload = $physicalTicket->qr_payload;
+                if (!empty($physicalTicket->zone_name)) {
+                    $zoneWithSeat = $physicalTicket->zone_name;
+                }
+                $matchedPhysicalTickets[$physicalTicket->id] = $physicalTicket;
+            } else {
+                // Fallback: Generar nuevo código único virtual solo si no existe boleto físico pre-impreso
+                $currentSeq = $startSeq + ($i - 1);
+                $ticketCode = 'TK-' . strtoupper(substr(Str::slug($event->title), 0, 3)) . '-' . str_pad($currentSeq, 5, '0', STR_PAD_LEFT);
+                $validationHash = strtoupper(Str::random(10));
+                $encryptedToken = strtoupper(substr(hash_hmac('sha256', "VIVEGO_ENC_{$event->id}_{$receiptNumber}_{$validationHash}_{$i}", config('app.key', 'ViveGoSecretKey2026')), 0, 24));
+                $qrPayload = "VGENC:{$encryptedToken}";
+            }
 
             $ticketsData[] = [
                 'ticket_code' => $ticketCode,
@@ -475,13 +558,16 @@ class BoxOfficeController extends Controller
                 'ticket_index' => $i,
                 'validation_hash' => $validationHash,
                 'qr_payload' => $qrPayload,
-                'zone' => $validated['zone_name'],
+                'zone' => $zoneWithSeat,
+                'seat' => $seatCode,
+                'seat_label' => $seatCode,
                 'price' => $effectiveTicketPrice,
                 'buyer_name' => $buyerName,
                 'buyer_dni' => $buyerDni,
                 'buyer_phone' => $buyerPhone,
                 'buyer_email' => $buyerEmail,
                 'is_courtesy' => $isCourtesy,
+                'event_ticket_id' => $physicalTicket ? $physicalTicket->id : null,
             ];
         }
 
@@ -510,22 +596,35 @@ class BoxOfficeController extends Controller
             'seller_name' => 'Taquilla Principal',
         ]);
 
-        // Registrar cada boleto emitido individualmente en la tabla event_tickets
+        // Vincular los boletos físicos existentes a esta venta o registrar los nuevos
         foreach ($ticketsData as $tData) {
-            \App\Models\EventTicket::create([
-                'event_id' => $event->id,
-                'ticket_sale_id' => $sale->id,
-                'ticket_code' => $tData['ticket_code'],
-                'ticket_number' => $tData['ticket_number'],
-                'zone_name' => $tData['zone'],
-                'unit_price' => $tData['price'],
-                'qr_payload' => $tData['qr_payload'],
-                'validation_hash' => $tData['validation_hash'],
-                'buyer_name' => $tData['buyer_name'],
-                'buyer_dni' => $tData['buyer_dni'],
-                'source' => 'pos_sale',
-                'is_used' => false,
-            ]);
+            if (!empty($tData['event_ticket_id']) && isset($matchedPhysicalTickets[$tData['event_ticket_id']])) {
+                $pTicket = $matchedPhysicalTickets[$tData['event_ticket_id']];
+                $pTicket->update([
+                    'ticket_sale_id' => $sale->id,
+                    'buyer_name' => $tData['buyer_name'],
+                    'buyer_dni' => $tData['buyer_dni'],
+                    'unit_price' => $tData['price'],
+                    'status' => 'valid',
+                    'is_used' => false,
+                ]);
+            } else {
+                \App\Models\EventTicket::create([
+                    'event_id' => $event->id,
+                    'ticket_sale_id' => $sale->id,
+                    'ticket_code' => $tData['ticket_code'],
+                    'ticket_number' => $tData['ticket_number'],
+                    'zone_name' => $tData['zone'],
+                    'unit_price' => $tData['price'],
+                    'qr_payload' => $tData['qr_payload'],
+                    'validation_hash' => $tData['validation_hash'],
+                    'buyer_name' => $tData['buyer_name'],
+                    'buyer_dni' => $tData['buyer_dni'],
+                    'source' => 'pos_sale',
+                    'is_used' => false,
+                    'status' => 'valid',
+                ]);
+            }
         }
 
         // Recalcular métricas en vivo para actualización dinámica
@@ -629,14 +728,19 @@ class BoxOfficeController extends Controller
                 }
             }
 
-            try {
-                Mail::to($effectiveEmail)->send(new TicketPurchaseMail($sale, $tempPassword, $isNewUser, $pdfBase64));
-                $emailSent = true;
-                Log::info("Boleto oficial enviado automáticamente a {$effectiveEmail} tras emisión en Taquilla POS");
-            } catch (\Throwable $e) {
-                Log::warning("No se pudo enviar el correo tras registrar venta/cortesía en Taquilla: " . $e->getMessage());
+            if (!empty($pdfBase64)) {
+                try {
+                    Mail::to($effectiveEmail)->send(new TicketPurchaseMail($sale, $tempPassword, $isNewUser, $pdfBase64));
+                    $emailSent = true;
+                    Log::info("Boleto oficial enviado automáticamente a {$effectiveEmail} tras emisión en Taquilla POS");
+                } catch (\Throwable $e) {
+                    Log::warning("No se pudo enviar el correo tras registrar venta/cortesía en Taquilla: " . $e->getMessage());
+                }
             }
         }
+
+        // Cargar boletos físicos y relación de evento para el frontend
+        $sale->loadMissing(['eventTickets', 'event']);
 
         return response()->json([
             'success' => true,
@@ -695,9 +799,28 @@ class BoxOfficeController extends Controller
         $event = Event::find($sale->event_id);
         if ($event && is_array($event->zones)) {
             $zones = $event->zones;
+            $tDataList = is_array($sale->tickets_data) ? $sale->tickets_data : (json_decode($sale->tickets_data ?? '[]', true) ?: []);
+            $releasedSeats = [];
+            foreach ($tDataList as $td) {
+                if (!empty($td['seat'])) {
+                    $releasedSeats[] = formatShortSeatCode($td['seat']);
+                }
+            }
+
+            $cleanSaleZone = preg_replace('/\s*\([^)]*\)$/', '', trim($sale->zone_name));
             foreach ($zones as $idx => $z) {
-                if (($z['name'] ?? '') === $sale->zone_name) {
+                $cleanZName = preg_replace('/\s*\([^)]*\)$/', '', trim($z['name'] ?? ''));
+                if (($z['name'] ?? '') === $sale->zone_name || strtolower($cleanZName) === strtolower($cleanSaleZone)) {
                     $zones[$idx]['capacity'] = (int) ($z['capacity'] ?? 0) + (int) $sale->quantity;
+                    if (!empty($releasedSeats) && !empty($zones[$idx]['seats']) && is_array($zones[$idx]['seats'])) {
+                        foreach ($zones[$idx]['seats'] as &$sItem) {
+                            $sCode = formatShortSeatCode($sItem);
+                            if (in_array($sCode, $releasedSeats)) {
+                                $sItem['status'] = 'available';
+                            }
+                        }
+                        unset($sItem);
+                    }
                     break;
                 }
             }
@@ -705,8 +828,21 @@ class BoxOfficeController extends Controller
             $event->save();
         }
 
-        // Eliminar boletos individuales asociados
-        \App\Models\EventTicket::where('ticket_sale_id', $sale->id)->delete();
+        // Desvincular boletos físicos pre-generados para que vuelvan a estar disponibles en taquilla
+        \App\Models\EventTicket::where('ticket_sale_id', $sale->id)
+            ->where('source', 'pdf_batch')
+            ->update([
+                'ticket_sale_id' => null,
+                'buyer_name' => 'Impresión de Evento',
+                'buyer_dni' => '00000000',
+                'status' => 'valid',
+                'is_used' => false,
+            ]);
+
+        // Eliminar solo los boletos virtuales que fueron creados exclusivamente para esta venta
+        \App\Models\EventTicket::where('ticket_sale_id', $sale->id)
+            ->where('source', '!=', 'pdf_batch')
+            ->delete();
 
         // Eliminar la venta
         $sale->delete();

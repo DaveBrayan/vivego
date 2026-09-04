@@ -831,6 +831,32 @@ class EventController extends Controller
     }
 
     /**
+     * Elimina todos los boletos generados para impresión PDF de este evento.
+     */
+    public function destroyBatchTickets(Request $request, Event $event): JsonResponse
+    {
+        $query = \App\Models\EventTicket::where('event_id', $event->id)
+            ->where(function ($q) {
+                $q->where('source', 'pdf_batch')
+                  ->orWhereNull('ticket_sale_id');
+            });
+
+        // Si se envía una zona específica a eliminar
+        $zone = $request->input('zone');
+        if (!empty($zone) && $zone !== 'ALL') {
+            $query->where('zone_name', 'LIKE', $zone . '%');
+        }
+
+        $deletedCount = $query->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Se han eliminado {$deletedCount} entradas generadas de este evento.",
+            'deleted_count' => $deletedCount,
+        ]);
+    }
+
+    /**
      * Limpia y normaliza URLs de imágenes eliminando dominios o IPs locales previas.
      */
     protected function sanitizeAssetUrl(?string $imageString): ?string

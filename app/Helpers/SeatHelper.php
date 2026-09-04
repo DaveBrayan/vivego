@@ -7,14 +7,45 @@ if (!function_exists('formatShortSeatCode')) {
     function formatShortSeatCode($seat): string
     {
         if (is_array($seat)) {
-            if (!empty($seat['row']) && (!empty($seat['number']) || !empty($seat['col']))) {
-                return strtoupper(trim((string)$seat['row'])) . trim((string)($seat['number'] ?? $seat['col']));
+            $row = !empty($seat['row']) ? strtoupper(trim((string)$seat['row'])) : '';
+            $col = !empty($seat['col']) ? trim((string)$seat['col']) : '';
+            $number = !empty($seat['number']) ? trim((string)$seat['number']) : '';
+            $label = !empty($seat['label']) ? trim((string)$seat['label']) : (!empty($seat['display_name']) ? trim((string)$seat['display_name']) : '');
+
+            // Si tenemos row y col limpia numérica (ej: row: "A", col: "3")
+            if ($row !== '' && $col !== '' && preg_match('/^\d+$/', $col)) {
+                return $row . $col;
             }
-            $seat = $seat['label'] ?? $seat['number'] ?? $seat['code'] ?? '';
+
+            // Si number es como "A-3", "A3", "A 3" o solo dígitos
+            if ($row !== '' && $number !== '') {
+                if (preg_match('/^' . preg_quote($row, '/') . '[\s\-_]*(\d+)$/i', $number, $m)) {
+                    return $row . $m[1];
+                }
+                if (preg_match('/^\d+$/', $number)) {
+                    return $row . $number;
+                }
+            }
+
+            if ($label !== '') {
+                $seat = $label;
+            } elseif ($number !== '') {
+                $seat = $number;
+            } elseif ($row !== '' && $col !== '') {
+                $seat = $row . $col;
+            } else {
+                $seat = $seat['code'] ?? '';
+            }
         }
+
         $seat = trim((string)$seat);
         if (empty($seat)) {
             return '';
+        }
+
+        // Si viene con prefijo de letra duplicado como "AA-3", "AA3", "AA_3"
+        if (preg_match('/^([A-Za-z])\1[\s\-_]*([0-9]+)$/', $seat, $m)) {
+            return strtoupper($m[1]) . $m[2];
         }
 
         // Caso 1: "Fila A - Asiento 1" o "Fila A - Columna 1"
@@ -27,13 +58,13 @@ if (!function_exists('formatShortSeatCode')) {
             return strtoupper($m[1]) . $m[2];
         }
 
-        // Caso 3: "A-1" o "A 1"
-        if (preg_match('/^([A-Za-z]+)[-\s]+([0-9]+)$/', $seat, $m)) {
+        // Caso 3: "A-1" o "A 1" o "A_1"
+        if (preg_match('/^([A-Za-z]+)[-\s_]+([0-9]+)$/', $seat, $m)) {
             return strtoupper($m[1]) . $m[2];
         }
 
         // Caso 4: "A1" o código compacto
-        if (preg_match('/([A-Za-z]+[0-9]+)$/', $seat, $m)) {
+        if (preg_match('/^([A-Za-z]+[0-9]+)$/', $seat, $m)) {
             return strtoupper($m[1]);
         }
 

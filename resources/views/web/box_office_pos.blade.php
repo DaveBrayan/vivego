@@ -465,6 +465,56 @@
                 font-family: 'Courier New', Courier, monospace !important;
             }
         }
+
+        /* ESTILOS DE BUTACAS INTERACTIVAS EN MODAL POS */
+        .pos-seat-rect {
+            cursor: pointer;
+            transition: fill 0.15s ease, stroke 0.15s ease, filter 0.15s ease;
+        }
+
+        .pos-seat-rect:hover {
+            filter: drop-shadow(0 0 6px rgba(255, 85, 0, 0.9));
+            stroke: #FF5500 !important;
+            stroke-width: 2px !important;
+        }
+
+        .pos-seat-rect.selected {
+            fill: #FF5500 !important;
+            stroke: #FFFFFF !important;
+            stroke-width: 2px !important;
+            filter: drop-shadow(0 0 8px #FF5500) !important;
+        }
+
+        .pos-seat-rect.occupied {
+            fill: #EF4444 !important;
+            stroke: #DC2626 !important;
+            cursor: not-allowed !important;
+            opacity: 0.85;
+        }
+
+        .pos-seat-rect.occupied:hover {
+            filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.9));
+            stroke: #991B1B !important;
+        }
+
+        .pos-seat-chip {
+            background: rgba(255, 85, 0, 0.12);
+            border: 1px solid rgba(255, 85, 0, 0.4);
+            color: #FF5500;
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            animation: popInChip 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popInChip {
+            0% { transform: scale(0.7); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
     </style>
 @endpush
 
@@ -820,6 +870,44 @@
                             </div>
                             <!-- Input oculto para guardar el sector seleccionado -->
                             <input type="hidden" id="pos_zone_select" value="{{ $zonesWithStats[0]['name'] ?? '' }}" required>
+                        </div>
+
+                        <!-- SELECTOR INTERACTIVO DE BUTACAS NUMERADAS EN MODAL POS -->
+                        <div id="posSeatSelectorContainer" style="display: none; margin-bottom: 0.75rem; background: rgba(255,255,255,0.02); border: 1.5px solid rgba(255, 85, 0, 0.35); border-radius: 14px; padding: 0.65rem 0.75rem; box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem;">
+                                <div style="font-size: 0.75rem; font-weight: 800; color: var(--color-primary-orange); display: flex; align-items: center; gap: 0.35rem;">
+                                    <span>🪑</span> <span id="posSeatSelectorTitle">Selección de Butacas</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.68rem; font-weight: 700; color: #94A3B8;">
+                                    <span style="display: inline-flex; align-items: center; gap: 0.2rem;"><span style="display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: #10B981;"></span> Libre</span>
+                                    <span style="display: inline-flex; align-items: center; gap: 0.2rem;"><span style="display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: #EF4444;"></span> Ocupada</span>
+                                    <span style="display: inline-flex; align-items: center; gap: 0.2rem;"><span style="display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: #FF5500;"></span> Elegida</span>
+                                </div>
+                            </div>
+
+                            <!-- Lienzo SVG del Plano de Butacas Auto-Ajustable -->
+                            <div id="posSeatMapCanvasLayer" style="position: relative; width: 100%; height: 210px; background: #FFFFFF; border-radius: 10px; overflow: hidden; border: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: center;">
+                                <svg id="posSeatMapSvg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible;" preserveAspectRatio="xMidYMid meet"></svg>
+                            </div>
+
+                            <!-- Tooltip Flotante del Mapa POS -->
+                            <div id="posZoneTooltip" style="position: absolute; display: none; z-index: 50; pointer-events: none; background: #0F172A; border: 1.5px solid rgba(255, 85, 0, 0.6); border-radius: 8px; padding: 0.35rem 0.6rem; color: #FFFFFF; box-shadow: 0 10px 25px rgba(0,0,0,0.4); transform: translate(-50%, -120%); font-size: 0.72rem; white-space: nowrap;">
+                                <div id="posTooltipTitle" style="font-weight: 800; color: #FF8800;"></div>
+                                <div id="posTooltipStatus" style="font-size: 0.68rem; color: #10B981; font-weight: 700;"></div>
+                            </div>
+
+                            <!-- Chips de Butacas Seleccionadas -->
+                            <div style="margin-top: 0.45rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                                    <span style="font-size: 0.68rem; font-weight: 800; color: #94A3B8; text-transform: uppercase;">Butacas Elegidas:</span>
+                                    <button type="button" onclick="clearPosSelectedSeats()" style="background: none; border: none; color: #EF4444; font-size: 0.68rem; font-weight: 800; cursor: pointer; padding: 0; display: none;" id="btnPosClearSeats">
+                                        ✕ Desmarcar todas
+                                    </button>
+                                </div>
+                                <div id="posSelectedSeatsTagsBox" style="display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; min-height: 22px;">
+                                    <span style="font-size: 0.7rem; color: #94A3B8;">👈 Haz clic en una o más butacas en el plano</span>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- CANTIDAD DE ENTRADAS CON BOTONES NARANJAS Y QUICK PILLS -->
@@ -1970,6 +2058,376 @@
         let selectedZoneName = "{{ $zonesWithStats[0]['name'] ?? '' }}";
         let selectedZonePrice = {{ $zonesWithStats[0]['price'] ?? 0 }};
         let selectedZoneAvailable = {{ $zonesWithStats[0]['available'] ?? 100 }};
+        let posSelectedSeats = [];
+        window.posRawZones = @json(is_array($event->zones) ? $event->zones : (json_decode($event->zones ?? '[]', true) ?: []));
+
+        function cleanPosZoneBase(name) {
+            if (!name) return 'GENERAL';
+            return String(name).replace(/\s*\([^)]*\)$/, '').trim().toUpperCase();
+        }
+
+        function getActivePosZone(name = selectedZoneName) {
+            const cleanTarget = cleanPosZoneBase(name);
+            return (window.posRawZones || []).find(z => {
+                const cleanZ = cleanPosZoneBase(z.name || '');
+                return cleanZ === cleanTarget || (z.name && z.name.trim().toLowerCase() === name.trim().toLowerCase());
+            });
+        }
+
+        function formatShortSeatCodeJs(seat) {
+            if (!seat) return '';
+            if (typeof seat === 'object') {
+                const r = seat.row ? String(seat.row).toUpperCase().trim() : '';
+                const c = (seat.col !== undefined && seat.col !== null) ? String(seat.col).trim() : '';
+                const num = (seat.number !== undefined && seat.number !== null) ? String(seat.number).trim() : '';
+
+                // Si col es numérico (ej: row: "A", col: "3")
+                if (r && c && /^\d+$/.test(c)) {
+                    return r + c;
+                }
+
+                // Si number es como "A-3", "A3", "A 3" o solo dígitos
+                if (r && num) {
+                    const numMatch = num.match(new RegExp('^' + r + '[\\s\\-_]*(\\d+)$', 'i'));
+                    if (numMatch) {
+                        return r + numMatch[1];
+                    }
+                    if (/^\d+$/.test(num)) {
+                        return r + num;
+                    }
+                }
+
+                seat = seat.label || seat.display_name || seat.number || (r && c ? r + c : '') || seat.code || '';
+            }
+            seat = String(seat).trim();
+            if (!seat) return '';
+
+            // Si viene duplicado como "AA-3", "AA3", "AA_3"
+            let m = seat.match(/^([A-Za-z])\1[\s\-_]*([0-9]+)$/);
+            if (m) return m[1].toUpperCase() + m[2];
+
+            // "Fila A - Asiento 1" o "Fila A - Columna 1"
+            m = seat.match(/Fila\s*([A-Za-z0-9]+)\s*-\s*(?:Asiento|Columna)\s*([0-9]+)/i);
+            if (m) return `${m[1].toUpperCase()}${m[2]}`;
+
+            // "Fila A Asiento 1"
+            m = seat.match(/Fila\s*([A-Za-z0-9]+)\s*(?:Asiento|Columna)\s*([0-9]+)/i);
+            if (m) return `${m[1].toUpperCase()}${m[2]}`;
+
+            // "A-1" o "A 1" o "A_1"
+            m = seat.match(/^([A-Za-z]+)[-\s_]+([0-9]+)$/);
+            if (m) return `${m[1].toUpperCase()}${m[2]}`;
+
+            // Código directo tipo "A1" o "B10"
+            m = seat.match(/^([A-Za-z]+[0-9]+)$/);
+            if (m) return m[1].toUpperCase();
+
+            return seat;
+        }
+
+        function isPosSeatOccupied(zoneName, seatCode) {
+            if (!seatCode) return false;
+            const targetZone = getActivePosZone(zoneName);
+            if (targetZone && Array.isArray(targetZone.seats)) {
+                const sObj = targetZone.seats.find(s => {
+                    const c = formatShortSeatCodeJs(s);
+                    return c === seatCode || (s.label && s.label === seatCode);
+                });
+                if (sObj && (sObj.status === 'occupied' || sObj.status === 'ocupado' || sObj.status === 'vendido' || sObj.is_occupied)) {
+                    return true;
+                }
+            }
+
+            // También verificar en ventas ya existentes en vivo
+            if (window.posSalesMap && typeof window.posSalesMap === 'object') {
+                const cleanZ = cleanPosZoneBase(zoneName);
+                for (const saleId in window.posSalesMap) {
+                    const sale = window.posSalesMap[saleId];
+                    if (!sale || sale.status === 'cancelled') continue;
+                    const saleZone = cleanPosZoneBase(sale.zone_name || '');
+                    if (saleZone === cleanZ) {
+                        const tData = Array.isArray(sale.tickets_data) ? sale.tickets_data : (typeof sale.tickets_data === 'string' ? JSON.parse(sale.tickets_data || '[]') : []);
+                        for (const t of tData) {
+                            const tSeat = formatShortSeatCodeJs(t.seat || t.seat_label || t.seat_number || t.zone || '');
+                            if (tSeat === seatCode) return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function renderPosSeatMap(zoneName) {
+            const container = document.getElementById('posSeatSelectorContainer');
+            const svg = document.getElementById('posSeatMapSvg');
+            const titleEl = document.getElementById('posSeatSelectorTitle');
+            if (!container || !svg) return false;
+
+            const targetZone = getActivePosZone(zoneName);
+            if (!targetZone || !Array.isArray(targetZone.seats) || targetZone.seats.length === 0) {
+                container.style.display = 'none';
+                posSelectedSeats = [];
+                updatePosSelectedSeatsTags();
+                return false;
+            }
+
+            container.style.display = 'block';
+            if (titleEl) titleEl.textContent = `Selección de Butacas (${targetZone.name})`;
+
+            svg.innerHTML = '';
+            const NS = "http://www.w3.org/2000/svg";
+
+            // 1. Calcular caja envolvente (Bounding Box)
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            let totalPointsCount = 0;
+
+            if (Array.isArray(targetZone.points) && targetZone.points.length >= 3) {
+                targetZone.points.forEach(p => {
+                    if (p.x < minX) minX = p.x;
+                    if (p.x > maxX) maxX = p.x;
+                    if (p.y < minY) minY = p.y;
+                    if (p.y > maxY) maxY = p.y;
+                    totalPointsCount++;
+                });
+            }
+
+            if (Array.isArray(targetZone.seats)) {
+                targetZone.seats.forEach(s => {
+                    if (s.x < minX) minX = s.x;
+                    if (s.x > maxX) maxX = s.x;
+                    if (s.y < minY) minY = s.y;
+                    if (s.y > maxY) maxY = s.y;
+                    totalPointsCount++;
+                });
+            }
+
+            if (totalPointsCount > 0) {
+                const boxWidth = Math.max(120, maxX - minX);
+                const boxHeight = Math.max(80, maxY - minY);
+                const padX = Math.max(14, Math.round(boxWidth * 0.04));
+                const padY = Math.max(14, Math.round(boxHeight * 0.05));
+                const vbX = Math.round(minX - padX);
+                const vbY = Math.round(minY - padY);
+                const vbW = Math.round(boxWidth + padX * 2);
+                const vbH = Math.round(boxHeight + padY * 2);
+                svg.setAttribute('viewBox', `${vbX} ${vbY} ${vbW} ${vbH}`);
+            } else {
+                svg.setAttribute('viewBox', '0 0 600 350');
+            }
+
+            // 2. Dibujar fondo de la zona si tiene polígono o rectángulo
+            const zoneColor = targetZone.color || '#FF5500';
+            const xs = (targetZone.points || []).map(p => p.x);
+            const ys = (targetZone.points || []).map(p => p.y);
+            const zMinX = xs.length > 0 ? Math.min(...xs) : minX;
+            const zMaxX = xs.length > 0 ? Math.max(...xs) : maxX;
+            const zMinY = ys.length > 0 ? Math.min(...ys) : minY;
+            const zMaxY = ys.length > 0 ? Math.max(...ys) : maxY;
+
+            const bgGroup = document.createElementNS(NS, 'g');
+            let zoneSurface;
+            if (Array.isArray(targetZone.points) && targetZone.points.length === 4) {
+                zoneSurface = document.createElementNS(NS, 'rect');
+                zoneSurface.setAttribute('x', zMinX);
+                zoneSurface.setAttribute('y', zMinY);
+                zoneSurface.setAttribute('width', zMaxX - zMinX);
+                zoneSurface.setAttribute('height', zMaxY - zMinY);
+                zoneSurface.setAttribute('rx', 10);
+                zoneSurface.setAttribute('ry', 10);
+            } else if (Array.isArray(targetZone.points) && targetZone.points.length >= 3) {
+                zoneSurface = document.createElementNS(NS, 'polygon');
+                zoneSurface.setAttribute('points', targetZone.points.map(p => `${p.x},${p.y}`).join(' '));
+                zoneSurface.setAttribute('stroke-linejoin', 'round');
+            }
+
+            if (zoneSurface) {
+                zoneSurface.setAttribute('fill', '#FAFAFA');
+                zoneSurface.setAttribute('stroke', zoneColor);
+                zoneSurface.setAttribute('stroke-width', '1.4');
+                zoneSurface.setAttribute('opacity', '0.9');
+                bgGroup.appendChild(zoneSurface);
+            }
+            svg.appendChild(bgGroup);
+
+            // 3. Dibujar cada butaca
+            const seatsGroup = document.createElementNS(NS, 'g');
+            const seatSide = 12;
+            const halfSide = seatSide / 2;
+
+            targetZone.seats.forEach(seat => {
+                const seatCode = formatShortSeatCodeJs(seat);
+                const isOccupied = isPosSeatOccupied(targetZone.name, seatCode);
+                const isSelected = posSelectedSeats.includes(seatCode);
+
+                const rect = document.createElementNS(NS, 'rect');
+                rect.setAttribute('x', seat.x - halfSide);
+                rect.setAttribute('y', seat.y - halfSide);
+                rect.setAttribute('width', seatSide);
+                rect.setAttribute('height', seatSide);
+                rect.setAttribute('rx', 2.8);
+                rect.setAttribute('ry', 2.8);
+                rect.setAttribute('class', `pos-seat-rect ${isOccupied ? 'occupied' : ''} ${isSelected ? 'selected' : ''}`);
+                rect.setAttribute('fill', isOccupied ? '#EF4444' : (isSelected ? '#FF5500' : (zoneColor || '#10B981')));
+                rect.setAttribute('stroke', isOccupied ? '#DC2626' : (isSelected ? '#FFFFFF' : '#FFFFFF'));
+                rect.setAttribute('stroke-width', '1.2');
+                rect.setAttribute('data-seat-id', seatCode);
+                rect.setAttribute('data-zone-name', targetZone.name);
+
+                rect.addEventListener('mouseenter', (e) => onPosSeatMouseEnter(e, seat, targetZone, isOccupied));
+                rect.addEventListener('mousemove', (e) => onPosSeatMouseMove(e));
+                rect.addEventListener('mouseleave', () => onPosSeatMouseLeave());
+                rect.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    togglePosSeat(seatCode, targetZone.name, isOccupied);
+                });
+
+                seatsGroup.appendChild(rect);
+            });
+
+            svg.appendChild(seatsGroup);
+            updatePosSelectedSeatsTags();
+            return true;
+        }
+
+        function onPosSeatMouseEnter(e, seat, zone, isOccupied) {
+            const tooltip = document.getElementById('posZoneTooltip');
+            const titleEl = document.getElementById('posTooltipTitle');
+            const statusEl = document.getElementById('posTooltipStatus');
+            if (!tooltip) return;
+
+            const seatCode = formatShortSeatCodeJs(seat);
+            const isSelected = posSelectedSeats.includes(seatCode);
+
+            if (titleEl) {
+                const rowStr = seat.row ? `Fila ${seat.row}` : '';
+                const numStr = (seat.number || seat.col) ? `Asiento ${seat.number || seat.col}` : '';
+                const fullLabel = [rowStr, numStr].filter(Boolean).join(' - ') || seatCode;
+                titleEl.textContent = `🪑 ${zone.name} (${fullLabel} · ${seatCode})`;
+            }
+
+            if (statusEl) {
+                if (isOccupied) {
+                    statusEl.textContent = '🚫 OCUPADA / VENDIDA';
+                    statusEl.style.color = '#EF4444';
+                } else if (isSelected) {
+                    statusEl.textContent = `🟠 SELECCIONADA (S/ ${selectedZonePrice.toFixed(2)}) · Clic para desmarcar`;
+                    statusEl.style.color = '#FF5500';
+                } else {
+                    statusEl.textContent = `🟢 DISPONIBLE (S/ ${selectedZonePrice.toFixed(2)}) · Clic para elegir`;
+                    statusEl.style.color = '#10B981';
+                }
+            }
+
+            tooltip.style.display = 'block';
+            onPosSeatMouseMove(e);
+        }
+
+        function onPosSeatMouseMove(e) {
+            const tooltip = document.getElementById('posZoneTooltip');
+            const container = document.getElementById('posSeatMapCanvasLayer');
+            if (!tooltip || !container) return;
+
+            const rect = container.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            tooltip.style.left = `${x}px`;
+            tooltip.style.top = `${y}px`;
+        }
+
+        function onPosSeatMouseLeave() {
+            const tooltip = document.getElementById('posZoneTooltip');
+            if (tooltip) tooltip.style.display = 'none';
+        }
+
+        function togglePosSeat(seatCode, zoneName, isOccupied) {
+            if (isOccupied) {
+                Swal.fire({
+                    title: 'Butaca Ocupada',
+                    text: `La butaca ${seatCode} ya se encuentra ocupada o vendida.`,
+                    icon: 'warning',
+                    confirmButtonColor: '#FF5500',
+                    background: '#14141E',
+                    color: '#FFFFFF'
+                });
+                return;
+            }
+
+            const rect = document.querySelector(`.pos-seat-rect[data-seat-id="${seatCode}"]`);
+            const targetZone = getActivePosZone(zoneName);
+            const zoneColor = targetZone ? (targetZone.color || '#10B981') : '#10B981';
+
+            if (posSelectedSeats.includes(seatCode)) {
+                posSelectedSeats = posSelectedSeats.filter(c => c !== seatCode);
+                if (rect) {
+                    rect.classList.remove('selected');
+                    rect.setAttribute('fill', zoneColor);
+                    rect.setAttribute('stroke', '#FFFFFF');
+                }
+            } else {
+                posSelectedSeats.push(seatCode);
+                if (rect) {
+                    rect.classList.add('selected');
+                    rect.setAttribute('fill', '#FF5500');
+                    rect.setAttribute('stroke', '#FFFFFF');
+                }
+            }
+
+            const newQty = Math.max(1, posSelectedSeats.length);
+            const qtyInput = document.getElementById('pos_quantity');
+            if (qtyInput) {
+                qtyInput.value = newQty;
+            }
+
+            document.querySelectorAll('.pos-quick-btn[id^="btnQuickQty"]').forEach(b => b.classList.remove('active'));
+            const quickBtn = document.getElementById(`btnQuickQty${newQty}`);
+            if (quickBtn) quickBtn.classList.add('active');
+
+            updatePosSelectedSeatsTags();
+            calculatePosTotal();
+        }
+
+        function removePosSeat(seatCode) {
+            togglePosSeat(seatCode, selectedZoneName, false);
+        }
+
+        function clearPosSelectedSeats() {
+            posSelectedSeats = [];
+            const targetZone = getActivePosZone();
+            const zoneColor = targetZone ? (targetZone.color || '#10B981') : '#10B981';
+
+            document.querySelectorAll('.pos-seat-rect.selected').forEach(rect => {
+                rect.classList.remove('selected');
+                rect.setAttribute('fill', zoneColor);
+                rect.setAttribute('stroke', '#FFFFFF');
+            });
+
+            const qtyInput = document.getElementById('pos_quantity');
+            if (qtyInput) qtyInput.value = 1;
+
+            document.querySelectorAll('.pos-quick-btn[id^="btnQuickQty"]').forEach(b => b.classList.remove('active'));
+            const btn1 = document.getElementById('btnQuickQty1');
+            if (btn1) btn1.classList.add('active');
+
+            updatePosSelectedSeatsTags();
+            calculatePosTotal();
+        }
+
+        function updatePosSelectedSeatsTags() {
+            const tagsBox = document.getElementById('posSelectedSeatsTagsBox');
+            const clearBtn = document.getElementById('btnPosClearSeats');
+            if (!tagsBox) return;
+
+            if (posSelectedSeats.length === 0) {
+                tagsBox.innerHTML = '<span style="font-size: 0.7rem; color: #94A3B8;">👈 Haz clic en una o más butacas en el plano</span>';
+                if (clearBtn) clearBtn.style.display = 'none';
+            } else {
+                tagsBox.innerHTML = posSelectedSeats.map(code => 
+                    `<span class="pos-seat-chip">🪑 ${code} <button type="button" onclick="removePosSeat('${code}')" style="background:none; border:none; color:#FF5500; font-weight:900; cursor:pointer; padding:0 2px; line-height:1;" title="Quitar butaca">✕</button></span>`
+                ).join('');
+                if (clearBtn) clearBtn.style.display = 'inline-block';
+            }
+        }
 
         function selectZoneCard(name, price, available, el) {
             if (available <= 0) return;
@@ -1984,12 +2442,25 @@
             const zoneInput = document.getElementById('pos_zone_select');
             if (zoneInput) zoneInput.value = name;
 
-            // Restringir el límite de cantidad si el stock es menor
-            const qtyInput = document.getElementById('pos_quantity');
-            if (qtyInput) {
-                qtyInput.max = selectedZoneAvailable;
-                if (parseInt(qtyInput.value, 10) > selectedZoneAvailable) {
-                    qtyInput.value = Math.max(1, selectedZoneAvailable);
+            posSelectedSeats = [];
+            const hasSeats = renderPosSeatMap(name);
+
+            if (hasSeats) {
+                // Auto-seleccionar primer asiento libre por defecto
+                const firstAvailRect = document.querySelector('.pos-seat-rect:not(.occupied)');
+                if (firstAvailRect) {
+                    const firstCode = firstAvailRect.getAttribute('data-seat-id');
+                    if (firstCode) {
+                        togglePosSeat(firstCode, name, false);
+                    }
+                }
+            } else {
+                const qtyInput = document.getElementById('pos_quantity');
+                if (qtyInput) {
+                    qtyInput.max = selectedZoneAvailable;
+                    if (parseInt(qtyInput.value, 10) > selectedZoneAvailable) {
+                        qtyInput.value = Math.max(1, selectedZoneAvailable);
+                    }
                 }
             }
 
@@ -2204,6 +2675,28 @@
         }
 
         function setPosQuantity(qty) {
+            const targetZone = getActivePosZone();
+            const hasSeats = targetZone && Array.isArray(targetZone.seats) && targetZone.seats.length > 0;
+
+            if (hasSeats) {
+                const targetQty = Math.min(qty, selectedZoneAvailable > 0 ? selectedZoneAvailable : 50);
+                if (targetQty > posSelectedSeats.length) {
+                    while (posSelectedSeats.length < targetQty) {
+                        const nextRect = document.querySelector('.pos-seat-rect:not(.occupied):not(.selected)');
+                        if (!nextRect) break;
+                        const c = nextRect.getAttribute('data-seat-id');
+                        if (c) togglePosSeat(c, selectedZoneName, false);
+                        else break;
+                    }
+                } else if (targetQty < posSelectedSeats.length) {
+                    while (posSelectedSeats.length > targetQty && posSelectedSeats.length > 1) {
+                        const lastCode = posSelectedSeats[posSelectedSeats.length - 1];
+                        togglePosSeat(lastCode, selectedZoneName, false);
+                    }
+                }
+                return;
+            }
+
             const input = document.getElementById('pos_quantity');
             if (input) {
                 const maxStock = selectedZoneAvailable > 0 ? selectedZoneAvailable : 50;
@@ -2219,6 +2712,23 @@
         }
 
         function stepPosQuantity(step) {
+            const targetZone = getActivePosZone();
+            const hasSeats = targetZone && Array.isArray(targetZone.seats) && targetZone.seats.length > 0;
+
+            if (hasSeats) {
+                if (step > 0) {
+                    const nextRect = document.querySelector('.pos-seat-rect:not(.occupied):not(.selected)');
+                    if (nextRect) {
+                        const c = nextRect.getAttribute('data-seat-id');
+                        if (c) togglePosSeat(c, selectedZoneName, false);
+                    }
+                } else if (step < 0 && posSelectedSeats.length > 1) {
+                    const lastCode = posSelectedSeats[posSelectedSeats.length - 1];
+                    togglePosSeat(lastCode, selectedZoneName, false);
+                }
+                return;
+            }
+
             const input = document.getElementById('pos_quantity');
             if (input) {
                 let current = parseInt(input.value, 10) || 1;
@@ -3087,28 +3597,49 @@
         function formatShortSeatCodeJs(seat) {
             if (!seat) return '';
             if (typeof seat === 'object') {
-                if (seat.row && (seat.number || seat.col)) {
-                    return `${String(seat.row).toUpperCase()}${seat.number || seat.col}`;
+                const r = seat.row ? String(seat.row).toUpperCase().trim() : '';
+                const c = (seat.col !== undefined && seat.col !== null) ? String(seat.col).trim() : '';
+                const num = (seat.number !== undefined && seat.number !== null) ? String(seat.number).trim() : '';
+
+                // Si col es numérico (ej: row: "A", col: "3")
+                if (r && c && /^\d+$/.test(c)) {
+                    return r + c;
                 }
-                seat = seat.label || seat.number || seat.code || '';
+
+                // Si number es como "A-3", "A3", "A 3" o solo dígitos
+                if (r && num) {
+                    const numMatch = num.match(new RegExp('^' + r + '[\\s\\-_]*(\\d+)$', 'i'));
+                    if (numMatch) {
+                        return r + numMatch[1];
+                    }
+                    if (/^\d+$/.test(num)) {
+                        return r + num;
+                    }
+                }
+
+                seat = seat.label || seat.display_name || seat.number || (r && c ? r + c : '') || seat.code || '';
             }
             seat = String(seat).trim();
             if (!seat) return '';
 
+            // Si viene duplicado como "AA-3", "AA3", "AA_3"
+            let m = seat.match(/^([A-Za-z])\1[\s\-_]*([0-9]+)$/);
+            if (m) return m[1].toUpperCase() + m[2];
+
             // "Fila A - Asiento 1" o "Fila A - Columna 1"
-            let m = seat.match(/Fila\s*([A-Za-z0-9]+)\s*-\s*(?:Asiento|Columna)\s*([0-9]+)/i);
+            m = seat.match(/Fila\s*([A-Za-z0-9]+)\s*-\s*(?:Asiento|Columna)\s*([0-9]+)/i);
             if (m) return `${m[1].toUpperCase()}${m[2]}`;
 
             // "Fila A Asiento 1"
             m = seat.match(/Fila\s*([A-Za-z0-9]+)\s*(?:Asiento|Columna)\s*([0-9]+)/i);
             if (m) return `${m[1].toUpperCase()}${m[2]}`;
 
-            // "A-1" o "A 1"
-            m = seat.match(/^([A-Za-z]+)[-\s]+([0-9]+)$/);
+            // "A-1" o "A 1" o "A_1"
+            m = seat.match(/^([A-Za-z]+)[-\s_]+([0-9]+)$/);
             if (m) return `${m[1].toUpperCase()}${m[2]}`;
 
-            // Código directo tipo "A1"
-            m = seat.match(/([A-Za-z]+[0-9]+)$/);
+            // Código directo tipo "A1" o "B10"
+            m = seat.match(/^([A-Za-z]+[0-9]+)$/);
             if (m) return m[1].toUpperCase();
 
             return seat;
@@ -3290,7 +3821,7 @@
                 if (typeof numSeq === 'string') {
                     numSeq = parseInt(numSeq.replace(/[^0-9]/g, ''), 10) || (i + 1);
                 }
-                const ticketNumStr = 'N° ' + String(numSeq).padStart(5, '0');
+                const ticketNumStr = (tItem.ticket_code && tItem.ticket_code.startsWith('N°')) ? tItem.ticket_code : ('N° ' + String(numSeq).padStart(5, '0'));
 
                 let hashVal = tItem.validation_hash || sale.validation_hash;
                 if (!hashVal) {
@@ -3589,6 +4120,22 @@
             const paymentMethod = document.getElementById('pos_payment_method').value;
             const amountPaid = parseFloat(document.getElementById('pos_amount_paid').value) || currentTotalToPay;
 
+            const targetZone = getActivePosZone(zoneName);
+            const hasSeats = targetZone && Array.isArray(targetZone.seats) && targetZone.seats.length > 0;
+            if (hasSeats && posSelectedSeats.length === 0) {
+                Swal.fire({
+                    title: 'Selecciona tus Butacas',
+                    text: 'Por favor elige al menos una butaca numerada en el plano para continuar.',
+                    icon: 'warning',
+                    confirmButtonColor: '#FF5500',
+                    background: '#14141E',
+                    color: '#FFFFFF'
+                });
+                return;
+            }
+
+            const finalQuantity = hasSeats ? posSelectedSeats.length : quantity;
+
             if (paymentMethod === 'Efectivo' && amountPaid < currentTotalToPay) {
                 Swal.fire({
                     title: 'Monto Insuficiente',
@@ -3615,39 +4162,16 @@
                 btnSubmit.textContent = '⏳ Procesando venta y emitiendo boletos...';
             }
 
-            // Pre-compilar PDF oficial de Canva Studio si hay correo para adjuntarlo al envío
-            let ticketPdfBase64 = null;
-            if (buyerEmail && buyerEmail.includes('@')) {
-                try {
-                    const simulatedSale = {
-                        receipt_number: 'REC-PENDING',
-                        buyer_name: buyerName,
-                        buyer_dni: buyerDni,
-                        buyer_email: buyerEmail,
-                        zone_name: zoneName,
-                        unit_price: selectedZonePrice,
-                        quantity: quantity,
-                        total_amount: currentTotalToPay,
-                        payment_method: paymentMethod,
-                        tickets_data: []
-                    };
-                    const { pdf } = await generatePosTicketPdfDoc(simulatedSale);
-                    if (pdf) ticketPdfBase64 = pdf.output('datauristring');
-                } catch (pdfErr) {
-                    console.warn('Compilación previa de PDF omitida:', pdfErr);
-                }
-            }
-
             const payload = {
                 zone_name: zoneName,
-                quantity: quantity,
+                quantity: finalQuantity,
+                selected_seats: (hasSeats && posSelectedSeats.length > 0) ? posSelectedSeats : null,
                 buyer_name: buyerName,
                 buyer_dni: buyerDni,
                 buyer_phone: buyerPhone,
                 buyer_email: buyerEmail || null,
                 payment_method: paymentMethod,
                 amount_paid: amountPaid,
-                ticket_pdf_base64: ticketPdfBase64
             };
 
             fetch("{{ route('web.box_office.store_sale', $event->id) }}", {
@@ -3667,6 +4191,10 @@
                 }
 
                 if (data.success) {
+                    if (data.event && data.event.zones) {
+                        window.posRawZones = data.event.zones;
+                    }
+
                     // 1. Guardar en mapa reactivo de ventas
                     window.posSalesMap = window.posSalesMap || {};
                     window.posSalesMap[data.sale.id] = data.sale;
@@ -3754,7 +4282,7 @@
                         tableBody.prepend(newRow);
                     }
 
-                    // 3. Actualizar KPIs en vivo
+                    // 3. Actualizar KPIs y disponibilidad en vivo
                     if (data.metrics) {
                         const totalRevEl = document.getElementById('kpiTotalRevenue');
                         const salesCountEl = document.getElementById('kpiSalesCount');
@@ -3872,9 +4400,36 @@
                         console.warn('[POS Thermal Print Error]', errPrint);
                     }
 
-                    // 6. Modal Interactivo de Confirmación (Recibo + Entrada PDF)
-                    const emailSentMsg = data.email_sent 
-                        ? `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #10B981; font-weight: 700; background: rgba(16,185,129,0.12); padding: 0.4rem 0.75rem; border-radius: 10px; border: 1px solid rgba(16,185,129,0.3);">✉️ Boleto oficial enviado a <strong>${escapePosHtml(data.recipient)}</strong></div>` 
+                    // 6. Enviar automáticamente entrada oficial en PDF idéntica a la plancha
+                    const targetEmail = (buyerEmail && buyerEmail.includes('@')) ? buyerEmail : ((data.recipient && data.recipient.includes('@')) ? data.recipient : null);
+                    if (targetEmail) {
+                        (async () => {
+                            try {
+                                const { pdf } = await generatePosTicketPdfDoc(data.sale);
+                                const realPdfBase64 = pdf ? pdf.output('datauristring') : '';
+                                if (realPdfBase64) {
+                                    await fetch(`/admin/taquilla/venta/${data.sale.id}/enviar-correo`, {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-CSRF-TOKEN': csrfToken
+                                        },
+                                        body: JSON.stringify({
+                                            email: targetEmail,
+                                            ticket_pdf_base64: realPdfBase64
+                                        })
+                                    });
+                                    console.log('[POS] Boleto oficial idéntico a plancha enviado a:', targetEmail);
+                                }
+                            } catch (autoEmailErr) {
+                                console.warn('[POS Auto-Email Error]', autoEmailErr);
+                            }
+                        })();
+                    }
+
+                    // 7. Modal Interactivo de Confirmación (Recibo + Entrada PDF)
+                    const emailSentMsg = targetEmail 
+                        ? `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #10B981; font-weight: 700; background: rgba(16,185,129,0.12); padding: 0.4rem 0.75rem; border-radius: 10px; border: 1px solid rgba(16,185,129,0.3);">✉️ Boleto oficial idéntico enviado a <strong>${escapePosHtml(targetEmail)}</strong></div>` 
                         : '';
 
                     Swal.fire({
@@ -3967,28 +4522,6 @@
                 btnSubmit.textContent = '⏳ Emitiendo cortesías y generando QR...';
             }
 
-            let ticketPdfBase64 = null;
-            if (buyerEmail && buyerEmail.includes('@')) {
-                try {
-                    const simulatedSale = {
-                        receipt_number: 'REC-PENDING',
-                        buyer_name: buyerName,
-                        buyer_dni: buyerDni,
-                        buyer_email: buyerEmail,
-                        zone_name: zoneName,
-                        unit_price: 0,
-                        quantity: quantity,
-                        total_amount: 0,
-                        payment_method: 'Cortesía',
-                        tickets_data: []
-                    };
-                    const { pdf } = await generatePosTicketPdfDoc(simulatedSale);
-                    if (pdf) ticketPdfBase64 = pdf.output('datauristring');
-                } catch (pdfErr) {
-                    console.warn('Compilación previa de PDF omitida:', pdfErr);
-                }
-            }
-
             const payload = {
                 zone_name: zoneName,
                 quantity: quantity,
@@ -3997,8 +4530,7 @@
                 buyer_email: buyerEmail || null,
                 buyer_phone: buyerPhone !== '-' ? `${buyerPhone} (${courtesyNote})` : courtesyNote,
                 payment_method: 'Cortesía',
-                amount_paid: 0.00,
-                ticket_pdf_base64: ticketPdfBase64
+                amount_paid: 0.00
             };
 
             fetch("{{ route('web.box_office.store_sale', $event->id) }}", {
@@ -4031,13 +4563,16 @@
                         const newRow = document.createElement('tr');
                         newRow.className = 'sale-row-item';
                         newRow.setAttribute('data-sale-id', data.sale.id);
-
-                        const paymentBadge = `<span class="dash-badge-custom badge-green" style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.35); font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;"><span>🎁</span> <span>Cortesía Adm</span></span>`;
+                        
+                        const isWeb = (data.sale.seller_name && data.sale.seller_name.toLowerCase().includes('web'));
+                        const courtesyBadge = isWeb
+                            ? `<span class="dash-badge-custom badge-cyan" style="font-size: 0.75rem; background: rgba(0, 240, 255, 0.15); color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.35); font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;"><span>🌐</span> <span>Cortesía Web</span></span>`
+                            : `<span class="dash-badge-custom badge-green" style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.35); font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;"><span>🎁</span> <span>Cortesía Adm</span></span>`;
 
                         newRow.innerHTML = `
                             <td>
                                 <div>
-                                    <span style="font-weight: 800; color: #10B981; font-family: monospace; font-size: 0.95rem; display: block;">
+                                    <span style="font-weight: 800; color: var(--color-primary-orange); font-family: monospace; font-size: 0.95rem; display: block;">
                                         ${data.receipt.receipt_number}
                                     </span>
                                     <small style="color: #94A3B8; font-size: 0.775rem; font-weight: 600;">
@@ -4063,15 +4598,15 @@
                             </td>
                             <td>
                                 <strong style="color: #10B981; font-size: 1rem; font-weight: 900;">
-                                    S/ 0.00
+                                    ${data.receipt.total_amount_formatted}
                                 </strong>
                             </td>
                             <td>
-                                ${paymentBadge}
+                                ${courtesyBadge}
                             </td>
                             <td style="text-align: right;">
                                 <div style="display: inline-flex; align-items: center; gap: 0.4rem; justify-content: flex-end;">
-                                    <button type="button" class="btn btn-primary btn-sm" onclick="reprintReceipt(${data.sale.id})" title="Reimprimir Recibo Térmico" style="background: linear-gradient(135deg, #FF5500, #FF7733); border: 1px solid rgba(255,85,0,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(255, 85, 0, 0.3); cursor: pointer;">
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="reprintReceipt(${data.sale.id})" title="Reimprimir Recibo Térmico" style="background: linear-gradient(135deg, #10B981, #059669); border: 1px solid rgba(16,185,129,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); cursor: pointer;">
                                         <span>🧾</span>
                                         <span>Recibo</span>
                                     </button>
@@ -4193,9 +4728,36 @@
                         console.warn('[POS Thermal Print Error]', errPrint);
                     }
 
-                    // 6. Modal flotante de confirmación y opciones rápidas
-                    const courtesyEmailSentMsg = data.email_sent 
-                        ? `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #10B981; font-weight: 700; background: rgba(16,185,129,0.12); padding: 0.4rem 0.75rem; border-radius: 10px; border: 1px solid rgba(16,185,129,0.3);">✉️ Pase oficial enviado a <strong>${escapePosHtml(data.recipient)}</strong></div>` 
+                    // 6. Auto-enviar entrada oficial idéntica a la plancha por correo
+                    const targetCourtesyEmail = (buyerEmail && buyerEmail.includes('@')) ? buyerEmail : ((data.recipient && data.recipient.includes('@')) ? data.recipient : null);
+                    if (targetCourtesyEmail) {
+                        (async () => {
+                            try {
+                                const { pdf } = await generatePosTicketPdfDoc(data.sale);
+                                const realPdfBase64 = pdf ? pdf.output('datauristring') : '';
+                                if (realPdfBase64) {
+                                    await fetch(`/admin/taquilla/venta/${data.sale.id}/enviar-correo`, {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-CSRF-TOKEN': csrfToken
+                                        },
+                                        body: JSON.stringify({
+                                            email: targetCourtesyEmail,
+                                            ticket_pdf_base64: realPdfBase64
+                                        })
+                                    });
+                                    console.log('[POS] Pase oficial de cortesía idéntico a plancha enviado a:', targetCourtesyEmail);
+                                }
+                            } catch (autoCourtesyEmailErr) {
+                                console.warn('[POS Courtesy Auto-Email Error]', autoCourtesyEmailErr);
+                            }
+                        })();
+                    }
+
+                    // 7. Modal flotante de confirmación y opciones rápidas
+                    const courtesyEmailSentMsg = targetCourtesyEmail 
+                        ? `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #10B981; font-weight: 700; background: rgba(16,185,129,0.12); padding: 0.4rem 0.75rem; border-radius: 10px; border: 1px solid rgba(16,185,129,0.3);">✉️ Pase oficial idéntico enviado a <strong>${escapePosHtml(targetCourtesyEmail)}</strong></div>` 
                         : '';
 
                     Swal.fire({

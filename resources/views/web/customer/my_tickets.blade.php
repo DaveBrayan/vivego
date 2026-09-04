@@ -261,26 +261,94 @@
                                 </span>
                                 
                                 <div style="display: flex; flex-direction: column; gap: 0.45rem;">
-                                    @if(count($items) > 0)
-                                        @foreach($items as $t)
-                                            @php
-                                                $tDisplayName = $cleanZoneName($t['zone_name'] ?? ($t['name'] ?? ''), $sale->zone_name);
-                                                $tSeats = !empty($t['seats']) ? (is_array($t['seats']) ? $t['seats'] : json_decode($t['seats'], true)) : [];
-                                                if (empty($tSeats) && $sale->eventTickets && $sale->eventTickets->count() > 0) {
-                                                    foreach ($sale->eventTickets as $et) {
-                                                        if (str_contains($et->zone_name, $tDisplayName) && preg_match('/\(([^)]+)\)/', $et->zone_name, $sm)) {
-                                                            $tSeats[] = $sm[1];
+                                    @php
+                                        $groupedTickets = [];
+                                        foreach ($items as $t) {
+                                            if (!is_array($t)) continue;
+                                            if (empty($t['zone']) && empty($t['zone_name']) && empty($t['name']) && empty($t['ticket_code']) && !isset($t['price'])) continue;
+
+                                            $zoneName = $cleanZoneName($t['zone'] ?? ($t['zone_name'] ?? ($t['name'] ?? '')), $sale->zone_name);
+                                            if (empty($zoneName)) {
+                                                $zoneName = !empty($sale->zone_name) ? $cleanZoneName($sale->zone_name) : 'Entrada';
+                                            }
+                                            $groupKey = mb_strtolower($zoneName);
+
+                                            $seats = [];
+                                            if (!empty($t['seat'])) {
+                                                $seats[] = $t['seat'];
+                                            } elseif (!empty($t['seat_label'])) {
+                                                $seats[] = $t['seat_label'];
+                                            } elseif (!empty($t['seats'])) {
+                                                $seats = is_array($t['seats']) ? $t['seats'] : (json_decode($t['seats'], true) ?: [$t['seats']]);
+                                            } elseif (preg_match('/\(([^)]+)\)/', $t['zone'] ?? ($t['zone_name'] ?? ''), $zm)) {
+                                                $seats[] = $zm[1];
+                                            }
+
+                                            $qty = (int)($t['quantity'] ?? 1);
+                                            if ($qty <= 0) $qty = 1;
+
+                                            $subtotal = isset($t['subtotal']) ? (float)$t['subtotal'] : ((float)($t['price'] ?? 0) * $qty);
+                                            $isPresale = function_exists('isSalePresale') && (isSalePresale($t) || isSalePresale($sale));
+
+                                            if (!isset($groupedTickets[$groupKey])) {
+                                                $groupedTickets[$groupKey] = [
+                                                    'name' => $zoneName,
+                                                    'quantity' => 0,
+                                                    'subtotal' => 0.0,
+                                                    'seats' => [],
+                                                    'is_presale' => $isPresale,
+                                                ];
+                                            }
+
+                                            $groupedTickets[$groupKey]['quantity'] += $qty;
+                                            $groupedTickets[$groupKey]['subtotal'] += $subtotal;
+                                            if ($isPresale) {
+                                                $groupedTickets[$groupKey]['is_presale'] = true;
+                                            }
+                                            foreach ((array)$seats as $s) {
+                                                if (!empty($s)) {
+                                                    $groupedTickets[$groupKey]['seats'][] = $s;
+                                                }
+                                            }
+                                        }
+
+                                        if (empty($groupedTickets)) {
+                                            $zoneName = $cleanZoneName($sale->zone_name);
+                                            $groupKey = mb_strtolower($zoneName);
+                                            $groupedTickets[$groupKey] = [
+                                                'name' => $zoneName,
+                                                'quantity' => (int)($sale->quantity ?? 1),
+                                                'subtotal' => (float)$sale->total_amount,
+                                                'seats' => [],
+                                                'is_presale' => function_exists('isSalePresale') && isSalePresale($sale),
+                                            ];
+                                        }
+
+                                        foreach ($groupedTickets as $gKey => &$group) {
+                                            if (empty($group['seats']) && $sale->eventTickets && $sale->eventTickets->count() > 0) {
+                                                foreach ($sale->eventTickets as $et) {
+                                                    $etZoneClean = $cleanZoneName($et->zone_name);
+                                                    if (mb_strtolower($etZoneClean) === $gKey || str_contains(mb_strtolower($et->zone_name), $gKey)) {
+                                                        if (preg_match('/\(([^)]+)\)/', $et->zone_name, $sm)) {
+                                                            $group['seats'][] = $sm[1];
+                                                        } elseif (!empty($et->seat)) {
+                                                            $group['seats'][] = $et->seat;
                                                         }
                                                     }
                                                 }
-                                                $formattedSeats = array_filter(array_map('formatShortSeatCode', (array)$tSeats));
-                                            @endphp
+                                            }
+                                            $group['formatted_seats'] = array_values(array_unique(array_filter(array_map('formatShortSeatCode', (array)$group['seats']))));
+                                        }
+                                        unset($group);
+                                    @endphp
+                                    @if(count($groupedTickets) > 0)
+                                        @foreach($groupedTickets as $t)
                                             <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 0.5rem 0.75rem;">
                                                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem;">
                                                     <span style="font-weight: 800; color: #0F172A;">
-                                                        <span style="background: rgba(255,85,0,0.12); color: #FF5500; padding: 2px 6px; border-radius: 6px; font-weight: 900;">{{ $t['quantity'] ?? 1 }}x</span>
-                                                        {{ $tDisplayName }}
-                                                        @if(function_exists('isSalePresale') && (isSalePresale($t) || isSalePresale($sale)))
+                                                        <span style="background: rgba(255,85,0,0.12); color: #FF5500; padding: 2px 6px; border-radius: 6px; font-weight: 900;">{{ $t['quantity'] }}x</span>
+                                                        {{ $t['name'] }}
+                                                        @if(!empty($t['is_presale']))
                                                             <span style="background: rgba(255,85,0,0.12); color: #FF5500; border: 1px solid rgba(255,85,0,0.3); font-size: 0.65rem; font-weight: 900; padding: 1px 5px; border-radius: 4px; margin-left: 0.3rem;">🔥 PREVENTA</span>
                                                         @endif
                                                     </span>
@@ -288,16 +356,16 @@
                                                         @if($isCourtesy)
                                                             Gratis
                                                         @elseif($sale->is_upgrade)
-                                                            <span style="font-size: 0.78rem; color: #6366F1; font-weight: 800;">+S/ {{ number_format(($t['subtotal'] ?? (($t['price'] ?? 0) * ($t['quantity'] ?? 1))), 2) }}</span>
+                                                            <span style="font-size: 0.78rem; color: #6366F1; font-weight: 800;">+S/ {{ number_format($t['subtotal'], 2) }}</span>
                                                         @else
-                                                            S/ {{ number_format(($t['subtotal'] ?? (($t['price'] ?? 0) * ($t['quantity'] ?? 1))), 2) }}
+                                                            S/ {{ number_format($t['subtotal'], 2) }}
                                                         @endif
                                                     </span>
                                                 </div>
-                                                @if(!empty($formattedSeats))
+                                                @if(!empty($t['formatted_seats']))
                                                     <div style="display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed #F1F5F9;">
                                                         <span style="font-size: 0.72rem; font-weight: 800; color: #059669;">🪑 Butacas:</span>
-                                                        @foreach($formattedSeats as $fs)
+                                                        @foreach($t['formatted_seats'] as $fs)
                                                             <span style="background: rgba(16, 185, 129, 0.12); color: #047857; border: 1.5px solid rgba(16, 185, 129, 0.3); font-size: 0.72rem; font-weight: 900; padding: 1px 6px; border-radius: 5px;">
                                                                 {{ $fs }}
                                                             </span>

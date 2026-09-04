@@ -145,7 +145,8 @@
         $logoBase64 = $resolveBase64('images/logo.png');
 
         $tData = is_array($sale->tickets_data) ? $sale->tickets_data : json_decode($sale->tickets_data, true);
-        $items = $tData['items'] ?? (is_array($tData) ? $tData : []);
+        $rawItems = $tData['items'] ?? (is_array($tData) ? $tData : []);
+        $items = array_values(array_filter($rawItems, fn($x) => is_array($x) && (!empty($x['zone']) || !empty($x['zone_name']) || !empty($x['name']) || !empty($x['ticket_code']) || isset($x['price']))));
         $totalTickets = count($items) > 0 ? count($items) : max(1, $sale->quantity);
 
         $eventTitle = strtoupper($event?->title ?? 'CONCIERTO EN VIVO');
@@ -158,7 +159,7 @@
     @for($i = 0; $i < $totalTickets; $i++)
         @php
             $ticketItem = $items[$i] ?? null;
-            $rawZone = $ticketItem['zone_name'] ?? ($ticketItem['name'] ?? $sale->zone_name);
+            $rawZone = $ticketItem['zone'] ?? ($ticketItem['zone_name'] ?? ($ticketItem['name'] ?? $sale->zone_name));
             if (preg_match('/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?(.+)/iu', $rawZone, $m)) {
                 $zoneName = trim($m[1]);
             } else {
@@ -167,7 +168,11 @@
 
             // Detectar y formatear butaca asignada para este ticket individual
             $seatAssigned = null;
-            if ($ticketItem && !empty($ticketItem['seats'])) {
+            if ($ticketItem && !empty($ticketItem['seat'])) {
+                $seatAssigned = $ticketItem['seat'];
+            } elseif ($ticketItem && !empty($ticketItem['seat_label'])) {
+                $seatAssigned = $ticketItem['seat_label'];
+            } elseif ($ticketItem && !empty($ticketItem['seats'])) {
                 $itemSeats = is_array($ticketItem['seats']) ? $ticketItem['seats'] : (json_decode($ticketItem['seats'], true) ?: []);
                 $seatAssigned = $itemSeats[$i] ?? null;
             }
@@ -183,11 +188,16 @@
             }
 
             $ticketPrice = $ticketItem['regular_price'] ?? ($ticketItem['price'] ?? $sale->unit_price);
-            $numSeq = $sale->id ? ($sale->id + $i) : ($i + 1);
-            $ticketNumStr = 'N° ' . str_pad($numSeq, 5, '0', STR_PAD_LEFT);
-            $hashVal = 'VG' . strtoupper(substr(md5($sale->receipt_number . $i . $sale->id), 0, 8));
-
-            $qrPayload = "VIVEGO|{$sale->receipt_number}|EVT-{$sale->event_id}|DNI-{$sale->buyer_dni}|TICK-" . ($i + 1);
+            
+            $realTicket = null;
+            if ($sale->eventTickets && isset($sale->eventTickets[$i])) {
+                $realTicket = $sale->eventTickets[$i];
+            }
+            
+            $numSeq = $realTicket?->ticket_number ?? ($ticketItem['ticket_number'] ?? ($sale->id ? ($sale->id + $i) : ($i + 1)));
+            $ticketNumStr = $realTicket?->ticket_code ?? ($ticketItem['ticket_code'] ?? ('N° ' . str_pad($numSeq, 5, '0', STR_PAD_LEFT)));
+            $hashVal = $realTicket?->validation_hash ?? ($ticketItem['validation_hash'] ?? ('VG' . strtoupper(substr(md5($sale->receipt_number . $i . $sale->id), 0, 8))));
+            $qrPayload = $realTicket?->qr_payload ?? ($ticketItem['qr_payload'] ?? "VIVEGO|{$sale->receipt_number}|EVT-{$sale->event_id}|DNI-{$sale->buyer_dni}|TICK-" . ($i + 1));
             $qrApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=0&data=" . urlencode($qrPayload);
             
             $qrImageContent = @file_get_contents($qrApiUrl);

@@ -564,28 +564,49 @@
     function formatShortSeatCodeJs(seat) {
         if (!seat) return '';
         if (typeof seat === 'object') {
-            if (seat.row && (seat.number || seat.col)) {
-                return `${String(seat.row).toUpperCase()}${seat.number || seat.col}`;
+            const r = seat.row ? String(seat.row).toUpperCase().trim() : '';
+            const c = (seat.col !== undefined && seat.col !== null) ? String(seat.col).trim() : '';
+            const num = (seat.number !== undefined && seat.number !== null) ? String(seat.number).trim() : '';
+
+            // Si col es numérico (ej: row: "A", col: "3")
+            if (r && c && /^\d+$/.test(c)) {
+                return r + c;
             }
-            seat = seat.label || seat.number || seat.code || '';
+
+            // Si number es como "A-3", "A3", "A 3" o solo dígitos
+            if (r && num) {
+                const numMatch = num.match(new RegExp('^' + r + '[\\s\\-_]*(\\d+)$', 'i'));
+                if (numMatch) {
+                    return r + numMatch[1];
+                }
+                if (/^\d+$/.test(num)) {
+                    return r + num;
+                }
+            }
+
+            seat = seat.label || seat.display_name || seat.number || (r && c ? r + c : '') || seat.code || '';
         }
         seat = String(seat).trim();
         if (!seat) return '';
 
+        // Si viene duplicado como "AA-3", "AA3", "AA_3"
+        let m = seat.match(/^([A-Za-z])\1[\s\-_]*([0-9]+)$/);
+        if (m) return m[1].toUpperCase() + m[2];
+
         // "Fila A - Asiento 1" o "Fila A - Columna 1"
-        let m = seat.match(/Fila\s*([A-Za-z0-9]+)\s*-\s*(?:Asiento|Columna)\s*([0-9]+)/i);
+        m = seat.match(/Fila\s*([A-Za-z0-9]+)\s*-\s*(?:Asiento|Columna)\s*([0-9]+)/i);
         if (m) return `${m[1].toUpperCase()}${m[2]}`;
 
         // "Fila A Asiento 1"
         m = seat.match(/Fila\s*([A-Za-z0-9]+)\s*(?:Asiento|Columna)\s*([0-9]+)/i);
         if (m) return `${m[1].toUpperCase()}${m[2]}`;
 
-        // "A-1" o "A 1"
-        m = seat.match(/^([A-Za-z]+)[-\s]+([0-9]+)$/);
+        // "A-1" o "A 1" o "A_1"
+        m = seat.match(/^([A-Za-z]+)[-\s_]+([0-9]+)$/);
         if (m) return `${m[1].toUpperCase()}${m[2]}`;
 
-        // Código directo tipo "A1"
-        m = seat.match(/([A-Za-z]+[0-9]+)$/);
+        // Código directo tipo "A1" o "B10"
+        m = seat.match(/^([A-Za-z]+[0-9]+)$/);
         if (m) return m[1].toUpperCase();
 
         return seat;
