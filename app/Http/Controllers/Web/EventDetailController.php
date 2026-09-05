@@ -114,9 +114,9 @@ class EventDetailController extends Controller
                         $soldCount = 0;
                     }
 
-                    // La capacidad restante real corresponde a la capacidad disponible descontada de la zona
-                    $remainingCapacity = max(0, $capacityVal);
-                    $totalCapacityVal = $remainingCapacity + $soldCount;
+                    // La capacidad total de la zona es la configurada, y la disponible es descontando las ventas
+                    $totalCapacityVal = max(0, $capacityVal);
+                    $remainingCapacity = max(0, $totalCapacityVal - $soldCount);
                     $isAvailable = $remainingCapacity > 0;
 
                     // Datos de Preventa

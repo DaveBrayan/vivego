@@ -111,13 +111,7 @@
                     <span id="plancha_zones_badge_count" style="font-size: 0.7rem; color: #10B981; font-weight: 800; white-space: nowrap;">Calculando...</span>
                 </div>
 
-                <!-- Barra de filtrado rápido de zona -->
-                <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 0.4rem 0.65rem;">
-                    <span style="font-size: 0.72rem; color: #94A3B8; font-weight: 700;">Filtrar zona:</span>
-                    <select id="plancha_quick_zone_filter" onchange="onPlanchaZoneFilterChange(this.value)" style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(59,130,246,0.5); color: #FFFFFF; border-radius: 6px; padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 800; outline: none; cursor: pointer;">
-                        <option value="ALL">🌟 Todas las Zonas</option>
-                    </select>
-                </div>
+
                 
                 <!-- Contenedor lista de zonas con scroll vertical -->
                 <div id="plancha_zones_list_container" style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 0.5rem; max-height: 440px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.45rem; flex: 1;">
@@ -189,44 +183,18 @@
                     </div>
                 </div>
 
-                <!-- SELECTOR DE ALCANCE DEL PDF (NUEVOS VS TODO EL AFORO) -->
-                <div id="plancha_pdf_scope_container" style="background: rgba(15, 23, 42, 0.75); border: 1.5px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 0.5rem 0.75rem; display: flex; flex-direction: column; gap: 0.3rem;">
-                    <div style="font-size: 0.68rem; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between;">
-                        <span>¿Qué Imprimir en el PDF?</span>
-                        <span id="plancha_scope_active_label" style="color: #F59E0B; font-weight: 800;">⚡ Solo Nuevos</span>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem;">
-                        <button type="button" id="btn_scope_new" onclick="setPlanchaPdfScope('NEW')" style="background: rgba(245,158,11,0.25); border: 1.5px solid #F59E0B; color: #FDE68A; padding: 0.38rem 0.45rem; border-radius: 8px; font-size: 0.72rem; font-weight: 800; cursor: pointer; transition: all 0.2s ease;">
-                            ⚡ Solo Nuevos
-                        </button>
-                        <button type="button" id="btn_scope_all" onclick="setPlanchaPdfScope('ALL')" style="background: rgba(255,255,255,0.04); border: 1.5px solid rgba(255,255,255,0.1); color: #94A3B8; padding: 0.38rem 0.45rem; border-radius: 8px; font-size: 0.72rem; font-weight: 800; cursor: pointer; transition: all 0.2s ease;">
-                            📦 Todo el Aforo
-                        </button>
-                    </div>
-                </div>
 
-                <!-- BOTONES DE ACCIÓN EN 2 PASOS INDEPENDIENTES -->
-                <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: auto;">
-                    <!-- FILA 1: GENERAR ENTRADAS + ELIMINAR TODO (Al lado de Generar Entradas) -->
-                    <div id="plancha_emit_row_container" style="display: grid; grid-template-columns: 1fr auto; gap: 0.45rem;">
-                        <button type="button" id="btnEmitTickets" onclick="executeEmitTickets()" style="background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; border: none; padding: 0.72rem 0.85rem; border-radius: 12px; font-size: 0.82rem; font-weight: 900; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem; transition: all 0.2s ease;">
-                            <span style="font-size: 1.05rem;">⚡</span>
-                            <span id="btnEmitTicketsText">1. GENERAR ENTRADAS</span>
-                        </button>
-                        <button type="button" id="btnDeleteAllTickets" onclick="executeDeleteAllTickets()" title="Eliminar todas las entradas generadas de este evento" style="background: rgba(239, 68, 68, 0.15); border: 1.5px solid rgba(239, 68, 68, 0.35); color: #F87171; padding: 0.72rem 0.75rem; border-radius: 12px; font-size: 0.78rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.35rem; transition: all 0.2s ease; white-space: nowrap;">
-                            <span style="font-size: 0.95rem;">🗑️</span>
-                            <span id="btnDeleteAllText">ELIMINAR TODO</span>
-                        </button>
-                    </div>
 
-                    <!-- FILA 2: GENERAR PDF (DISTRIBUIR EN HOJA) - Se habilita SIEMPRE Y CUANDO haya entradas generadas -->
-                    <button type="button" id="btnExecutePlanchaGeneration" onclick="startPlanchaPdfGeneration()" style="background: linear-gradient(135deg, #2563EB, #1D4ED8); color: #FFFFFF; border: none; padding: 0.75rem 1rem; border-radius: 12px; font-size: 0.86rem; font-weight: 900; box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.45rem; transition: all 0.2s ease;">
-                        <span style="font-size: 1.1rem;">🖨️</span>
-                        <span id="btnPlanchaText">2. GENERAR PDF (DISTRIBUIR EN HOJA)</span>
+                <!-- BOTONES DE ACCIÓN: GENERAR PLANCHA PDF Y CERRAR -->
+                <div style="display: flex; flex-direction: column; gap: 0.6rem; margin-top: auto;">
+                    <!-- BOTÓN PRINCIPAL: GENERAR PLANCHA PDF -->
+                    <button type="button" id="btnExecutePlanchaGeneration" onclick="startPlanchaPdfGeneration()" style="background: linear-gradient(135deg, #2563EB, #1D4ED8); color: #FFFFFF; border: none; padding: 0.85rem 1.1rem; border-radius: 14px; font-size: 0.92rem; font-weight: 900; box-shadow: 0 4px 18px rgba(37, 99, 235, 0.45); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s ease;">
+                        <span style="font-size: 1.2rem;">🖨️</span>
+                        <span id="btnPlanchaText">GENERAR PLANCHA PDF</span>
                     </button>
 
-                    <!-- FILA 3: CERRAR MODAL -->
-                    <button type="button" onclick="closePlanchaModal()" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #94A3B8; padding: 0.58rem 0.9rem; border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; text-align: center;">
+                    <!-- BOTÓN CERRAR -->
+                    <button type="button" onclick="closePlanchaModal()" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #94A3B8; padding: 0.65rem 0.9rem; border-radius: 12px; font-weight: 800; font-size: 0.82rem; cursor: pointer; text-align: center; transition: all 0.2s ease;">
                         Cerrar
                     </button>
                 </div>
@@ -244,46 +212,8 @@
     let planchaExistingTickets = [];
     let planchaZoneBreakdown = [];
     let planchaPrintMode = 'ONLY_NEW'; // 'ONLY_NEW', 'ALL', 'REPRINT'
-    let planchaPdfScope = 'NEW'; // 'NEW' (Solo Nuevos / Fila F) o 'ALL' (Todo el Aforo)
     let newlyEmittedTicketsCache = [];
     let planchaIsGenerating = false;
-
-    /**
-     * Alterna el alcance de boletos a incluir en el PDF (Nuevos/Fila F vs Todo el aforo)
-     */
-    function setPlanchaPdfScope(scope) {
-        planchaPdfScope = scope;
-        const btnNew = document.getElementById('btn_scope_new');
-        const btnAll = document.getElementById('btn_scope_all');
-        const lbl = document.getElementById('plancha_scope_active_label');
-
-        if (scope === 'NEW') {
-            if (btnNew) {
-                btnNew.style.background = 'rgba(245,158,11,0.25)';
-                btnNew.style.borderColor = '#F59E0B';
-                btnNew.style.color = '#FDE68A';
-            }
-            if (btnAll) {
-                btnAll.style.background = 'rgba(255,255,255,0.04)';
-                btnAll.style.borderColor = 'rgba(255,255,255,0.1)';
-                btnAll.style.color = '#94A3B8';
-            }
-            if (lbl) lbl.textContent = '⚡ Solo Nuevos (Fila F)';
-        } else {
-            if (btnAll) {
-                btnAll.style.background = 'rgba(37,99,235,0.25)';
-                btnAll.style.borderColor = '#3B82F6';
-                btnAll.style.color = '#93C5FD';
-            }
-            if (btnNew) {
-                btnNew.style.background = 'rgba(255,255,255,0.04)';
-                btnNew.style.borderColor = 'rgba(255,255,255,0.1)';
-                btnNew.style.color = '#94A3B8';
-            }
-            if (lbl) lbl.textContent = '📦 Todo el Aforo';
-        }
-        updatePlanchaSummary();
-    }
 
     /**
      * Abre el modal de planchas y consulta el estado de boletos y aforos del evento
@@ -292,7 +222,6 @@
         if (!eventData) return;
         activePlanchaEvent = eventData;
         planchaPrintMode = 'ONLY_NEW';
-        planchaPdfScope = 'NEW';
         newlyEmittedTicketsCache = [];
 
         // 1. Resetear barra de progreso y estado previo
@@ -342,8 +271,13 @@
             if (activePlanchaEvent.id) {
                 const res = await fetch(`/admin/eventos/${activePlanchaEvent.id}/boletos-registrados`);
                 const data = await res.json();
-                if (data && data.success && Array.isArray(data.tickets)) {
-                    planchaExistingTickets = data.tickets;
+                if (data && data.success) {
+                    if (Array.isArray(data.tickets)) {
+                        planchaExistingTickets = data.tickets;
+                    }
+                    if (data.courtesy_settings && (!activePlanchaEvent.courtesy_settings || Object.keys(activePlanchaEvent.courtesy_settings).length === 0)) {
+                        activePlanchaEvent.courtesy_settings = data.courtesy_settings;
+                    }
                 }
             }
         } catch (e) {
@@ -438,7 +372,8 @@
 
     function cleanZoneBase(name) {
         if (!name) return 'GENERAL';
-        return String(name).replace(/\s*\([^)]*\)$/, '').trim().toUpperCase();
+        let str = String(name).replace(/\s*\([^)]*\)$/, '').trim().toUpperCase();
+        return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     }
 
     function formatShortSeatCodeJs(seat) {
@@ -605,6 +540,8 @@
 
             planchaZoneBreakdown.push({
                 name: zName,
+                baseZoneName: zName,
+                isCourtesy: false,
                 price: zPrice,
                 capacity: zCap,
                 seats: zSeats,
@@ -615,19 +552,98 @@
             });
         });
 
+        // Detectar si las entradas de cortesía están activadas en el evento
+        let cSettings = evt.courtesy_settings || {};
+        if (typeof cSettings === 'string') {
+            try { cSettings = JSON.parse(cSettings); } catch(e) { cSettings = {}; }
+        }
+        const isCourtesyActive = cSettings && (cSettings.enabled === true || cSettings.enabled === '1' || cSettings.enabled === 1 || cSettings.enabled === 'true');
+
+        if (isCourtesyActive) {
+            const courtesyConfigMap = {};
+            if (Array.isArray(cSettings.zones)) {
+                cSettings.zones.forEach(cz => {
+                    if (cz && cz.name) {
+                        courtesyConfigMap[cleanZoneBase(cz.name)] = cz;
+                    }
+                });
+            }
+            const hasCustomCourtesyZones = Object.keys(courtesyConfigMap).length > 0;
+
+            zones.forEach(z => {
+                const zName = z.name || 'General';
+                const zKey = cleanZoneBase(zName);
+                const czConfig = courtesyConfigMap[zKey];
+                // Determinar stock de cortesía asignado para este sector (solo si se configuró un cupo mayor a 0)
+                let czCap = 0;
+                if (czConfig && czConfig.stock !== null && czConfig.stock !== undefined && czConfig.stock !== '' && !isNaN(parseInt(czConfig.stock))) {
+                    czCap = parseInt(czConfig.stock, 10);
+                }
+                if (czCap <= 0) return;
+
+                const courtesyZoneName = `CORTESÍA - ${zName}`;
+                const courtesyZKey = cleanZoneBase(courtesyZoneName);
+
+                // Butacas si la zona base es numerada
+                let zSeats = [];
+                if (Array.isArray(z.seats) && z.seats.length > 0) {
+                    zSeats = z.seats;
+                } else if (evt.raw_zones && Array.isArray(evt.raw_zones)) {
+                    const rz = evt.raw_zones.find(item => cleanZoneBase(item.name) === zKey);
+                    if (rz && Array.isArray(rz.seats)) zSeats = rz.seats;
+                }
+
+                const isNumbered = (zSeats && zSeats.length > 0) ||
+                    (z.capacity_type && /butaca|asiento|numerad/i.test(z.capacity_type)) ||
+                    /butaca|asiento|numerad/i.test(zName);
+
+                const existingCourtesyList = existingByZone[courtesyZKey] || [];
+                const alreadyGenCount = existingCourtesyList.length;
+                const pendingCount = Math.max(0, czCap - alreadyGenCount);
+
+                totalConfigCapacity += czCap;
+                totalAlreadyGenerated += alreadyGenCount;
+                totalPendingNew += pendingCount;
+
+                planchaZoneBreakdown.push({
+                    name: courtesyZoneName,
+                    baseZoneName: zName,
+                    isCourtesy: true,
+                    price: 0.00,
+                    capacity: czCap,
+                    seats: zSeats,
+                    isNumberedZone: isNumbered,
+                    alreadyGenerated: alreadyGenCount,
+                    pendingNew: pendingCount,
+                    existingTickets: existingCourtesyList
+                });
+            });
+        }
+
         // 1. Renderizar lista visual de zonas en Columna 1
         const zonesContainer = document.getElementById('plancha_zones_list_container');
         const badgeCount = document.getElementById('plancha_zones_badge_count');
         if (badgeCount) {
-            badgeCount.textContent = `${planchaZoneBreakdown.length} zonas (${totalConfigCapacity} aforo total)`;
+            const regularCount = planchaZoneBreakdown.filter(zb => !zb.isCourtesy).length;
+            const courtesyCount = planchaZoneBreakdown.filter(zb => zb.isCourtesy).length;
+            if (courtesyCount > 0) {
+                badgeCount.textContent = `${regularCount} reg. + ${courtesyCount} cortesías (${totalConfigCapacity} aforo total)`;
+            } else {
+                badgeCount.textContent = `${planchaZoneBreakdown.length} zonas (${totalConfigCapacity} aforo total)`;
+            }
         }
 
         // Poblar selector rápido de zonas
         const quickFilter = document.getElementById('plancha_quick_zone_filter');
         if (quickFilter) {
             let filterHtml = '<option value="ALL">🌟 Todas las Zonas</option>';
+            if (isCourtesyActive) {
+                filterHtml += '<option value="REGULAR_ONLY">🎟️ Solo Zonas Regulares</option>';
+                filterHtml += '<option value="COURTESY_ONLY">🎁 Solo Zonas de Cortesía</option>';
+            }
             planchaZoneBreakdown.forEach((zb, idx) => {
-                filterHtml += `<option value="${idx}">🎟️ ${zb.name}</option>`;
+                const icon = zb.isCourtesy ? '🎁' : '🎟️';
+                filterHtml += `<option value="${idx}">${icon} ${zb.name}</option>`;
             });
             quickFilter.innerHTML = filterHtml;
             quickFilter.value = 'ALL';
@@ -636,11 +652,12 @@
         if (zonesContainer) {
             let html = '';
             const sheetLabel = selectedPlanchaSizeKey === 'a4' ? '1 Hoja (6)' : '1 Pliego (24)';
+            let courtesyHeaderRendered = false;
 
             planchaZoneBreakdown.forEach((zb, idx) => {
                 let statusBadge = '';
                 if (zb.alreadyGenerated === 0) {
-                    statusBadge = `<span style="background: rgba(37,99,235,0.15); color: #93C5FD; border: 1px solid rgba(37,99,235,0.3); font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 6px;">0 emitidas</span>`;
+                    statusBadge = `<span style="background: ${zb.isCourtesy ? 'rgba(16,185,129,0.12)' : 'rgba(37,99,235,0.15)'}; color: ${zb.isCourtesy ? '#6EE7B7' : '#93C5FD'}; border: 1px solid ${zb.isCourtesy ? 'rgba(16,185,129,0.3)' : 'rgba(37,99,235,0.3)'}; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 6px;">0 emitidas</span>`;
                 } else {
                     statusBadge = `<span style="background: rgba(16,185,129,0.15); color: #34D399; border: 1px solid rgba(16,185,129,0.3); font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 6px;">✓ ${zb.alreadyGenerated} en BD</span>`;
                 }
@@ -666,17 +683,45 @@
                 }
 
                 const cardOpacity = defaultChecked ? '1' : '0.45';
-                const cardBorder = defaultChecked ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)';
+                const cardBorder = zb.isCourtesy
+                    ? (defaultChecked ? 'rgba(16, 185, 129, 0.4)' : 'rgba(16, 185, 129, 0.15)')
+                    : (defaultChecked ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)');
                 const inputDisabled = defaultChecked ? '' : 'disabled';
 
+                if (zb.isCourtesy && !courtesyHeaderRendered) {
+                    courtesyHeaderRendered = true;
+                    html += `
+                        <div id="plancha_courtesy_zones_header" style="margin: 0.35rem 0 0.2rem 0; padding: 0.25rem 0.6rem; background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 6px; display: flex; align-items: center; justify-content: space-between; gap: 0.4rem;">
+                            <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                <span style="font-size: 0.8rem;">🎁</span>
+                                <span style="color: #10B981; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.2px;">Entradas de Cortesía (Pases Free)</span>
+                                <span style="font-size: 0.62rem; color: #94A3B8;">— Emisión S/ 0.00</span>
+                            </div>
+                            <span style="background: rgba(16,185,129,0.12); color: #34D399; border: 1px solid rgba(16,185,129,0.25); font-size: 0.58rem; font-weight: 700; padding: 0.08rem 0.35rem; border-radius: 4px; white-space: nowrap;">Cortesías Activas</span>
+                        </div>
+                    `;
+                }
+
+                const icon = zb.isCourtesy ? '🎁' : '🎟️';
+                const courtesyTag = zb.isCourtesy
+                    ? `<span style="background: rgba(16,185,129,0.18); color: #10B981; border: 1px solid rgba(16,185,129,0.4); font-size: 0.63rem; font-weight: 900; padding: 0.12rem 0.4rem; border-radius: 6px; margin-left: 0.35rem;">FREE</span>`
+                    : '';
+                const priceLabel = zb.isCourtesy
+                    ? `<span style="color: #10B981; font-weight: 800;">S/ 0.00 (CORTESÍA)</span>`
+                    : `S/ ${zb.price.toFixed(2)}`;
+                const refLabel = zb.isCourtesy ? 'Cupo Ref:' : 'Aforo Ref:';
+                const inputBorder = zb.isCourtesy ? 'rgba(16,185,129,0.6)' : 'rgba(37,99,235,0.6)';
+                const chkAccent = zb.isCourtesy ? '#10B981' : '#2563EB';
+
                 html += `
-                    <div id="plancha_zone_card_${idx}" style="background: rgba(255,255,255,0.02); border: 1.5px solid ${cardBorder}; opacity: ${cardOpacity}; border-radius: 12px; padding: 0.6rem 0.75rem; display: flex; flex-direction: column; gap: 0.4rem; transition: all 0.2s ease;">
+                    <div id="plancha_zone_card_${idx}" class="${zb.isCourtesy ? 'card-is-courtesy' : 'card-is-regular'}" style="background: ${zb.isCourtesy ? 'rgba(16, 185, 129, 0.04)' : 'rgba(255,255,255,0.02)'}; border: 1.5px solid ${cardBorder}; opacity: ${cardOpacity}; border-radius: 12px; padding: 0.6rem 0.75rem; display: flex; flex-direction: column; gap: 0.4rem; transition: all 0.2s ease;">
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
                             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; flex: 1; min-width: 0; margin: 0;">
-                                <input type="checkbox" id="plancha_zone_chk_${idx}" ${defaultChecked ? 'checked' : ''} onchange="onPlanchaZoneCheckChange(${idx})" style="width: 16px; height: 16px; accent-color: #2563EB; cursor: pointer; border-radius: 4px; flex-shrink: 0;" />
+                                <input type="checkbox" id="plancha_zone_chk_${idx}" ${defaultChecked ? 'checked' : ''} onchange="onPlanchaZoneCheckChange(${idx})" style="width: 16px; height: 16px; accent-color: ${chkAccent}; cursor: pointer; border-radius: 4px; flex-shrink: 0;" />
                                 <span style="font-weight: 800; font-size: 0.83rem; color: #FFFFFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                    🎟️ ${zb.name}
+                                    ${icon} ${zb.name}
                                 </span>
+                                ${courtesyTag}
                                 ${seatChip}
                             </label>
                             <div style="flex-shrink: 0;">
@@ -685,13 +730,13 @@
                         </div>
 
                         <div style="font-size: 0.7rem; color: #94A3B8; display: flex; align-items: center; justify-content: space-between; padding-left: 1.5rem;">
-                            <span>Precio: <strong style="color: #10B981;">S/ ${zb.price.toFixed(2)}</strong></span>
-                            <span>Aforo Ref: <strong style="color: #FFFFFF;">${zb.capacity}</strong> • En BD: <strong style="color: #34D399;">${zb.alreadyGenerated}</strong></span>
+                            <span>Precio: <strong style="color: #10B981;">${priceLabel}</strong></span>
+                            <span>${refLabel} <strong style="color: #FFFFFF;">${zb.capacity}</strong> • En BD: <strong style="color: #34D399;">${zb.alreadyGenerated}</strong></span>
                         </div>
 
                         <div id="plancha_zone_qty_row_${idx}" style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; background: rgba(15, 23, 42, 0.7); padding: 0.35rem 0.55rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.07); margin-left: 1.5rem; flex-wrap: wrap;">
                             <div style="display: flex; align-items: center; gap: 0.4rem;">
-                                <span style="font-size: 0.7rem; color: #93C5FD; font-weight: 800; white-space: nowrap;">Cantidad:</span>
+                                <span style="font-size: 0.7rem; color: ${zb.isCourtesy ? '#6EE7B7' : '#93C5FD'}; font-weight: 800; white-space: nowrap;">Cantidad:</span>
                                 <input type="number" 
                                        id="plancha_zone_qty_${idx}" 
                                        min="1" 
@@ -699,13 +744,13 @@
                                        value="${defaultQty}" 
                                        ${inputDisabled}
                                        oninput="onPlanchaZoneQtyInput(${idx})" 
-                                       style="width: 70px; background: rgba(255,255,255,0.08); border: 1.5px solid rgba(37,99,235,0.6); color: #FFFFFF; border-radius: 6px; padding: 0.2rem 0.35rem; font-size: 0.82rem; font-weight: 900; text-align: center; outline: none;" />
+                                       style="width: 70px; background: rgba(255,255,255,0.08); border: 1.5px solid ${inputBorder}; color: #FFFFFF; border-radius: 6px; padding: 0.2rem 0.35rem; font-size: 0.82rem; font-weight: 900; text-align: center; outline: none;" />
                             </div>
                             <div style="display: flex; gap: 0.25rem; flex-wrap: wrap;">
                                 ${zb.pendingNew > 0 ? `<button type="button" onclick="setZoneQtyPreset(${idx}, 'pending')" style="background: rgba(16,185,129,0.22); border: 1.5px solid rgba(16,185,129,0.5); color: #34D399; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 5px; cursor: pointer;">⚡ Restantes (${zb.pendingNew})</button>` : ''}
                                 <button type="button" onclick="adjustZoneQty(${idx}, 10)" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #CBD5E1; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.4rem; border-radius: 5px; cursor: pointer;">+10</button>
                                 <button type="button" onclick="setZoneQtyPreset(${idx}, 'sheet')" id="btn_preset_sheet_${idx}" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #CBD5E1; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.4rem; border-radius: 5px; cursor: pointer;">${sheetLabel}</button>
-                                <button type="button" onclick="setZoneQtyPreset(${idx}, 'capacity')" style="background: rgba(37,99,235,0.25); border: 1px solid rgba(37,99,235,0.5); color: #93C5FD; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.4rem; border-radius: 5px; cursor: pointer;">Aforo (${zb.capacity})</button>
+                                <button type="button" onclick="setZoneQtyPreset(${idx}, 'capacity')" style="background: ${zb.isCourtesy ? 'rgba(16,185,129,0.25)' : 'rgba(37,99,235,0.25)'}; border: 1.5px solid ${zb.isCourtesy ? 'rgba(16,185,129,0.5)' : 'rgba(37,99,235,0.5)'}; color: ${zb.isCourtesy ? '#6EE7B7' : '#93C5FD'}; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.4rem; border-radius: 5px; cursor: pointer;">${zb.isCourtesy ? 'Cupo' : 'Aforo'} (${zb.capacity})</button>
                                 ${zb.alreadyGenerated > 0 ? `<button type="button" onclick="setZoneQtyPreset(${idx}, 'existing')" style="background: rgba(16,185,129,0.2); border: 1px solid rgba(16,185,129,0.4); color: #34D399; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.4rem; border-radius: 5px; cursor: pointer;">En BD (${zb.alreadyGenerated})</button>` : ''}
                             </div>
                         </div>
@@ -720,47 +765,16 @@
         const alertIcon = document.getElementById('plancha_alert_icon');
         const alertContent = document.getElementById('plancha_alert_content');
 
-        if (totalPendingNew > 0 && totalAlreadyGenerated > 0) {
-            // Aumento de aforo detectado: boletos pendientes por generar
-            if (alertBox) {
-                alertBox.style.background = 'rgba(245, 158, 11, 0.14)';
-                alertBox.style.border = '1.5px solid rgba(245, 158, 11, 0.45)';
-            }
-            if (alertIcon) alertIcon.textContent = '⚡';
-            if (alertContent) {
-                alertContent.innerHTML = `
-                    <strong style="color: #FBBF24; display: block; font-size: 0.88rem; margin-bottom: 0.2rem;">¡Aumento de Aforo! ${totalPendingNew} Boletos Pendientes</strong>
-                    <span style="color: #CBD5E1;">Se detectaron <b>${totalPendingNew} boletos adicionales</b> (Fila F en Butacas Numeradas) pendientes por generar.</span>
-                    <div style="margin-top: 0.35rem; font-size: 0.73rem; color: #94A3B8;">Presiona el botón verde <b>"1. GENERAR (${totalPendingNew} RESTANTES)"</b> para crear sus códigos QR oficiales y registrarlos en la BD.</div>
-                `;
-            }
-        } else if (totalAlreadyGenerated > 0 && totalPendingNew === 0) {
-            // Aforo completo: todos los boletos ya fueron generados
-            if (alertBox) {
-                alertBox.style.background = 'rgba(16, 185, 129, 0.12)';
-                alertBox.style.border = '1.5px solid rgba(16, 185, 129, 0.4)';
-            }
-            if (alertIcon) alertIcon.textContent = '✓';
-            if (alertContent) {
-                alertContent.innerHTML = `
-                    <strong style="color: #34D399; display: block; font-size: 0.88rem; margin-bottom: 0.2rem;">✓ Aforo Completo (${totalAlreadyGenerated} Boletos en BD)</strong>
-                    <span style="color: #CBD5E1;">Todos los boletos del aforo oficial ya tienen su código QR generado. Haz clic en <b>"2. GENERAR PDF"</b> para distribuirlos en ${selectedPlanchaSizeKey === 'a4' ? 'Hoja A4' : 'Plancha'}.</span>
-                    <div style="margin-top: 0.35rem; font-size: 0.73rem; color: #94A3B8;">El botón verde de generar se ha desactivado. Solo cuando aumentes el aforo del evento se volverá a activar automáticamente.</div>
-                `;
-            }
-        } else {
-            // Sin entradas emitidas aún
-            if (alertBox) {
-                alertBox.style.background = 'rgba(37, 99, 235, 0.1)';
-                alertBox.style.border = '1.5px solid rgba(37, 99, 235, 0.3)';
-            }
-            if (alertIcon) alertIcon.textContent = '⚡';
-            if (alertContent) {
-                alertContent.innerHTML = `
-                    <strong style="color: #60A5FA; display: block; font-size: 0.88rem; margin-bottom: 0.2rem;">Sin Entradas Emitidas Aún</strong>
-                    <span style="color: #CBD5E1;">Indica la cantidad deseada por zona y presiona <b>"1. GENERAR ENTRADAS"</b> para crear los códigos QR y guardarlas en el sistema.</span>
-                `;
-            }
+        if (alertBox) {
+            alertBox.style.background = 'rgba(16, 185, 129, 0.12)';
+            alertBox.style.border = '1.5px solid rgba(16, 185, 129, 0.4)';
+        }
+        if (alertIcon) alertIcon.textContent = '✓';
+        if (alertContent) {
+            alertContent.innerHTML = `
+                <strong style="color: #34D399; display: block; font-size: 0.88rem; margin-bottom: 0.2rem;">✓ Boletos Oficiales Listos (${totalAlreadyGenerated} en BD)</strong>
+                <span style="color: #CBD5E1;">Todas las entradas y códigos QR del aforo configurado están registrados en la base de datos. Selecciona las zonas deseadas y haz clic en <b>"GENERAR PLANCHA PDF"</b>.</span>
+            `;
         }
 
         updatePlanchaSummary();
@@ -776,14 +790,15 @@
         const btns = card ? card.querySelectorAll('button') : [];
 
         if (chk && card) {
+            const isCourtesy = planchaZoneBreakdown && planchaZoneBreakdown[idx] && planchaZoneBreakdown[idx].isCourtesy;
             if (chk.checked) {
                 card.style.opacity = '1';
-                card.style.borderColor = 'rgba(255,255,255,0.08)';
+                card.style.borderColor = isCourtesy ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255,255,255,0.08)';
                 if (qtyInput) qtyInput.disabled = false;
                 btns.forEach(b => b.disabled = false);
             } else {
                 card.style.opacity = '0.45';
-                card.style.borderColor = 'rgba(255,255,255,0.04)';
+                card.style.borderColor = isCourtesy ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.04)';
                 if (qtyInput) qtyInput.disabled = true;
                 btns.forEach(b => b.disabled = true);
             }
@@ -793,8 +808,18 @@
         const quickFilter = document.getElementById('plancha_quick_zone_filter');
         if (quickFilter && Array.isArray(planchaZoneBreakdown)) {
             const allChecked = planchaZoneBreakdown.every((_, i) => document.getElementById(`plancha_zone_chk_${i}`)?.checked);
+            const regularZones = planchaZoneBreakdown.map((zb, i) => (!zb.isCourtesy ? i : null)).filter(v => v !== null);
+            const courtesyZones = planchaZoneBreakdown.map((zb, i) => (zb.isCourtesy ? i : null)).filter(v => v !== null);
+
+            const regularAllChecked = regularZones.length > 0 && regularZones.every(i => document.getElementById(`plancha_zone_chk_${i}`)?.checked) && (courtesyZones.length === 0 || courtesyZones.every(i => !document.getElementById(`plancha_zone_chk_${i}`)?.checked));
+            const courtesyAllChecked = courtesyZones.length > 0 && courtesyZones.every(i => document.getElementById(`plancha_zone_chk_${i}`)?.checked) && regularZones.every(i => !document.getElementById(`plancha_zone_chk_${i}`)?.checked);
+
             if (allChecked) {
                 quickFilter.value = 'ALL';
+            } else if (regularAllChecked && courtesyZones.length > 0) {
+                quickFilter.value = 'REGULAR_ONLY';
+            } else if (courtesyAllChecked) {
+                quickFilter.value = 'COURTESY_ONLY';
             } else {
                 const checkedIndices = planchaZoneBreakdown
                     .map((_, i) => document.getElementById(`plancha_zone_chk_${i}`)?.checked ? i : null)
@@ -809,28 +834,67 @@
     }
 
     /**
-     * Filtro desplegable de zonas (Todas o una zona específica)
+     * Filtro desplegable de zonas (Todas, Solo Regulares, Solo Cortesías, o una zona específica)
      */
     function onPlanchaZoneFilterChange(val) {
         if (!Array.isArray(planchaZoneBreakdown)) return;
 
         if (val === 'ALL') {
-            planchaZoneBreakdown.forEach((_, idx) => {
+            planchaZoneBreakdown.forEach((zb, idx) => {
                 const chk = document.getElementById(`plancha_zone_chk_${idx}`);
+                const card = document.getElementById(`plancha_zone_card_${idx}`);
+                if (card) card.style.display = 'flex';
                 if (chk) {
                     chk.checked = true;
                     onPlanchaZoneCheckChange(idx);
                 }
             });
+            const cHeader = document.getElementById('plancha_courtesy_zones_header');
+            if (cHeader) cHeader.style.display = 'flex';
+        } else if (val === 'REGULAR_ONLY') {
+            planchaZoneBreakdown.forEach((zb, idx) => {
+                const chk = document.getElementById(`plancha_zone_chk_${idx}`);
+                const card = document.getElementById(`plancha_zone_card_${idx}`);
+                if (zb.isCourtesy) {
+                    if (card) card.style.display = 'none';
+                    if (chk) { chk.checked = false; onPlanchaZoneCheckChange(idx); }
+                } else {
+                    if (card) card.style.display = 'flex';
+                    if (chk) { chk.checked = true; onPlanchaZoneCheckChange(idx); }
+                }
+            });
+            const cHeader = document.getElementById('plancha_courtesy_zones_header');
+            if (cHeader) cHeader.style.display = 'none';
+        } else if (val === 'COURTESY_ONLY') {
+            planchaZoneBreakdown.forEach((zb, idx) => {
+                const chk = document.getElementById(`plancha_zone_chk_${idx}`);
+                const card = document.getElementById(`plancha_zone_card_${idx}`);
+                if (zb.isCourtesy) {
+                    if (card) card.style.display = 'flex';
+                    if (chk) { chk.checked = true; onPlanchaZoneCheckChange(idx); }
+                } else {
+                    if (card) card.style.display = 'none';
+                    if (chk) { chk.checked = false; onPlanchaZoneCheckChange(idx); }
+                }
+            });
+            const cHeader = document.getElementById('plancha_courtesy_zones_header');
+            if (cHeader) cHeader.style.display = 'flex';
         } else {
             const targetIdx = parseInt(val, 10);
-            planchaZoneBreakdown.forEach((_, idx) => {
+            planchaZoneBreakdown.forEach((zb, idx) => {
                 const chk = document.getElementById(`plancha_zone_chk_${idx}`);
+                const card = document.getElementById(`plancha_zone_card_${idx}`);
+                if (card) card.style.display = 'flex';
                 if (chk) {
                     chk.checked = (idx === targetIdx);
                     onPlanchaZoneCheckChange(idx);
                 }
             });
+            const cHeader = document.getElementById('plancha_courtesy_zones_header');
+            if (cHeader) {
+                const targetIsCourtesy = planchaZoneBreakdown[targetIdx]?.isCourtesy;
+                cHeader.style.display = targetIsCourtesy ? 'flex' : 'none';
+            }
         }
 
         updatePlanchaSummary();
@@ -952,11 +1016,6 @@
         const rangeEl = document.getElementById('plancha_summary_correlative_range');
         const btnPlancha = document.getElementById('btnExecutePlanchaGeneration');
         const btnText = document.getElementById('btnPlanchaText');
-        const btnEmit = document.getElementById('btnEmitTickets');
-        const btnEmitText = document.getElementById('btnEmitTicketsText');
-        const btnDel = document.getElementById('btnDeleteAllTickets');
-        const btnDelText = document.getElementById('btnDeleteAllText');
-        const emitContainer = document.getElementById('plancha_emit_row_container');
 
         if (totalEl) totalEl.textContent = `${ticketsToPrintCount} boletos (${selectedZonesCount} zona${selectedZonesCount === 1 ? '' : 's'})`;
         if (sheetsEl) sheetsEl.textContent = `${sheetsCount} ${sheetTypeWord}`;
@@ -972,17 +1031,7 @@
                     const input = document.getElementById(`plancha_zone_qty_${idx}`);
                     const qtyWanted = input ? (parseInt(input.value, 10) || 0) : 0;
                     if (qtyWanted > 0 && zoneExisting.length > 0) {
-                        let slice = [];
-                        if (planchaPdfScope === 'NEW') {
-                            const newInZone = zoneExisting.filter(t => t.isNew);
-                            if (newInZone.length > 0 && newInZone.length <= qtyWanted) {
-                                slice = newInZone;
-                            } else {
-                                slice = zoneExisting.slice(-qtyWanted);
-                            }
-                        } else {
-                            slice = zoneExisting.slice(0, qtyWanted);
-                        }
+                        const slice = zoneExisting.slice(0, qtyWanted);
                         selectedPrintTickets = selectedPrintTickets.concat(slice);
                     }
                 }
@@ -1008,65 +1057,7 @@
             }
         }
 
-        // 1. Botón GENERAR ENTRADAS: Se oculta/desactiva cuando todo el aforo está emitido, y se muestra cuando hay aumento de aforo
-        if (btnEmit && btnEmitText) {
-            if (totalPendingRemaining === 0) {
-                // Todos los boletos del aforo oficial ya fueron generados: ocultar botón verde
-                btnEmit.style.display = 'none';
-                if (emitContainer) {
-                    emitContainer.style.gridTemplateColumns = '1fr';
-                }
-                if (btnDel) {
-                    btnDel.style.width = '100%';
-                    btnDel.style.justifyContent = 'center';
-                }
-                if (btnDelText) {
-                    btnDelText.textContent = `🗑️ ELIMINAR TODAS LAS ENTRADAS (${dbCount} EN BD)`;
-                }
-            } else {
-                // Hay boletos pendientes por emitir (aumento de aforo): mostrar botón verde
-                btnEmit.style.display = 'flex';
-                if (emitContainer) {
-                    emitContainer.style.gridTemplateColumns = '1fr auto';
-                }
-                if (btnDel) {
-                    btnDel.style.width = 'auto';
-                    btnDel.style.justifyContent = 'center';
-                }
-                if (btnDelText) {
-                    btnDelText.textContent = 'ELIMINAR TODO';
-                }
-
-                if (ticketsToPrintCount > 0) {
-                    btnEmitText.textContent = `1. GENERAR (${ticketsToPrintCount} RESTANTES)`;
-                    btnEmit.disabled = false;
-                    btnEmit.style.opacity = '1';
-                    btnEmit.style.cursor = 'pointer';
-                } else {
-                    btnEmitText.textContent = `1. GENERAR (${totalPendingRemaining} RESTANTES)`;
-                    btnEmit.disabled = true;
-                    btnEmit.style.opacity = '0.45';
-                    btnEmit.style.cursor = 'not-allowed';
-                }
-            }
-        }
-
-        // 2. Botón ELIMINAR TODO (Al lado de GENERAR ENTRADAS)
-        if (btnDel) {
-            if (dbCount > 0) {
-                btnDel.disabled = false;
-                btnDel.style.opacity = '1';
-                btnDel.style.cursor = 'pointer';
-                btnDel.title = `Eliminar las ${dbCount} entradas generadas de este evento`;
-            } else {
-                btnDel.disabled = true;
-                btnDel.style.opacity = '0.35';
-                btnDel.style.cursor = 'not-allowed';
-                btnDel.title = 'No hay entradas en la base de datos para eliminar';
-            }
-        }
-
-        // 3. Botón GENERAR PDF: Habilitado SIEMPRE Y CUANDO se hayan generado las entradas en BD
+        // Botón GENERAR PDF: Habilitado cuando se hayan seleccionado boletos
         let generatedInDbForSelectedZones = 0;
         if (Array.isArray(planchaZoneBreakdown)) {
             planchaZoneBreakdown.forEach((zb, idx) => {
@@ -1083,13 +1074,9 @@
 
         if (btnText && btnPlancha) {
             if (generatedInDbForSelectedZones > 0) {
-                let scopeTag = '';
-                if (planchaPdfScope === 'NEW' && generatedInDbForSelectedZones < dbCount) {
-                    scopeTag = ' (FILA F / NUEVOS)';
-                }
                 btnText.textContent = isA4 
-                    ? `2. GENERAR PDF A4 (${generatedInDbForSelectedZones} BOLETOS${scopeTag})` 
-                    : `2. GENERAR PLANCHA PDF (${generatedInDbForSelectedZones} BOLETOS${scopeTag})`;
+                    ? `GENERAR PDF A4 (${generatedInDbForSelectedZones} BOLETOS)` 
+                    : `GENERAR PLANCHA PDF (${generatedInDbForSelectedZones} BOLETOS)`;
                 btnPlancha.disabled = false;
                 btnPlancha.style.opacity = '1';
                 btnPlancha.style.cursor = 'pointer';
@@ -1102,327 +1089,16 @@
                 btnPlancha.style.background = 'rgba(255,255,255,0.06)';
                 btnPlancha.style.boxShadow = 'none';
                 if (dbCount === 0) {
-                    btnText.textContent = '2. GENERAR PDF (GENERA ENTRADAS PRIMERO)';
+                    btnText.textContent = 'GENERAR PLANCHA PDF (SIN BOLETOS EN BD)';
                 } else {
-                    btnText.textContent = '2. GENERAR PDF (SIN ENTRADAS EN ZONA)';
+                    btnText.textContent = 'GENERAR PLANCHA PDF (SIN BOLETOS SELECCIONADOS)';
                 }
             }
         }
     }
 
     /**
-     * PASO 1: EMISIÓN DE NUEVAS ENTRADAS (Crear códigos QR, correlativos y guardar en BD)
-     */
-    async function executeEmitTickets() {
-        if (!activePlanchaEvent) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'No se ha detectado información del evento.',
-                background: '#14141E',
-                color: '#FFFFFF'
-            });
-            return;
-        }
-
-        let ticketsToEmit = [];
-        let maxExistingNum = 0;
-        if (Array.isArray(planchaExistingTickets)) {
-            planchaExistingTickets.forEach(t => {
-                const n = parseInt(t.ticketNumberVal || t.ticket_number, 10);
-                if (n > maxExistingNum) maxExistingNum = n;
-            });
-        }
-
-        let nextCorrelative = maxExistingNum + 1;
-
-        if (Array.isArray(planchaZoneBreakdown)) {
-            planchaZoneBreakdown.forEach((zb, zIdx) => {
-                const chk = document.getElementById(`plancha_zone_chk_${zIdx}`);
-                if (!chk || !chk.checked) return;
-
-                const qtyInput = document.getElementById(`plancha_zone_qty_${zIdx}`);
-                const countToEmit = qtyInput ? (parseInt(qtyInput.value, 10) || 0) : 0;
-                if (countToEmit <= 0) return;
-
-                // Butacas ocupadas si la zona es numerada
-                const usedSeats = new Set();
-                if (zb.isNumberedZone && Array.isArray(zb.existingTickets)) {
-                    zb.existingTickets.forEach(et => {
-                        const etZone = et.zoneName || et.zone_name || '';
-                        const m = etZone.match(/\(([^)]+)\)/);
-                        if (m) usedSeats.add(m[1].trim().toUpperCase());
-                        if (et.seat) usedSeats.add(String(et.seat).trim().toUpperCase());
-                    });
-                }
-
-                let seatIndexCursor = 0;
-                for (let k = 0; k < countToEmit; k++) {
-                    const currentNum = nextCorrelative++;
-                    const ticketNumStr = 'N° ' + String(currentNum).padStart(5, '0');
-                    const valHash = 'VG' + Math.random().toString(36).substring(2, 10).toUpperCase();
-                    const qrPayload = `VIVEGO|EVT-${activePlanchaEvent.id}|TICK-${currentNum}|HASH-${valHash}`;
-
-                    let seatCode = '';
-                    if (zb.isNumberedZone) {
-                        while (seatIndexCursor < 9999) {
-                            const candidate = getSeatCodeForIndex(zb.seats, seatIndexCursor++, zb);
-                            if (!usedSeats.has(candidate.toUpperCase())) {
-                                seatCode = candidate;
-                                usedSeats.add(candidate.toUpperCase());
-                                break;
-                            }
-                        }
-                    }
-
-                    const fullZoneName = seatCode ? `${zb.name} (${seatCode})` : zb.name;
-
-                    ticketsToEmit.push({
-                        ticketNumberVal: currentNum,
-                        ticket_number: currentNum,
-                        ticketCode: ticketNumStr,
-                        ticket_code: ticketNumStr,
-                        zoneName: fullZoneName,
-                        zone_name: fullZoneName,
-                        seatCode: seatCode,
-                        seat: seatCode,
-                        zonePrice: zb.price.toFixed(2),
-                        unit_price: zb.price,
-                        validationHash: valHash,
-                        validation_hash: valHash,
-                        qrPayload: qrPayload,
-                        qr_payload: qrPayload,
-                        buyerName: 'TALONARIO FÍSICO TAQUILLA',
-                        buyer_name: 'TALONARIO FÍSICO TAQUILLA',
-                        buyerDni: '00000000',
-                        buyer_dni: '00000000',
-                        isNew: true
-                    });
-                }
-            });
-        }
-
-        if (ticketsToEmit.length === 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Sin entradas a emitir',
-                text: 'Selecciona al menos una zona e ingresa la cantidad de entradas que deseas generar.',
-                confirmButtonColor: '#2563EB',
-                background: '#14141E',
-                color: '#FFFFFF'
-            });
-            return;
-        }
-
-        const firstNumStr = String(ticketsToEmit[0].ticketNumberVal).padStart(5, '0');
-        const lastNumStr = String(ticketsToEmit[ticketsToEmit.length - 1].ticketNumberVal).padStart(5, '0');
-
-        const confirmRes = await Swal.fire({
-            title: `¿Generar ${ticketsToEmit.length} Nuevas Entradas?`,
-            html: `Se crearán <b>${ticketsToEmit.length} boletos físicos</b> con sus códigos QR oficiales y se registrarán en la base de datos para el escáner.<br><br>Correlativos: <b style="color: #F59E0B; font-family: monospace;">N° ${firstNumStr} → N° ${lastNumStr}</b><br><br><span style="color: #10B981; font-weight: 700;">✓ Quedarán guardadas y listas para distribuir en PDF cuando quieras.</span>`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#10B981',
-            cancelButtonColor: '#475569',
-            confirmButtonText: '⚡ Sí, Generar y Guardar en BD',
-            cancelButtonText: 'Cancelar',
-            background: '#14141E',
-            color: '#FFFFFF'
-        });
-
-        if (!confirmRes.isConfirmed) return;
-
-        Swal.fire({
-            title: '⚡ Generando Entradas y Códigos QR...',
-            html: `<div style="font-size: 0.85rem; color: #94A3B8; margin-top: 0.4rem;">Registrando ${ticketsToEmit.length} boletos en la base de datos...</div>`,
-            allowOutsideClick: false,
-            didOpen: () => { Swal.showLoading(); },
-            background: '#14141E',
-            color: '#FFFFFF'
-        });
-
-        try {
-            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || (typeof csrfToken !== 'undefined' ? csrfToken : '');
-            const res = await fetch(`/admin/eventos/${activePlanchaEvent.id}/registrar-boletos-pdf`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': token,
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    tickets: ticketsToEmit.map(t => ({
-                        ticket_code: t.ticketCode,
-                        ticket_number: t.ticketNumberVal,
-                        zone_name: t.zoneName,
-                        unit_price: parseFloat(t.zonePrice) || 0.00,
-                        validation_hash: t.validationHash,
-                        qr_payload: t.qrPayload,
-                        buyer_name: t.buyerName,
-                        buyer_dni: t.buyerDni
-                    }))
-                })
-            });
-
-            const data = await res.json();
-            if (!data || !data.success) {
-                throw new Error(data?.message || 'No se pudieron registrar las entradas en la base de datos.');
-            }
-
-            // Incorporar las nuevas entradas a planchaExistingTickets
-            ticketsToEmit.forEach(t => {
-                t.isNew = true;
-                planchaExistingTickets.push(t);
-            });
-
-            newlyEmittedTicketsCache = [...ticketsToEmit];
-
-            // Recalcular zonas y aforos con las nuevas entradas registradas
-            computePlanchaAforoAndZones();
-
-            // Configurar zonas para que quede seleccionada la zona emitida con su cantidad recién creada
-            if (Array.isArray(planchaZoneBreakdown)) {
-                planchaZoneBreakdown.forEach((zb, idx) => {
-                    const emittedForZone = ticketsToEmit.filter(te => cleanZoneBase(te.zoneName || te.zone_name) === cleanZoneBase(zb.name));
-                    const chk = document.getElementById(`plancha_zone_chk_${idx}`);
-                    const qtyInput = document.getElementById(`plancha_zone_qty_${idx}`);
-                    if (emittedForZone.length > 0) {
-                        if (chk) { chk.checked = true; onPlanchaZoneCheckChange(idx); }
-                        if (qtyInput) qtyInput.value = emittedForZone.length;
-                    } else {
-                        if (chk) { chk.checked = false; onPlanchaZoneCheckChange(idx); }
-                    }
-                });
-            }
-
-            setPlanchaPdfScope('NEW');
-            updatePlanchaSummary();
-
-            const hasRowF = ticketsToEmit.some(t => /fila\s*f|[\(]F\d+[\)]/i.test(t.zoneName || '') || /^F\d+/i.test(t.seatCode || ''));
-            const rowFNotice = hasRowF ? ' (Fila F: Butacas F1 a F10)' : '';
-
-            Swal.fire({
-                icon: 'success',
-                title: '🎉 ¡Boletos Nuevos Generados con Éxito!',
-                html: `Se registraron <b>${ticketsToEmit.length} boletos oficiales${rowFNotice}</b> en la base de datos con sus códigos QR únicos (N° ${firstNumStr} al N° ${lastNumStr}).<br><br><span style="color: #10B981; font-weight: 700;">✓ El botón verde de generar se ha desactivado porque el aforo ya está completo.</span><br><br><span style="color: #60A5FA; font-weight: 700;">👉 Ahora haz clic en <b>"2. GENERAR PDF"</b> para descargar la plancha o pliego con estos nuevos boletos.</span>`,
-                confirmButtonColor: '#2563EB',
-                confirmButtonText: 'Excelente, Ir a Generar PDF',
-                background: '#14141E',
-                color: '#FFFFFF'
-            });
-
-        } catch (err) {
-            console.error('[Plancha] Error emitiendo entradas:', err);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error al Generar Entradas',
-                text: err.message || 'Ocurrió un error al registrar las entradas en el sistema.',
-                confirmButtonColor: '#EF4444',
-                background: '#14141E',
-                color: '#FFFFFF'
-            });
-        }
-    }
-
-    /**
-     * Elimina todas las entradas generadas para impresión PDF de este evento en la BD
-     */
-    async function executeDeleteAllTickets() {
-        if (!activePlanchaEvent) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'No se ha detectado información del evento.',
-                background: '#14141E',
-                color: '#FFFFFF'
-            });
-            return;
-        }
-
-        const count = Array.isArray(planchaExistingTickets) ? planchaExistingTickets.length : 0;
-        if (count === 0) {
-            Swal.fire({
-                icon: 'info',
-                title: 'Sin entradas generadas',
-                text: 'No hay entradas registradas en la base de datos para eliminar en este evento.',
-                confirmButtonColor: '#2563EB',
-                background: '#14141E',
-                color: '#FFFFFF'
-            });
-            return;
-        }
-
-        const confirmRes = await Swal.fire({
-            title: '¿Eliminar TODAS las Entradas Generadas?',
-            html: `Se eliminarán permanentemente las <b>${count} entradas registradas</b> con sus códigos QR en la base de datos para este evento.<br><br><span style="color: #EF4444; font-weight: 700;">⚠️ Los boletos físicos que ya hayan sido impresos con estos códigos QR ya no serán reconocidos por el escáner.</span><br><br>El contador se reiniciará a 0 para que puedas generar una nueva tanda limpia de entradas desde el N° 00001.`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#EF4444',
-            cancelButtonColor: '#475569',
-            confirmButtonText: '🗑️ Sí, Eliminar Todas',
-            cancelButtonText: 'Cancelar',
-            background: '#14141E',
-            color: '#FFFFFF'
-        });
-
-        if (!confirmRes.isConfirmed) return;
-
-        Swal.fire({
-            title: '🗑️ Eliminando entradas...',
-            html: `<div style="font-size: 0.85rem; color: #94A3B8; margin-top: 0.4rem;">Borrando registros de boletos de la base de datos...</div>`,
-            allowOutsideClick: false,
-            didOpen: () => { Swal.showLoading(); },
-            background: '#14141E',
-            color: '#FFFFFF'
-        });
-
-        try {
-            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || (typeof csrfToken !== 'undefined' ? csrfToken : '');
-            const res = await fetch(`/admin/eventos/${activePlanchaEvent.id}/eliminar-boletos-pdf`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': token,
-                    'Accept': 'application/json'
-                }
-            });
-
-            const data = await res.json();
-            if (!data || !data.success) {
-                throw new Error(data?.message || 'No se pudieron eliminar las entradas de la base de datos.');
-            }
-
-            // Vaciar las entradas locales
-            planchaExistingTickets = [];
-
-            // Recalcular zonas y aforos desde cero
-            computePlanchaAforoAndZones();
-
-            Swal.fire({
-                icon: 'success',
-                title: '🗑️ Entradas Eliminadas',
-                html: `Se eliminaron correctamente <b>${data.deleted_count || count} entradas</b> de la base de datos.<br><br><span style="color: #10B981; font-weight: 700;">✓ Ahora puedes generar una nueva tanda limpia con códigos QR nuevos.</span>`,
-                confirmButtonColor: '#2563EB',
-                confirmButtonText: 'Entendido',
-                background: '#14141E',
-                color: '#FFFFFF'
-            });
-
-        } catch (err) {
-            console.error('[Plancha] Error eliminando entradas:', err);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error al Eliminar',
-                text: err.message || 'Ocurrió un error al intentar eliminar las entradas.',
-                confirmButtonColor: '#EF4444',
-                background: '#14141E',
-                color: '#FFFFFF'
-            });
-        }
-    }
-
-    /**
-     * PASO 2: GENERACIÓN DE PDF (Distribuir / mapear entradas ya registradas en la hoja A4 o Plancha)
+     * GENERACIÓN DE PDF (Distribuir / mapear entradas ya registradas en la hoja A4 o Plancha)
      */
     async function startPlanchaPdfGeneration() {
         if (!activePlanchaEvent) {
@@ -1437,21 +1113,14 @@
         }
 
         if (!Array.isArray(planchaExistingTickets) || planchaExistingTickets.length === 0) {
-            const askEmit = await Swal.fire({
+            Swal.fire({
                 icon: 'info',
-                title: 'No hay entradas generadas aún',
-                html: 'Aún no se han generado los códigos QR para este evento en el sistema.<br><br>¿Deseas generarlos ahora con el botón <b>"1. GENERAR ENTRADAS"</b>?',
-                showCancelButton: true,
-                confirmButtonColor: '#10B981',
-                cancelButtonColor: '#475569',
-                confirmButtonText: '⚡ Generar Entradas Primero',
-                cancelButtonText: 'Cancelar',
+                title: 'No hay entradas disponibles',
+                text: 'No se encontraron boletos registrados en el sistema para este evento.',
+                confirmButtonColor: '#2563EB',
                 background: '#14141E',
                 color: '#FFFFFF'
             });
-            if (askEmit.isConfirmed) {
-                executeEmitTickets();
-            }
             return;
         }
 
@@ -1500,8 +1169,8 @@
             marginY = (600 - (6 * 88.3 + 5 * 6)) / 2;
         }
 
-        // Recolectar únicamente las entradas YA GENERADAS correspondientes a las zonas marcadas
-        let ticketsToPrint = [];
+        // Recolectar las entradas correspondientes a las zonas marcadas
+        let candidateTickets = [];
 
         if (Array.isArray(planchaZoneBreakdown)) {
             planchaZoneBreakdown.forEach((zb, zIdx) => {
@@ -1516,18 +1185,7 @@
                 const zoneTickets = planchaExistingTickets.filter(t => cleanZoneBase(t.zoneName || t.zone_name) === cleanZoneBase(zb.name));
                 if (zoneTickets.length === 0) return;
                 
-                // Si el alcance es SOLO NUEVOS o la cantidad solicitada es menor al total de la zona, tomar los últimos (la nueva fila)
-                let sliceTickets = [];
-                if (planchaPdfScope === 'NEW') {
-                    const newInZone = zoneTickets.filter(t => t.isNew);
-                    if (newInZone.length > 0 && newInZone.length <= qtyWanted) {
-                        sliceTickets = newInZone;
-                    } else {
-                        sliceTickets = zoneTickets.slice(-qtyWanted);
-                    }
-                } else {
-                    sliceTickets = zoneTickets.slice(0, qtyWanted);
-                }
+                const sliceTickets = zoneTickets.slice(0, qtyWanted);
 
                 sliceTickets.forEach(t => {
                     const zName = t.zoneName || t.zone_name || zb.name;
@@ -1537,27 +1195,30 @@
                         if (m) sCode = m[1].trim();
                     }
 
-                    ticketsToPrint.push({
-                        ticketNumberVal: t.ticketNumberVal || t.ticket_number,
+                    const isTicketCourtesy = zb.isCourtesy || /cortes[ií]a/i.test(zName) || (t.buyerName && /cortes/i.test(t.buyerName));
+
+                    candidateTickets.push({
+                        ticketNumberVal: parseInt(t.ticketNumberVal || t.ticket_number, 10),
                         ticketCode: t.ticketCode || t.ticket_code,
                         zoneName: zName,
                         seatCode: sCode,
-                        zonePrice: t.zonePrice || (parseFloat(t.unit_price) || 0).toFixed(2),
+                        zonePrice: isTicketCourtesy ? '0.00' : (t.zonePrice || (parseFloat(t.unit_price) || 0).toFixed(2)),
                         validationHash: t.validationHash || t.validation_hash,
                         qrPayload: t.qrPayload || t.qr_payload,
-                        buyerName: t.buyerName || t.buyer_name || 'TALONARIO FÍSICO',
+                        buyerName: t.buyerName || t.buyer_name || (isTicketCourtesy ? 'PASE DE CORTESÍA / TAQUILLA' : 'TALONARIO FÍSICO'),
                         buyerDni: t.buyerDni || t.buyer_dni || '00000000',
+                        isCourtesy: isTicketCourtesy,
                         isNew: !!t.isNew
                     });
                 });
             });
         }
 
-        if (ticketsToPrint.length === 0) {
+        if (candidateTickets.length === 0) {
             Swal.fire({
                 icon: 'warning',
                 title: 'Sin boletos a generar en PDF',
-                text: 'No se encontraron boletos registrados para las zonas y cantidades seleccionadas. Si deseas emitir nuevos boletos, haz clic en "1. GENERAR ENTRADAS".',
+                text: 'No se encontraron boletos registrados para las zonas y cantidades seleccionadas. Recuerda que los boletos se crean automáticamente al configurar el aforo en el evento.',
                 confirmButtonColor: '#2563EB',
                 background: '#14141E',
                 color: '#FFFFFF'
@@ -1565,19 +1226,62 @@
             return;
         }
 
-        const totalSheets = Math.ceil(ticketsToPrint.length / perSheet);
+        // Ordenar correlativamente
+        candidateTickets.sort((a, b) => a.ticketNumberVal - b.ticketNumberVal);
+
         const formatTitle = isA4 ? 'Hoja A4' : `Plancha ${planchaSizeLabel}`;
         const sheetUnitName = isA4 ? 'hoja(s) A4' : 'plancha(s)';
 
-        const firstNum = String(ticketsToPrint[0].ticketNumberVal).padStart(5, '0');
-        const lastNum = String(ticketsToPrint[ticketsToPrint.length - 1].ticketNumberVal).padStart(5, '0');
-        const hasRowF = ticketsToPrint.some(t => /fila\s*f|[\(]F\d+[\)]/i.test(t.zoneName || '') || /^F\d+/i.test(t.seatCode || ''));
-        const rowFBadge = hasRowF ? `<div style="background: rgba(245,158,11,0.15); color: #F59E0B; border: 1px solid rgba(245,158,11,0.3); padding: 0.35rem 0.6rem; border-radius: 8px; font-size: 0.8rem; font-weight: 800; margin-bottom: 0.5rem;">✨ Incluye Fila F (Butacas F1 a F10)</div>` : '';
+        const minNum = candidateTickets[0].ticketNumberVal;
+        const maxNum = candidateTickets[candidateTickets.length - 1].ticketNumberVal;
+        const minTicketStr = String(minNum).padStart(5, '0');
+        const maxTicketStr = String(maxNum).padStart(5, '0');
 
-        // Confirmar con el usuario
+        // Confirmar con el usuario permitiendo elegir o ajustar rango de números correlativos
         const confirmRes = await Swal.fire({
-            title: `¿Generar PDF en ${formatTitle}?`,
-            html: `${rowFBadge}Se distribuirán <b>${ticketsToPrint.length} boletos</b> en <b>${totalSheets} ${sheetUnitName}</b> (${perSheet} boletos por hoja en cuadrícula de ${cols}×${rows}).<br><br>Correlativos: <b style="color: #F59E0B; font-family: monospace;">N° ${firstNum} → N° ${lastNum}</b><br><br><span style="color: #10B981; font-weight: 700;">✓ Códigos QR oficiales conservados intactos listos para escanear.</span>`,
+            title: `Generar PDF en ${formatTitle}`,
+            html: `
+                <div style="text-align: left; font-size: 0.82rem; color: #CBD5E1;">
+                    <p style="margin: 0 0 0.85rem 0; color: #94A3B8; line-height: 1.4;">
+                        Configura el <b>rango de números correlativos</b> que deseas imprimir en esta plancha. Puedes imprimir todo el rango seleccionado o indicar un tramo específico:
+                    </p>
+                    
+                    <div style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 0.85rem; margin-bottom: 0.85rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+                            <div>
+                                <label style="display: block; font-size: 0.72rem; font-weight: 800; color: #60A5FA; margin-bottom: 0.35rem; text-transform: uppercase;">
+                                    🔢 Desde Correlativo
+                                </label>
+                                <input id="swal_range_start" type="number" class="swal2-input" value="${minNum}" min="${minNum}" max="${maxNum}" 
+                                       style="width: 100%; margin: 0; padding: 0.5rem 0.65rem; height: 42px; font-size: 1rem; font-weight: 900; color: #F59E0B; text-align: center; background: rgba(15, 23, 42, 0.9); border: 1.5px solid rgba(245, 158, 11, 0.4); border-radius: 8px; box-sizing: border-box;" 
+                                       oninput="updateSwalRangeSummary()">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.72rem; font-weight: 800; color: #60A5FA; margin-bottom: 0.35rem; text-transform: uppercase;">
+                                    🔢 Hasta Correlativo
+                                </label>
+                                <input id="swal_range_end" type="number" class="swal2-input" value="${maxNum}" min="${minNum}" max="${maxNum}" 
+                                       style="width: 100%; margin: 0; padding: 0.5rem 0.65rem; height: 42px; font-size: 1rem; font-weight: 900; color: #F59E0B; text-align: center; background: rgba(15, 23, 42, 0.9); border: 1.5px solid rgba(245, 158, 11, 0.4); border-radius: 8px; box-sizing: border-box;" 
+                                       oninput="updateSwalRangeSummary()">
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 0.65rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.73rem; color: #94A3B8; border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 0.55rem;">
+                            <span>Rango total en selección:</span>
+                            <span style="font-family: monospace; font-weight: 800; color: #FFFFFF;">N° ${minTicketStr} → N° ${maxTicketStr} (${candidateTickets.length} disp.)</span>
+                        </div>
+                    </div>
+
+                    <div id="swal_range_preview_box" style="background: rgba(37, 99, 235, 0.1); border: 1px solid rgba(37, 99, 235, 0.3); border-radius: 8px; padding: 0.55rem 0.75rem; font-size: 0.76rem; color: #93C5FD; display: flex; justify-content: space-between; align-items: center;">
+                        <span id="swal_range_preview_text">Se imprimirán <b>${candidateTickets.length} boletos</b></span>
+                        <span id="swal_range_preview_sheets" style="color: #F59E0B; font-weight: 800;">(${Math.ceil(candidateTickets.length / perSheet)} ${sheetUnitName})</span>
+                    </div>
+
+                    <div style="margin-top: 0.6rem; font-size: 0.72rem; color: #10B981; font-weight: 700; text-align: center;">
+                        ✓ Códigos QR oficiales y correlativos continuos sincronizados para impresión
+                    </div>
+                </div>
+            `,
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#2563EB',
@@ -1585,10 +1289,50 @@
             confirmButtonText: '🖨️ Sí, Compilar y Descargar PDF',
             cancelButtonText: 'Cancelar',
             background: '#14141E',
-            color: '#FFFFFF'
+            color: '#FFFFFF',
+            didOpen: () => {
+                window.updateSwalRangeSummary = function() {
+                    const s = parseInt(document.getElementById('swal_range_start')?.value, 10);
+                    const e = parseInt(document.getElementById('swal_range_end')?.value, 10);
+                    const previewText = document.getElementById('swal_range_preview_text');
+                    const previewSheets = document.getElementById('swal_range_preview_sheets');
+                    if (isNaN(s) || isNaN(e) || s > e) {
+                        if (previewText) previewText.innerHTML = '<span style="color: #EF4444;">Rango correlativo inválido</span>';
+                        if (previewSheets) previewSheets.textContent = '';
+                        return;
+                    }
+                    const count = candidateTickets.filter(t => t.ticketNumberVal >= s && t.ticketNumberVal <= e).length;
+                    const sheets = Math.ceil(count / perSheet);
+                    if (previewText) previewText.innerHTML = `Se imprimirán <b>${count} boletos</b>`;
+                    if (previewSheets) previewSheets.textContent = `(${sheets} ${sheetUnitName})`;
+                };
+            },
+            preConfirm: () => {
+                const s = parseInt(document.getElementById('swal_range_start')?.value, 10);
+                const e = parseInt(document.getElementById('swal_range_end')?.value, 10);
+                if (isNaN(s) || isNaN(e)) {
+                    Swal.showValidationMessage('Por favor ingresa números correlativos válidos.');
+                    return false;
+                }
+                if (s > e) {
+                    Swal.showValidationMessage('El correlativo inicial no puede ser mayor que el correlativo final.');
+                    return false;
+                }
+                const filtered = candidateTickets.filter(t => t.ticketNumberVal >= s && t.ticketNumberVal <= e);
+                if (filtered.length === 0) {
+                    Swal.showValidationMessage(`No existen boletos con correlativos entre N° ${s} y N° ${e} en las zonas seleccionadas.`);
+                    return false;
+                }
+                return { start: s, end: e, tickets: filtered };
+            }
         });
 
-        if (!confirmRes.isConfirmed) return;
+        if (!confirmRes.isConfirmed || !confirmRes.value || !confirmRes.value.tickets) {
+            return;
+        }
+
+        const ticketsToPrint = confirmRes.value.tickets;
+        const totalSheets = Math.ceil(ticketsToPrint.length / perSheet);
 
         planchaIsGenerating = true;
         const progressBox = document.getElementById('plancha_render_progress_box');
@@ -1711,6 +1455,7 @@
                     qrDataUrl = qr.createDataURL(4, 0);
                 }
 
+                const isTicketCourtesy = tItem.isCourtesy || /cortes[ií]a/i.test(tItem.zoneName) || (tItem.buyerName && /cortes/i.test(tItem.buyerName));
                 const dynamicData = {
                     title: eventTitle,
                     venue: eventVenue,
@@ -1719,8 +1464,8 @@
                     time: eventTime,
                     zone: tItem.zoneName,
                     seat: tItem.seatCode || '',
-                    price: 'S/ ' + tItem.zonePrice,
-                    buyer_name: '',
+                    price: isTicketCourtesy ? 'S/ 0.00 (CORTESÍA)' : ('S/ ' + tItem.zonePrice),
+                    buyer_name: isTicketCourtesy ? 'PASE DE CORTESÍA' : '',
                     buyer_dni: '',
                     is_plancha_print: true,
                     ticket_number: tItem.ticketCode,
@@ -1738,7 +1483,7 @@
                         <div style="position: relative; width: 100%; height: 100%; padding: 1.25rem; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; background: #14141E; color: #FFFFFF; border-radius: 14px;">
                             <div>
                                 <h3 style="font-size: 18px; font-weight: 900; margin: 0 0 4px 0;">${eventTitle}</h3>
-                                <p style="font-size: 13px; color: #FF5500; font-weight: 800; margin: 0 0 6px 0;">ZONA: ${tItem.zoneName} • PRECIO: S/ ${tItem.zonePrice}</p>
+                                <p style="font-size: 13px; color: ${isTicketCourtesy ? '#10B981' : '#FF5500'}; font-weight: 800; margin: 0 0 6px 0;">ZONA: ${tItem.zoneName} • PRECIO: ${isTicketCourtesy ? 'S/ 0.00 (CORTESÍA)' : 'S/ ' + tItem.zonePrice}</p>
                                 <p style="font-size: 11px; opacity: 0.8; margin: 0;">${eventVenue} • ${eventDate} ${eventTime}</p>
                                 <div style="margin-top: 10px; font-size: 13px; font-weight: 900; color: #F59E0B;">${tItem.ticketCode}</div>
                             </div>

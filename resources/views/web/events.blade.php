@@ -118,14 +118,27 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <div style="width: 140px;">
+                                            <div style="min-width: 145px; max-width: 175px;">
                                                 <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 0.85rem; font-weight: 800; margin-bottom: 0.35rem;">
-                                                    <span style="color: #FFFFFF; font-weight: 900; letter-spacing: 0.3px;" class="event-capacity-text"><strong>{{ $evt['tickets_sold'] }}</strong> / {{ $evt['total_capacity'] }}</span>
+                                                    <span style="color: #FFFFFF; font-weight: 900; letter-spacing: 0.3px;" class="event-capacity-text" title="Ventas regulares / Aforo regular">
+                                                        <strong>{{ $evt['regular_sold'] ?? $evt['tickets_sold'] }}</strong> / {{ $evt['regular_capacity'] ?? $evt['total_capacity'] }}
+                                                    </span>
                                                     <span style="color: var(--color-primary-orange); font-weight: 900; font-size: 0.85rem;">{{ $evt['capacity_percentage'] }}%</span>
                                                 </div>
-                                                <div style="width: 100%; height: 7px; background: rgba(255,255,255,0.12); border-radius: 10px; overflow: hidden;" class="event-progress-bg">
+                                                <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.12); border-radius: 10px; overflow: hidden;" class="event-progress-bg">
                                                     <div style="height: 100%; width: {{ $evt['capacity_percentage'] }}%; background: linear-gradient(90deg, #FF5500, #FF1E3C); border-radius: 10px; transition: width 0.4s ease;"></div>
                                                 </div>
+
+                                                @if(!empty($evt['courtesy_enabled']) || ($evt['courtesy_capacity'] ?? 0) > 0 || ($evt['courtesy_sold'] ?? 0) > 0)
+                                                    <div style="margin-top: 0.45rem; display: flex; align-items: center; justify-content: space-between; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.28); border-radius: 7px; padding: 0.22rem 0.5rem; font-size: 0.725rem;" title="Pases de cortesía emitidos / Cupo total de cortesías">
+                                                        <span style="color: #6EE7B7; font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                                            <span>🎁</span> <span>Cortesías:</span>
+                                                        </span>
+                                                        <span style="color: #10B981; font-weight: 900; letter-spacing: 0.2px;">
+                                                            <strong>{{ $evt['courtesy_sold'] ?? 0 }}</strong> / {{ $evt['courtesy_capacity'] ?? 0 }}
+                                                        </span>
+                                                    </div>
+                                                @endif
                                             </div>
                                         </td>
                                         <td>

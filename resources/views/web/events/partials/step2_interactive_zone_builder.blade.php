@@ -410,22 +410,6 @@
             </div>
         </div>
     </div>
-
-    <!-- BARRA DE NAVEGACIÓN Y CONTINUACIÓN A PASO 3 EN MODO INTERACTIVO -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; background: rgba(255, 255, 255, 0.03); border: 1.5px solid rgba(255, 255, 255, 0.1); border-radius: 18px; padding: 1rem 1.25rem; flex-wrap: wrap; gap: 1rem;">
-        <button type="button" class="btn btn-cancel-custom" onclick="goToStep(1)" style="padding: 0.75rem 1.25rem; font-size: 0.9rem;">
-            ← Anterior: Información General
-        </button>
-
-        <div style="display: flex; align-items: center; gap: 0.85rem;">
-            <span style="color: #94A3B8; font-size: 0.825rem;">
-                🗺️ Zonas configuradas: <strong id="navInteractiveZoneCountBadge" style="color: #10B981; font-weight: 800;">0</strong>
-            </span>
-            <button type="button" class="btn btn-primary btn-save-settings" style="padding: 0.85rem 2.2rem; font-size: 1rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(255, 85, 0, 0.4);" onclick="SeatMapEditor.syncToStandardTable(); goToStep(3);">
-                <span>Continuar a Plantilla Canva (Paso 3)</span> ➔
-            </button>
-        </div>
-    </div>
 </div>
 
 <style>

@@ -832,102 +832,6 @@
                             </table>
                         </div>
 
-                        <div style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.1); padding: 1rem 1.25rem; border-radius: 14px; display: flex; align-items: center; justify-content: space-between;">
-                            <div>
-                                <span style="font-size: 0.85rem; font-weight: 700; color: #94A3B8;">Aforo Total Configurado:</span>
-                                <strong id="totalCapacitySummaryText" style="font-size: 1.1rem; color: #FFFFFF; margin-left: 0.5rem;">2,800 entradas</strong>
-                            </div>
-                            <div>
-                                <span style="font-size: 0.85rem; font-weight: 700; color: #94A3B8;">Precio Desde:</span>
-                                <strong id="minPriceSummaryText" style="font-size: 1.1rem; color: #10B981; margin-left: 0.5rem;">S/ 60.00</strong>
-                            </div>
-                        </div>
-
-                        <!-- SECCIÓN: CONFIGURACIÓN DE ENTRADAS DE CORTESÍA -->
-                        <div style="margin-top: 1.75rem; background: rgba(16, 185, 129, 0.03); border: 1.5px solid rgba(16, 185, 129, 0.25); border-radius: 18px; padding: 1.5rem;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.75rem;">
-                                <div style="display: flex; align-items: center; gap: 0.65rem;">
-                                    <span style="font-size: 1.4rem;">🎁</span>
-                                    <div>
-                                        <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #10B981;">Generar Entradas de Cortesía (Pases Free / Gratuitos)</h4>
-                                        <p style="margin: 0.15rem 0 0 0; font-size: 0.825rem; color: #94A3B8;">Habilita la emisión de entradas a costo S/ 0.00 para clientes web o emisión desde el panel / taquilla.</p>
-                                    </div>
-                                </div>
-                                <label style="display: inline-flex; align-items: center; gap: 0.65rem; cursor: pointer; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.45rem 0.85rem; border-radius: 10px;">
-                                    <input type="checkbox" id="courtesy_enabled" class="orange-checkbox" onchange="toggleCourtesySection(this.checked)">
-                                    <span style="font-size: 0.85rem; font-weight: 800; color: #E2E8F0;">Activar Cortesías</span>
-                                </label>
-                            </div>
-
-                            <div id="courtesyOptionsBox" style="display: none; padding-top: 1rem; border-top: 1px dashed rgba(16, 185, 129, 0.2); margin-top: 0.85rem;">
-                                <span style="font-size: 0.825rem; font-weight: 700; color: #E2E8F0; display: block; margin-bottom: 0.75rem;">¿Quiénes pueden generar u obtener entradas de cortesía?</span>
-                                
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
-                                    <label style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem; display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer;">
-                                        <input type="checkbox" id="courtesy_for_users" class="orange-checkbox" style="margin-top: 3px;" checked>
-                                        <div>
-                                            <strong style="color: #FFFFFF; font-size: 0.9rem; display: block;">👥 Usuarios / Clientes Web</strong>
-                                            <span style="color: #94A3B8; font-size: 0.775rem; display: block; margin-top: 2px;">Los compradores podrán seleccionar cortesías en la web. <strong style="color: #FF5500;">(Límite estricto: Máximo 2 por usuario)</strong>.</span>
-                                        </div>
-                                    </label>
-
-                                    <label style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem; display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer;">
-                                        <input type="checkbox" id="courtesy_for_admins" class="orange-checkbox" style="margin-top: 3px;" checked>
-                                        <div>
-                                            <strong style="color: #FFFFFF; font-size: 0.9rem; display: block;">🛡️ Administradores (Taquilla / Panel)</strong>
-                                            <span style="color: #94A3B8; font-size: 0.775rem; display: block; margin-top: 2px;">El administrador podrá emitir pases de cortesía desde Taquilla POS sin costo y <strong style="color: #10B981;">sin límite de cantidad</strong>.</span>
-                                        </div>
-                                    </label>
-                                </div>
-
-                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
-                                        <div>
-                                            <label style="font-size: 0.775rem; font-weight: 700; color: #CBD5E1; display: block; margin-bottom: 0.35rem;">NOMBRE DE LA ENTRADA DE CORTESÍA</label>
-                                            <input type="text" id="courtesy_ticket_name" class="form-input-custom" value="Entrada de Cortesía (Free)" placeholder="Ej: Pase VIP de Cortesía" style="font-size: 0.85rem;">
-                                        </div>
-                                        <div>
-                                            <label style="font-size: 0.775rem; font-weight: 700; color: #CBD5E1; display: block; margin-bottom: 0.35rem;">MÁXIMO POR USUARIO (WEB)</label>
-                                            <input type="number" id="courtesy_user_max" class="form-input-custom" value="2" min="1" max="100" style="font-size: 0.85rem; font-weight: 800; color: #10B981;" placeholder="Por defecto 2">
-                                        </div>
-                                        <div>
-                                            <label style="font-size: 0.775rem; font-weight: 700; color: #CBD5E1; display: block; margin-bottom: 0.35rem;">STOCK TOTAL CORTESÍAS (GLOBAL / OPCIONAL)</label>
-                                            <input type="number" id="courtesy_stock" class="form-input-custom" placeholder="Ilimitado / según aforo" min="1" style="font-size: 0.85rem;">
-                                        </div>
-                                    </div>
-
-                                    <!-- TABLA DINÁMICA DE CORTESÍAS Y CUPOS POR ZONA -->
-                                    <div style="background: rgba(15, 23, 42, 0.65); border: 1.5px solid rgba(16, 185, 129, 0.25); border-radius: 14px; padding: 1.15rem; margin-top: 1rem;">
-                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
-                                            <div>
-                                                <strong style="color: #10B981; font-size: 0.9rem; display: flex; align-items: center; gap: 0.4rem;">
-                                                    <span>🎟️</span> <span>Habilitar y Asignar Stock de Cortesía por Zonas (Opcional)</span>
-                                                </strong>
-                                                <p style="color: #94A3B8; font-size: 0.775rem; margin: 0.2rem 0 0 0;">
-                                                    Indica en qué sectores se permiten cortesías y cuántos pases como máximo se pueden emitir para cada zona en Taquilla.
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <div class="dash-table-container" style="margin-top: 0.5rem; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08);">
-                                            <table class="dash-table" style="font-size: 0.85rem; margin: 0;">
-                                                <thead>
-                                                    <tr style="background: rgba(16,185,129,0.08);">
-                                                        <th style="width: 70px; text-align: center;">Cortesía</th>
-                                                        <th>Sector / Zona</th>
-                                                        <th>Aforo Regular</th>
-                                                        <th>Precio Regular</th>
-                                                        <th style="width: 220px;">Cupo Máx. Cortesía (Stock)</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="courtesyZonesConfigBody">
-                                                    <!-- Se sincroniza automáticamente -->
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
                         <!-- SECCIÓN: SUBIR IMAGEN DE REFERENCIA / PLANO DE ZONAS -->
                         <div style="margin-top: 1.75rem; background: rgba(255, 255, 255, 0.02); border: 1.5px dashed rgba(255, 255, 255, 0.18); border-radius: 18px; padding: 1.5rem;">
                             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
@@ -974,18 +878,145 @@
                                     </button>
                                 </div>
                             </div>
-                            </div>
                         </div> <!-- Fin #step2StandardContainer -->
 
-                        <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-                            <button type="button" class="btn btn-cancel-custom" onclick="goToStep(1)">
-                                ← Anterior: Información General
-                            </button>
-                            <button type="button" class="btn btn-primary btn-save-settings" style="padding: 0.85rem 2rem; font-size: 1rem;" onclick="goToStep(3)">
-                                Continuar al Diseñador ➔
-                            </button>
+                        <!-- SECCIÓN: CONFIGURACIÓN DE ENTRADAS DE CORTESÍA -->
+                        <div id="step2CourtesySection" style="margin-top: 1.75rem; background: rgba(16, 185, 129, 0.03); border: 1.5px solid rgba(16, 185, 129, 0.25); border-radius: 18px; padding: 1.5rem;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.75rem;">
+                                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                    <span style="font-size: 1.4rem;">🎁</span>
+                                    <div>
+                                        <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #10B981;">Generar Entradas de Cortesía (Pases Free / Gratuitos)</h4>
+                                        <p style="margin: 0.15rem 0 0 0; font-size: 0.825rem; color: #94A3B8;">Habilita la emisión de entradas a costo S/ 0.00 para clientes web o emisión desde el panel / taquilla.</p>
+                                    </div>
+                                </div>
+                                <label style="display: inline-flex; align-items: center; gap: 0.65rem; cursor: pointer; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.45rem 0.85rem; border-radius: 10px;">
+                                    <input type="checkbox" id="courtesy_enabled" class="orange-checkbox" onchange="toggleCourtesySection(this.checked)">
+                                    <span style="font-size: 0.85rem; font-weight: 800; color: #E2E8F0;">Activar Cortesías</span>
+                                </label>
+                            </div>
+
+                            <div id="courtesyOptionsBox" style="display: none; padding-top: 1rem; border-top: 1px dashed rgba(16, 185, 129, 0.2); margin-top: 0.85rem;">
+                                <span style="font-size: 0.825rem; font-weight: 700; color: #E2E8F0; display: block; margin-bottom: 0.75rem;">¿Quiénes pueden generar u obtener entradas de cortesía?</span>
+                                
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+                                    <label style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem; display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer;">
+                                        <input type="checkbox" id="courtesy_for_users" class="orange-checkbox" style="margin-top: 3px;" checked>
+                                        <div>
+                                            <strong style="color: #FFFFFF; font-size: 0.9rem; display: block;">👥 Usuarios / Clientes Web</strong>
+                                            <span style="color: #94A3B8; font-size: 0.775rem; display: block; margin-top: 2px;">Los compradores podrán seleccionar cortesías en la web. <strong style="color: #FF5500;">(Límite estricto: Máximo 2 por usuario)</strong>.</span>
+                                        </div>
+                                    </label>
+
+                                    <label style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem; display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer;">
+                                        <input type="checkbox" id="courtesy_for_admins" class="orange-checkbox" style="margin-top: 3px;" checked>
+                                        <div>
+                                            <strong style="color: #FFFFFF; font-size: 0.9rem; display: block;">🛡️ Administradores (Taquilla / Panel)</strong>
+                                            <span style="color: #94A3B8; font-size: 0.775rem; display: block; margin-top: 2px;">El administrador podrá emitir pases de cortesía desde Taquilla POS sin costo y <strong style="color: #10B981;">sin límite de cantidad</strong>.</span>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 240px; gap: 1.25rem; margin-bottom: 1.25rem;">
+                                        <div>
+                                            <label style="font-size: 0.82rem; font-weight: 800; color: #CBD5E1; display: block; margin-bottom: 0.45rem; text-transform: uppercase; letter-spacing: 0.5px;">NOMBRE DE LA ENTRADA DE CORTESÍA</label>
+                                            <input type="text" id="courtesy_ticket_name" class="form-input-custom" value="Entrada de Cortesía (Free)" placeholder="Ej: Entrada de Cortesía (Free)" style="font-size: 0.98rem; padding: 0.7rem 1rem; width: 100%; border-radius: 10px;">
+                                        </div>
+                                        <div>
+                                            <label style="font-size: 0.82rem; font-weight: 800; color: #CBD5E1; display: block; margin-bottom: 0.45rem; text-transform: uppercase; letter-spacing: 0.5px;">MÁXIMO POR USUARIO (WEB)</label>
+                                            <input type="number" id="courtesy_user_max" class="form-input-custom" value="2" min="1" max="100" style="font-size: 0.98rem; padding: 0.7rem 1rem; font-weight: 800; color: #10B981; text-align: center; width: 100%; border-radius: 10px;" placeholder="Por defecto 2">
+                                        </div>
+                                    </div>
+
+                                    <!-- TABLA DINÁMICA DE CORTESÍAS Y CUPOS POR ZONA -->
+                                    <div style="background: rgba(15, 23, 42, 0.65); border: 1.5px solid rgba(16, 185, 129, 0.25); border-radius: 14px; padding: 1.15rem; margin-top: 1rem;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: gap; gap: 0.5rem;">
+                                            <div>
+                                                <strong style="color: #10B981; font-size: 0.9rem; display: flex; align-items: center; gap: 0.4rem;">
+                                                    <span>🎟️</span> <span>Habilitar y Asignar Stock de Cortesía por Zonas (Opcional)</span>
+                                                </strong>
+                                                <p style="color: #94A3B8; font-size: 0.775rem; margin: 0.2rem 0 0 0;">
+                                                    Asigna el cupo máximo de entradas de cortesía autorizadas para cada sector. Las zonas con cupo 0 o vacío no emitirán cortesías.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div class="dash-table-container" style="margin-top: 0.5rem; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08);">
+                                            <table class="dash-table" style="font-size: 0.85rem; margin: 0;">
+                                                <thead>
+                                                    <tr style="background: rgba(16,185,129,0.08);">
+                                                        <th>Sector / Zona</th>
+                                                        <th style="width: 140px; text-align: center;">Aforo Regular</th>
+                                                        <th style="width: 140px; text-align: center;">Precio Regular</th>
+                                                        <th style="width: 270px; text-align: center;">Cupo Máx. Cortesía (Stock)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="courtesyZonesConfigBody">
+                                                    <!-- Se sincroniza automáticamente -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- AFORO TOTAL ESTIMADO (DISPONIBLE PARA AMBOS MODOS DEBAJO DE CORTESÍAS) -->
+                            <div id="aforoTotalEstimadoContainer" style="background: rgba(16, 185, 129, 0.08); border: 1.5px solid rgba(16, 185, 129, 0.25); padding: 1.25rem 1.4rem; border-radius: 18px; margin-top: 1.5rem; margin-bottom: 1.75rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <span style="font-size: 2.2rem;">🏟️</span>
+                                    <div>
+                                        <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+                                            <h4 style="margin: 0; color: #FFFFFF; font-size: 1.1rem; font-weight: 800;">Aforo Total Estimado</h4>
+                                            <span id="aforoCourtesyBadge" style="display: none; background: rgba(16, 185, 129, 0.18); border: 1px solid rgba(16, 185, 129, 0.4); color: #34D399; font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.55rem; border-radius: 6px;">
+                                                🎁 CON CORTESÍAS ACTIVADAS
+                                            </span>
+                                        </div>
+                                        <p id="aforoSubtitleText" style="margin: 0.25rem 0 0 0; color: #94A3B8; font-size: 0.85rem;">
+                                            Suma total de localidades configuradas en las zonas superiores
+                                        </p>
+
+                                        <!-- DESGLOSE EN TIEMPO REAL CUANDO CORTESÍAS ESTÁ ACTIVADO -->
+                                        <div id="aforoCourtesyBreakdown" style="display: none; margin-top: 0.65rem; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                                            <div style="display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(37, 99, 235, 0.15); border: 1px solid rgba(37, 99, 235, 0.35); padding: 0.28rem 0.65rem; border-radius: 8px;">
+                                                <span style="font-size: 0.85rem;">🎟️</span>
+                                                <span style="font-size: 0.78rem; color: #93C5FD; font-weight: 700;">Aforo Regular:</span>
+                                                <strong id="aforoRegularCount" style="color: #FFFFFF; font-size: 0.88rem; font-weight: 900;">0</strong>
+                                                <span style="font-size: 0.72rem; color: #94A3B8;">entradas</span>
+                                            </div>
+                                            <div style="display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); padding: 0.28rem 0.65rem; border-radius: 8px;">
+                                                <span style="font-size: 0.85rem;">🎁</span>
+                                                <span style="font-size: 0.78rem; color: #6EE7B7; font-weight: 700;">Cortesías:</span>
+                                                <strong id="aforoCourtesyCount" style="color: #10B981; font-size: 0.88rem; font-weight: 900;">0</strong>
+                                                <span style="font-size: 0.72rem; color: #94A3B8;">pases</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="text-align: right; min-width: 140px;">
+                                    <span id="calculatedTotalCapacity" style="font-size: 2rem; font-weight: 900; color: #10B981; line-height: 1;">0</span>
+                                    <span id="calculatedTotalLabel" style="display: block; font-size: 0.75rem; color: #A7F3D0; font-weight: 700; margin-top: 0.25rem;">Entradas Disponibles</span>
+                                    <span id="totalCapacitySummaryText" style="display: none;">0 entradas</span>
+                                    <span id="minPriceSummaryText" style="display: none;">S/ 0.00</span>
+                                </div>
+                            </div>
+
+                            <!-- BARRA DE NAVEGACIÓN Y CONTINUACIÓN AL PASO 3 (DISPONIBLE PARA AMBOS MODOS) -->
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; background: rgba(255, 255, 255, 0.03); border: 1.5px solid rgba(255, 255, 255, 0.1); border-radius: 18px; padding: 1rem 1.25rem; flex-wrap: wrap; gap: 1rem;">
+                                <button type="button" class="btn btn-cancel-custom" onclick="goToStep(1)" style="padding: 0.75rem 1.25rem; font-size: 0.9rem;">
+                                    ← Anterior: Información General
+                                </button>
+
+                                <div style="display: flex; align-items: center; gap: 0.85rem;">
+                                    <span style="color: #94A3B8; font-size: 0.825rem;">
+                                        🗺️ Zonas configuradas: <strong id="navInteractiveZoneCountBadge" style="color: #10B981; font-weight: 800;">0</strong>
+                                    </span>
+                                    <button type="button" class="btn btn-primary btn-save-settings" style="padding: 0.85rem 2.2rem; font-size: 1rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(255, 85, 0, 0.4);" onclick="if(typeof SeatMapEditor !== 'undefined' && typeof SeatMapEditor.syncToStandardTable === 'function') { SeatMapEditor.syncToStandardTable(); } goToStep(3);">
+                                        <span>Continuar a Plantilla Canva (Paso 3)</span> ➔
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
                 </div>
 
                 <!-- STEP 3: DISEÑADOR INTERACTIVO ESTILO ELEMENTOR / CERTIFICADOS (20.40 CM × 9.80 CM) -->
@@ -1337,7 +1368,7 @@
                             <div class="card-header-icon" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #10B981;">🚀</div>
                             <div>
                                 <h3 class="card-header-title">Paso 4: Confirmación & Registro del Evento Principal</h3>
-                                <p class="card-header-subtitle">Revisa el resumen final de la información antes de guardar en MySQL</p>
+                                <p class="card-header-subtitle">Revisa el resumen final de la información antes de guardar y publicar</p>
                             </div>
                         </div>
 
@@ -2604,54 +2635,82 @@
                 const zName = row.getAttribute('data-zone-name');
                 if (zName) {
                     currentInputs[zName] = {
-                        enabled: row.querySelector('.courtesy-zone-enable-cb')?.checked ?? true,
                         stock: row.querySelector('.courtesy-zone-stock-input')?.value ?? ''
                     };
                 }
             });
 
+            let zoneList = [];
             const zoneRows = document.querySelectorAll('#zonesTableBody .zone-row');
+            if (zoneRows.length > 0) {
+                zoneRows.forEach((row, idx) => {
+                    zoneList.push({
+                        name: row.querySelector('.zone-name-input')?.value?.trim() || `Zona ${idx + 1}`,
+                        capacity: parseInt(row.querySelector('.zone-capacity-input')?.value) || 0,
+                        price: parseFloat(row.querySelector('.zone-price-input')?.value) || 0
+                    });
+                });
+            } else if (typeof SeatMapEditor !== 'undefined' && Array.isArray(SeatMapEditor.zones) && SeatMapEditor.zones.length > 0) {
+                SeatMapEditor.zones.forEach((z, idx) => {
+                    zoneList.push({
+                        name: (z.name || '').trim() || `Zona ${idx + 1}`,
+                        capacity: parseInt(z.capacity) || 0,
+                        price: parseFloat(z.price) || 0
+                    });
+                });
+            }
+
             tbody.innerHTML = '';
 
-            if (zoneRows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #94A3B8; padding: 1.5rem;">Agrega sectores en la tabla superior para configurar sus cupos de cortesía.</td></tr>`;
+            if (zoneList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #94A3B8; padding: 1.5rem;">Agrega sectores en la tabla o mapa interactivo para configurar sus cupos de cortesía.</td></tr>`;
+                recalculateTotalCapacity();
                 return;
             }
 
-            zoneRows.forEach((row, idx) => {
-                const zName = row.querySelector('.zone-name-input')?.value?.trim() || `Zona ${idx + 1}`;
-                const zCap = parseInt(row.querySelector('.zone-capacity-input')?.value) || 0;
-                const zPrice = parseFloat(row.querySelector('.zone-price-input')?.value) || 0;
+            zoneList.forEach((z, idx) => {
+                const zName = z.name;
+                const zCap = z.capacity;
+                const zPrice = z.price;
 
-                let isEnabled = true;
                 let stockVal = '';
-
                 if (currentInputs[zName]) {
-                    isEnabled = currentInputs[zName].enabled;
                     stockVal = currentInputs[zName].stock;
                 }
+
+                const hasStock = stockVal !== '' && parseInt(stockVal) > 0;
+                const borderStyle = hasStock ? '1.5px solid #10B981' : '1.5px solid rgba(16,185,129,0.3)';
+                const bgStyle = hasStock ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.04)';
 
                 const tr = document.createElement('tr');
                 tr.setAttribute('data-zone-name', zName);
                 tr.innerHTML = `
+                    <td>
+                        <strong style="color: #FFFFFF; font-size: 0.92rem;" class="courtesy-zone-name-label">${zName}</strong>
+                    </td>
                     <td style="text-align: center;">
-                        <input type="checkbox" class="orange-checkbox courtesy-zone-enable-cb" ${isEnabled ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
+                        <span class="dash-badge-custom badge-blue" style="font-size: 0.78rem;">${zCap.toLocaleString()} entradas</span>
                     </td>
-                    <td>
-                        <strong style="color: #FFFFFF; font-size: 0.9rem;" class="courtesy-zone-name-label">${zName}</strong>
+                    <td style="text-align: center;">
+                        <span style="font-weight: 800; color: #10B981; font-size: 0.88rem;">S/ ${zPrice.toFixed(2)}</span>
                     </td>
-                    <td>
-                        <span class="dash-badge-custom badge-blue" style="font-size: 0.75rem;">${zCap.toLocaleString()} entradas</span>
-                    </td>
-                    <td>
-                        <span style="font-weight: 800; color: #10B981; font-size: 0.875rem;">S/ ${zPrice.toFixed(2)}</span>
-                    </td>
-                    <td>
-                        <input type="number" class="form-input-custom courtesy-zone-stock-input" value="${stockVal}" min="1" max="${zCap > 0 ? zCap : 999999}" placeholder="Ilimitado / aforo total" style="font-size: 0.85rem; padding: 0.4rem 0.65rem; border-color: rgba(16,185,129,0.35); font-weight: 700; color: #10B981;">
+                    <td style="text-align: center;">
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                            <input type="number" 
+                                   class="form-input-custom courtesy-zone-stock-input" 
+                                   value="${stockVal}" 
+                                   min="0" 
+                                   max="${zCap > 0 ? zCap : 999999}" 
+                                   placeholder="0 (Sin cortesías)" 
+                                   style="font-size: 0.95rem; padding: 0.55rem 0.85rem; border: ${borderStyle}; background: ${bgStyle}; font-weight: 800; color: #10B981; text-align: center; width: 100%; max-width: 240px; border-radius: 8px;" 
+                                   oninput="this.style.border = (this.value && parseInt(this.value) > 0) ? '1.5px solid #10B981' : '1.5px solid rgba(16,185,129,0.3)'; this.style.background = (this.value && parseInt(this.value) > 0) ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.04)'; recalculateTotalCapacity();">
+                        </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
+
+            recalculateTotalCapacity();
         }
 
         function toggleCourtesySection(enabled) {
@@ -2659,9 +2718,14 @@
             if (box) {
                 box.style.display = enabled ? 'block' : 'none';
                 if (enabled) {
+                    const adminChk = document.getElementById('courtesy_for_admins');
+                    if (adminChk) {
+                        adminChk.checked = true;
+                    }
                     syncCourtesyZonesTable();
                 }
             }
+            recalculateTotalCapacity();
         }
 
         function addDynamicZoneRow() {
@@ -2771,20 +2835,95 @@
         }
 
         function recalculateTotalCapacity() {
-            let total = 0;
+            let regularTotal = 0;
             let minPrice = Infinity;
-            document.querySelectorAll('.zone-row').forEach(row => {
-                const cap = parseInt(row.querySelector('.zone-capacity-input').value) || 0;
-                const price = parseFloat(row.querySelector('.zone-price-input').value) || 0;
-                total += cap;
-                if (price < minPrice) minPrice = price;
-            });
+
+            // Si estamos en modo interactivo o SeatMapEditor tiene zonas activas
+            if (window.currentStep2ZoneMode === 'interactive' && typeof SeatMapEditor !== 'undefined' && Array.isArray(SeatMapEditor.zones) && SeatMapEditor.zones.length > 0) {
+                regularTotal = SeatMapEditor.zones.reduce((sum, z) => sum + (parseInt(z.capacity) || 0), 0);
+                SeatMapEditor.zones.forEach(z => {
+                    const p = parseFloat(z.price) || 0;
+                    if (p < minPrice) minPrice = p;
+                });
+            } else {
+                const zoneRows = document.querySelectorAll('#zonesTableBody .zone-row');
+                zoneRows.forEach(row => {
+                    const cap = parseInt(row.querySelector('.zone-capacity-input')?.value) || 0;
+                    const price = parseFloat(row.querySelector('.zone-price-input')?.value) || 0;
+                    regularTotal += cap;
+                    if (price < minPrice) minPrice = price;
+                });
+                if (regularTotal === 0 && typeof SeatMapEditor !== 'undefined' && Array.isArray(SeatMapEditor.zones) && SeatMapEditor.zones.length > 0) {
+                    regularTotal = SeatMapEditor.zones.reduce((sum, z) => sum + (parseInt(z.capacity) || 0), 0);
+                    SeatMapEditor.zones.forEach(z => {
+                        const p = parseFloat(z.price) || 0;
+                        if (p < minPrice) minPrice = p;
+                    });
+                }
+            }
             if (minPrice === Infinity) minPrice = 0;
 
-            const capEl = document.getElementById('totalCapacitySummaryText');
-            if (capEl) capEl.innerText = total.toLocaleString() + ' entradas';
+            // Calcular cortesías si están activadas (únicamente en base a cupos asignados > 0 por el usuario)
+            const courtesyEnabled = !!document.getElementById('courtesy_enabled')?.checked;
+            let courtesyTotal = 0;
+
+            if (courtesyEnabled) {
+                const courtesyRows = document.querySelectorAll('#courtesyZonesConfigBody tr[data-zone-name]');
+                courtesyRows.forEach(tr => {
+                    const stockInput = tr.querySelector('.courtesy-zone-stock-input');
+                    const stockVal = stockInput && stockInput.value !== '' ? parseInt(stockInput.value, 10) : 0;
+                    if (!isNaN(stockVal) && stockVal > 0) {
+                        courtesyTotal += stockVal;
+                    }
+                });
+            }
+
+            const capEl = document.getElementById('calculatedTotalCapacity');
+            const labelEl = document.getElementById('calculatedTotalLabel');
+            const badgeEl = document.getElementById('aforoCourtesyBadge');
+            const breakdownEl = document.getElementById('aforoCourtesyBreakdown');
+            const regularCountEl = document.getElementById('aforoRegularCount');
+            const courtesyCountEl = document.getElementById('aforoCourtesyCount');
+            const subtitleEl = document.getElementById('aforoSubtitleText');
+
+            if (courtesyEnabled) {
+                const combinedTotal = regularTotal + courtesyTotal;
+                if (capEl) capEl.innerText = combinedTotal.toLocaleString();
+                if (badgeEl) badgeEl.style.display = 'inline-block';
+                if (breakdownEl) breakdownEl.style.display = 'flex';
+                if (regularCountEl) regularCountEl.innerText = regularTotal.toLocaleString();
+                if (courtesyCountEl) courtesyCountEl.innerText = courtesyTotal.toLocaleString();
+
+                if (courtesyTotal > 0) {
+                    if (labelEl) labelEl.innerText = `Total General (${regularTotal.toLocaleString()} Aforo + ${courtesyTotal.toLocaleString()} Cortesías)`;
+                    if (subtitleEl) subtitleEl.innerText = `Aforo oficial de venta: ${regularTotal.toLocaleString()} entradas | Cortesías: ${courtesyTotal.toLocaleString()} pases`;
+                } else {
+                    if (labelEl) labelEl.innerText = `Entradas Disponibles (0 Cortesías asignadas)`;
+                    if (subtitleEl) subtitleEl.innerText = `Cortesías activadas (Asigna cupos a los sectores para emitir pases free)`;
+                }
+            } else {
+                if (capEl) capEl.innerText = regularTotal.toLocaleString();
+                if (labelEl) labelEl.innerText = 'Entradas Disponibles';
+                if (badgeEl) badgeEl.style.display = 'none';
+                if (breakdownEl) breakdownEl.style.display = 'none';
+                if (regularCountEl) regularCountEl.innerText = regularTotal.toLocaleString();
+                if (courtesyCountEl) courtesyCountEl.innerText = '0';
+                if (subtitleEl) subtitleEl.innerText = 'Suma total de localidades configuradas en las zonas superiores';
+            }
+
             const priceEl = document.getElementById('minPriceSummaryText');
             if (priceEl) priceEl.innerText = 'S/ ' + minPrice.toFixed(2);
+
+            const zoneCount = (typeof SeatMapEditor !== 'undefined' && Array.isArray(SeatMapEditor.zones) && SeatMapEditor.zones.length > 0)
+                ? SeatMapEditor.zones.length
+                : document.querySelectorAll('#zonesTableBody .zone-row').length;
+            const navBadge = document.getElementById('navInteractiveZoneCountBadge');
+            if (navBadge) navBadge.textContent = zoneCount;
+
+            const summaryText = document.getElementById('totalCapacitySummaryText');
+            if (summaryText) {
+                summaryText.textContent = (courtesyEnabled && courtesyTotal > 0 ? (regularTotal + courtesyTotal) : regularTotal).toLocaleString() + ' entradas';
+            }
         }
 
         function updateReviewSummary() {
@@ -3004,9 +3143,9 @@
             document.querySelectorAll('#courtesyZonesConfigBody tr').forEach(row => {
                 const zName = row.getAttribute('data-zone-name');
                 if (zName) {
-                    const isEnabled = row.querySelector('.courtesy-zone-enable-cb')?.checked ?? true;
                     const stockRaw = row.querySelector('.courtesy-zone-stock-input')?.value?.trim();
                     const stock = (stockRaw !== '' && stockRaw !== null && !isNaN(parseInt(stockRaw))) ? parseInt(stockRaw) : null;
+                    const isEnabled = stock !== null && stock > 0;
                     courtesyZoneSettings.push({
                         name: zName,
                         enabled: isEnabled,
@@ -3021,7 +3160,7 @@
                 for_admins: courtesyEnabled ? (document.getElementById('courtesy_for_admins')?.checked || false) : false,
                 name: document.getElementById('courtesy_ticket_name')?.value || 'Entrada de Cortesía (Free)',
                 user_max_quantity: parseInt(document.getElementById('courtesy_user_max')?.value) || 2,
-                stock: parseInt(document.getElementById('courtesy_stock')?.value) || null,
+                stock: null,
                 zones: courtesyZoneSettings
             };
 
@@ -3066,7 +3205,7 @@
                 if (data.success) {
                     Swal.fire({
                         title: '¡Evento Guardado Exitosamente!',
-                        text: data.message || 'El espectáculo y su configuración se guardaron con éxito.',
+                        text: data.message || 'El evento y su configuración se guardaron con éxito.',
                         icon: 'success',
                         background: '#14141E',
                         color: '#FFFFFF'

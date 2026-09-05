@@ -588,7 +588,13 @@
                                 <span>+ GENERAR PLANCHA PDF</span>
                             </button>
                         @endif
-                        @if(in_array(($event->sales_type ?? 'fisica'), ['virtual', 'ambos']))
+                        @php
+                            $cSettings = is_array($event->courtesy_settings) 
+                                ? $event->courtesy_settings 
+                                : (json_decode($event->courtesy_settings ?? '[]', true) ?? []);
+                            $isCourtesyActive = !empty($cSettings['enabled']);
+                        @endphp
+                        @if($isCourtesyActive)
                             <button type="button" class="btn" onclick="openPosCourtesyModal()" style="background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 22px rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer; border: none; transition: all 0.2s ease;">
                                 <span style="font-size: 1.25rem;">🎁</span>
                                 <span>+ NUEVA CORTESÍA (F2)</span>
@@ -1310,7 +1316,8 @@
                 sales_type: {!! json_encode($event->sales_type ?? 'fisica') !!},
                 template: {!! json_encode($event->template ?? null) !!},
                 zones: {!! json_encode($zonesWithStats ?? ($zones ?? [])) !!},
-                raw_zones: {!! json_encode(is_array($event->zones) ? $event->zones : (json_decode($event->zones ?? '[]', true) ?: [])) !!}
+                raw_zones: {!! json_encode(is_array($event->zones) ? $event->zones : (json_decode($event->zones ?? '[]', true) ?: [])) !!},
+                courtesy_settings: {!! json_encode($cSettings ?? (is_array($event->courtesy_settings) ? $event->courtesy_settings : (json_decode($event->courtesy_settings ?? '[]', true) ?: []))) !!}
             };
             if (typeof openPlanchaModal === 'function') {
                 openPlanchaModal(evtData);
@@ -2516,6 +2523,9 @@
         let selectedCourtesyZoneAvailable = {{ $zonesWithStats[$firstActiveIndex ?? 0]['courtesy_available'] ?? ($zonesWithStats[0]['available'] ?? 100) }};
 
         function openPosCourtesyModal() {
+            @if(!$isCourtesyActive)
+                return;
+            @endif
             const modal = document.getElementById('posCourtesyModal');
             if (modal) {
                 modal.classList.add('active');
@@ -4836,7 +4846,9 @@
                 openPosSaleModal();
             } else if (e.key === 'F2') {
                 e.preventDefault();
-                openPosCourtesyModal();
+                @if($isCourtesyActive)
+                    openPosCourtesyModal();
+                @endif
             } else if (e.key === 'Escape') {
                 closePosSaleModal();
                 closePosCourtesyModal();

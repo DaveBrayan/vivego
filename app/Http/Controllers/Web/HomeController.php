@@ -39,8 +39,7 @@ class HomeController extends Controller
             $minPrice = (!empty($zones) && count($zones) > 0) ? min(array_column($zones, 'price')) : 50.00;
             $currentAvailable = !empty($zones) ? (int) array_sum(array_column($zones, 'capacity')) : 100;
 
-            $ticketsSold = $ev->sales ? (int) $ev->sales->sum('quantity') : 0;
-            $totalCapacity = $currentAvailable + $ticketsSold;
+            $totalCapacity = $currentAvailable;
             $capacityPercentage = $totalCapacity > 0 ? min(100, round(($ticketsSold / $totalCapacity) * 100)) : 10;
             if ($capacityPercentage < 10) {
                 // Simulación visual atractiva si recién se crea

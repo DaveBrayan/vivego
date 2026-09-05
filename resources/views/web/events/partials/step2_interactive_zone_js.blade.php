@@ -2222,6 +2222,16 @@
 
             if (badge) badge.textContent = this.zones.length;
             if (navBadge) navBadge.textContent = this.zones.length;
+
+            const totalCap = this.zones.reduce((sum, z) => sum + (parseInt(z.capacity) || 0), 0);
+            if (typeof recalculateTotalCapacity === 'function') {
+                recalculateTotalCapacity();
+            } else {
+                const capEl = document.getElementById('calculatedTotalCapacity');
+                if (capEl) capEl.textContent = totalCap.toLocaleString();
+                const capSummaryEl = document.getElementById('totalCapacitySummaryText');
+                if (capSummaryEl) capSummaryEl.textContent = totalCap.toLocaleString() + ' entradas';
+            }
             if (!list) return;
 
             list.innerHTML = '';
@@ -2694,6 +2704,12 @@
             if (standardContainer) standardContainer.style.display = 'block';
             if (interactiveContainer) interactiveContainer.style.display = 'none';
             SeatMapEditor.syncToStandardTable();
+            if (typeof syncCourtesyZonesTable === 'function') {
+                syncCourtesyZonesTable();
+            }
+            if (typeof recalculateTotalCapacity === 'function') {
+                recalculateTotalCapacity();
+            }
         } else {
             if (btnInteractive) btnInteractive.classList.add('active');
             if (btnStandard) btnStandard.classList.remove('active');
@@ -2702,6 +2718,12 @@
             SeatMapEditor.syncFromStandardTable();
             SeatMapEditor.updateImageBadge();
             SeatMapEditor.render();
+            if (typeof syncCourtesyZonesTable === 'function') {
+                syncCourtesyZonesTable();
+            }
+            if (typeof recalculateTotalCapacity === 'function') {
+                recalculateTotalCapacity();
+            }
         }
     }
 

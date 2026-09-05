@@ -105,6 +105,7 @@ Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group
     Route::delete('/admin/eventos/{event}', [EventController::class, 'destroy'])->name('web.events.destroy');
     Route::post('/admin/eventos/{event}/duplicar', [EventController::class, 'duplicate'])->name('web.events.duplicate');
     Route::get('/admin/eventos/{event}/boletos-registrados', [EventController::class, 'getRegisteredTickets'])->name('web.events.registered_tickets');
+    Route::post('/admin/eventos/{event}/sincronizar-boletos', [EventController::class, 'syncTickets'])->name('web.events.sync_tickets');
     Route::post('/admin/eventos/{event}/registrar-boletos-pdf', [EventController::class, 'storeBatchTickets'])->name('web.events.store_batch_tickets');
     Route::delete('/admin/eventos/{event}/eliminar-boletos-pdf', [EventController::class, 'destroyBatchTickets'])->name('web.events.destroy_batch_tickets');
     Route::get('/admin/media', [EventController::class, 'getMedia'])->name('web.media.index');

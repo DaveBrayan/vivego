@@ -42,13 +42,45 @@ class EventController extends Controller
 
         foreach ($dbEvents as $ev) {
             $zones = $ev->zones ?? [];
-            $currentAvailable = (int) array_sum(array_column($zones, 'capacity'));
+            $totalCapacity = (int) array_sum(array_column($zones, 'capacity'));
             $minPrice = count($zones) > 0 ? min(array_column($zones, 'price')) : 50;
 
-            // Calcular ventas reales y aforo total inicial (disponible + vendido)
-            $ticketsSold = $ev->sales ? (int) $ev->sales->sum('quantity') : (int) TicketSale::where('event_id', $ev->id)->sum('quantity');
-            $totalCapacity = $currentAvailable + $ticketsSold;
-            $capacityPercentage = $totalCapacity > 0 ? min(100, round(($ticketsSold / $totalCapacity) * 100, 1)) : 0;
+            // Cortesías: configuración y cupo asignado por zonas
+            $cSettings = is_array($ev->courtesy_settings) 
+                ? $ev->courtesy_settings 
+                : (json_decode($ev->courtesy_settings ?? '[]', true) ?: []);
+            $courtesyEnabled = !empty($cSettings['enabled']);
+            $courtesyCapacity = 0;
+
+            if ($courtesyEnabled && !empty($cSettings['zones']) && is_array($cSettings['zones'])) {
+                foreach ($cSettings['zones'] as $cz) {
+                    if (isset($cz['stock']) && is_numeric($cz['stock']) && (int)$cz['stock'] > 0) {
+                        $courtesyCapacity += (int)$cz['stock'];
+                    }
+                }
+            }
+
+            // Calcular ventas regulares vs cortesías
+            $regularSold = 0;
+            $courtesySold = 0;
+
+            $salesList = $ev->sales ?? TicketSale::where('event_id', $ev->id)->get();
+            foreach ($salesList as $s) {
+                if (isset($s->status) && in_array(strtolower($s->status), ['cancelled', 'anulado', 'refunded'])) {
+                    continue;
+                }
+                $pm = strtolower(trim((string)$s->payment_method));
+                $zName = strtolower(trim((string)$s->zone_name));
+                $isCourtesy = ($pm === 'cortesía' || $pm === 'cortesia' || (float)$s->total_amount == 0 || str_contains($zName, 'cortesía') || str_contains($zName, 'cortesia'));
+
+                if ($isCourtesy) {
+                    $courtesySold += (int) $s->quantity;
+                } else {
+                    $regularSold += (int) $s->quantity;
+                }
+            }
+
+            $capacityPercentage = $totalCapacity > 0 ? min(100, round(($regularSold / $totalCapacity) * 100, 1)) : 0;
 
             // Formatear fecha de manera 100% segura contra cadenas o Carbon
             $dateFormatted = '10/04/2025';
@@ -107,9 +139,16 @@ class EventController extends Controller
                 'city' => $ev->address ?? 'Ayacucho',
                 'date_formatted' => $dateFormatted,
                 'time_formatted' => $ev->event_time ?? '18:00 hrs',
-                'tickets_sold' => $ticketsSold,
+                'tickets_sold' => $regularSold,
+                'regular_sold' => $regularSold,
                 'total_capacity' => $totalCapacity > 0 ? $totalCapacity : 60,
+                'regular_capacity' => $totalCapacity,
                 'capacity_percentage' => $capacityPercentage,
+                'courtesy_enabled' => $courtesyEnabled,
+                'courtesy_sold' => $courtesySold,
+                'courtesy_capacity' => $courtesyCapacity,
+                'total_combined_sold' => $regularSold + $courtesySold,
+                'total_combined_capacity' => $totalCapacity + $courtesyCapacity,
                 'min_price' => 'S/ ' . number_format($minPrice, 2),
                 'revenue_formatted' => 'S/ 0.00',
                 'status' => $evStatus,
@@ -323,9 +362,16 @@ class EventController extends Controller
             $event->save();
         }
 
+        // Pre-generar y sincronizar automáticamente todos los boletos oficiales (QR, correlativo y hash) para todo el aforo
+        try {
+            \App\Services\TicketGenerationService::syncEventTickets($event);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error pre-generando boletos en creación de evento: ' . $e->getMessage());
+        }
+
         return response()->json([
             'success' => true,
-            'message' => '¡Evento publicado y guardado en MySQL con éxito!',
+            'message' => '¡Evento publicado exitosamente!',
             'event' => $event,
             'redirect' => route('events.index')
         ]);
@@ -634,9 +680,16 @@ class EventController extends Controller
             }
         }
 
+        // Pre-generar y sincronizar automáticamente boletos faltantes si se aumentó el aforo o se agregaron butacas
+        try {
+            \App\Services\TicketGenerationService::syncEventTickets($event);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error sincronizando boletos en edición de evento: ' . $e->getMessage());
+        }
+
         return response()->json([
             'success' => true,
-            'message' => '¡Evento actualizado con éxito en MySQL!',
+            'message' => '¡Evento y aforos actualizados con éxito!',
         ]);
     }
 
@@ -802,12 +855,39 @@ class EventController extends Controller
     }
 
     /**
+     * Sincroniza explícitamente los boletos de un evento con su aforo configurado.
+     */
+    public function syncTickets(Event $event): JsonResponse
+    {
+        try {
+            $result = \App\Services\TicketGenerationService::syncEventTickets($event);
+            return response()->json([
+                'success' => true,
+                'message' => "Sincronización completada. Se generaron {$result['created']} nuevas entradas.",
+                'created' => $result['created'],
+                'total' => $result['total'],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al sincronizar boletos: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Obtiene los boletos ya registrados en la base de datos para impresión PDF de este evento.
      */
     public function getRegisteredTickets(Event $event): JsonResponse
     {
+        // Asegurar que las entradas para todo el aforo configurado estén creadas en MySQL
+        try {
+            \App\Services\TicketGenerationService::syncEventTickets($event);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error sincronizando boletos en getRegisteredTickets: ' . $e->getMessage());
+        }
+
         $tickets = \App\Models\EventTicket::where('event_id', $event->id)
-            ->where('source', 'pdf_batch')
             ->orderBy('ticket_number', 'asc')
             ->orderBy('id', 'asc')
             ->get()
@@ -836,6 +916,9 @@ class EventController extends Controller
             'success' => true,
             'count' => $tickets->count(),
             'tickets' => $tickets,
+            'courtesy_settings' => is_array($event->courtesy_settings) 
+                ? $event->courtesy_settings 
+                : (json_decode($event->courtesy_settings ?? '[]', true) ?: []),
         ]);
     }
 

@@ -42,16 +42,15 @@ class BoxOfficeController extends Controller
 
         foreach ($dbEvents as $ev) {
             $zones = $ev->zones ?? [];
-            $currentAvailableCapacity = (int) array_sum(array_column($zones, 'capacity'));
+            $totalCapacity = (int) array_sum(array_column($zones, 'capacity'));
             $minPrice = count($zones) > 0 ? min(array_column($zones, 'price')) : 50;
 
             // Calcular ventas reales desde la tabla ticket_sales
             $salesCount = $ev->sales ? (int) $ev->sales->sum('quantity') : (int) TicketSale::where('event_id', $ev->id)->sum('quantity');
             $salesRevenue = $ev->sales ? (float) $ev->sales->sum('total_amount') : (float) TicketSale::where('event_id', $ev->id)->sum('total_amount');
 
-            // El aforo total inicial es el stock disponible actual más las entradas ya vendidas
-            $totalCapacity = $currentAvailableCapacity + $salesCount;
-            $remainingStock = $currentAvailableCapacity;
+            // El aforo total es la capacidad configurada, y el stock restante se calcula restando las ventas
+            $remainingStock = max(0, $totalCapacity - $salesCount);
 
             $globalTotalRevenue += $salesRevenue;
             $globalTicketsSold += $salesCount;
@@ -230,10 +229,10 @@ class BoxOfficeController extends Controller
         $zonesWithStats = [];
         foreach ($zones as $z) {
             $zName = $z['name'] ?? 'General';
-            $zAvail = (int) ($z['capacity'] ?? 0);
+            $zTotalCap = (int) ($z['capacity'] ?? 0);
             $zPrice = (float) ($z['price'] ?? 0);
             $zSold = (int) $sales->where('zone_name', $zName)->sum('quantity');
-            $zTotalCap = $zAvail + $zSold;
+            $zAvail = max(0, $zTotalCap - $zSold);
 
             $zCourtesySold = (int) $courtesySales->where('zone_name', $zName)->sum('quantity');
             $hasCustomCourtesyZones = count($courtesyZoneConfigMap) > 0;
@@ -649,10 +648,10 @@ class BoxOfficeController extends Controller
         $zonesWithStats = [];
         foreach ($event->zones as $z) {
             $zName = $z['name'] ?? 'General';
-            $zAvail = (int) ($z['capacity'] ?? 0);
+            $zTotalCap = (int) ($z['capacity'] ?? 0);
             $zPrice = (float) ($z['price'] ?? 0);
             $zSold = (int) $allSales->where('zone_name', $zName)->sum('quantity');
-            $zTotalCap = $zAvail + $zSold;
+            $zAvail = max(0, $zTotalCap - $zSold);
 
             $zCourtesySold = (int) $courtesySales->where('zone_name', $zName)->sum('quantity');
             $hasCustomCourtesyZones = count($courtesyZoneConfigMap) > 0;
