@@ -23,6 +23,7 @@ use App\Http\Controllers\Web\PaymentGatewayController;
 use App\Http\Controllers\Web\LegalController;
 use App\Http\Controllers\Web\ClaimBookController;
 use App\Http\Controllers\Web\ClaimAdminController;
+use App\Http\Controllers\Web\DeviceController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -128,6 +129,14 @@ Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group
     Route::post('/admin/asistentes/{event}/validar-qr', [AttendeeController::class, 'verifyQr'])->name('web.attendees.verify_qr');
     Route::post('/admin/asistentes/{event}/anular-escaneo/{ticket}', [AttendeeController::class, 'resetCheckin'])->name('web.attendees.reset_checkin');
     Route::delete('/admin/asistentes/{event}/anular-escaneo/{ticket}', [AttendeeController::class, 'resetCheckin'])->name('web.attendees.destroy_checkin');
+
+    // Control de Dispositivos Móviles & Handhelds (App Flutter)
+    Route::get('/admin/dispositivos', [DeviceController::class, 'index'])->name('web.devices');
+    Route::post('/admin/dispositivos', [DeviceController::class, 'store'])->name('web.devices.store');
+    Route::put('/admin/dispositivos/{device}', [DeviceController::class, 'update'])->name('web.devices.update');
+    Route::delete('/admin/dispositivos/{device}', [DeviceController::class, 'destroy'])->name('web.devices.destroy');
+    Route::post('/admin/dispositivos/{device}/regenerar-qr', [DeviceController::class, 'regenerateQr'])->name('web.devices.regenerate_qr');
+    Route::post('/admin/dispositivos/{device}/toggle-status', [DeviceController::class, 'toggleStatus'])->name('web.devices.toggle_status');
 
     Route::get('/admin/categorias', [CategoryController::class, 'index'])->name('web.categories');
     Route::post('/admin/categorias', [CategoryController::class, 'store'])->name('web.categories.store');

@@ -391,6 +391,12 @@
                     <span class="dash-nav-text">Asistentes & Scanner</span>
                 </a>
             </li>
+            <li class="dash-nav-item {{ request()->routeIs('web.devices*') ? 'active' : '' }}">
+                <a href="{{ route('web.devices') }}" class="dash-nav-link">
+                    <span class="dash-nav-icon">📱</span>
+                    <span class="dash-nav-text">Dispositivos</span>
+                </a>
+            </li>
         </ul>
 
         <div class="dash-nav-section-title" style="margin-top: 1.5rem;">GESTIÓN & HERRAMIENTAS</div>
