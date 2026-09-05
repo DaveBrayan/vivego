@@ -806,49 +806,46 @@ class BoxOfficeController extends Controller
                 }
             }
 
-            $cleanSaleZone = preg_replace('/\s*\([^)]*\)$/', '', trim($sale->zone_name));
-            foreach ($zones as $idx => $z) {
-                $cleanZName = preg_replace('/\s*\([^)]*\)$/', '', trim($z['name'] ?? ''));
-                if (($z['name'] ?? '') === $sale->zone_name || strtolower($cleanZName) === strtolower($cleanSaleZone)) {
-                    $zones[$idx]['capacity'] = (int) ($z['capacity'] ?? 0) + (int) $sale->quantity;
-                    if (!empty($releasedSeats) && !empty($zones[$idx]['seats']) && is_array($zones[$idx]['seats'])) {
+            // Si hay butacas numeradas liberadas, restaurar su estado a disponible sin alterar el aforo base
+            if (!empty($releasedSeats)) {
+                $hasSeatChanges = false;
+                foreach ($zones as $idx => $z) {
+                    if (!empty($zones[$idx]['seats']) && is_array($zones[$idx]['seats'])) {
                         foreach ($zones[$idx]['seats'] as &$sItem) {
                             $sCode = formatShortSeatCode($sItem);
                             if (in_array($sCode, $releasedSeats)) {
                                 $sItem['status'] = 'available';
+                                $hasSeatChanges = true;
                             }
                         }
                         unset($sItem);
                     }
-                    break;
+                }
+                if ($hasSeatChanges) {
+                    $event->zones = $zones;
+                    $event->save();
                 }
             }
-            $event->zones = $zones;
-            $event->save();
         }
 
-        // Desvincular boletos físicos pre-generados para que vuelvan a estar disponibles en taquilla
+        // Liberar el boleto en event_tickets: NUNCA se borra el registro de la entrada,
+        // solo se desvincula de la venta (ticket_sale_id = null) y se resetean los datos del comprador
+        // para que la entrada quede completamente libre y lista para registrarse en otra venta.
         \App\Models\EventTicket::where('ticket_sale_id', $sale->id)
-            ->where('source', 'pdf_batch')
             ->update([
                 'ticket_sale_id' => null,
-                'buyer_name' => 'Impresión de Evento',
+                'buyer_name' => 'Talonario Físico / Taquilla',
                 'buyer_dni' => '00000000',
                 'status' => 'valid',
                 'is_used' => false,
             ]);
 
-        // Eliminar solo los boletos virtuales que fueron creados exclusivamente para esta venta
-        \App\Models\EventTicket::where('ticket_sale_id', $sale->id)
-            ->where('source', '!=', 'pdf_batch')
-            ->delete();
-
-        // Eliminar la venta
+        // Eliminar el registro de la venta en ticket_sales
         $sale->delete();
 
         return response()->json([
             'success' => true,
-            'message' => '¡Entrada / venta eliminada correctamente y aforo restaurado!'
+            'message' => '¡Venta eliminada correctamente! La entrada quedó libre para poder registrarse en otra venta.'
         ]);
     }
 

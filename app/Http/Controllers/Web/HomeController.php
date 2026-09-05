@@ -38,7 +38,7 @@ class HomeController extends Controller
             $zones = is_array($ev->zones) ? $ev->zones : (is_string($ev->zones) ? json_decode($ev->zones, true) : []);
             $minPrice = (!empty($zones) && count($zones) > 0) ? min(array_column($zones, 'price')) : 50.00;
             $currentAvailable = !empty($zones) ? (int) array_sum(array_column($zones, 'capacity')) : 100;
-
+            $ticketsSold = $ev->sales ? (int) $ev->sales->where('status', '!=', 'cancelled')->sum('quantity') : 0;
             $totalCapacity = $currentAvailable;
             $capacityPercentage = $totalCapacity > 0 ? min(100, round(($ticketsSold / $totalCapacity) * 100)) : 10;
             if ($capacityPercentage < 10) {

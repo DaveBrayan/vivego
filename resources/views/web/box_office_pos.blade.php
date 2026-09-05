@@ -1333,13 +1333,13 @@
             if (!saleId) return;
 
             const result = await Swal.fire({
-                title: '🗑️ ¿Borrar Entrada / Venta?',
-                text: 'Esta acción anulará el boleto emitido y devolverá el aforo correspondiente a la zona.',
+                title: '🗑️ ¿Anular Venta y Liberar Entrada?',
+                text: 'Esta acción borrará el registro de venta y liberará el boleto en el sistema para que quede disponible para registrarse en otra venta.',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#EF4444',
                 cancelButtonColor: '#475569',
-                confirmButtonText: 'Sí, borrar entrada',
+                confirmButtonText: 'Sí, anular y liberar entrada',
                 cancelButtonText: 'Cancelar',
                 background: '#14141E',
                 color: '#FFFFFF'
