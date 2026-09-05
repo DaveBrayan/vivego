@@ -1400,7 +1400,7 @@
             renderWrapper.style.height = '370px';
             renderWrapper.style.zIndex = '9999999';
             renderWrapper.style.overflow = 'hidden';
-            renderWrapper.style.borderRadius = '14px';
+            renderWrapper.style.borderRadius = '0px';
             renderWrapper.style.background = bgColor;
             renderWrapper.style.fontFamily = "'Plus Jakarta Sans', sans-serif";
             renderWrapper.style.boxSizing = 'border-box';
@@ -1480,7 +1480,7 @@
                     canvasHtml = renderTicketCanvasContent(template, dynamicData, assetMap);
                 } else {
                     canvasHtml = `
-                        <div style="position: relative; width: 100%; height: 100%; padding: 1.25rem; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; background: #14141E; color: #FFFFFF; border-radius: 14px;">
+                        <div style="position: relative; width: 100%; height: 100%; padding: 1.25rem; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; background: #14141E; color: #FFFFFF; border-radius: 0px;">
                             <div>
                                 <h3 style="font-size: 18px; font-weight: 900; margin: 0 0 4px 0;">${eventTitle}</h3>
                                 <p style="font-size: 13px; color: ${isTicketCourtesy ? '#10B981' : '#FF5500'}; font-weight: 800; margin: 0 0 6px 0;">ZONA: ${tItem.zoneName} • PRECIO: ${isTicketCourtesy ? 'S/ 0.00 (CORTESÍA)' : 'S/ ' + tItem.zonePrice}</p>
@@ -1507,10 +1507,10 @@
                 const imgData = canvas.toDataURL('image/jpeg', 0.95);
                 pdf.addImage(imgData, 'JPEG', posX, posY, ticketWidthMm, ticketHeightMm, undefined, 'FAST');
 
-                const cutRadius = isA4 ? 2.5 : 3.5;
+                // Guía perimetral de corte recto para imprenta (guillotina)
                 pdf.setDrawColor(180, 190, 205);
                 pdf.setLineWidth(0.2);
-                pdf.roundedRect(posX, posY, ticketWidthMm, ticketHeightMm, cutRadius, cutRadius, 'S');
+                pdf.rect(posX, posY, ticketWidthMm, ticketHeightMm, 'S');
             }
 
             if (renderWrapper && renderWrapper.parentNode) {
