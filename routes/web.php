@@ -224,6 +224,21 @@ Route::get('/optimizar-sistema', function () {
                         <div>✔ Caché de Optimización lista</div>
                     </div>
                     ' . (!empty(trim($migrateOutput)) ? '<div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 0.75rem 1rem; text-align: left; font-family: monospace; font-size: 0.8rem; color: #CBD5E1; max-height: 140px; overflow-y: auto; margin-bottom: 1.5rem; white-space: pre-wrap;">' . htmlspecialchars($migrateOutput) . '</div>' : '') . '
+
+                    <!-- TARJETA DE ACCIÓN: SINCRONIZAR VENTAS ANTIGUAS A BOLETOS DE PLANCHA -->
+                    <div style="background: rgba(37,99,235,0.08); border: 1.5px solid rgba(37,99,235,0.3); border-radius: 14px; padding: 1.25rem; margin-bottom: 1.5rem; text-align: left;">
+                        <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem;">
+                            <span style="font-size: 1.4rem;">🎟️</span>
+                            <strong style="color: #60A5FA; font-size: 1rem;">Sincronizar Ventas Antiguas a Boletos de Plancha</strong>
+                        </div>
+                        <p style="color: #94A3B8; font-size: 0.82rem; margin: 0 0 1rem 0; line-height: 1.4;">
+                            Vincula las ventas registradas con la tabla oficial de boletos de plancha (<code>event_tickets</code>), trasladando el correlativo, código QR y hash de validación para que la plancha imprima exactamente el mismo boleto y no duplique correlativos.
+                        </p>
+                        <a href="/sincronizar-ventas-antiguas" style="display: inline-block; background: linear-gradient(135deg, #2563EB, #1D4ED8); color: #FFFFFF; font-weight: 800; text-decoration: none; padding: 0.75rem 1.4rem; border-radius: 10px; font-size: 0.85rem; box-shadow: 0 4px 15px rgba(37,99,235,0.35);">
+                            🔄 Pasar Ventas Antiguas a Boletos de Plancha
+                        </a>
+                    </div>
+
                     <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
                         <a href="' . route('web.home') . '" style="display: inline-block; background: linear-gradient(135deg, #FF5500, #E04B00); color: #FFFFFF; font-weight: 800; text-decoration: none; padding: 0.85rem 1.8rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(255,85,0,0.4);">
                             Ir a la Página Principal
@@ -237,6 +252,78 @@ Route::get('/optimizar-sistema', function () {
         ', 200)->header('Content-Type', 'text/html');
     } catch (\Exception $e) {
         return response('<div style="font-family: sans-serif; padding: 2rem; background: #14141E; color: #EF4444;"><h3 style="color:#EF4444;">Error al optimizar y migrar:</h3><pre style="background: #000; padding: 1rem; border-radius: 8px; color: #FCA5A5;">' . htmlspecialchars($e->getMessage()) . '</pre></div>', 500);
+    }
+});
+
+Route::get('/sincronizar-ventas-antiguas', function () {
+    try {
+        $res = \App\Services\TicketGenerationService::syncSalesToEventTickets();
+
+        $rowsHtml = '';
+        foreach (array_slice($res['details'], 0, 50) as $d) {
+            $badgeColor = $d['action'] === 'Creado' ? '#10B981' : '#3B82F6';
+            $rowsHtml .= '<tr style="border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.8rem;">
+                <td style="padding: 0.5rem 0.65rem; color: #94A3B8;">#' . $d['sale_id'] . '</td>
+                <td style="padding: 0.5rem 0.65rem; color: #F59E0B; font-weight: 800; font-family: monospace;">' . htmlspecialchars($d['ticket_code']) . '</td>
+                <td style="padding: 0.5rem 0.65rem; color: #60A5FA; font-family: monospace;">' . htmlspecialchars($d['validation_hash']) . '</td>
+                <td style="padding: 0.5rem 0.65rem; color: #FFFFFF;">' . htmlspecialchars($d['buyer_name']) . '</td>
+                <td style="padding: 0.5rem 0.65rem; color: #CBD5E1;">ET #' . $d['event_ticket_id'] . '</td>
+                <td style="padding: 0.5rem 0.65rem;"><span style="background: ' . $badgeColor . '22; color: ' . $badgeColor . '; border: 1px solid ' . $badgeColor . '55; padding: 0.15rem 0.45rem; border-radius: 6px; font-weight: 800; font-size: 0.7rem;">' . $d['action'] . '</span></td>
+            </tr>';
+        }
+
+        return response('
+            <div style="font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; background: #0A0A10; display: flex; align-items: center; justify-content: center; padding: 1.5rem; color: #FFFFFF;">
+                <div style="background: #14141E; border: 1px solid rgba(37,99,235,0.35); padding: 2.5rem; border-radius: 20px; max-width: 760px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.6); text-align: center;">
+                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">🎉</div>
+                    <h2 style="color: #60A5FA; font-size: 1.6rem; font-weight: 900; margin: 0 0 0.5rem 0;">¡Ventas Antiguas Sincronizadas con Éxito!</h2>
+                    <p style="color: #94A3B8; font-size: 0.92rem; margin-bottom: 1.5rem;">Se han vinculado los códigos QR, hashes y correlativos de las ventas registradas con la tabla oficial de boletos de plancha (<code>event_tickets</code>).</p>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; text-align: center;">
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 0.85rem;">
+                            <span style="font-size: 0.75rem; color: #94A3B8; display: block;">Ventas Procesadas</span>
+                            <strong style="font-size: 1.3rem; color: #60A5FA;">' . $res['synced_sales'] . '</strong>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 0.85rem;">
+                            <span style="font-size: 0.75rem; color: #94A3B8; display: block;">Boletos Actualizados</span>
+                            <strong style="font-size: 1.3rem; color: #10B981;">' . $res['updated_tickets'] . '</strong>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 0.85rem;">
+                            <span style="font-size: 0.75rem; color: #94A3B8; display: block;">Boletos Creados</span>
+                            <strong style="font-size: 1.3rem; color: #F59E0B;">' . $res['created_tickets'] . '</strong>
+                        </div>
+                    </div>
+
+                    ' . (!empty($rowsHtml) ? '
+                    <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; overflow: hidden; margin-bottom: 1.5rem; max-height: 260px; overflow-y: auto;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                            <thead>
+                                <tr style="background: rgba(255,255,255,0.04); font-size: 0.72rem; color: #94A3B8; text-transform: uppercase;">
+                                    <th style="padding: 0.5rem 0.65rem;">Venta</th>
+                                    <th style="padding: 0.5rem 0.65rem;">Boleto</th>
+                                    <th style="padding: 0.5rem 0.65rem;">Hash</th>
+                                    <th style="padding: 0.5rem 0.65rem;">Comprador</th>
+                                    <th style="padding: 0.5rem 0.65rem;">Ref ET</th>
+                                    <th style="padding: 0.5rem 0.65rem;">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>' . $rowsHtml . '</tbody>
+                        </table>
+                    </div>' : '') . '
+
+                    <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+                        <a href="/optimizar-sistema" style="display: inline-block; background: #1E1E2E; border: 1px solid rgba(255,255,255,0.15); color: #FFFFFF; font-weight: 700; text-decoration: none; padding: 0.85rem 1.4rem; border-radius: 12px;">
+                            ← Volver a Optimizar Sistema
+                        </a>
+                        <a href="' . route('web.home') . '" style="display: inline-block; background: linear-gradient(135deg, #FF5500, #E04B00); color: #FFFFFF; font-weight: 800; text-decoration: none; padding: 0.85rem 1.8rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(255,85,0,0.4);">
+                            Ir a la Página Principal
+                        </a>
+                    </div>
+                </div>
+            </div>
+        ', 200)->header('Content-Type', 'text/html');
+    } catch (\Exception $e) {
+        return response('<div style="font-family: sans-serif; padding: 2rem; background: #14141E; color: #EF4444;"><h3 style="color:#EF4444;">Error al sincronizar ventas antiguas:</h3><pre style="background: #000; padding: 1rem; border-radius: 8px; color: #FCA5A5;">' . htmlspecialchars($e->getMessage()) . '</pre></div>', 500);
     }
 });
 
