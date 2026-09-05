@@ -1196,10 +1196,12 @@
                     }
 
                     const isTicketCourtesy = zb.isCourtesy || /cortes[ií]a/i.test(zName) || (t.buyerName && /cortes/i.test(t.buyerName));
+                    const numSeq = parseInt(t.ticketNumberVal || t.ticket_number, 10) || 1;
+                    const correlativeFormatted = 'N° ' + String(numSeq).padStart(5, '0');
 
                     candidateTickets.push({
-                        ticketNumberVal: parseInt(t.ticketNumberVal || t.ticket_number, 10),
-                        ticketCode: t.ticketCode || t.ticket_code,
+                        ticketNumberVal: numSeq,
+                        ticketCode: correlativeFormatted,
                         zoneName: zName,
                         seatCode: sCode,
                         zonePrice: isTicketCourtesy ? '0.00' : (t.zonePrice || (parseFloat(t.unit_price) || 0).toFixed(2)),
@@ -1456,6 +1458,9 @@
                 }
 
                 const isTicketCourtesy = tItem.isCourtesy || /cortes[ií]a/i.test(tItem.zoneName) || (tItem.buyerName && /cortes/i.test(tItem.buyerName));
+                const numVal = parseInt(tItem.ticketNumberVal, 10) || 1;
+                const correlativeFormatted = 'N° ' + String(numVal).padStart(5, '0');
+
                 const dynamicData = {
                     title: eventTitle,
                     venue: eventVenue,
@@ -1468,7 +1473,8 @@
                     buyer_name: isTicketCourtesy ? 'PASE DE CORTESÍA' : '',
                     buyer_dni: '',
                     is_plancha_print: true,
-                    ticket_number: tItem.ticketCode,
+                    ticket_number: correlativeFormatted,
+                    ticket_code: correlativeFormatted,
                     hash: tItem.validationHash,
                     qr_data_url: qrDataUrl
                 };
@@ -1485,7 +1491,7 @@
                                 <h3 style="font-size: 18px; font-weight: 900; margin: 0 0 4px 0;">${eventTitle}</h3>
                                 <p style="font-size: 13px; color: ${isTicketCourtesy ? '#10B981' : '#FF5500'}; font-weight: 800; margin: 0 0 6px 0;">ZONA: ${tItem.zoneName} • PRECIO: ${isTicketCourtesy ? 'S/ 0.00 (CORTESÍA)' : 'S/ ' + tItem.zonePrice}</p>
                                 <p style="font-size: 11px; opacity: 0.8; margin: 0;">${eventVenue} • ${eventDate} ${eventTime}</p>
-                                <div style="margin-top: 10px; font-size: 13px; font-weight: 900; color: #F59E0B;">${tItem.ticketCode}</div>
+                                <div style="margin-top: 10px; font-size: 13px; font-weight: 900; color: #F59E0B;">${correlativeFormatted}</div>
                             </div>
                             <div style="width: 100px; height: 100px; background: #FFFFFF; padding: 4px; border-radius: 8px;">
                                 <img src="${qrDataUrl}" style="width: 100%; height: 100%; object-fit: contain;" />
@@ -1848,10 +1854,13 @@
                         } else {
                             rawTxt = `<div style="display: flex; flex-direction: column; text-align: inherit; width: 100%;"><span style="font-size: 0.75em; opacity: 0.85;">Comprador:</span><span style="font-weight: 900; text-transform: uppercase;">${bName}</span></div>`;
                         }
-                    } else if (field === 'ticket_number' || el.id === 'canvaElTicketNumber' || /N[°º]/i.test(rawTxt)) {
-                        const numStr = dynamicData.ticket_number || 'N° 00001';
-                        if (/N[°º]/i.test(rawTxt)) {
-                            rawTxt = rawTxt.replace(/N[°º]\s*[\d]+/gi, numStr);
+                    } else if (field === 'ticket_number' || field === 'ticket_code' || field === 'code' ||
+                               el.id === 'canvaElTicketNumber' || el.id === 'canvaElTicketCode' ||
+                               /N[°º]/i.test(rawTxt) || /TK-[A-Z0-9_\-]+/i.test(rawTxt)) {
+                        const numVal = parseInt(String(dynamicData.ticket_number || dynamicData.ticket_code || '').replace(/[^0-9]/g, ''), 10) || 1;
+                        const numStr = 'N° ' + String(numVal).padStart(5, '0');
+                        if (/N[°º]/i.test(rawTxt) || /TK-[A-Z0-9_\-]+/i.test(rawTxt)) {
+                            rawTxt = rawTxt.replace(/(N[°º]\s*[\d]+|TK-[A-Z0-9_\-]+)/gi, numStr);
                         } else if (rawTxt && rawTxt.trim().length > 0) {
                             rawTxt = rawTxt.includes('<') ? rawTxt.replace(/([^>]+)(?=<|$)/, numStr) : numStr;
                         } else {

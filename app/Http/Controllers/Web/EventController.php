@@ -894,7 +894,7 @@ class EventController extends Controller
             ->values()
             ->map(function ($t, $index) use ($event) {
                 $num = (int) $t->ticket_number > 0 ? (int) $t->ticket_number : ($index + 1);
-                $formattedCode = $t->ticket_code ?: ('N° ' . str_pad($num, 5, '0', STR_PAD_LEFT));
+                $formattedCode = 'N° ' . str_pad($num, 5, '0', STR_PAD_LEFT);
                 $valHash = $t->validation_hash ?: ('VG' . strtoupper(substr(md5($event->id . '_' . $num . '_' . $t->id), 0, 8)));
                 $qrPayload = $t->qr_payload ?: "VIVEGO|EVT-{$event->id}|TICK-{$num}|HASH-{$valHash}";
 

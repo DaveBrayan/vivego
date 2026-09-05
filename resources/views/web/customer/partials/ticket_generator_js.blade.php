@@ -358,10 +358,13 @@
                     } else {
                         rawTxt = `<span style="font-weight: 800;">DNI: ${bDni}</span>`;
                     }
-                } else if (field === 'ticket_number' || el.id === 'canvaElTicketNumber' || /N[°º]/i.test(rawTxt)) {
-                    const numStr = dynamicData.ticket_number || 'N° 00001';
-                    if (/N[°º]/i.test(rawTxt)) {
-                        rawTxt = rawTxt.replace(/N[°º]\s*[\d]+/gi, numStr);
+                } else if (field === 'ticket_number' || field === 'ticket_code' || field === 'code' ||
+                           el.id === 'canvaElTicketNumber' || el.id === 'canvaElTicketCode' ||
+                           /N[°º]/i.test(rawTxt) || /TK-[A-Z0-9_\-]+/i.test(rawTxt)) {
+                    const numVal = parseInt(String(dynamicData.ticket_number || dynamicData.ticket_code || '').replace(/[^0-9]/g, ''), 10) || 1;
+                    const numStr = 'N° ' + String(numVal).padStart(5, '0');
+                    if (/N[°º]/i.test(rawTxt) || /TK-[A-Z0-9_\-]+/i.test(rawTxt)) {
+                        rawTxt = rawTxt.replace(/(N[°º]\s*[\d]+|TK-[A-Z0-9_\-]+)/gi, numStr);
                     } else if (rawTxt && rawTxt.trim().length > 0) {
                         rawTxt = rawTxt.includes('<') ? rawTxt.replace(/([^>]+)(?=<|$)/, numStr) : numStr;
                     } else {

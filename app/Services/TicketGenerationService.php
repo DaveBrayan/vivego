@@ -286,7 +286,7 @@ class TicketGenerationService
                         $ticketNum = $i + 1;
                     }
 
-                    $ticketCode = !empty($t['ticket_code']) ? $t['ticket_code'] : ('N° ' . str_pad($ticketNum, 5, '0', STR_PAD_LEFT));
+                    $ticketCode = 'N° ' . str_pad($ticketNum, 5, '0', STR_PAD_LEFT);
                     $zoneName = !empty($t['zone']) ? $t['zone'] : (!empty($t['zone_name']) ? $t['zone_name'] : $sale->zone_name);
                     $unitPrice = isset($t['price']) ? (float)$t['price'] : (float)$sale->unit_price;
                     $buyerName = !empty($t['buyer_name']) ? $t['buyer_name'] : $sale->buyer_name;
@@ -380,6 +380,15 @@ class TicketGenerationService
                     $sale->update(['tickets_data' => $updatedTicketsList]);
                 }
                 $syncedSales++;
+            }
+
+            // Normalizar cualquier boleto remanente en event_tickets con formato antiguo TK-
+            $legacyTickets = EventTicket::where('ticket_code', 'like', 'TK-%')->get();
+            foreach ($legacyTickets as $lt) {
+                $num = (int)$lt->ticket_number > 0 ? (int)$lt->ticket_number : 1;
+                $lt->update([
+                    'ticket_code' => 'N° ' . str_pad($num, 5, '0', STR_PAD_LEFT),
+                ]);
             }
 
             return [
