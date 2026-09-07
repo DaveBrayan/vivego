@@ -1381,6 +1381,13 @@ class CheckoutController extends Controller
                 }
             }
 
+            $splitSettings = is_array($targetEvent->quota_split_settings) 
+                ? $targetEvent->quota_split_settings 
+                : (json_decode($targetEvent->quota_split_settings ?? '[]', true) ?: []);
+            $isSplitActive = !empty($splitSettings['enabled']);
+            $isCourtesySale = (in_array(strtolower($sale->payment_method ?? ''), ['cortesía', 'cortesia']) || (float)$sale->total_amount == 0);
+            $requiredTicketType = $isSplitActive ? ($isCourtesySale ? 'cortesia_digital' : 'digital') : null;
+
             $currentIdx = 0;
             $matchedPhysicalTickets = [];
 
@@ -1392,8 +1399,21 @@ class CheckoutController extends Controller
 
                 $physicalTicket = null;
 
+                $applyTicketTypeFilter = function ($q) use ($requiredTicketType) {
+                    if ($requiredTicketType === 'cortesia_digital') {
+                        $q->where(function ($sq) {
+                            $sq->where('ticket_type', 'cortesia_digital')
+                               ->orWhere(function ($ssq) {
+                                   $ssq->where('ticket_type', 'cortesia')->where('source', 'web_checkout');
+                               });
+                        });
+                    } elseif ($requiredTicketType) {
+                        $q->where('ticket_type', $requiredTicketType);
+                    }
+                };
+
                 if ($seatCode) {
-                    // Caso Butacas Numeradas: buscar boleto físico pre-generado para esta butaca específica
+                    // Caso Butacas Numeradas: buscar boleto pre-generado para esta butaca específica
                     $seatDigits = preg_replace('/[^0-9]/', '', $seatCode);
                     $seatLetter = preg_replace('/[^A-Za-z]/', '', $seatCode);
 
@@ -1402,6 +1422,7 @@ class CheckoutController extends Controller
                             $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
                         })
                         ->whereNotIn('id', array_keys($matchedPhysicalTickets))
+                        ->tap($applyTicketTypeFilter)
                         ->where(function ($q) use ($entry, $cleanBaseZone, $seatCode, $seatDigits, $seatLetter) {
                             $q->where('zone_name', $entry['zone'])
                               ->orWhere('zone_name', 'LIKE', "%{$seatCode}%")
@@ -1411,12 +1432,13 @@ class CheckoutController extends Controller
                         ->orderBy('id', 'asc')
                         ->first();
                 } else {
-                    // Caso Zona General: buscar el siguiente boleto pre-impreso disponible del pool
+                    // Caso Zona General: buscar el siguiente boleto disponible del pool
                     $physicalTicket = \App\Models\EventTicket::where('event_id', $targetEvent->id)
                         ->where(function ($q) {
                             $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
                         })
                         ->whereNotIn('id', array_keys($matchedPhysicalTickets))
+                        ->tap($applyTicketTypeFilter)
                         ->where(function ($q) use ($entry, $cleanBaseZone) {
                             $q->where('zone_name', $entry['zone'])
                               ->orWhere('zone_name', 'LIKE', $cleanBaseZone . '%');
@@ -1432,6 +1454,7 @@ class CheckoutController extends Controller
                                 $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
                             })
                             ->whereNotIn('id', array_keys($matchedPhysicalTickets))
+                            ->tap($applyTicketTypeFilter)
                             ->where(function ($q) use ($entry, $cleanBaseZone) {
                                 $q->where('zone_name', $entry['zone'])
                                   ->orWhere('zone_name', 'LIKE', $cleanBaseZone . '%');
@@ -1472,6 +1495,7 @@ class CheckoutController extends Controller
                         'buyer_name' => $sale->buyer_name,
                         'buyer_dni' => $sale->buyer_dni,
                         'source' => $sale->seller_name ?: 'web_checkout',
+                        'ticket_type' => $requiredTicketType ?: 'digital',
                         'is_used' => false,
                         'status' => 'valid',
                     ]);

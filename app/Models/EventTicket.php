@@ -23,6 +23,7 @@ class EventTicket extends Model
         'buyer_name',
         'buyer_dni',
         'source',
+        'ticket_type',
         'is_used',
         'checked_in_at',
         'scanned_by',

@@ -2232,6 +2232,9 @@
                 const capSummaryEl = document.getElementById('totalCapacitySummaryText');
                 if (capSummaryEl) capSummaryEl.textContent = totalCap.toLocaleString() + ' entradas';
             }
+            if (typeof syncQuotaSplitTable === 'function') {
+                syncQuotaSplitTable();
+            }
             if (!list) return;
 
             list.innerHTML = '';

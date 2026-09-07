@@ -652,7 +652,7 @@
                         </div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;" id="zonesStockContainer">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;" id="zonesStockContainer">
                         @foreach($zonesWithStats as $z)
                             <div class="pos-zone-card" data-zone-name="{{ $z['name'] }}" style="{{ $z['available'] <= 0 ? 'border-color: rgba(239, 68, 68, 0.4);' : '' }}">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
@@ -660,19 +660,72 @@
                                         <h4 style="font-size: 1rem; font-weight: 800; color: #FFFFFF; margin: 0 0 0.2rem 0;">{{ $z['name'] }}</h4>
                                         <span style="font-size: 1.15rem; font-weight: 900; color: #10B981;">S/ {{ number_format($z['price'], 2) }}</span>
                                     </div>
-                                    <span class="dash-badge-custom {{ $z['available'] > 0 ? 'badge-green' : 'badge-red' }}" style="font-size: 0.75rem; font-weight: 800;">
-                                        {{ $z['available'] > 0 ? 'Disponible' : 'Agotado' }}
-                                    </span>
+                                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                                        <span class="dash-badge-custom {{ $z['available'] > 0 ? 'badge-green' : 'badge-red' }}" style="font-size: 0.75rem; font-weight: 800;">
+                                            {{ $z['available'] > 0 ? 'Disponible' : 'Agotado' }}
+                                        </span>
+                                        @if(!empty($z['has_split']))
+                                            <span style="font-size: 0.65rem; color: #94A3B8; font-weight: 700; background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);">
+                                                Venta Híbrida
+                                            </span>
+                                        @endif
+                                    </div>
                                 </div>
 
                                 <div style="margin-top: 0.75rem;">
                                     <div style="display: flex; justify-content: space-between; font-size: 0.775rem; font-weight: 700; margin-bottom: 0.35rem;">
-                                        <span style="color: #94A3B8;">Vendidos: <strong style="color: #FFFFFF;" class="zone-sold-count">{{ $z['sold'] }}</strong> / <span class="zone-total-cap">{{ $z['capacity'] }}</span></span>
+                                        <span style="color: #94A3B8;">Total Vendidos: <strong style="color: #FFFFFF;" class="zone-sold-count">{{ $z['sold'] }}</strong> / <span class="zone-total-cap">{{ $z['capacity'] }}</span></span>
                                         <span style="color: {{ $z['available'] > 0 ? '#10B981' : '#EF4444' }};">Quedan: <strong class="zone-available-count">{{ $z['available'] }}</strong></span>
                                     </div>
-                                    <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden;">
+                                    <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; margin-bottom: 0.65rem;">
                                         <div class="zone-progress-bar" style="height: 100%; width: {{ $z['percentage'] }}%; background: linear-gradient(90deg, #FF5500, #10B981); border-radius: 10px; transition: width 0.4s ease;"></div>
                                     </div>
+
+                                    <!-- DESGLOSE: FÍSICAS VS DIGITALES -->
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; background: rgba(0,0,0,0.3); padding: 0.5rem 0.65rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
+                                        <!-- FÍSICAS -->
+                                        <div style="display: flex; flex-direction: column;">
+                                            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.68rem; font-weight: 800; color: #F59E0B; text-transform: uppercase;">
+                                                <span>🎟️ Físicas</span>
+                                                <span style="font-size: 0.62rem; color: #94A3B8; text-transform: none;">Taquilla</span>
+                                            </div>
+                                            <div style="font-size: 0.8rem; color: #E2E8F0; font-weight: 700; margin-top: 2px;">
+                                                <strong style="color: #F59E0B;" class="zone-phys-sold">{{ $z['physical_sold'] }}</strong> / <span class="zone-phys-cap">{{ $z['physical_capacity'] }}</span>
+                                            </div>
+                                            <div style="font-size: 0.67rem; color: #94A3B8; margin-top: 1px;">
+                                                Quedan: <strong style="color: {{ $z['physical_available'] > 0 ? '#10B981' : '#EF4444' }};" class="zone-phys-avail">{{ $z['physical_available'] }}</strong>
+                                            </div>
+                                        </div>
+
+                                        <!-- DIGITALES -->
+                                        <div style="display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,0.08); padding-left: 0.5rem;">
+                                            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.68rem; font-weight: 800; color: #00F0FF; text-transform: uppercase;">
+                                                <span>💻 Digitales</span>
+                                                <span style="font-size: 0.62rem; color: #94A3B8; text-transform: none;">Web</span>
+                                            </div>
+                                            <div style="font-size: 0.8rem; color: #E2E8F0; font-weight: 700; margin-top: 2px;">
+                                                <strong style="color: #00F0FF;" class="zone-virt-sold">{{ $z['digital_sold'] }}</strong> / <span class="zone-virt-cap">{{ $z['digital_capacity'] }}</span>
+                                            </div>
+                                            <div style="font-size: 0.67rem; color: #94A3B8; margin-top: 1px;">
+                                                Quedan: <strong style="color: {{ $z['digital_available'] > 0 ? '#00F0FF' : '#EF4444' }};" class="zone-virt-avail">{{ $z['digital_available'] }}</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    @if(!empty($z['courtesy_enabled']) && (($z['courtesy_max_stock'] ?? 0) > 0 || ($z['courtesy_sold'] ?? 0) > 0))
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.45rem; background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.25); padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.72rem;">
+                                            <div style="display: flex; align-items: center; gap: 4px; color: #D8B4FE; font-weight: 800; flex-wrap: wrap;">
+                                                <span>🎁 Cortesía:</span>
+                                                <span style="color: #FFFFFF;" class="zone-courtesy-sold">{{ $z['courtesy_sold'] }}</span> / <span class="zone-courtesy-max">{{ $z['courtesy_max_stock'] ?? 'Libre' }}</span>
+                                                @if(($z['courtesy_physical_capacity'] ?? 0) > 0 || ($z['courtesy_digital_capacity'] ?? 0) > 0)
+                                                    <span style="font-size: 0.64rem; color: #C084FC; font-weight: 600;">(🎟️ {{ $z['courtesy_physical_sold'] }}/{{ $z['courtesy_physical_capacity'] }} | 💻 {{ $z['courtesy_digital_sold'] }}/{{ $z['courtesy_digital_capacity'] }})</span>
+                                                @endif
+                                            </div>
+                                            <div style="color: #A855F7; font-weight: 700; font-size: 0.68rem; white-space: nowrap;">
+                                                Quedan: <strong class="zone-courtesy-avail">{{ $z['courtesy_available'] }}</strong>
+                                            </div>
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                         @endforeach
@@ -850,11 +903,14 @@
                         <div class="form-group-custom" style="margin-bottom: 0.75rem;">
                             <div style="display: flex; flex-direction: column; gap: 0.45rem; max-height: 210px; overflow-y: auto; padding-right: 0.2rem;" id="zoneCardsContainer">
                                 @foreach($zonesWithStats as $index => $z)
-                                    <div class="zone-card-item {{ $index === 0 && $z['available'] > 0 ? 'active' : '' }} {{ $z['available'] <= 0 ? 'disabled' : '' }}"
+                                    @php
+                                        $effectiveAvail = !empty($z['has_split']) ? ($z['physical_available'] ?? $z['available']) : $z['available'];
+                                    @endphp
+                                    <div class="zone-card-item {{ $index === 0 && $effectiveAvail > 0 ? 'active' : '' }} {{ $effectiveAvail <= 0 ? 'disabled' : '' }}"
                                          data-name="{{ $z['name'] }}"
                                          data-price="{{ $z['price'] }}"
-                                         data-available="{{ $z['available'] }}"
-                                         onclick="selectZoneCard('{{ addslashes($z['name']) }}', {{ $z['price'] }}, {{ $z['available'] }}, this)"
+                                         data-available="{{ $effectiveAvail }}"
+                                         onclick="selectZoneCard('{{ addslashes($z['name']) }}', {{ $z['price'] }}, {{ $effectiveAvail }}, this)"
                                          style="padding: 0.55rem 0.75rem; border-radius: 12px;">
                                         <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
                                             <div style="display: flex; align-items: center; gap: 0.55rem; min-width: 0; flex: 1;">
@@ -862,8 +918,8 @@
                                                 <div style="min-width: 0; flex: 1;">
                                                     <strong class="zone-card-name" style="font-size: 0.85rem; word-break: break-word;">{{ $z['name'] }}</strong>
                                                     <div style="margin-top: 0.1rem;">
-                                                        @if($z['available'] > 0)
-                                                            <span class="zone-stock-badge available" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">📦 {{ number_format($z['available']) }} libres</span>
+                                                        @if($effectiveAvail > 0)
+                                                            <span class="zone-stock-badge available" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">📦 {{ number_format($effectiveAvail) }} libres{{ !empty($z['has_split']) ? ' (Físico)' : '' }}</span>
                                                         @else
                                                             <span class="zone-stock-badge sold-out" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">🚫 AGOTADO</span>
                                                         @endif
@@ -1317,7 +1373,8 @@
                 template: {!! json_encode($event->template ?? null) !!},
                 zones: {!! json_encode($zonesWithStats ?? ($zones ?? [])) !!},
                 raw_zones: {!! json_encode(is_array($event->zones) ? $event->zones : (json_decode($event->zones ?? '[]', true) ?: [])) !!},
-                courtesy_settings: {!! json_encode($cSettings ?? (is_array($event->courtesy_settings) ? $event->courtesy_settings : (json_decode($event->courtesy_settings ?? '[]', true) ?: []))) !!}
+                courtesy_settings: {!! json_encode($cSettings ?? (is_array($event->courtesy_settings) ? $event->courtesy_settings : (json_decode($event->courtesy_settings ?? '[]', true) ?: []))) !!},
+                quota_split_settings: {!! json_encode($event->quota_split_settings ? (is_array($event->quota_split_settings) ? $event->quota_split_settings : json_decode($event->quota_split_settings, true)) : null) !!}
             };
             if (typeof openPlanchaModal === 'function') {
                 openPlanchaModal(evtData);
@@ -4350,16 +4407,42 @@
                                     if (progressEl) {
                                         progressEl.style.width = `${z.percentage}%`;
                                     }
+
+                                    // Desglose en vivo de Físicas y Digitales
+                                    const physSoldEl = pageCard.querySelector('.zone-phys-sold');
+                                    if (physSoldEl && z.physical_sold !== undefined) physSoldEl.textContent = z.physical_sold;
+
+                                    const physAvailEl = pageCard.querySelector('.zone-phys-avail');
+                                    if (physAvailEl && z.physical_available !== undefined) {
+                                        physAvailEl.textContent = z.physical_available;
+                                        physAvailEl.style.color = z.physical_available > 0 ? '#10B981' : '#EF4444';
+                                    }
+
+                                    const virtSoldEl = pageCard.querySelector('.zone-virt-sold');
+                                    if (virtSoldEl && z.digital_sold !== undefined) virtSoldEl.textContent = z.digital_sold;
+
+                                    const virtAvailEl = pageCard.querySelector('.zone-virt-avail');
+                                    if (virtAvailEl && z.digital_available !== undefined) {
+                                        virtAvailEl.textContent = z.digital_available;
+                                        virtAvailEl.style.color = z.digital_available > 0 ? '#00F0FF' : '#EF4444';
+                                    }
+
+                                    const cSoldEl = pageCard.querySelector('.zone-courtesy-sold');
+                                    if (cSoldEl && z.courtesy_sold !== undefined) cSoldEl.textContent = z.courtesy_sold;
+
+                                    const cAvailEl = pageCard.querySelector('.zone-courtesy-avail');
+                                    if (cAvailEl && z.courtesy_available !== undefined) cAvailEl.textContent = z.courtesy_available;
                                 }
 
                                 const zoneModalCard = document.querySelector(`.zone-card-item[data-name="${z.name}"]:not(.courtesy-zone-card)`);
                                 if (zoneModalCard) {
-                                    zoneModalCard.setAttribute('data-available', z.available);
+                                    const effectivePosAvail = (z.has_split && z.physical_available !== undefined) ? z.physical_available : z.available;
+                                    zoneModalCard.setAttribute('data-available', effectivePosAvail);
                                     const modalBadge = zoneModalCard.querySelector('.zone-stock-badge');
                                     if (modalBadge) {
-                                        if (z.available > 0) {
+                                        if (effectivePosAvail > 0) {
                                             modalBadge.className = 'zone-stock-badge available';
-                                            modalBadge.textContent = `📦 Stock: ${z.available} libres`;
+                                            modalBadge.textContent = `📦 Stock: ${effectivePosAvail} libres${z.has_split ? ' (físico)' : ''}`;
                                             zoneModalCard.classList.remove('disabled');
                                         } else {
                                             modalBadge.className = 'zone-stock-badge sold-out';

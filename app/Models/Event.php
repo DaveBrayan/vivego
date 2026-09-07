@@ -29,6 +29,7 @@ class Event extends Model
         'template_id',
         'zones',
         'courtesy_settings',
+        'quota_split_settings',
         'status',
         'sales_type',
         'layout_template',
@@ -41,6 +42,7 @@ class Event extends Model
         'tags' => 'array',
         'zones' => 'array',
         'courtesy_settings' => 'array',
+        'quota_split_settings' => 'array',
     ];
 
     public function getBannerImageAttribute($value): ?string

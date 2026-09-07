@@ -273,10 +273,18 @@
                 const data = await res.json();
                 if (data && data.success) {
                     if (Array.isArray(data.tickets)) {
-                        planchaExistingTickets = data.tickets;
+                        // Filtrar estrictamente solo boletos físicos (física o cortesía física) para planchas
+                        planchaExistingTickets = data.tickets.filter(t => {
+                            const tType = String(t.ticketType || t.ticket_type || 'fisica').toLowerCase();
+                            const src = String(t.source || '').toLowerCase();
+                            return tType !== 'digital' && tType !== 'cortesia_digital' && src !== 'web_checkout';
+                        });
                     }
                     if (data.courtesy_settings && (!activePlanchaEvent.courtesy_settings || Object.keys(activePlanchaEvent.courtesy_settings).length === 0)) {
                         activePlanchaEvent.courtesy_settings = data.courtesy_settings;
+                    }
+                    if (data.quota_split_settings && (!activePlanchaEvent.quota_split_settings || Object.keys(activePlanchaEvent.quota_split_settings).length === 0)) {
+                        activePlanchaEvent.quota_split_settings = data.quota_split_settings;
                     }
                 }
             }
@@ -374,6 +382,17 @@
         if (!name) return 'GENERAL';
         let str = String(name).replace(/\s*\([^)]*\)$/, '').trim().toUpperCase();
         return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function resolveTicketZoneKey(t) {
+        if (!t) return 'GENERAL';
+        let rawZ = t.zoneName || t.zone_name || '';
+        const tType = String(t.ticketType || t.ticket_type || '').toLowerCase();
+        let zKey = cleanZoneBase(rawZ);
+        if ((tType === 'cortesia' || String(t.buyerName || '').toLowerCase().includes('cortes')) && !zKey.startsWith('CORTESIA')) {
+            zKey = cleanZoneBase('CORTESIA - ' + rawZ);
+        }
+        return zKey;
     }
 
     function formatShortSeatCodeJs(seat) {
@@ -498,12 +517,34 @@
             ];
 
         // Mapear boletos ya existentes por zona usando base limpia
+        // (planchaExistingTickets ya contiene únicamente boletos físicos y de cortesía física)
         const existingByZone = {};
-        planchaExistingTickets.forEach(t => {
-            const zKey = cleanZoneBase(t.zoneName || t.zone_name);
+        (Array.isArray(planchaExistingTickets) ? planchaExistingTickets : []).forEach(t => {
+            let rawZ = t.zoneName || t.zone_name || '';
+            const tType = String(t.ticketType || t.ticket_type || '').toLowerCase();
+            let zKey = cleanZoneBase(rawZ);
+            if ((tType === 'cortesia' || String(t.buyerName || '').toLowerCase().includes('cortes')) && !zKey.startsWith('CORTESIA')) {
+                zKey = cleanZoneBase('CORTESIA - ' + rawZ);
+            }
             if (!existingByZone[zKey]) existingByZone[zKey] = [];
             existingByZone[zKey].push(t);
         });
+
+        // Extraer configuración de división de aforo físico vs digital si existe
+        let splitSettings = evt.quota_split_settings || {};
+        if (typeof splitSettings === 'string') {
+            try { splitSettings = JSON.parse(splitSettings); } catch(e) { splitSettings = {}; }
+        }
+        const isSplitActive = splitSettings && (splitSettings.enabled === true || splitSettings.enabled === '1' || splitSettings.enabled === 1 || splitSettings.enabled === 'true');
+
+        const zoneSplitMap = {};
+        if (splitSettings && Array.isArray(splitSettings.zones)) {
+            splitSettings.zones.forEach(sz => {
+                if (sz && (sz.name || sz.zone_name)) {
+                    zoneSplitMap[cleanZoneBase(sz.name || sz.zone_name)] = sz;
+                }
+            });
+        }
 
         planchaZoneBreakdown = [];
         let totalConfigCapacity = 0;
@@ -528,10 +569,27 @@
                 (z.capacity_type && /butaca|asiento|numerad/i.test(z.capacity_type)) ||
                 /butaca|asiento|numerad/i.test(zName);
 
-            const zCap = parseInt(z.capacity || z.stock || z.available || (zSeats.length > 0 ? zSeats.length : 24), 10) || (zSeats.length > 0 ? zSeats.length : 24);
+            const szConfig = zoneSplitMap[zKey];
+
+            // DETERMINAR AFORO FÍSICO REAL (en planchas solo se imprimen entradas físicas)
+            let zCap = 0;
+            if (isSplitActive && szConfig && szConfig.physical !== undefined && szConfig.physical !== null && szConfig.physical !== '') {
+                zCap = parseInt(szConfig.physical, 10) || 0;
+            } else if (z.physical_capacity !== undefined && z.physical_capacity !== null && z.physical_capacity !== '') {
+                zCap = parseInt(z.physical_capacity, 10) || 0;
+            } else if (evt.sales_type === 'virtual') {
+                zCap = 0;
+            } else {
+                zCap = parseInt(z.capacity || z.stock || z.available || (zSeats.length > 0 ? zSeats.length : 24), 10) || (zSeats.length > 0 ? zSeats.length : 24);
+            }
             
             const existingList = existingByZone[zKey] || [];
-            const alreadyGenCount = existingList.length;
+            const alreadyGenCount = zCap > 0 ? Math.min(existingList.length, zCap) : existingList.length;
+
+            if (zCap <= 0 && alreadyGenCount > 0 && !isSplitActive) {
+                zCap = alreadyGenCount;
+            }
+
             const pendingCount = Math.max(0, zCap - alreadyGenCount);
 
             totalConfigCapacity += zCap;
@@ -557,7 +615,8 @@
         if (typeof cSettings === 'string') {
             try { cSettings = JSON.parse(cSettings); } catch(e) { cSettings = {}; }
         }
-        const isCourtesyActive = cSettings && (cSettings.enabled === true || cSettings.enabled === '1' || cSettings.enabled === 1 || cSettings.enabled === 'true');
+        const isCourtesyActive = (cSettings && (cSettings.enabled === true || cSettings.enabled === '1' || cSettings.enabled === 1 || cSettings.enabled === 'true'))
+            || (splitSettings && (splitSettings.courtesy_global_enabled === true || splitSettings.courtesy_global_enabled === '1' || splitSettings.courtesy_global_enabled === 1 || splitSettings.courtesy_global_enabled === 'true'));
 
         if (isCourtesyActive) {
             const courtesyConfigMap = {};
@@ -574,15 +633,34 @@
                 const zName = z.name || 'General';
                 const zKey = cleanZoneBase(zName);
                 const czConfig = courtesyConfigMap[zKey];
-                // Determinar stock de cortesía asignado para este sector (solo si se configuró un cupo mayor a 0)
+                const szConfig = zoneSplitMap[zKey];
+
+                // DETERMINAR CUPO FÍSICO DE CORTESÍA (solo entradas físicas a imprimir en plancha)
                 let czCap = 0;
-                if (czConfig && czConfig.stock !== null && czConfig.stock !== undefined && czConfig.stock !== '' && !isNaN(parseInt(czConfig.stock))) {
-                    czCap = parseInt(czConfig.stock, 10);
+                if (szConfig && szConfig.courtesy_physical !== undefined && szConfig.courtesy_physical !== null && szConfig.courtesy_physical !== '') {
+                    czCap = parseInt(szConfig.courtesy_physical, 10) || 0;
                 }
-                if (czCap <= 0) return;
+                if (czCap <= 0 && czConfig) {
+                    if (czConfig.physical_stock !== undefined && czConfig.physical_stock !== null && czConfig.physical_stock !== '') {
+                        czCap = parseInt(czConfig.physical_stock, 10) || 0;
+                    } else if (czConfig.stock !== undefined && czConfig.stock !== null && czConfig.stock !== '') {
+                        czCap = parseInt(czConfig.stock, 10) || 0;
+                    }
+                }
+                if (czCap <= 0 && !hasCustomCourtesyZones && cSettings.stock) {
+                    czCap = parseInt(cSettings.stock, 10) || 0;
+                }
 
                 const courtesyZoneName = `CORTESÍA - ${zName}`;
                 const courtesyZKey = cleanZoneBase(courtesyZoneName);
+                const existingCourtesyList = existingByZone[courtesyZKey] || [];
+                const alreadyGenCount = czCap > 0 ? Math.min(existingCourtesyList.length, czCap) : existingCourtesyList.length;
+
+                if (czCap <= 0 && alreadyGenCount <= 0) return;
+
+                if (czCap <= 0 && alreadyGenCount > 0 && !isSplitActive && !hasCustomCourtesyZones) {
+                    czCap = alreadyGenCount;
+                }
 
                 // Butacas si la zona base es numerada
                 let zSeats = [];
@@ -597,8 +675,6 @@
                     (z.capacity_type && /butaca|asiento|numerad/i.test(z.capacity_type)) ||
                     /butaca|asiento|numerad/i.test(zName);
 
-                const existingCourtesyList = existingByZone[courtesyZKey] || [];
-                const alreadyGenCount = existingCourtesyList.length;
                 const pendingCount = Math.max(0, czCap - alreadyGenCount);
 
                 totalConfigCapacity += czCap;
@@ -671,14 +747,14 @@
                 let defaultChecked = true;
                 if (totalPendingNew > 0) {
                     if (zb.pendingNew > 0) {
-                        defaultQty = zb.pendingNew;
+                        defaultQty = zb.capacity > 0 ? Math.min(zb.capacity, zb.pendingNew) : zb.pendingNew;
                         defaultChecked = true;
                     } else {
                         defaultQty = 0;
                         defaultChecked = false;
                     }
                 } else {
-                    defaultQty = zb.alreadyGenerated > 0 ? zb.alreadyGenerated : (zb.capacity > 0 ? zb.capacity : 24);
+                    defaultQty = zb.capacity > 0 ? Math.min(zb.capacity, (zb.alreadyGenerated > 0 ? zb.alreadyGenerated : zb.capacity)) : (zb.alreadyGenerated > 0 ? zb.alreadyGenerated : 24);
                     defaultChecked = true;
                 }
 
@@ -740,7 +816,7 @@
                                 <input type="number" 
                                        id="plancha_zone_qty_${idx}" 
                                        min="1" 
-                                       max="99999" 
+                                       max="${zb.capacity > 0 ? zb.capacity : 99999}" 
                                        value="${defaultQty}" 
                                        ${inputDisabled}
                                        oninput="onPlanchaZoneQtyInput(${idx})" 
@@ -904,6 +980,14 @@
      * Validación en tiempo real del campo cantidad por zona
      */
     function onPlanchaZoneQtyInput(idx) {
+        const input = document.getElementById(`plancha_zone_qty_${idx}`);
+        const zb = (Array.isArray(planchaZoneBreakdown) && planchaZoneBreakdown[idx]) ? planchaZoneBreakdown[idx] : null;
+        if (input && zb && zb.capacity > 0) {
+            let val = parseInt(input.value, 10);
+            if (val > zb.capacity) {
+                input.value = zb.capacity;
+            }
+        }
         updatePlanchaSummary();
     }
 
@@ -918,8 +1002,10 @@
             chk.checked = true;
             onPlanchaZoneCheckChange(idx);
         }
+        const zb = (Array.isArray(planchaZoneBreakdown) && planchaZoneBreakdown[idx]) ? planchaZoneBreakdown[idx] : null;
+        const maxLimit = (zb && zb.capacity > 0) ? zb.capacity : 99999;
         let current = parseInt(input.value, 10) || 0;
-        input.value = Math.max(1, current + amount);
+        input.value = Math.min(maxLimit, Math.max(1, current + amount));
         updatePlanchaSummary();
     }
 
@@ -939,14 +1025,14 @@
         const zb = (Array.isArray(planchaZoneBreakdown) && planchaZoneBreakdown[idx]) ? planchaZoneBreakdown[idx] : null;
 
         if (type === 'pending') {
-            input.value = Math.max(1, zb ? zb.pendingNew : 1);
+            input.value = Math.max(1, zb ? (zb.capacity > 0 ? Math.min(zb.capacity, zb.pendingNew) : zb.pendingNew) : 1);
         } else if (type === 'capacity') {
             input.value = Math.max(1, zb ? zb.capacity : 24);
         } else if (type === 'existing') {
-            input.value = Math.max(1, zb ? zb.alreadyGenerated : 24);
+            input.value = Math.max(1, zb ? (zb.capacity > 0 ? Math.min(zb.capacity, zb.alreadyGenerated) : zb.alreadyGenerated) : 24);
         } else if (type === 'sheet') {
             const perSheet = selectedPlanchaSizeKey === 'a4' ? 6 : 24;
-            input.value = perSheet;
+            input.value = (zb && zb.capacity > 0) ? Math.min(zb.capacity, perSheet) : perSheet;
         }
         updatePlanchaSummary();
     }
@@ -984,7 +1070,8 @@
                 if (chk && chk.checked) {
                     selectedZonesCount++;
                     const input = document.getElementById(`plancha_zone_qty_${idx}`);
-                    const qty = input ? (parseInt(input.value, 10) || 0) : 0;
+                    const rawQty = input ? (parseInt(input.value, 10) || 0) : 0;
+                    const qty = zb.capacity > 0 ? Math.min(rawQty, zb.capacity) : rawQty;
                     ticketsToPrintCount += Math.max(0, qty);
                 }
             });
@@ -1027,9 +1114,10 @@
                 const chk = document.getElementById(`plancha_zone_chk_${idx}`);
                 if (chk && chk.checked) {
                     const zKey = cleanZoneBase(zb.name);
-                    const zoneExisting = planchaExistingTickets.filter(t => cleanZoneBase(t.zoneName || t.zone_name) === zKey);
+                    const zoneExisting = planchaExistingTickets.filter(t => resolveTicketZoneKey(t) === zKey);
                     const input = document.getElementById(`plancha_zone_qty_${idx}`);
-                    const qtyWanted = input ? (parseInt(input.value, 10) || 0) : 0;
+                    const rawQty = input ? (parseInt(input.value, 10) || 0) : 0;
+                    const qtyWanted = zb.capacity > 0 ? Math.min(rawQty, zb.capacity) : rawQty;
                     if (qtyWanted > 0 && zoneExisting.length > 0) {
                         const slice = zoneExisting.slice(0, qtyWanted);
                         selectedPrintTickets = selectedPrintTickets.concat(slice);
@@ -1064,7 +1152,7 @@
                 const chk = document.getElementById(`plancha_zone_chk_${idx}`);
                 if (chk && chk.checked) {
                     const zKey = cleanZoneBase(zb.name);
-                    const zoneExisting = planchaExistingTickets.filter(t => cleanZoneBase(t.zoneName || t.zone_name) === zKey);
+                    const zoneExisting = planchaExistingTickets.filter(t => resolveTicketZoneKey(t) === zKey);
                     const input = document.getElementById(`plancha_zone_qty_${idx}`);
                     const qtyWanted = input ? (parseInt(input.value, 10) || 0) : 0;
                     generatedInDbForSelectedZones += Math.min(qtyWanted, zoneExisting.length);
@@ -1178,11 +1266,12 @@
                 if (!chk || !chk.checked) return;
 
                 const qtyInput = document.getElementById(`plancha_zone_qty_${zIdx}`);
-                const qtyWanted = qtyInput ? (parseInt(qtyInput.value, 10) || 0) : 0;
+                const rawQty = qtyInput ? (parseInt(qtyInput.value, 10) || 0) : 0;
+                const qtyWanted = zb.capacity > 0 ? Math.min(rawQty, zb.capacity) : rawQty;
                 if (qtyWanted <= 0) return;
 
                 // Filtrar las entradas registradas de esta zona
-                const zoneTickets = planchaExistingTickets.filter(t => cleanZoneBase(t.zoneName || t.zone_name) === cleanZoneBase(zb.name));
+                const zoneTickets = planchaExistingTickets.filter(t => resolveTicketZoneKey(t) === cleanZoneBase(zb.name));
                 if (zoneTickets.length === 0) return;
                 
                 const sliceTickets = zoneTickets.slice(0, qtyWanted);

@@ -208,63 +208,7 @@ class BoxOfficeController extends Controller
             ];
         }
 
-        $courtesySettings = is_array($event->courtesy_settings)
-            ? $event->courtesy_settings
-            : (json_decode($event->courtesy_settings ?? '[]', true) ?? []);
-
-        $courtesyEnabledGlobally = !empty($courtesySettings['enabled']);
-        $courtesyZonesConfig = $courtesySettings['zones'] ?? [];
-        $courtesyZoneConfigMap = [];
-        if (is_array($courtesyZonesConfig)) {
-            foreach ($courtesyZonesConfig as $cz) {
-                if (!empty($cz['name'])) {
-                    $courtesyZoneConfigMap[$cz['name']] = $cz;
-                }
-            }
-        }
-
-        $courtesySales = $sales->filter(fn($s) => in_array($s->payment_method, ['Cortesía', 'cortesia']));
-
-        // Calcular stock por cada zona en base a ventas realizadas
-        $zonesWithStats = [];
-        foreach ($zones as $z) {
-            $zName = $z['name'] ?? 'General';
-            $zTotalCap = (int) ($z['capacity'] ?? 0);
-            $zPrice = (float) ($z['price'] ?? 0);
-            $zSold = (int) $sales->where('zone_name', $zName)->sum('quantity');
-            $zAvail = max(0, $zTotalCap - $zSold);
-
-            $zCourtesySold = (int) $courtesySales->where('zone_name', $zName)->sum('quantity');
-            $hasCustomCourtesyZones = count($courtesyZoneConfigMap) > 0;
-            $zCourtesyConfig = $courtesyZoneConfigMap[$zName] ?? null;
-
-            $zCourtesyEnabled = $hasCustomCourtesyZones
-                ? (!empty($zCourtesyConfig['enabled']))
-                : $courtesyEnabledGlobally;
-
-            $zCourtesyMaxStock = ($zCourtesyConfig && isset($zCourtesyConfig['stock']) && $zCourtesyConfig['stock'] !== '' && $zCourtesyConfig['stock'] !== null)
-                ? (int) $zCourtesyConfig['stock']
-                : null;
-
-            $zCourtesyAvailable = $zCourtesyMaxStock !== null
-                ? min($zAvail, max(0, $zCourtesyMaxStock - $zCourtesySold))
-                : $zAvail;
-
-            $zonesWithStats[] = [
-                'name' => $zName,
-                'price' => $zPrice,
-                'capacity' => $zTotalCap,
-                'sold' => $zSold,
-                'available' => $zAvail,
-                'percentage' => $zTotalCap > 0 ? min(100, round(($zSold / $zTotalCap) * 100)) : 0,
-                'courtesy_enabled' => $zCourtesyEnabled,
-                'courtesy_max_stock' => $zCourtesyMaxStock,
-                'courtesy_sold' => $zCourtesySold,
-                'courtesy_available' => $zCourtesyAvailable,
-                'capacity_type' => $z['capacity_type'] ?? null,
-                'seats' => $z['seats'] ?? [],
-            ];
-        }
+        $zonesWithStats = $this->buildZonesWithStats($event, $sales);
 
         $totalCapacity = array_sum(array_column($zonesWithStats, 'capacity'));
         $remainingStock = array_sum(array_column($zonesWithStats, 'available'));
@@ -475,6 +419,12 @@ class BoxOfficeController extends Controller
         $matchedPhysicalTickets = [];
         $cleanBaseZone = preg_replace('/\s*\([^)]*\)$/', '', trim($validated['zone_name']));
 
+        $splitSettings = is_array($event->quota_split_settings) 
+            ? $event->quota_split_settings 
+            : (json_decode($event->quota_split_settings ?? '[]', true) ?: []);
+        $isSplitActive = !empty($splitSettings['enabled']);
+        $requiredTicketType = $isSplitActive ? ($isCourtesy ? 'cortesia' : 'fisica') : null;
+
         for ($i = 1; $i <= $validated['quantity']; $i++) {
             $effectiveTicketPrice = $isCourtesy ? 0.00 : $unitPrice;
             $seatCode = !empty($selectedSeats[$i - 1]) ? formatShortSeatCode($selectedSeats[$i - 1]) : null;
@@ -492,6 +442,10 @@ class BoxOfficeController extends Controller
                         $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
                     })
                     ->whereNotIn('id', array_keys($matchedPhysicalTickets))
+                    ->when($requiredTicketType, function ($q) use ($requiredTicketType) {
+                        $q->where('ticket_type', $requiredTicketType)
+                          ->where('source', '!=', 'web_checkout');
+                    })
                     ->where(function ($q) use ($zoneWithSeat, $seatCode, $seatLetter, $seatDigits) {
                         $q->where('zone_name', $zoneWithSeat)
                           ->orWhere('zone_name', 'LIKE', "%({$seatCode})%")
@@ -507,6 +461,10 @@ class BoxOfficeController extends Controller
                         $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
                     })
                     ->whereNotIn('id', array_keys($matchedPhysicalTickets))
+                    ->when($requiredTicketType, function ($q) use ($requiredTicketType) {
+                        $q->where('ticket_type', $requiredTicketType)
+                          ->where('source', '!=', 'web_checkout');
+                    })
                     ->where(function ($q) use ($validated, $cleanBaseZone) {
                         $q->where('zone_name', $validated['zone_name'])
                           ->orWhere('zone_name', 'LIKE', $cleanBaseZone . '%');
@@ -522,6 +480,10 @@ class BoxOfficeController extends Controller
                             $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
                         })
                         ->whereNotIn('id', array_keys($matchedPhysicalTickets))
+                        ->when($requiredTicketType, function ($q) use ($requiredTicketType) {
+                            $q->where('ticket_type', $requiredTicketType)
+                              ->where('source', '!=', 'web_checkout');
+                        })
                         ->where(function ($q) use ($validated, $cleanBaseZone) {
                             $q->where('zone_name', $validated['zone_name'])
                               ->orWhere('zone_name', 'LIKE', $cleanBaseZone . '%');
@@ -620,6 +582,7 @@ class BoxOfficeController extends Controller
                     'buyer_name' => $tData['buyer_name'],
                     'buyer_dni' => $tData['buyer_dni'],
                     'source' => 'pos_sale',
+                    'ticket_type' => $requiredTicketType ?: ($isCourtesy ? 'cortesia' : 'fisica'),
                     'is_used' => false,
                     'status' => 'valid',
                 ]);
@@ -633,55 +596,7 @@ class BoxOfficeController extends Controller
         $digitalRevenue = $totalRevenue - $cashRevenue;
         $ticketsSold = $allSales->sum('quantity');
 
-        $courtesySales = $allSales->filter(fn($s) => in_array($s->payment_method, ['Cortesía', 'cortesia']));
-        $courtesyZonesConfig = $courtesySettings['zones'] ?? [];
-        $courtesyZoneConfigMap = [];
-        if (is_array($courtesyZonesConfig)) {
-            foreach ($courtesyZonesConfig as $cz) {
-                if (!empty($cz['name'])) {
-                    $courtesyZoneConfigMap[$cz['name']] = $cz;
-                }
-            }
-        }
-        $courtesyEnabledGlobally = !empty($courtesySettings['enabled']);
-
-        $zonesWithStats = [];
-        foreach ($event->zones as $z) {
-            $zName = $z['name'] ?? 'General';
-            $zTotalCap = (int) ($z['capacity'] ?? 0);
-            $zPrice = (float) ($z['price'] ?? 0);
-            $zSold = (int) $allSales->where('zone_name', $zName)->sum('quantity');
-            $zAvail = max(0, $zTotalCap - $zSold);
-
-            $zCourtesySold = (int) $courtesySales->where('zone_name', $zName)->sum('quantity');
-            $hasCustomCourtesyZones = count($courtesyZoneConfigMap) > 0;
-            $zCourtesyConfig = $courtesyZoneConfigMap[$zName] ?? null;
-
-            $zCourtesyEnabled = $hasCustomCourtesyZones
-                ? (!empty($zCourtesyConfig['enabled']))
-                : $courtesyEnabledGlobally;
-
-            $zCourtesyMaxStock = ($zCourtesyConfig && isset($zCourtesyConfig['stock']) && $zCourtesyConfig['stock'] !== '' && $zCourtesyConfig['stock'] !== null)
-                ? (int) $zCourtesyConfig['stock']
-                : null;
-
-            $zCourtesyAvailable = $zCourtesyMaxStock !== null
-                ? min($zAvail, max(0, $zCourtesyMaxStock - $zCourtesySold))
-                : $zAvail;
-
-            $zonesWithStats[] = [
-                'name' => $zName,
-                'price' => $zPrice,
-                'capacity' => $zTotalCap,
-                'sold' => $zSold,
-                'available' => $zAvail,
-                'percentage' => $zTotalCap > 0 ? min(100, round(($zSold / $zTotalCap) * 100)) : 0,
-                'courtesy_enabled' => $zCourtesyEnabled,
-                'courtesy_max_stock' => $zCourtesyMaxStock,
-                'courtesy_sold' => $zCourtesySold,
-                'courtesy_available' => $zCourtesyAvailable,
-            ];
-        }
+        $zonesWithStats = $this->buildZonesWithStats($event, $allSales);
 
         $totalCapacity = (int) array_sum(array_column($zonesWithStats, 'capacity'));
         $remainingStock = (int) array_sum(array_column($zonesWithStats, 'available'));
@@ -908,6 +823,217 @@ class BoxOfficeController extends Controller
                 'message' => 'Error al enviar el correo: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Construye las estadísticas detalladas de stock por zona (desglose físico, digital y cortesía).
+     */
+    protected function buildZonesWithStats(Event $event, $sales = null): array
+    {
+        if ($sales === null) {
+            $sales = $event->sales()->with('eventTickets')->latest()->get();
+        }
+
+        $zones = is_array($event->zones)
+            ? $event->zones
+            : (is_string($event->zones) ? json_decode($event->zones, true) : []);
+
+        if (empty($zones)) {
+            $zones = [
+                ['name' => 'BOX PLATINUM INDIVIDUAL', 'price' => 150.00, 'capacity' => 10],
+                ['name' => 'ZONA VIP STAND UP', 'price' => 95.00, 'capacity' => 20],
+                ['name' => 'ZONA GENERAL', 'price' => 55.50, 'capacity' => 30]
+            ];
+        }
+
+        // Configuración de división de aforo físico vs digital
+        $splitSettings = is_array($event->quota_split_settings)
+            ? $event->quota_split_settings
+            : (json_decode($event->quota_split_settings ?? '[]', true) ?: []);
+        $isSplitActive = !empty($splitSettings['enabled']);
+
+        $zoneSplitMap = [];
+        if (!empty($splitSettings['zones']) && is_array($splitSettings['zones'])) {
+            foreach ($splitSettings['zones'] as $sz) {
+                if (!empty($sz['name'])) {
+                    $clean = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $sz['name'])));
+                    $zoneSplitMap[$clean] = $sz;
+                }
+            }
+        }
+
+        // Configuración de cortesías
+        $courtesySettings = is_array($event->courtesy_settings)
+            ? $event->courtesy_settings
+            : (json_decode($event->courtesy_settings ?? '[]', true) ?? []);
+
+        $courtesyEnabledGlobally = !empty($courtesySettings['enabled']) || !empty($splitSettings['courtesy_global_enabled']);
+        $courtesyZonesConfig = $courtesySettings['zones'] ?? [];
+        $courtesyZoneConfigMap = [];
+        if (is_array($courtesyZonesConfig)) {
+            foreach ($courtesyZonesConfig as $cz) {
+                if (!empty($cz['name'])) {
+                    $cleanCz = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $cz['name'])));
+                    $courtesyZoneConfigMap[$cleanCz] = $cz;
+                    $courtesyZoneConfigMap[$cz['name']] = $cz;
+                }
+            }
+        }
+
+        $courtesySales = $sales->filter(fn($s) => in_array($s->payment_method, ['Cortesía', 'cortesia']));
+
+        // Obtener tickets vendidos en DB para desglose exacto
+        $soldTickets = \App\Models\EventTicket::where('event_id', $event->id)
+            ->where(function ($q) {
+                $q->whereNotNull('ticket_sale_id')->where('ticket_sale_id', '>', 0);
+            })
+            ->get();
+
+        $zonesWithStats = [];
+        foreach ($zones as $z) {
+            $zName = $z['name'] ?? 'General';
+            $cleanZone = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $zName)));
+            $zTotalCap = (int) ($z['capacity'] ?? 0);
+            $zPrice = (float) ($z['price'] ?? 0);
+
+            $szConfig = $zoneSplitMap[$cleanZone] ?? null;
+
+            // Capacidades configuradas: Física y Digital
+            if ($isSplitActive && $szConfig) {
+                $physCap = isset($szConfig['physical']) && is_numeric($szConfig['physical']) 
+                    ? (int) $szConfig['physical'] 
+                    : (int) ($z['physical_capacity'] ?? $zTotalCap);
+                $virtCap = isset($szConfig['virtual']) && is_numeric($szConfig['virtual']) 
+                    ? (int) $szConfig['virtual'] 
+                    : (int) ($z['virtual_capacity'] ?? max(0, $zTotalCap - $physCap));
+            } elseif (isset($z['physical_capacity']) || isset($z['virtual_capacity'])) {
+                $physCap = (int) ($z['physical_capacity'] ?? $zTotalCap);
+                $virtCap = (int) ($z['virtual_capacity'] ?? max(0, $zTotalCap - $physCap));
+            } elseif ($event->sales_type === 'virtual') {
+                $physCap = 0;
+                $virtCap = $zTotalCap;
+            } elseif ($event->sales_type === 'fisica') {
+                $physCap = $zTotalCap;
+                $virtCap = 0;
+            } else {
+                $physCap = $zTotalCap;
+                $virtCap = 0;
+            }
+
+            // Ventas registradas de la zona
+            $zoneSales = $sales->filter(function ($s) use ($zName, $cleanZone) {
+                $sClean = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $s->zone_name ?? '')));
+                return $s->zone_name === $zName || $sClean === $cleanZone;
+            });
+            $rawZoneSold = (int) $zoneSales->sum('quantity');
+
+            // Conteo exacto por tickets en BD
+            $zoneSoldTickets = $soldTickets->filter(function ($t) use ($cleanZone) {
+                $tClean = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $t->zone_name ?? '')));
+                return $tClean === $cleanZone;
+            });
+
+            $physSold = $zoneSoldTickets->where('ticket_type', 'fisica')->count();
+            $virtSold = $zoneSoldTickets->where('ticket_type', 'digital')->count();
+
+            // Si hay ventas históricas sin boletos explícitos asignados, complementar por canal
+            if (($physSold + $virtSold) < $rawZoneSold) {
+                $webQty = (int) $zoneSales->filter(fn($s) => $s->seller_name === 'Web Checkout' || in_array($s->payment_method, ['Tarjeta', 'Online', 'MercadoPago', 'Culqi']))->sum('quantity');
+                $posQty = (int) $zoneSales->filter(fn($s) => $s->seller_name !== 'Web Checkout' && !in_array($s->payment_method, ['Tarjeta', 'Online', 'MercadoPago', 'Culqi']))->sum('quantity');
+                $physSold = max($physSold, $posQty);
+                $virtSold = max($virtSold, $webQty);
+            }
+
+            $zSold = max($rawZoneSold, ($physSold + $virtSold));
+            $zAvail = max(0, $zTotalCap - $zSold);
+
+            $physAvail = max(0, $physCap - $physSold);
+            $virtAvail = max(0, $virtCap - $virtSold);
+
+            // Cortesías para esta zona
+            $zCourtesyConfig = $courtesyZoneConfigMap[$cleanZone] ?? ($courtesyZoneConfigMap[$zName] ?? null);
+            $hasCustomCourtesyZones = count($courtesyZoneConfigMap) > 0;
+
+            $zCourtesyEnabled = $hasCustomCourtesyZones
+                ? (!empty($zCourtesyConfig['enabled']))
+                : $courtesyEnabledGlobally;
+
+            $courtesyPhysCap = 0;
+            $courtesyVirtCap = 0;
+            if ($szConfig) {
+                if (isset($szConfig['courtesy_physical']) && is_numeric($szConfig['courtesy_physical'])) {
+                    $courtesyPhysCap = (int) $szConfig['courtesy_physical'];
+                }
+                if (isset($szConfig['courtesy_virtual']) && is_numeric($szConfig['courtesy_virtual'])) {
+                    $courtesyVirtCap = (int) $szConfig['courtesy_virtual'];
+                }
+            }
+            if ($courtesyPhysCap === 0 && $courtesyVirtCap === 0 && $zCourtesyConfig) {
+                if (isset($zCourtesyConfig['physical_stock']) && is_numeric($zCourtesyConfig['physical_stock'])) {
+                    $courtesyPhysCap = (int) $zCourtesyConfig['physical_stock'];
+                }
+                if (isset($zCourtesyConfig['virtual_stock']) && is_numeric($zCourtesyConfig['virtual_stock'])) {
+                    $courtesyVirtCap = (int) $zCourtesyConfig['virtual_stock'];
+                }
+                if ($courtesyPhysCap === 0 && $courtesyVirtCap === 0 && isset($zCourtesyConfig['stock']) && is_numeric($zCourtesyConfig['stock'])) {
+                    $courtesyPhysCap = (int) $zCourtesyConfig['stock'];
+                }
+            }
+
+            $zCourtesyMaxStock = ($courtesyPhysCap + $courtesyVirtCap) > 0
+                ? ($courtesyPhysCap + $courtesyVirtCap)
+                : (($zCourtesyConfig && isset($zCourtesyConfig['stock']) && is_numeric($zCourtesyConfig['stock'])) ? (int) $zCourtesyConfig['stock'] : null);
+
+            $courtesySoldTickets = $soldTickets->filter(function ($t) use ($cleanZone) {
+                $tClean = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $t->zone_name ?? '')));
+                return (str_contains($tClean, 'CORTESIA') || str_contains($tClean, 'CORTESÍA')) && str_contains($tClean, $cleanZone);
+            });
+            $courtesyPhysSold = $courtesySoldTickets->where('ticket_type', 'cortesia')->where('source', '!=', 'web_checkout')->count();
+            $courtesyVirtSold = $courtesySoldTickets->where(fn($t) => $t->ticket_type === 'cortesia_digital' || ($t->ticket_type === 'cortesia' && $t->source === 'web_checkout'))->count();
+
+            $courtesySalesQty = (int) $courtesySales->filter(function ($s) use ($zName, $cleanZone) {
+                $sClean = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $s->zone_name ?? '')));
+                return $s->zone_name === $zName || $sClean === $cleanZone;
+            })->sum('quantity');
+
+            $zCourtesySold = max($courtesySalesQty, ($courtesyPhysSold + $courtesyVirtSold));
+            $zCourtesyAvailable = $zCourtesyMaxStock !== null
+                ? max(0, $zCourtesyMaxStock - $zCourtesySold)
+                : $zAvail;
+
+            $zonesWithStats[] = [
+                'name' => $zName,
+                'price' => $zPrice,
+                'capacity' => $zTotalCap,
+                'sold' => $zSold,
+                'available' => $zAvail,
+                'percentage' => $zTotalCap > 0 ? min(100, round(($zSold / $zTotalCap) * 100)) : 0,
+
+                // Desglose físico vs virtual
+                'has_split' => $isSplitActive,
+                'physical_capacity' => $physCap,
+                'digital_capacity' => $virtCap,
+                'physical_sold' => $physSold,
+                'digital_sold' => $virtSold,
+                'physical_available' => $physAvail,
+                'digital_available' => $virtAvail,
+
+                // Cortesía
+                'courtesy_enabled' => $zCourtesyEnabled,
+                'courtesy_max_stock' => $zCourtesyMaxStock,
+                'courtesy_sold' => $zCourtesySold,
+                'courtesy_available' => $zCourtesyAvailable,
+                'courtesy_physical_capacity' => $courtesyPhysCap,
+                'courtesy_digital_capacity' => $courtesyVirtCap,
+                'courtesy_physical_sold' => $courtesyPhysSold,
+                'courtesy_digital_sold' => $courtesyVirtSold,
+
+                'capacity_type' => $z['capacity_type'] ?? null,
+                'seats' => $z['seats'] ?? [],
+            ];
+        }
+
+        return $zonesWithStats;
     }
 }
 

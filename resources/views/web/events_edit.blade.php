@@ -472,6 +472,9 @@
                                                 lAmbos.style.border = selected === 'ambos' ? '2px solid #A855F7' : '2px solid rgba(255,255,255,0.1)';
                                                 lAmbos.style.background = selected === 'ambos' ? 'rgba(168, 85, 247, 0.12)' : 'rgba(255,255,255,0.02)';
                                             }
+                                            if (typeof applySalesTypeToQuotaInputs === 'function') {
+                                                applySalesTypeToQuotaInputs();
+                                            }
                                         }
                                     </script>
                                 </div>
@@ -828,91 +831,110 @@
                             </div> <!-- Fin #step2StandardContainer -->
 
                             @php
-                                $cSettings = $eventData['courtesy_settings'] ?? [];
-                                $cEnabled = !empty($cSettings['enabled']);
+                                $cSettings = is_array($eventData['courtesy_settings'] ?? null) 
+                                    ? $eventData['courtesy_settings'] 
+                                    : (json_decode($eventData['courtesy_settings'] ?? '[]', true) ?: []);
                                 $cForUsers = !isset($cSettings['for_users']) || !empty($cSettings['for_users']);
                                 $cForAdmins = !isset($cSettings['for_admins']) || !empty($cSettings['for_admins']);
                                 $cName = $cSettings['name'] ?? 'Entrada de Cortesía (Free)';
                                 $cUserMax = $cSettings['user_max_quantity'] ?? 2;
-                                $cStock = $cSettings['stock'] ?? '';
+                                $qsSettings = is_array($eventData['quota_split_settings'] ?? null) 
+                                    ? $eventData['quota_split_settings'] 
+                                    : (json_decode($eventData['quota_split_settings'] ?? '[]', true) ?: []);
                             @endphp
 
-                            <!-- SECCIÓN: CONFIGURACIÓN DE ENTRADAS DE CORTESÍA (DISPONIBLE EN MODO ESTÁNDAR E INTERACTIVO) -->
-                            <div id="step2CourtesySection" style="margin-bottom: 1.75rem; background: rgba(16, 185, 129, 0.03); border: 1.5px solid rgba(16, 185, 129, 0.25); border-radius: 18px; padding: 1.5rem;">
-                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.75rem;">
-                                    <div style="display: flex; align-items: center; gap: 0.65rem;">
-                                        <span style="font-size: 1.4rem;">🎁</span>
+                            <!-- SECCIÓN UNIFICADA: DISTRIBUCIÓN DE AFORO Y CORTESÍAS POR ZONA -->
+                            <div id="unifiedQuotaDistributionSection" style="background: rgba(15, 23, 42, 0.75); border: 1.5px solid rgba(56, 189, 248, 0.35); border-radius: 20px; padding: 1.4rem; margin-top: 1.75rem; margin-bottom: 1.5rem; box-shadow: 0 8px 32px rgba(0,0,0,0.35);">
+                                <!-- ENCABEZADO CON MODALIDAD DE VENTA Y EXPLICACIÓN -->
+                                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+                                    <div style="display: flex; align-items: center; gap: 0.85rem;">
+                                        <div style="width: 46px; height: 46px; border-radius: 14px; background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(168, 85, 247, 0.2)); border: 1.5px solid rgba(56, 189, 248, 0.4); display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+                                            ⚖️
+                                        </div>
                                         <div>
-                                            <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #10B981;">Generar Entradas de Cortesía (Pases Free / Gratuitos)</h4>
-                                            <p style="margin: 0.15rem 0 0 0; font-size: 0.825rem; color: #94A3B8;">Habilita la emisión de entradas a costo S/ 0.00 para clientes web o emisión desde el panel / taquilla.</p>
+                                            <h4 style="margin: 0; color: #FFFFFF; font-size: 1.05rem; font-weight: 800; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                                                Distribución de Aforo y Cortesías por Zona
+                                                <span id="salesModalityBadge" style="font-size: 0.725rem; font-weight: 800; padding: 0.2rem 0.65rem; border-radius: 8px;">
+                                                    <!-- Dinámico vía JS -->
+                                                </span>
+                                            </h4>
+                                            <p style="margin: 0.2rem 0 0 0; font-size: 0.825rem; color: #94A3B8;">
+                                                Define cuántas entradas destinar a <strong style="color: #FF5500;">Venta Física</strong>, <strong style="color: #38BDF8;">Venta Digital</strong> y los pases de <strong style="color: #10B981;">Cortesía</strong> adicionales vinculados a cada sector.
+                                            </p>
                                         </div>
                                     </div>
-                                    <label style="display: inline-flex; align-items: center; gap: 0.65rem; cursor: pointer; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.45rem 0.85rem; border-radius: 10px;">
-                                        <input type="checkbox" id="courtesy_enabled" class="orange-checkbox" {{ $cEnabled ? 'checked' : '' }} onchange="toggleCourtesySection(this.checked)">
-                                        <span style="font-size: 0.85rem; font-weight: 800; color: #E2E8F0;">Activar Cortesías</span>
-                                    </label>
+
+                                    <div id="salesTypeNoticeBox" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 0.5rem 0.85rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; color: #CBD5E1;">
+                                        <!-- Notificación dinámica sobre modalidad de venta activa -->
+                                    </div>
                                 </div>
 
-                                <div id="courtesyOptionsBox" style="display: {{ $cEnabled ? 'block' : 'none' }}; padding-top: 1rem; border-top: 1px dashed rgba(16, 185, 129, 0.2); margin-top: 0.85rem;">
-                                    <span style="font-size: 0.825rem; font-weight: 700; color: #E2E8F0; display: block; margin-bottom: 0.75rem;">¿Quiénes pueden generar u obtener entradas de cortesía?</span>
-                                    
-                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
-                                        <label style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem; display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer;">
-                                            <input type="checkbox" id="courtesy_for_users" class="orange-checkbox" style="margin-top: 3px;" {{ $cForUsers ? 'checked' : '' }}>
-                                            <div>
-                                                <strong style="color: #FFFFFF; font-size: 0.9rem; display: block;">👥 Usuarios / Clientes Web</strong>
-                                                <span style="color: #94A3B8; font-size: 0.775rem; display: block; margin-top: 2px;">Los compradores podrán seleccionar cortesías en la web. <strong style="color: #FF5500;">(Límite estricto configurable por usuario)</strong>.</span>
-                                            </div>
-                                        </label>
-
-                                        <label style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem; display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer;">
-                                            <input type="checkbox" id="courtesy_for_admins" class="orange-checkbox" style="margin-top: 3px;" {{ $cForAdmins ? 'checked' : '' }}>
-                                            <div>
-                                                <strong style="color: #FFFFFF; font-size: 0.9rem; display: block;">🛡️ Administradores (Taquilla / Panel)</strong>
-                                                <span style="color: #94A3B8; font-size: 0.775rem; display: block; margin-top: 2px;">El administrador podrá emitir pases de cortesía desde Taquilla POS sin costo y <strong style="color: #10B981;">sin límite de cantidad</strong>.</span>
-                                            </div>
-                                        </label>
-                                    </div>
-
-                                    <div style="display: grid; grid-template-columns: 1fr 240px; gap: 1.25rem; margin-bottom: 1.25rem;">
+                                <!-- BARRA COMPACTA DE CONFIGURACIÓN GLOBAL DE CORTESÍAS -->
+                                <div style="background: rgba(16, 185, 129, 0.06); border: 1.5px solid rgba(16, 185, 129, 0.25); border-radius: 12px; padding: 0.75rem 1.15rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.85rem;">
+                                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                        <span style="font-size: 1.25rem;">🎁</span>
                                         <div>
-                                            <label style="font-size: 0.82rem; font-weight: 800; color: #CBD5E1; display: block; margin-bottom: 0.45rem; text-transform: uppercase; letter-spacing: 0.5px;">NOMBRE DE LA ENTRADA DE CORTESÍA</label>
-                                            <input type="text" id="courtesy_ticket_name" class="form-input-custom" value="{{ $cName }}" placeholder="Ej: Entrada de Cortesía (Free)" style="font-size: 0.98rem; padding: 0.7rem 1rem; width: 100%; border-radius: 10px;">
-                                        </div>
-                                        <div>
-                                            <label style="font-size: 0.82rem; font-weight: 800; color: #CBD5E1; display: block; margin-bottom: 0.45rem; text-transform: uppercase; letter-spacing: 0.5px;">MÁXIMO POR USUARIO (WEB)</label>
-                                            <input type="number" id="courtesy_user_max" class="form-input-custom" value="{{ $cUserMax }}" min="1" max="100" style="font-size: 0.98rem; padding: 0.7rem 1rem; font-weight: 800; color: #10B981; text-align: center; width: 100%; border-radius: 10px;" placeholder="Por defecto 2">
+                                            <strong style="color: #10B981; font-size: 0.88rem;">Pases de Cortesía Adicionales</strong>
+                                            <span style="color: #94A3B8; font-size: 0.75rem; display: block;">Se generan con correlativo propio independiente y costo S/ 0.00</span>
                                         </div>
                                     </div>
-
-                                    <!-- TABLA DINÁMICA DE CORTESÍAS Y CUPOS POR ZONA -->
-                                    <div style="background: rgba(15, 23, 42, 0.65); border: 1.5px solid rgba(16, 185, 129, 0.25); border-radius: 14px; padding: 1.15rem; margin-top: 1rem;">
-                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
-                                            <div>
-                                                <strong style="color: #10B981; font-size: 0.9rem; display: flex; align-items: center; gap: 0.4rem;">
-                                                    <span>🎟️</span> <span>Habilitar y Asignar Stock de Cortesía por Zonas (Opcional)</span>
-                                                </strong>
-                                                <p style="color: #94A3B8; font-size: 0.775rem; margin: 0.2rem 0 0 0;">
-                                                    Asigna el cupo máximo de entradas de cortesía autorizadas para cada sector. Las zonas con cupo 0 o vacío no emitirán cortesías.
-                                                </p>
-                                            </div>
+                                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                                        <label style="display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; margin: 0;">
+                                            <input type="checkbox" id="courtesy_for_admins" class="orange-checkbox" {{ $cForAdmins ? 'checked' : '' }}>
+                                            <span style="font-size: 0.8rem; color: #E2E8F0; font-weight: 700;">🛡️ Taquilla / Admin</span>
+                                        </label>
+                                        <label style="display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; margin: 0;" id="courtesyForUsersWrapper">
+                                            <input type="checkbox" id="courtesy_for_users" class="orange-checkbox" {{ $cForUsers ? 'checked' : '' }}>
+                                            <span style="font-size: 0.8rem; color: #E2E8F0; font-weight: 700;">👥 Clientes Web</span>
+                                        </label>
+                                        <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                            <span style="font-size: 0.75rem; color: #94A3B8;">Nombre:</span>
+                                            <input type="text" id="courtesy_ticket_name" class="form-input-custom" value="{{ $cName }}" placeholder="Pase de Cortesía" style="font-size: 0.8rem; padding: 0.35rem 0.6rem; width: 170px;">
                                         </div>
-
-                                        <div class="dash-table-container" style="margin-top: 0.5rem; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08);">
-                                            <table class="dash-table" style="font-size: 0.85rem; margin: 0;">
-                                                <thead>
-                                                    <tr style="background: rgba(16,185,129,0.08);">
-                                                        <th>Sector / Zona</th>
-                                                        <th style="width: 140px; text-align: center;">Aforo Regular</th>
-                                                        <th style="width: 140px; text-align: center;">Precio Regular</th>
-                                                        <th style="width: 270px; text-align: center;">Cupo Máx. Cortesía (Stock)</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="courtesyZonesConfigBody">
-                                                    <!-- Se sincroniza automáticamente -->
-                                                </tbody>
-                                            </table>
+                                        <div style="display: flex; align-items: center; gap: 0.4rem;" id="courtesyUserMaxWrapper">
+                                            <span style="font-size: 0.75rem; color: #94A3B8;">Máx/User:</span>
+                                            <input type="number" id="courtesy_user_max" class="form-input-custom" value="{{ $cUserMax }}" min="1" max="100" style="font-size: 0.8rem; padding: 0.35rem 0.6rem; width: 65px; text-align: center;">
                                         </div>
+                                    </div>
+                                </div>
+
+                                <!-- TABLA UNIFICADA DE REPARTO Y CORTESÍAS POR SECTOR -->
+                                <div class="dash-table-container" style="border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08);">
+                                    <table class="dash-table" style="font-size: 0.85rem; margin: 0; width: 100%;">
+                                        <thead>
+                                            <tr style="background: rgba(30, 41, 59, 0.9);">
+                                                <th style="min-width: 140px;">Sector / Zona</th>
+                                                <th style="width: 110px; text-align: center;">Aforo Venta</th>
+                                                <th style="width: 170px; text-align: center;" id="thColPhys">🎟️ Venta Física</th>
+                                                <th style="width: 170px; text-align: center;" id="thColVirt">💻 Venta Digital</th>
+                                                <th style="width: 150px; text-align: center;">Balance Venta</th>
+                                                <th style="width: 150px; text-align: center;" id="thColCortPhys">🎁 Cortesía Física</th>
+                                                <th style="width: 150px; text-align: center;" id="thColCortVirt">🎁 Cortesía Digital</th>
+                                                <th style="width: 130px; text-align: center;">Total Sector</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="quotaSplitZonesBody">
+                                            <!-- Sincronizado dinámicamente -->
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- RESUMEN EN PIE DE TABLA -->
+                                <div style="margin-top: 1rem; display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; flex-wrap: wrap;">
+                                    <div style="background: rgba(255, 85, 0, 0.1); border: 1px solid rgba(255, 85, 0, 0.3); border-radius: 8px; padding: 0.4rem 0.75rem; font-size: 0.8rem; color: #CBD5E1;">
+                                        🎟️ Venta Física: <strong id="quotaSummaryPhys" style="color: #FF5500; font-size: 0.92rem;">0</strong>
+                                    </div>
+                                    <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 0.4rem 0.75rem; font-size: 0.8rem; color: #CBD5E1;">
+                                        💻 Venta Digital: <strong id="quotaSummaryVirt" style="color: #38BDF8; font-size: 0.92rem;">0</strong>
+                                    </div>
+                                    <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 0.4rem 0.75rem; font-size: 0.8rem; color: #CBD5E1;">
+                                        🎁 Cortesías Físicas: <strong id="quotaSummaryCortPhys" style="color: #10B981; font-size: 0.92rem;">0</strong>
+                                    </div>
+                                    <div style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 8px; padding: 0.4rem 0.75rem; font-size: 0.8rem; color: #CBD5E1;">
+                                        🎁 Cortesías Digitales: <strong id="quotaSummaryCortVirt" style="color: #C084FC; font-size: 0.92rem;">0</strong>
+                                    </div>
+                                    <div style="background: rgba(255, 255, 255, 0.08); border: 1.5px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 0.4rem 0.85rem; font-size: 0.82rem; color: #FFFFFF;">
+                                        Total Entradas: <strong id="quotaSummaryGrandTotal" style="color: #34D399; font-size: 1rem; font-weight: 900;">0</strong>
                                     </div>
                                 </div>
                             </div>
@@ -927,12 +949,15 @@
                                             <span id="aforoCourtesyBadge" style="display: none; background: rgba(16, 185, 129, 0.18); border: 1px solid rgba(16, 185, 129, 0.4); color: #34D399; font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.55rem; border-radius: 6px;">
                                                 🎁 CON CORTESÍAS ACTIVADAS
                                             </span>
+                                            <span id="aforoSplitBadge" style="display: none; background: rgba(56, 189, 248, 0.18); border: 1px solid rgba(56, 189, 248, 0.4); color: #38BDF8; font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.55rem; border-radius: 6px;">
+                                                ⚖️ DIVISIÓN FÍSICA/DIGITAL ACTIVA
+                                            </span>
                                         </div>
                                         <p id="aforoSubtitleText" style="margin: 0.25rem 0 0 0; color: #94A3B8; font-size: 0.85rem;">
                                             Suma total de localidades configuradas en las zonas superiores
                                         </p>
 
-                                        <!-- DESGLOSE EN TIEMPO REAL CUANDO CORTESÍAS ESTÁ ACTIVADO -->
+                                        <!-- DESGLOSE EN TIEMPO REAL CUANDO CORTESÍAS O DIVISIÓN ESTÁ ACTIVADO -->
                                         <div id="aforoCourtesyBreakdown" style="display: none; margin-top: 0.65rem; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
                                             <div style="display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(37, 99, 235, 0.15); border: 1px solid rgba(37, 99, 235, 0.35); padding: 0.28rem 0.65rem; border-radius: 8px;">
                                                 <span style="font-size: 0.85rem;">🎟️</span>
@@ -945,6 +970,22 @@
                                                 <span style="font-size: 0.78rem; color: #6EE7B7; font-weight: 700;">Cortesías:</span>
                                                 <strong id="aforoCourtesyCount" style="color: #10B981; font-size: 0.88rem; font-weight: 900;">0</strong>
                                                 <span style="font-size: 0.72rem; color: #94A3B8;">pases</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- DESGLOSE EN TIEMPO REAL DE CUPOS FÍSICOS Y DIGITALES -->
+                                        <div id="aforoSplitBreakdown" style="display: none; margin-top: 0.65rem; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                                            <div style="display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(255, 85, 0, 0.15); border: 1px solid rgba(255, 85, 0, 0.35); padding: 0.28rem 0.65rem; border-radius: 8px;">
+                                                <span style="font-size: 0.85rem;">🎟️</span>
+                                                <span style="font-size: 0.78rem; color: #FFAA80; font-weight: 700;">Físicas:</span>
+                                                <strong id="aforoSplitPhysCount" style="color: #FFFFFF; font-size: 0.88rem; font-weight: 900;">0</strong>
+                                                <span style="font-size: 0.72rem; color: #94A3B8;">plancha/POS</span>
+                                            </div>
+                                            <div style="display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.35); padding: 0.28rem 0.65rem; border-radius: 8px;">
+                                                <span style="font-size: 0.85rem;">💻</span>
+                                                <span style="font-size: 0.78rem; color: #BAE6FD; font-weight: 700;">Digitales:</span>
+                                                <strong id="aforoSplitVirtCount" style="color: #38BDF8; font-size: 0.88rem; font-weight: 900;">0</strong>
+                                                <span style="font-size: 0.72rem; color: #94A3B8;">web</span>
                                             </div>
                                         </div>
                                     </div>
@@ -2632,19 +2673,171 @@
             }
         }
 
-        const savedCourtesyZones = @json($cSettings['zones'] ?? []);
+        const savedQuotaSplitSettings = @json($qsSettings ?? []);
+        const savedQuotaZones = savedQuotaSplitSettings.zones || [];
+        const savedCourtesySettings = @json($cSettings ?? []);
+        const savedCourtesyZones = savedCourtesySettings.zones || [];
 
-        function syncCourtesyZonesTable() {
-            const tbody = document.getElementById('courtesyZonesConfigBody');
+        function getEventSalesType() {
+            return document.querySelector('input[name="event_sales_type"]:checked')?.value || 'fisica';
+        }
+
+        function applySalesTypeToQuotaInputs() {
+            const salesType = getEventSalesType();
+            const badgeEl = document.getElementById('salesModalityBadge');
+            const noticeEl = document.getElementById('salesTypeNoticeBox');
+
+            if (badgeEl) {
+                if (salesType === 'ambos') {
+                    badgeEl.style.background = 'rgba(168, 85, 247, 0.18)';
+                    badgeEl.style.border = '1px solid rgba(168, 85, 247, 0.4)';
+                    badgeEl.style.color = '#C084FC';
+                    badgeEl.innerHTML = '🎫🌐 Venta Híbrida (Ambos Activos)';
+                } else if (salesType === 'fisica') {
+                    badgeEl.style.background = 'rgba(255, 85, 0, 0.18)';
+                    badgeEl.style.border = '1px solid rgba(255, 85, 0, 0.4)';
+                    badgeEl.style.color = '#FFAA80';
+                    badgeEl.innerHTML = '🎫 Solo Venta Física (Digital Bloqueado)';
+                } else {
+                    badgeEl.style.background = 'rgba(56, 189, 248, 0.18)';
+                    badgeEl.style.border = '1px solid rgba(56, 189, 248, 0.4)';
+                    badgeEl.style.color = '#38BDF8';
+                    badgeEl.innerHTML = '🌐 Solo Venta Digital (Físico Bloqueado)';
+                }
+            }
+
+            if (noticeEl) {
+                if (salesType === 'fisica') {
+                    noticeEl.innerHTML = '<span style="font-size: 1rem;">🔒</span><span>Modalidad <strong>Solo Venta Física</strong>: Venta y cortesía digital bloqueadas (0).</span>';
+                } else if (salesType === 'virtual') {
+                    noticeEl.innerHTML = '<span style="font-size: 1rem;">🔒</span><span>Modalidad <strong>Solo Venta Digital</strong>: Venta y cortesía física bloqueadas (0).</span>';
+                } else {
+                    noticeEl.innerHTML = '<span style="font-size: 1rem;">⚖️</span><span>Modalidad <strong>Venta Híbrida</strong>: Canales físicos y digitales activos para reparto libre.</span>';
+                }
+            }
+
+            const courtesyForUsersWrapper = document.getElementById('courtesyForUsersWrapper');
+            const courtesyUserMaxWrapper = document.getElementById('courtesyUserMaxWrapper');
+            if (courtesyForUsersWrapper) {
+                courtesyForUsersWrapper.style.display = (salesType === 'fisica') ? 'none' : 'inline-flex';
+            }
+            if (courtesyUserMaxWrapper) {
+                courtesyUserMaxWrapper.style.display = (salesType === 'fisica') ? 'none' : 'flex';
+            }
+
+            document.querySelectorAll('#quotaSplitZonesBody tr[data-zone-name]').forEach(row => {
+                const totalCap = parseInt(row.getAttribute('data-zone-total'), 10) || 0;
+                const physInput = row.querySelector('.quota-zone-phys-input');
+                const virtInput = row.querySelector('.quota-zone-virt-input');
+                const cortPhysInput = row.querySelector('.quota-zone-cort-phys-input');
+                const cortVirtInput = row.querySelector('.quota-zone-cort-virt-input');
+
+                if (salesType === 'fisica') {
+                    if (virtInput) {
+                        virtInput.value = 0;
+                        virtInput.disabled = true;
+                        virtInput.style.opacity = '0.35';
+                        virtInput.style.cursor = 'not-allowed';
+                        virtInput.title = 'Bloqueado por Modalidad Solo Venta Física';
+                    }
+                    if (cortVirtInput) {
+                        cortVirtInput.value = 0;
+                        cortVirtInput.disabled = true;
+                        cortVirtInput.style.opacity = '0.35';
+                        cortVirtInput.style.cursor = 'not-allowed';
+                        cortVirtInput.title = 'Bloqueado por Modalidad Solo Venta Física';
+                    }
+                    if (physInput) {
+                        physInput.value = totalCap;
+                        physInput.disabled = true;
+                        physInput.style.opacity = '1';
+                        physInput.style.cursor = 'default';
+                        physInput.title = '100% asignado a venta física';
+                    }
+                    if (cortPhysInput) {
+                        cortPhysInput.disabled = false;
+                        cortPhysInput.style.opacity = '1';
+                        cortPhysInput.style.cursor = 'auto';
+                        cortPhysInput.title = 'Cortesías físicas para taquilla o planchas';
+                    }
+                } else if (salesType === 'virtual') {
+                    if (physInput) {
+                        physInput.value = 0;
+                        physInput.disabled = true;
+                        physInput.style.opacity = '0.35';
+                        physInput.style.cursor = 'not-allowed';
+                        physInput.title = 'Bloqueado por Modalidad Solo Venta Digital';
+                    }
+                    if (cortPhysInput) {
+                        cortPhysInput.value = 0;
+                        cortPhysInput.disabled = true;
+                        cortPhysInput.style.opacity = '0.35';
+                        cortPhysInput.style.cursor = 'not-allowed';
+                        cortPhysInput.title = 'Bloqueado por Modalidad Solo Venta Digital';
+                    }
+                    if (virtInput) {
+                        virtInput.value = totalCap;
+                        virtInput.disabled = true;
+                        virtInput.style.opacity = '1';
+                        virtInput.style.cursor = 'default';
+                        virtInput.title = '100% asignado a venta digital';
+                    }
+                    if (cortVirtInput) {
+                        cortVirtInput.disabled = false;
+                        cortVirtInput.style.opacity = '1';
+                        cortVirtInput.style.cursor = 'auto';
+                        cortVirtInput.title = 'Cortesías digitales para web';
+                    }
+                } else {
+                    // Ambos (híbrido)
+                    if (physInput) {
+                        physInput.disabled = false;
+                        physInput.style.opacity = '1';
+                        physInput.style.cursor = 'auto';
+                        physInput.title = '';
+                    }
+                    if (virtInput) {
+                        virtInput.disabled = false;
+                        virtInput.style.opacity = '1';
+                        virtInput.style.cursor = 'auto';
+                        virtInput.title = '';
+                    }
+                    if (cortPhysInput) {
+                        cortPhysInput.disabled = false;
+                        cortPhysInput.style.opacity = '1';
+                        cortPhysInput.style.cursor = 'auto';
+                        cortPhysInput.title = '';
+                    }
+                    if (cortVirtInput) {
+                        cortVirtInput.disabled = false;
+                        cortVirtInput.style.opacity = '1';
+                        cortVirtInput.style.cursor = 'auto';
+                        cortVirtInput.title = '';
+                    }
+                }
+
+                updateQuotaRowState(row, totalCap);
+            });
+
+            recalculateTotalCapacity();
+        }
+
+        function syncQuotaSplitTable() {
+            const tbody = document.getElementById('quotaSplitZonesBody');
             if (!tbody) return;
+
+            const salesType = getEventSalesType();
 
             // Guardar valores actualmente escritos por el usuario
             const currentInputs = {};
-            tbody.querySelectorAll('tr').forEach(row => {
+            tbody.querySelectorAll('tr[data-zone-name]').forEach(row => {
                 const zName = row.getAttribute('data-zone-name');
                 if (zName) {
                     currentInputs[zName] = {
-                        stock: row.querySelector('.courtesy-zone-stock-input')?.value ?? ''
+                        phys: row.querySelector('.quota-zone-phys-input')?.value ?? '',
+                        virt: row.querySelector('.quota-zone-virt-input')?.value ?? '',
+                        cortPhys: row.querySelector('.quota-zone-cort-phys-input')?.value ?? '',
+                        cortVirt: row.querySelector('.quota-zone-cort-virt-input')?.value ?? ''
                     };
                 }
             });
@@ -2672,7 +2865,7 @@
             tbody.innerHTML = '';
 
             if (zoneList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #94A3B8; padding: 1.5rem;">Agrega sectores en la tabla o mapa interactivo para configurar sus cupos de cortesía.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #94A3B8; padding: 1.75rem;">Configura sectores en la tabla de zonas superior para distribuir sus aforos y cortesías.</td></tr>`;
                 recalculateTotalCapacity();
                 return;
             }
@@ -2680,67 +2873,196 @@
             zoneList.forEach((z, idx) => {
                 const zName = z.name;
                 const zCap = z.capacity;
-                const zPrice = z.price;
+                const cleanUpper = zName.trim().toUpperCase();
 
-                let stockVal = '';
+                let physVal = '';
+                let virtVal = '';
+                let cortPhysVal = '';
+                let cortVirtVal = '';
 
                 if (currentInputs[zName]) {
-                    stockVal = currentInputs[zName].stock;
-                } else if (Array.isArray(savedCourtesyZones) && savedCourtesyZones.length > 0) {
-                    const savedMatch = savedCourtesyZones.find(s => (s.name || s.zone_name) === zName);
-                    if (savedMatch) {
-                        stockVal = (savedMatch.stock !== null && savedMatch.stock !== undefined && savedMatch.stock !== '' && savedMatch.stock > 0) ? savedMatch.stock : '';
+                    physVal = currentInputs[zName].phys;
+                    virtVal = currentInputs[zName].virt;
+                    cortPhysVal = currentInputs[zName].cortPhys;
+                    cortVirtVal = currentInputs[zName].cortVirt;
+                } else {
+                    // 1. Buscar en savedQuotaZones
+                    if (Array.isArray(savedQuotaZones) && savedQuotaZones.length > 0) {
+                        const savedMatch = savedQuotaZones.find(s => (s.name || s.zone_name || '')?.trim().toUpperCase() === cleanUpper);
+                        if (savedMatch) {
+                            if (savedMatch.physical !== null && savedMatch.physical !== undefined) physVal = savedMatch.physical;
+                            if (savedMatch.virtual !== null && savedMatch.virtual !== undefined) virtVal = savedMatch.virtual;
+                            if (savedMatch.courtesy_physical !== null && savedMatch.courtesy_physical !== undefined) cortPhysVal = savedMatch.courtesy_physical;
+                            if (savedMatch.courtesy_virtual !== null && savedMatch.courtesy_virtual !== undefined) cortVirtVal = savedMatch.courtesy_virtual;
+                        }
                     }
+
+                    // 2. Buscar en savedCourtesyZones
+                    if ((cortPhysVal === '' || cortVirtVal === '') && Array.isArray(savedCourtesyZones) && savedCourtesyZones.length > 0) {
+                        const cMatch = savedCourtesyZones.find(s => (s.name || s.zone_name || '')?.trim().toUpperCase() === cleanUpper);
+                        if (cMatch) {
+                            if (cortPhysVal === '' && cMatch.physical_stock !== undefined) cortPhysVal = cMatch.physical_stock;
+                            if (cortVirtVal === '' && cMatch.virtual_stock !== undefined) cortVirtVal = cMatch.virtual_stock;
+                            if (cortPhysVal === '' && cMatch.stock !== undefined && salesType === 'fisica') cortPhysVal = cMatch.stock;
+                            if (cortVirtVal === '' && cMatch.stock !== undefined && salesType === 'virtual') cortVirtVal = cMatch.stock;
+                        }
+                    }
+
+                    // 3. Fallback a modalidad
+                    if (physVal === '' && virtVal === '') {
+                        if (salesType === 'virtual') {
+                            physVal = 0;
+                            virtVal = zCap;
+                        } else if (salesType === 'fisica') {
+                            physVal = zCap;
+                            virtVal = 0;
+                        } else {
+                            // ambos
+                            physVal = zCap;
+                            virtVal = 0;
+                        }
+                    }
+
+                    if (cortPhysVal === '') cortPhysVal = 0;
+                    if (cortVirtVal === '') cortVirtVal = 0;
                 }
 
-                const hasStock = stockVal !== '' && parseInt(stockVal) > 0;
-                const borderStyle = hasStock ? '1.5px solid #10B981' : '1.5px solid rgba(16,185,129,0.3)';
-                const bgStyle = hasStock ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.04)';
+                const pNum = parseInt(physVal, 10) || 0;
+                const vNum = parseInt(virtVal, 10) || 0;
+                const cpNum = parseInt(cortPhysVal, 10) || 0;
+                const cvNum = parseInt(cortVirtVal, 10) || 0;
+                const isBalanced = (pNum + vNum) === zCap;
+                const totalSector = (pNum + vNum) + (cpNum + cvNum);
+
+                const badgeHtml = isBalanced
+                    ? `<span class="quota-balance-badge" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #34D399; font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 6px;">✓ Cuadrado (${pNum}+${vNum}=${zCap})</span>`
+                    : `<span class="quota-balance-badge" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #FCA5A5; font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 6px;">⚠️ Descuadrado (${pNum+vNum}≠${zCap})</span>`;
 
                 const tr = document.createElement('tr');
                 tr.setAttribute('data-zone-name', zName);
+                tr.setAttribute('data-zone-total', zCap);
                 tr.innerHTML = `
                     <td>
-                        <strong style="color: #FFFFFF; font-size: 0.92rem;" class="courtesy-zone-name-label">${zName}</strong>
+                        <strong style="color: #FFFFFF; font-size: 0.9rem; display: block;">${zName}</strong>
+                        <span style="font-size: 0.72rem; color: #94A3B8;">Ref: S/ ${z.price ? z.price.toFixed(2) : '0.00'}</span>
                     </td>
                     <td style="text-align: center;">
-                        <span class="dash-badge-custom badge-blue" style="font-size: 0.78rem;">${zCap.toLocaleString()} entradas</span>
+                        <span class="dash-badge-custom badge-blue" style="font-size: 0.8rem; font-weight: 800;">${zCap.toLocaleString()}</span>
                     </td>
                     <td style="text-align: center;">
-                        <span style="font-weight: 800; color: #10B981; font-size: 0.88rem;">S/ ${zPrice.toFixed(2)}</span>
+                        <input type="number" 
+                               class="form-input-custom quota-zone-phys-input" 
+                               value="${physVal}" 
+                               min="0" 
+                               max="${zCap}" 
+                               style="font-size: 0.92rem; padding: 0.45rem 0.6rem; border: 1.5px solid rgba(255, 85, 0, 0.5); background: rgba(255, 85, 0, 0.08); font-weight: 800; color: #FF5500; text-align: center; width: 110px; border-radius: 8px; margin: 0 auto;" 
+                               oninput="handleQuotaPhysChange(this, ${zCap})">
                     </td>
                     <td style="text-align: center;">
-                        <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                            <input type="number" 
-                                   class="form-input-custom courtesy-zone-stock-input" 
-                                   value="${stockVal}" 
-                                   min="0" 
-                                   max="${zCap > 0 ? zCap : 999999}" 
-                                   placeholder="0 (Sin cortesías)" 
-                                   style="font-size: 0.95rem; padding: 0.55rem 0.85rem; border: ${borderStyle}; background: ${bgStyle}; font-weight: 800; color: #10B981; text-align: center; width: 100%; max-width: 240px; border-radius: 8px;" 
-                                   oninput="this.style.border = (this.value && parseInt(this.value) > 0) ? '1.5px solid #10B981' : '1.5px solid rgba(16,185,129,0.3)'; this.style.background = (this.value && parseInt(this.value) > 0) ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.04)'; recalculateTotalCapacity();">
-                        </div>
+                        <input type="number" 
+                               class="form-input-custom quota-zone-virt-input" 
+                               value="${virtVal}" 
+                               min="0" 
+                               max="${zCap}" 
+                               style="font-size: 0.92rem; padding: 0.45rem 0.6rem; border: 1.5px solid rgba(56, 189, 248, 0.5); background: rgba(56, 189, 248, 0.08); font-weight: 800; color: #38BDF8; text-align: center; width: 110px; border-radius: 8px; margin: 0 auto;" 
+                               oninput="handleQuotaVirtChange(this, ${zCap})">
+                    </td>
+                    <td style="text-align: center;" class="quota-balance-cell">
+                        ${badgeHtml}
+                    </td>
+                    <td style="text-align: center;">
+                        <input type="number" 
+                               class="form-input-custom quota-zone-cort-phys-input" 
+                               value="${cortPhysVal}" 
+                               min="0" 
+                               max="99999" 
+                               placeholder="0" 
+                               style="font-size: 0.92rem; padding: 0.45rem 0.6rem; border: 1.5px solid rgba(16, 185, 129, 0.5); background: rgba(16, 185, 129, 0.08); font-weight: 800; color: #10B981; text-align: center; width: 100px; border-radius: 8px; margin: 0 auto;" 
+                               oninput="handleCourtesyChange(this)">
+                    </td>
+                    <td style="text-align: center;">
+                        <input type="number" 
+                               class="form-input-custom quota-zone-cort-virt-input" 
+                               value="${cortVirtVal}" 
+                               min="0" 
+                               max="99999" 
+                               placeholder="0" 
+                               style="font-size: 0.92rem; padding: 0.45rem 0.6rem; border: 1.5px solid rgba(168, 85, 247, 0.5); background: rgba(168, 85, 247, 0.08); font-weight: 800; color: #C084FC; text-align: center; width: 100px; border-radius: 8px; margin: 0 auto;" 
+                               oninput="handleCourtesyChange(this)">
+                    </td>
+                    <td style="text-align: center;" class="quota-row-total-cell">
+                        <strong style="color: #FFFFFF; font-size: 0.95rem; font-weight: 900;">${totalSector.toLocaleString()}</strong>
+                        <span style="display: block; font-size: 0.7rem; color: #94A3B8;">${pNum + vNum} vta + ${cpNum + cvNum} cort</span>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
 
+            applySalesTypeToQuotaInputs();
+        }
+
+        function syncCourtesyZonesTable() {
+            syncQuotaSplitTable();
+        }
+
+        function handleQuotaPhysChange(input, totalCap) {
+            const val = parseInt(input.value, 10);
+            const row = input.closest('tr');
+            if (!row) return;
+            const virtInput = row.querySelector('.quota-zone-virt-input');
+            const salesType = getEventSalesType();
+            if (salesType === 'ambos' && !isNaN(val) && val >= 0) {
+                const remaining = Math.max(0, totalCap - val);
+                if (virtInput) virtInput.value = remaining;
+            }
+            updateQuotaRowState(row, totalCap);
             recalculateTotalCapacity();
         }
 
-        function toggleCourtesySection(enabled) {
-            const box = document.getElementById('courtesyOptionsBox');
-            if (box) {
-                box.style.display = enabled ? 'block' : 'none';
-                if (enabled) {
-                    const adminChk = document.getElementById('courtesy_for_admins');
-                    if (adminChk) {
-                        adminChk.checked = true;
-                    }
-                    syncCourtesyZonesTable();
-                }
+        function handleQuotaVirtChange(input, totalCap) {
+            const val = parseInt(input.value, 10);
+            const row = input.closest('tr');
+            if (!row) return;
+            const physInput = row.querySelector('.quota-zone-phys-input');
+            const salesType = getEventSalesType();
+            if (salesType === 'ambos' && !isNaN(val) && val >= 0) {
+                const remaining = Math.max(0, totalCap - val);
+                if (physInput) physInput.value = remaining;
             }
+            updateQuotaRowState(row, totalCap);
             recalculateTotalCapacity();
+        }
+
+        function handleCourtesyChange(input) {
+            const row = input.closest('tr');
+            if (!row) return;
+            const totalCap = parseInt(row.getAttribute('data-zone-total'), 10) || 0;
+            updateQuotaRowState(row, totalCap);
+            recalculateTotalCapacity();
+        }
+
+        function updateQuotaRowState(row, totalCap) {
+            const p = parseInt(row.querySelector('.quota-zone-phys-input')?.value, 10) || 0;
+            const v = parseInt(row.querySelector('.quota-zone-virt-input')?.value, 10) || 0;
+            const cp = parseInt(row.querySelector('.quota-zone-cort-phys-input')?.value, 10) || 0;
+            const cv = parseInt(row.querySelector('.quota-zone-cort-virt-input')?.value, 10) || 0;
+
+            const cell = row.querySelector('.quota-balance-cell');
+            if (cell) {
+                const isBalanced = (p + v) === totalCap;
+                cell.innerHTML = isBalanced
+                    ? `<span class="quota-balance-badge" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #34D399; font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 6px;">✓ Cuadrado (${p}+${v}=${totalCap})</span>`
+                    : `<span class="quota-balance-badge" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #FCA5A5; font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 6px;">⚠️ Descuadrado (${p+v}≠${totalCap})</span>`;
+            }
+
+            const totalCell = row.querySelector('.quota-row-total-cell');
+            if (totalCell) {
+                const totalSector = (p + v) + (cp + cv);
+                totalCell.innerHTML = `
+                    <strong style="color: #FFFFFF; font-size: 0.95rem; font-weight: 900;">${totalSector.toLocaleString()}</strong>
+                    <span style="display: block; font-size: 0.7rem; color: #94A3B8;">${p + v} vta + ${cp + cv} cort</span>
+                `;
+            }
         }
 
         function addDynamicZoneRow() {
@@ -2826,6 +3148,7 @@
             tbody.appendChild(presaleRow);
             recalculateTotalCapacity();
             syncCourtesyZonesTable();
+            if (typeof syncQuotaSplitTable === 'function') syncQuotaSplitTable();
         }
 
         function removeZoneRow(btn) {
@@ -2838,6 +3161,7 @@
                 row.remove();
                 recalculateTotalCapacity();
                 syncCourtesyZonesTable();
+                if (typeof syncQuotaSplitTable === 'function') syncQuotaSplitTable();
             } else {
                 Swal.fire({
                     title: 'Atención',
@@ -2851,68 +3175,89 @@
 
         function recalculateTotalCapacity() {
             let regularTotal = 0;
+            let physTotal = 0;
+            let virtTotal = 0;
+            let cortPhysTotal = 0;
+            let cortVirtTotal = 0;
 
-            // Si estamos en modo interactivo o SeatMapEditor tiene zonas activas
-            if (window.currentStep2ZoneMode === 'interactive' && typeof SeatMapEditor !== 'undefined' && Array.isArray(SeatMapEditor.zones) && SeatMapEditor.zones.length > 0) {
-                regularTotal = SeatMapEditor.zones.reduce((sum, z) => sum + (parseInt(z.capacity) || 0), 0);
-            } else {
-                const zoneRows = document.querySelectorAll('#zonesTableBody .zone-row');
-                zoneRows.forEach(row => {
-                    const cap = parseInt(row.querySelector('.zone-capacity-input')?.value) || 0;
-                    regularTotal += cap;
+            const splitRows = document.querySelectorAll('#quotaSplitZonesBody tr[data-zone-name]');
+            if (splitRows.length > 0) {
+                splitRows.forEach(tr => {
+                    const p = parseInt(tr.querySelector('.quota-zone-phys-input')?.value, 10) || 0;
+                    const v = parseInt(tr.querySelector('.quota-zone-virt-input')?.value, 10) || 0;
+                    const cp = parseInt(tr.querySelector('.quota-zone-cort-phys-input')?.value, 10) || 0;
+                    const cv = parseInt(tr.querySelector('.quota-zone-cort-virt-input')?.value, 10) || 0;
+
+                    regularTotal += (p + v);
+                    physTotal += p;
+                    virtTotal += v;
+                    cortPhysTotal += cp;
+                    cortVirtTotal += cv;
                 });
-                if (regularTotal === 0 && typeof SeatMapEditor !== 'undefined' && Array.isArray(SeatMapEditor.zones) && SeatMapEditor.zones.length > 0) {
+            } else {
+                if (window.currentStep2ZoneMode === 'interactive' && typeof SeatMapEditor !== 'undefined' && Array.isArray(SeatMapEditor.zones) && SeatMapEditor.zones.length > 0) {
                     regularTotal = SeatMapEditor.zones.reduce((sum, z) => sum + (parseInt(z.capacity) || 0), 0);
+                } else {
+                    document.querySelectorAll('#zonesTableBody .zone-row').forEach(row => {
+                        regularTotal += parseInt(row.querySelector('.zone-capacity-input')?.value) || 0;
+                    });
+                }
+                const sType = getEventSalesType();
+                if (sType === 'virtual') {
+                    virtTotal = regularTotal;
+                } else {
+                    physTotal = regularTotal;
                 }
             }
 
-            // Calcular cortesías si están activadas (únicamente en base a cupos asignados > 0 por el usuario)
-            const courtesyEnabled = !!document.getElementById('courtesy_enabled')?.checked;
-            let courtesyTotal = 0;
+            const courtesyTotal = cortPhysTotal + cortVirtTotal;
+            const grandTotal = regularTotal + courtesyTotal;
 
-            if (courtesyEnabled) {
-                const courtesyRows = document.querySelectorAll('#courtesyZonesConfigBody tr[data-zone-name]');
-                courtesyRows.forEach(tr => {
-                    const stockInput = tr.querySelector('.courtesy-zone-stock-input');
-                    const stockVal = stockInput && stockInput.value !== '' ? parseInt(stockInput.value, 10) : 0;
-                    if (!isNaN(stockVal) && stockVal > 0) {
-                        courtesyTotal += stockVal;
-                    }
-                });
-            }
+            // Actualizar resumen en pie de tabla
+            const qSummaryPhys = document.getElementById('quotaSummaryPhys');
+            const qSummaryVirt = document.getElementById('quotaSummaryVirt');
+            const qSummaryCortPhys = document.getElementById('quotaSummaryCortPhys');
+            const qSummaryCortVirt = document.getElementById('quotaSummaryCortVirt');
+            const qSummaryGrand = document.getElementById('quotaSummaryGrandTotal');
 
+            if (qSummaryPhys) qSummaryPhys.innerText = `${physTotal.toLocaleString()} tickets`;
+            if (qSummaryVirt) qSummaryVirt.innerText = `${virtTotal.toLocaleString()} tickets`;
+            if (qSummaryCortPhys) qSummaryCortPhys.innerText = `${cortPhysTotal.toLocaleString()} tickets`;
+            if (qSummaryCortVirt) qSummaryCortVirt.innerText = `${cortVirtTotal.toLocaleString()} tickets`;
+            if (qSummaryGrand) qSummaryGrand.innerText = `${grandTotal.toLocaleString()} tickets`;
+
+            // Actualizar el contenedor grande #aforoTotalEstimadoContainer
             const capEl = document.getElementById('calculatedTotalCapacity');
             const labelEl = document.getElementById('calculatedTotalLabel');
-            const badgeEl = document.getElementById('aforoCourtesyBadge');
-            const breakdownEl = document.getElementById('aforoCourtesyBreakdown');
+            const subtitleEl = document.getElementById('aforoSubtitleText');
+            const courtesyBadgeEl = document.getElementById('aforoCourtesyBadge');
+            const splitBadgeEl = document.getElementById('aforoSplitBadge');
+            const courtesyBreakdownEl = document.getElementById('aforoCourtesyBreakdown');
             const regularCountEl = document.getElementById('aforoRegularCount');
             const courtesyCountEl = document.getElementById('aforoCourtesyCount');
-            const subtitleEl = document.getElementById('aforoSubtitleText');
+            const splitBreakdownEl = document.getElementById('aforoSplitBreakdown');
+            const splitPhysCountEl = document.getElementById('aforoSplitPhysCount');
+            const splitVirtCountEl = document.getElementById('aforoSplitVirtCount');
 
-            if (courtesyEnabled) {
-                const combinedTotal = regularTotal + courtesyTotal;
-                if (capEl) capEl.innerText = combinedTotal.toLocaleString();
-                if (badgeEl) badgeEl.style.display = 'inline-block';
-                if (breakdownEl) breakdownEl.style.display = 'flex';
-                if (regularCountEl) regularCountEl.innerText = regularTotal.toLocaleString();
-                if (courtesyCountEl) courtesyCountEl.innerText = courtesyTotal.toLocaleString();
-
-                if (courtesyTotal > 0) {
-                    if (labelEl) labelEl.innerText = `Total General (${regularTotal.toLocaleString()} Aforo + ${courtesyTotal.toLocaleString()} Cortesías)`;
-                    if (subtitleEl) subtitleEl.innerText = `Aforo oficial de venta: ${regularTotal.toLocaleString()} entradas | Cortesías: ${courtesyTotal.toLocaleString()} pases`;
-                } else {
-                    if (labelEl) labelEl.innerText = `Entradas Disponibles (0 Cortesías asignadas)`;
-                    if (subtitleEl) subtitleEl.innerText = `Cortesías activadas (Asigna cupos a los sectores para emitir pases free)`;
-                }
-            } else {
-                if (capEl) capEl.innerText = regularTotal.toLocaleString();
-                if (labelEl) labelEl.innerText = 'Entradas Disponibles';
-                if (badgeEl) badgeEl.style.display = 'none';
-                if (breakdownEl) breakdownEl.style.display = 'none';
-                if (regularCountEl) regularCountEl.innerText = regularTotal.toLocaleString();
-                if (courtesyCountEl) courtesyCountEl.innerText = '0';
-                if (subtitleEl) subtitleEl.innerText = 'Suma total de localidades configuradas en las zonas superiores';
+            if (capEl) capEl.innerText = grandTotal.toLocaleString();
+            if (labelEl) {
+                labelEl.innerText = courtesyTotal > 0
+                    ? `Total Entradas (${regularTotal.toLocaleString()} Venta + ${courtesyTotal.toLocaleString()} Cortesías)`
+                    : 'Entradas Disponibles para Venta';
             }
+            if (subtitleEl) {
+                subtitleEl.innerText = `Venta Física: ${physTotal.toLocaleString()} | Venta Digital: ${virtTotal.toLocaleString()} | Cortesías Físicas: ${cortPhysTotal.toLocaleString()} | Cortesías Digitales: ${cortVirtTotal.toLocaleString()}`;
+            }
+
+            if (regularCountEl) regularCountEl.innerText = regularTotal.toLocaleString();
+            if (courtesyCountEl) courtesyCountEl.innerText = courtesyTotal.toLocaleString();
+            if (courtesyBreakdownEl) courtesyBreakdownEl.style.display = courtesyTotal > 0 ? 'flex' : 'none';
+            if (courtesyBadgeEl) courtesyBadgeEl.style.display = courtesyTotal > 0 ? 'inline-block' : 'none';
+
+            if (splitPhysCountEl) splitPhysCountEl.innerText = (physTotal + cortPhysTotal).toLocaleString();
+            if (splitVirtCountEl) splitVirtCountEl.innerText = (virtTotal + cortVirtTotal).toLocaleString();
+            if (splitBreakdownEl) splitBreakdownEl.style.display = 'flex';
+            if (splitBadgeEl) splitBadgeEl.style.display = 'inline-block';
 
             const zoneCount = (typeof SeatMapEditor !== 'undefined' && Array.isArray(SeatMapEditor.zones) && SeatMapEditor.zones.length > 0)
                 ? SeatMapEditor.zones.length
@@ -2921,9 +3266,7 @@
             if (navBadge) navBadge.textContent = zoneCount;
 
             const summaryText = document.getElementById('totalCapacitySummaryText');
-            if (summaryText) {
-                summaryText.textContent = (courtesyEnabled && courtesyTotal > 0 ? (regularTotal + courtesyTotal) : regularTotal).toLocaleString() + ' entradas';
-            }
+            if (summaryText) summaryText.textContent = `${grandTotal.toLocaleString()} entradas`;
         }
 
         function updateReviewSummary() {
@@ -3131,32 +3474,77 @@
 
             const position = leafletMarker ? leafletMarker.getLatLng() : { lat: initialLat, lng: initialLng };
             const salesType = document.querySelector('input[name="event_sales_type"]:checked')?.value || 'fisica';
+            const quotaSplitZones = [];
+            let quotaSplitError = null;
 
-            const courtesyEnabled = document.getElementById('courtesy_enabled')?.checked || false;
-            const courtesyZoneSettings = [];
-            document.querySelectorAll('#courtesyZonesConfigBody tr').forEach(row => {
+            document.querySelectorAll('#quotaSplitZonesBody tr[data-zone-name]').forEach(row => {
                 const zName = row.getAttribute('data-zone-name');
-                if (zName) {
-                    const stockRaw = row.querySelector('.courtesy-zone-stock-input')?.value?.trim();
-                    const stock = (stockRaw !== '' && stockRaw !== null && !isNaN(parseInt(stockRaw))) ? parseInt(stockRaw) : null;
-                    const isEnabled = stock !== null && stock > 0;
-                    courtesyZoneSettings.push({
-                        name: zName,
-                        enabled: isEnabled,
-                        stock: stock
-                    });
+                const zTotal = parseInt(row.getAttribute('data-zone-total'), 10) || 0;
+                const phys = parseInt(row.querySelector('.quota-zone-phys-input')?.value, 10) || 0;
+                const virt = parseInt(row.querySelector('.quota-zone-virt-input')?.value, 10) || 0;
+                const cortPhys = parseInt(row.querySelector('.quota-zone-cort-phys-input')?.value, 10) || 0;
+                const cortVirt = parseInt(row.querySelector('.quota-zone-cort-virt-input')?.value, 10) || 0;
+
+                if (salesType === 'ambos' && (phys + virt) !== zTotal) {
+                    quotaSplitError = `La zona "${zName}" no coincide: Física (${phys}) + Digital (${virt}) = ${phys + virt}, debe sumar exactamente el aforo de venta (${zTotal}).`;
                 }
+
+                quotaSplitZones.push({
+                    name: zName,
+                    zone_name: zName,
+                    capacity: zTotal,
+                    physical: phys,
+                    virtual: virt,
+                    courtesy_physical: cortPhys,
+                    courtesy_virtual: cortVirt
+                });
             });
 
+            if (quotaSplitError) {
+                Swal.fire({
+                    title: 'Aforo Descuadrado',
+                    text: quotaSplitError,
+                    icon: 'warning',
+                    background: '#14141E',
+                    color: '#FFFFFF'
+                });
+                goToStep(2);
+                return;
+            }
+
+            const hasAnyCourtesy = quotaSplitZones.some(z => (z.courtesy_physical > 0 || z.courtesy_virtual > 0));
             const courtesySettings = {
-                enabled: courtesyEnabled,
-                for_users: courtesyEnabled ? (document.getElementById('courtesy_for_users')?.checked || false) : false,
-                for_admins: courtesyEnabled ? (document.getElementById('courtesy_for_admins')?.checked || false) : false,
+                enabled: hasAnyCourtesy,
+                for_users: (salesType !== 'fisica') ? (document.getElementById('courtesy_for_users')?.checked || false) : false,
+                for_admins: document.getElementById('courtesy_for_admins')?.checked || false,
                 name: document.getElementById('courtesy_ticket_name')?.value || 'Entrada de Cortesía (Free)',
                 user_max_quantity: parseInt(document.getElementById('courtesy_user_max')?.value) || 2,
-                stock: null,
-                zones: courtesyZoneSettings
+                stock: quotaSplitZones.reduce((acc, z) => acc + (z.courtesy_physical || 0) + (z.courtesy_virtual || 0), 0),
+                zones: quotaSplitZones.map(z => ({
+                    name: z.name,
+                    zone_name: z.name,
+                    enabled: (z.courtesy_physical > 0 || z.courtesy_virtual > 0),
+                    stock: (z.courtesy_physical || 0) + (z.courtesy_virtual || 0),
+                    physical_stock: z.courtesy_physical || 0,
+                    virtual_stock: z.courtesy_virtual || 0
+                }))
             };
+
+            const quotaSplitSettings = {
+                enabled: true,
+                courtesy_global_enabled: hasAnyCourtesy,
+                zones: quotaSplitZones
+            };
+
+            zones.forEach(z => {
+                const match = quotaSplitZones.find(s => s.name === z.name);
+                if (match) {
+                    z.physical_capacity = match.physical;
+                    z.virtual_capacity = match.virtual;
+                    z.courtesy_physical = match.courtesy_physical;
+                    z.courtesy_virtual = match.courtesy_virtual;
+                }
+            });
 
             const payload = {
                 title: title,
@@ -3178,6 +3566,7 @@
                 tags: tags,
                 zones: zones,
                 courtesy_settings: courtesySettings,
+                quota_split_settings: quotaSplitSettings,
                 status: document.querySelector('input[name="event_publication_status"]:checked')?.value || 'Publicado',
                 sales_type: salesType,
                 custom_ticket: certState
@@ -3234,8 +3623,9 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             initLeafletMap();
+            syncQuotaSplitTable();
+            applySalesTypeToQuotaInputs();
             recalculateTotalCapacity();
-            syncCourtesyZonesTable();
             updatePublicationCardStyles();
             if (typeof SeatMapEditor !== 'undefined') {
                 SeatMapEditor.init();

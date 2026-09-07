@@ -277,6 +277,7 @@ class EventController extends Controller
             'template_id' => 'nullable|integer',
             'zones' => 'nullable|array',
             'courtesy_settings' => 'nullable|array',
+            'quota_split_settings' => 'nullable|array',
             'sales_type' => 'nullable|string|in:fisica,virtual,ambos',
         ]);
 
@@ -310,6 +311,7 @@ class EventController extends Controller
             'template_id' => $validated['template_id'] ?? null,
             'zones' => $validated['zones'] ?? [],
             'courtesy_settings' => $request->input('courtesy_settings') ?? [],
+            'quota_split_settings' => $request->input('quota_split_settings') ?? [],
             'status' => 'Publicado',
             'sales_type' => $validated['sales_type'] ?? 'fisica',
         ]);
@@ -364,6 +366,7 @@ class EventController extends Controller
 
         // Pre-generar y sincronizar automáticamente todos los boletos oficiales (QR, correlativo y hash) para todo el aforo
         try {
+            $event->refresh();
             \App\Services\TicketGenerationService::syncEventTickets($event);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Error pre-generando boletos en creación de evento: ' . $e->getMessage());
@@ -430,6 +433,7 @@ class EventController extends Controller
                 ],
                 'status' => 'Publicado',
                 'sales_type' => 'fisica',
+                'quota_split_settings' => [],
             ];
         } else {
             $dateVal = '';
@@ -484,6 +488,7 @@ class EventController extends Controller
                 'template' => $templateData,
                 'zones' => is_array($eventModel->zones) ? $eventModel->zones : [],
                 'courtesy_settings' => is_array($eventModel->courtesy_settings) ? $eventModel->courtesy_settings : (json_decode($eventModel->courtesy_settings, true) ?? []),
+                'quota_split_settings' => is_array($eventModel->quota_split_settings) ? $eventModel->quota_split_settings : (json_decode($eventModel->quota_split_settings ?? '[]', true) ?: []),
                 'status' => $eventModel->status ?? 'Publicado',
                 'sales_type' => $eventModel->sales_type ?? 'fisica',
             ];
@@ -541,6 +546,7 @@ class EventController extends Controller
             'template_id' => 'nullable|integer',
             'zones' => 'nullable|array',
             'courtesy_settings' => 'nullable|array',
+            'quota_split_settings' => 'nullable|array',
             'status' => 'nullable|string',
             'sales_type' => 'nullable|string|in:fisica,virtual,ambos',
         ]);
@@ -576,6 +582,7 @@ class EventController extends Controller
                 'template_id' => $validated['template_id'] ?? null,
                 'zones' => $validated['zones'] ?? [],
                 'courtesy_settings' => $request->input('courtesy_settings') ?? [],
+                'quota_split_settings' => $request->input('quota_split_settings') ?? [],
                 'status' => $validated['status'] ?? 'Publicado',
                 'sales_type' => $validated['sales_type'] ?? 'fisica',
             ]);
@@ -608,6 +615,7 @@ class EventController extends Controller
                 'template_id' => $validated['template_id'] ?? $event->template_id,
                 'zones' => $validated['zones'] ?? $event->zones,
                 'courtesy_settings' => $request->input('courtesy_settings') ?? [],
+                'quota_split_settings' => $request->input('quota_split_settings') ?? ($event->quota_split_settings ?? []),
                 'status' => $validated['status'] ?? $event->status ?? 'Publicado',
                 'sales_type' => $validated['sales_type'] ?? $event->sales_type ?? 'fisica',
             ]);
@@ -682,6 +690,7 @@ class EventController extends Controller
 
         // Pre-generar y sincronizar automáticamente boletos faltantes si se aumentó el aforo o se agregaron butacas
         try {
+            $event->refresh();
             \App\Services\TicketGenerationService::syncEventTickets($event);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Error sincronizando boletos en edición de evento: ' . $e->getMessage());
@@ -887,7 +896,30 @@ class EventController extends Controller
             \Illuminate\Support\Facades\Log::error('Error sincronizando boletos en getRegisteredTickets: ' . $e->getMessage());
         }
 
-        $tickets = \App\Models\EventTicket::where('event_id', $event->id)
+        $splitSettings = is_array($event->quota_split_settings) 
+            ? $event->quota_split_settings 
+            : (json_decode($event->quota_split_settings ?? '[]', true) ?: []);
+        $ticketsQuery = \App\Models\EventTicket::where('event_id', $event->id);
+
+        $requestedType = request()->input('ticket_type');
+        if ($requestedType && in_array($requestedType, ['fisica', 'cortesia', 'digital', 'cortesia_digital'])) {
+            $ticketsQuery->where('ticket_type', $requestedType);
+        } else {
+            // Para el Generador de Planchas & Hojas de Boletos (impresión física), entregar exclusivamente
+            // boletos físicos (regulares y cortesías físicas). Las entradas digitales web nunca deben imprimirse en planchas.
+            $ticketsQuery->where(function($q) {
+                $q->where(function($sq) {
+                    $sq->whereIn('ticket_type', ['fisica', 'cortesia'])
+                       ->where('source', '!=', 'web_checkout');
+                })->orWhere(function($sq) {
+                    // Fallback para boletos legados sin ticket_type explícito pero no de web
+                    $sq->whereNull('ticket_type')
+                       ->where('source', '!=', 'web_checkout');
+                });
+            });
+        }
+
+        $tickets = $ticketsQuery
             ->orderBy('ticket_number', 'asc')
             ->orderBy('id', 'asc')
             ->get()
@@ -909,6 +941,7 @@ class EventController extends Controller
                     'buyerName' => $t->buyer_name ?: 'Impresión de Evento',
                     'buyerDni' => $t->buyer_dni ?: '00000000',
                     'source' => $t->source,
+                    'ticketType' => $t->ticket_type ?: 'fisica',
                 ];
             });
 
@@ -919,6 +952,7 @@ class EventController extends Controller
             'courtesy_settings' => is_array($event->courtesy_settings) 
                 ? $event->courtesy_settings 
                 : (json_decode($event->courtesy_settings ?? '[]', true) ?: []),
+            'quota_split_settings' => $splitSettings,
         ]);
     }
 

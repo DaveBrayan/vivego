@@ -81,14 +81,35 @@ class EventDetailController extends Controller
                         continue;
                     }
 
+                    $splitSettings = is_array($eventModel->quota_split_settings) ? $eventModel->quota_split_settings : (json_decode($eventModel->quota_split_settings ?? '[]', true) ?: []);
+                    $isSplitActive = !empty($splitSettings['enabled']);
+
                     $regularPrice = isset($zone['price']) ? (float)$zone['price'] : 50.00;
                     $capacityVal = isset($zone['capacity']) ? (int)$zone['capacity'] : 100;
+
+                    if ($isSplitActive) {
+                        $cleanZ = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $zoneName)));
+                        $szConfig = null;
+                        if (!empty($splitSettings['zones']) && is_array($splitSettings['zones'])) {
+                            foreach ($splitSettings['zones'] as $sz) {
+                                if (!empty($sz['name']) && strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $sz['name']))) === $cleanZ) {
+                                    $szConfig = $sz;
+                                    break;
+                                }
+                            }
+                        }
+                        if ($szConfig && isset($szConfig['virtual']) && is_numeric($szConfig['virtual'])) {
+                            $capacityVal = (int) $szConfig['virtual'];
+                        } elseif (isset($zone['virtual_capacity']) && is_numeric($zone['virtual_capacity'])) {
+                            $capacityVal = (int) $zone['virtual_capacity'];
+                        }
+                    }
 
                     // Calcular ventas registradas si existe la tabla (SOLO boletos con venta efectiva asociada)
                     $soldCount = 0;
                     try {
                         if (\Illuminate\Support\Facades\Schema::hasTable('event_tickets')) {
-                            $soldCount = (int) \Illuminate\Support\Facades\DB::table('event_tickets')
+                            $soldQ = \Illuminate\Support\Facades\DB::table('event_tickets')
                                 ->where('event_id', $eventModel->id)
                                 ->where(function($q) use ($zoneName) {
                                     $q->where('zone_name', $zoneName)
@@ -96,8 +117,12 @@ class EventDetailController extends Controller
                                 })
                                 ->whereNotNull('ticket_sale_id')
                                 ->where('status', '!=', 'upgraded')
-                                ->where('status', '!=', 'cancelled')
-                                ->count();
+                                ->where('status', '!=', 'cancelled');
+                            
+                            if ($isSplitActive) {
+                                $soldQ->where('ticket_type', 'digital');
+                            }
+                            $soldCount = (int) $soldQ->count();
                         }
                         if ($soldCount === 0 && \Illuminate\Support\Facades\Schema::hasTable('ticket_sales')) {
                             $soldCount = (int) \Illuminate\Support\Facades\DB::table('ticket_sales')
