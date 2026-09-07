@@ -906,15 +906,23 @@ class EventController extends Controller
             $ticketsQuery->where('ticket_type', $requestedType);
         } else {
             // Para el Generador de Planchas & Hojas de Boletos (impresión física), entregar exclusivamente
-            // boletos físicos (regulares y cortesías físicas). Las entradas digitales web nunca deben imprimirse en planchas.
+            // boletos físicos (regulares y cortesías físicas no vendidas o de lote). Las ventas digitales nunca deben imprimirse en planchas.
             $ticketsQuery->where(function($q) {
                 $q->where(function($sq) {
                     $sq->whereIn('ticket_type', ['fisica', 'cortesia'])
-                       ->where('source', '!=', 'web_checkout');
+                       ->where(function($ssq) {
+                           $ssq->where('source', 'pdf_batch')
+                               ->orWhereNull('ticket_sale_id')
+                               ->orWhere('ticket_sale_id', 0);
+                       });
                 })->orWhere(function($sq) {
-                    // Fallback para boletos legados sin ticket_type explícito pero no de web
+                    // Fallback para boletos legados sin ticket_type explícito pero no de web ni vendidos digitalmente
                     $sq->whereNull('ticket_type')
-                       ->where('source', '!=', 'web_checkout');
+                       ->where(function($ssq) {
+                           $ssq->where('source', 'pdf_batch')
+                               ->orWhereNull('ticket_sale_id')
+                               ->orWhere('ticket_sale_id', 0);
+                       });
                 });
             });
         }

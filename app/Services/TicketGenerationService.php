@@ -67,20 +67,10 @@ class TicketGenerationService
                 // =========================================================================
                 // MODO 1: DIVISIÓN ACTIVA DE CUPO FÍSICO VS DIGITAL (CORRELATIVOS INDEPENDIENTES)
                 // =========================================================================
-                $maxPhys = (int) EventTicket::where('event_id', $event->id)->where('ticket_type', 'fisica')->max('ticket_number') ?: 0;
-                $maxVirt = (int) EventTicket::where('event_id', $event->id)->where('ticket_type', 'digital')->max('ticket_number') ?: 0;
-                $maxPhysCort = (int) EventTicket::where('event_id', $event->id)->where('ticket_type', 'cortesia')->where('source', '!=', 'web_checkout')->max('ticket_number') ?: 0;
-                $maxVirtCort = (int) EventTicket::where('event_id', $event->id)->where(function($q) {
-                    $q->where('ticket_type', 'cortesia_digital')
-                      ->orWhere(function($sq) {
-                          $sq->where('ticket_type', 'cortesia')->where('source', 'web_checkout');
-                      });
-                })->max('ticket_number') ?: 0;
-
-                $nextPhysCorrelative = $maxPhys + 1;
-                $nextVirtCorrelative = $maxVirt + 1;
-                $nextPhysCortCorrelative = $maxPhysCort + 1;
-                $nextVirtCortCorrelative = $maxVirtCort + 1;
+                $zonePhysCounters = [];
+                $zoneVirtCounters = [];
+                $zoneCortPhysCounters = [];
+                $zoneCortVirtCounters = [];
 
                 $zoneSplitMap = [];
                 if (!empty($splitSettings['zones']) && is_array($splitSettings['zones'])) {
@@ -113,6 +103,30 @@ class TicketGenerationService
                         : (isset($zone['virtual_capacity']) && is_numeric($zone['virtual_capacity']) ? (int)$zone['virtual_capacity'] : max(0, $targetTotalCapacity - $targetPhysCap));
 
                     $seats = isset($zone['seats']) && is_array($zone['seats']) ? $zone['seats'] : [];
+
+                    if (!isset($zonePhysCounters[$cleanZoneUpper])) {
+                        $maxZonePhys = (int) EventTicket::where('event_id', $event->id)
+                            ->where('ticket_type', 'fisica')
+                            ->where(function($q) use ($zoneName, $cleanZoneUpper) {
+                                $q->where('zone_name', $zoneName)
+                                  ->orWhereRaw("UPPER(TRIM(zone_name)) = ?", [$cleanZoneUpper])
+                                  ->orWhere('zone_name', 'LIKE', "{$cleanZoneUpper} (%");
+                            })
+                            ->max('ticket_number') ?: 0;
+                        $zonePhysCounters[$cleanZoneUpper] = $maxZonePhys + 1;
+                    }
+
+                    if (!isset($zoneVirtCounters[$cleanZoneUpper])) {
+                        $maxZoneVirt = (int) EventTicket::where('event_id', $event->id)
+                            ->where('ticket_type', 'digital')
+                            ->where(function($q) use ($zoneName, $cleanZoneUpper) {
+                                $q->where('zone_name', $zoneName)
+                                  ->orWhereRaw("UPPER(TRIM(zone_name)) = ?", [$cleanZoneUpper])
+                                  ->orWhere('zone_name', 'LIKE', "{$cleanZoneUpper} (%");
+                            })
+                            ->max('ticket_number') ?: 0;
+                        $zoneVirtCounters[$cleanZoneUpper] = $maxZoneVirt + 1;
+                    }
 
                     if (!empty($seats)) {
                         // ZONA CON BUTACAS NUMERADAS: RECONCILIAR CUPO FÍSICO VS DIGITAL
@@ -158,13 +172,13 @@ class TicketGenerationService
 
                             // Si no existía en BD, crear la nueva butaca
                             if ($shouldBePhys) {
-                                $ticketNumber = $nextPhysCorrelative++;
+                                $ticketNumber = $zonePhysCounters[$cleanZoneUpper]++;
                                 $ticketType = 'fisica';
                                 $source = 'pdf_batch';
                                 $buyerDesc = 'Talonario Físico / Taquilla';
                                 $assignedPhys++;
                             } else {
-                                $ticketNumber = $nextVirtCorrelative++;
+                                $ticketNumber = $zoneVirtCounters[$cleanZoneUpper]++;
                                 $ticketType = 'digital';
                                 $source = 'web_checkout';
                                 $buyerDesc = 'Boleto Digital Web';
@@ -262,7 +276,7 @@ class TicketGenerationService
                         // Si aún faltan entradas físicas por crear
                         $missingPhys = max(0, $neededUnsoldPhys - $assignedUnsoldPhys);
                         for ($k = 0; $k < $missingPhys; $k++) {
-                            $ticketNumber = $nextPhysCorrelative++;
+                            $ticketNumber = $zonePhysCounters[$cleanZoneUpper]++;
                             $ticketCode = 'N° ' . str_pad($ticketNumber, 5, '0', STR_PAD_LEFT);
                             $validationHash = 'VG' . strtoupper(substr(md5(uniqid('vg_f_', true) . $event->id . $ticketNumber), 0, 8));
                             $qrPayload = "VIVEGO|EVT-{$event->id}|TICK-{$ticketNumber}|HASH-{$validationHash}";
@@ -289,7 +303,7 @@ class TicketGenerationService
                         // Si aún faltan entradas virtuales por crear
                         $missingVirt = max(0, $neededUnsoldVirt - $assignedUnsoldVirt);
                         for ($k = 0; $k < $missingVirt; $k++) {
-                            $ticketNumber = $nextVirtCorrelative++;
+                            $ticketNumber = $zoneVirtCounters[$cleanZoneUpper]++;
                             $ticketCode = 'N° ' . str_pad($ticketNumber, 5, '0', STR_PAD_LEFT);
                             $validationHash = 'VG' . strtoupper(substr(md5(uniqid('vg_d_', true) . $event->id . $ticketNumber), 0, 8));
                             $qrPayload = "VIVEGO|EVT-{$event->id}|TICK-{$ticketNumber}|HASH-{$validationHash}";
@@ -411,10 +425,42 @@ class TicketGenerationService
                             }
                         }
 
+                        $cleanCourtesyUpper = strtoupper($courtesyZoneName);
+
+                        if (!isset($zoneCortPhysCounters[$cleanCourtesyUpper])) {
+                            $maxZoneCortPhys = (int) EventTicket::where('event_id', $event->id)
+                                ->where('ticket_type', 'cortesia')
+                                ->where('source', '!=', 'web_checkout')
+                                ->where(function($q) use ($courtesyZoneName, $cleanCourtesyUpper) {
+                                    $q->where('zone_name', $courtesyZoneName)
+                                      ->orWhereRaw("UPPER(TRIM(zone_name)) = ?", [$cleanCourtesyUpper])
+                                      ->orWhere('zone_name', 'LIKE', "{$cleanCourtesyUpper} (%");
+                                })
+                                ->max('ticket_number') ?: 0;
+                            $zoneCortPhysCounters[$cleanCourtesyUpper] = $maxZoneCortPhys + 1;
+                        }
+
+                        if (!isset($zoneCortVirtCounters[$cleanCourtesyUpper])) {
+                            $maxZoneCortVirt = (int) EventTicket::where('event_id', $event->id)
+                                ->where(function($q) {
+                                    $q->where('ticket_type', 'cortesia_digital')
+                                      ->orWhere(function($sq) {
+                                          $sq->where('ticket_type', 'cortesia')->where('source', 'web_checkout');
+                                      });
+                                })
+                                ->where(function($q) use ($courtesyZoneName, $cleanCourtesyUpper) {
+                                    $q->where('zone_name', $courtesyZoneName)
+                                      ->orWhereRaw("UPPER(TRIM(zone_name)) = ?", [$cleanCourtesyUpper])
+                                      ->orWhere('zone_name', 'LIKE', "{$cleanCourtesyUpper} (%");
+                                })
+                                ->max('ticket_number') ?: 0;
+                            $zoneCortVirtCounters[$cleanCourtesyUpper] = $maxZoneCortVirt + 1;
+                        }
+
                         // 1. Generar Cortesías Físicas faltantes (para planchas y taquilla)
                         $missingPhysCort = max(0, $physCortCap - $assignedUnsoldPhysCort);
                         for ($k = 0; $k < $missingPhysCort; $k++) {
-                            $ticketNumber = $nextPhysCortCorrelative++;
+                            $ticketNumber = $zoneCortPhysCounters[$cleanCourtesyUpper]++;
                             $ticketCode = 'N° ' . str_pad($ticketNumber, 5, '0', STR_PAD_LEFT);
                             $validationHash = 'VG' . strtoupper(substr(md5(uniqid('vg_cp_', true) . $event->id . $ticketNumber), 0, 8));
                             $qrPayload = "VIVEGO|EVT-{$event->id}|TICK-{$ticketNumber}|HASH-{$validationHash}";
@@ -441,7 +487,7 @@ class TicketGenerationService
                         // 2. Generar Cortesías Digitales faltantes (para emisión / compras web)
                         $missingVirtCort = max(0, $virtCortCap - $assignedUnsoldVirtCort);
                         for ($k = 0; $k < $missingVirtCort; $k++) {
-                            $ticketNumber = $nextVirtCortCorrelative++;
+                            $ticketNumber = $zoneCortVirtCounters[$cleanCourtesyUpper]++;
                             $ticketCode = 'N° ' . str_pad($ticketNumber, 5, '0', STR_PAD_LEFT);
                             $validationHash = 'VG' . strtoupper(substr(md5(uniqid('vg_cd_', true) . $event->id . $ticketNumber), 0, 8));
                             $qrPayload = "VIVEGO|EVT-{$event->id}|TICK-{$ticketNumber}|HASH-{$validationHash}";
@@ -481,8 +527,8 @@ class TicketGenerationService
                 // =========================================================================
                 // MODO 2: COMPORTAMIENTO ORIGINAL UNIFICADO (100% RETROCOMPATIBLE)
                 // =========================================================================
-                $maxCorrelative = (int) EventTicket::where('event_id', $event->id)->where('ticket_type', 'fisica')->max('ticket_number') ?: 0;
-                $nextCorrelative = $maxCorrelative + 1;
+                $zoneCounters = [];
+                $courtesyZoneCounters = [];
 
                 foreach ($zones as $idx => $zone) {
                     $zoneName = trim($zone['name'] ?? $zone['capacity_type'] ?? ('Zona ' . ($idx + 1)));
@@ -490,6 +536,18 @@ class TicketGenerationService
 
                     if (in_array($cleanZoneUpper, ['ESCENARIO', 'TARIMA']) || ($zone['capacity_type'] ?? '') === 'Escenario' || ($zone['type'] ?? '') === 'stage') {
                         continue;
+                    }
+
+                    if (!isset($zoneCounters[$cleanZoneUpper])) {
+                        $maxZone = (int) EventTicket::where('event_id', $event->id)
+                            ->where('ticket_type', 'fisica')
+                            ->where(function($q) use ($zoneName, $cleanZoneUpper) {
+                                $q->where('zone_name', $zoneName)
+                                  ->orWhereRaw("UPPER(TRIM(zone_name)) = ?", [$cleanZoneUpper])
+                                  ->orWhere('zone_name', 'LIKE', "{$cleanZoneUpper} (%");
+                            })
+                            ->max('ticket_number') ?: 0;
+                        $zoneCounters[$cleanZoneUpper] = $maxZone + 1;
                     }
 
                     $zonePrice = isset($zone['price']) ? (float)$zone['price'] : 0.00;
@@ -504,7 +562,7 @@ class TicketGenerationService
                             $seatKey = "{$cleanZoneUpper}___{$seatCode}";
                             if (isset($existingNumberedSeats[$seatKey])) continue;
 
-                            $ticketNumber = $nextCorrelative++;
+                            $ticketNumber = $zoneCounters[$cleanZoneUpper]++;
                             $ticketCode = 'N° ' . str_pad($ticketNumber, 5, '0', STR_PAD_LEFT);
                             $validationHash = 'VG' . strtoupper(substr(md5(uniqid('vg_', true) . $event->id . $ticketNumber), 0, 8));
                             $qrPayload = "VIVEGO|EVT-{$event->id}|TICK-{$ticketNumber}|HASH-{$validationHash}";
@@ -535,7 +593,7 @@ class TicketGenerationService
                         $missingCount = max(0, $targetCapacity - $currentInDb);
 
                         for ($k = 0; $k < $missingCount; $k++) {
-                            $ticketNumber = $nextCorrelative++;
+                            $ticketNumber = $zoneCounters[$cleanZoneUpper]++;
                             $ticketCode = 'N° ' . str_pad($ticketNumber, 5, '0', STR_PAD_LEFT);
                             $validationHash = 'VG' . strtoupper(substr(md5(uniqid('vg_', true) . $event->id . $ticketNumber), 0, 8));
                             $qrPayload = "VIVEGO|EVT-{$event->id}|TICK-{$ticketNumber}|HASH-{$validationHash}";
@@ -563,7 +621,7 @@ class TicketGenerationService
                     }
                 }
 
-                // CORTESÍAS EN MODO UNIFICADO (CONTINÚAN EL CORRELATIVO GENERAL)
+                // CORTESÍAS EN MODO UNIFICADO
                 $cSettings = is_array($event->courtesy_settings) 
                     ? $event->courtesy_settings 
                     : (json_decode($event->courtesy_settings ?? '[]', true) ?: []);
@@ -579,9 +637,6 @@ class TicketGenerationService
                             }
                         }
                     }
-
-                    $maxCourtesyCorrelative = (int) EventTicket::where('event_id', $event->id)->where('ticket_type', 'cortesia')->max('ticket_number') ?: 0;
-                    $nextCourtesyCorrelative = $maxCourtesyCorrelative + 1;
 
                     foreach ($zones as $idx => $zone) {
                         $zoneName = trim($zone['name'] ?? $zone['capacity_type'] ?? ('Zona ' . ($idx + 1)));
@@ -602,11 +657,23 @@ class TicketGenerationService
                         $courtesyZoneName = "CORTESÍA - {$zoneName}";
                         $cleanCourtesyUpper = strtoupper($courtesyZoneName);
 
+                        if (!isset($courtesyZoneCounters[$cleanCourtesyUpper])) {
+                            $maxCourtesyCorrelative = (int) EventTicket::where('event_id', $event->id)
+                                ->where('ticket_type', 'cortesia')
+                                ->where(function($q) use ($courtesyZoneName, $cleanCourtesyUpper) {
+                                    $q->where('zone_name', $courtesyZoneName)
+                                      ->orWhereRaw("UPPER(TRIM(zone_name)) = ?", [$cleanCourtesyUpper])
+                                      ->orWhere('zone_name', 'LIKE', "{$cleanCourtesyUpper} (%");
+                                })
+                                ->max('ticket_number') ?: 0;
+                            $courtesyZoneCounters[$cleanCourtesyUpper] = $maxCourtesyCorrelative + 1;
+                        }
+
                         $currentInDb = $existingGeneralCounts[$cleanCourtesyUpper] ?? 0;
                         $missingCount = max(0, $czCap - $currentInDb);
 
                         for ($k = 0; $k < $missingCount; $k++) {
-                            $ticketNumber = $nextCourtesyCorrelative++;
+                            $ticketNumber = $courtesyZoneCounters[$cleanCourtesyUpper]++;
                             $ticketCode = 'N° ' . str_pad($ticketNumber, 5, '0', STR_PAD_LEFT);
                             $validationHash = 'VG' . strtoupper(substr(md5(uniqid('vg_', true) . $event->id . $ticketNumber), 0, 8));
                             $qrPayload = "VIVEGO|EVT-{$event->id}|TICK-{$ticketNumber}|HASH-{$validationHash}";
@@ -1173,15 +1240,11 @@ class TicketGenerationService
             }
 
             // 2. Procesar correlativos, QR y hashes según el modo seleccionado
-            // Regular física y cortesía física tienen cada una su propia secuencia independiente iniciando en startCorrelative (por defecto 1)
-            $currentRegularCorrelative = max(1, $startCorrelative);
-            $currentCourtesyCorrelative = max(1, $startCorrelative);
-            $startRegularSeq = $currentRegularCorrelative;
-            $startCourtesySeq = $currentCourtesyCorrelative;
-            $minRegular = null;
-            $maxRegular = null;
-            $minCourtesy = null;
-            $maxCourtesy = null;
+            // Cada zona física regular y cortesía física tienen su propia secuencia independiente iniciando en startCorrelative (por defecto 1)
+            $zoneRegularCounters = [];
+            $zoneCourtesyCounters = [];
+            $minByZone = [];
+            $maxByZone = [];
             $processedTickets = 0;
             $details = [];
 
@@ -1195,31 +1258,36 @@ class TicketGenerationService
                 $oldQr = $ticket->qr_payload;
                 $isCort = ($ticket->ticket_type === 'cortesia');
 
+                $rawZone = $ticket->zone_name;
+                $cleanZone = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $rawZone)));
+
                 $newNum = $oldNum;
                 $newCode = $oldCode;
                 $newHash = $oldHash;
                 $newQr = $oldQr;
 
-                // Correlativo y código de boleto: física regular y cortesía física tienen numeración separada
+                // Correlativo y código de boleto: cada zona física tiene numeración separada
                 if ($actionMode === 'both' || $actionMode === 'correlative_only') {
-                    $newNum = $isCort ? $currentCourtesyCorrelative++ : $currentRegularCorrelative++;
+                    if ($isCort) {
+                        if (!isset($zoneCourtesyCounters[$cleanZone])) {
+                            $zoneCourtesyCounters[$cleanZone] = max(1, $startCorrelative);
+                        }
+                        $newNum = $zoneCourtesyCounters[$cleanZone]++;
+                    } else {
+                        if (!isset($zoneRegularCounters[$cleanZone])) {
+                            $zoneRegularCounters[$cleanZone] = max(1, $startCorrelative);
+                        }
+                        $newNum = $zoneRegularCounters[$cleanZone]++;
+                    }
                     $newCode = 'N° ' . str_pad($newNum, 5, '0', STR_PAD_LEFT);
                 }
 
-                if ($isCort) {
-                    if ($minCourtesy === null || $newNum < $minCourtesy) {
-                        $minCourtesy = $newNum;
-                    }
-                    if ($maxCourtesy === null || $newNum > $maxCourtesy) {
-                        $maxCourtesy = $newNum;
-                    }
-                } else {
-                    if ($minRegular === null || $newNum < $minRegular) {
-                        $minRegular = $newNum;
-                    }
-                    if ($maxRegular === null || $newNum > $maxRegular) {
-                        $maxRegular = $newNum;
-                    }
+                $statKey = $isCort ? "CORTESÍA ({$cleanZone})" : $cleanZone;
+                if (!isset($minByZone[$statKey]) || $newNum < $minByZone[$statKey]) {
+                    $minByZone[$statKey] = $newNum;
+                }
+                if (!isset($maxByZone[$statKey]) || $newNum > $maxByZone[$statKey]) {
+                    $maxByZone[$statKey] = $newNum;
                 }
 
                 // Código QR y Hash de Validación
@@ -1311,11 +1379,9 @@ class TicketGenerationService
             }
 
             $rangeParts = [];
-            if ($minRegular !== null && $maxRegular !== null) {
-                $rangeParts[] = 'Físicos Regulares: N° ' . str_pad($minRegular, 5, '0', STR_PAD_LEFT) . ' → N° ' . str_pad($maxRegular, 5, '0', STR_PAD_LEFT);
-            }
-            if ($minCourtesy !== null && $maxCourtesy !== null) {
-                $rangeParts[] = 'Cortesías Plancha: N° ' . str_pad($minCourtesy, 5, '0', STR_PAD_LEFT) . ' → N° ' . str_pad($maxCourtesy, 5, '0', STR_PAD_LEFT);
+            foreach ($maxByZone as $statKey => $maxN) {
+                $minN = $minByZone[$statKey] ?? 1;
+                $rangeParts[] = "{$statKey}: N° " . str_pad($minN, 5, '0', STR_PAD_LEFT) . ' → N° ' . str_pad($maxN, 5, '0', STR_PAD_LEFT);
             }
             $correlativeRange = !empty($rangeParts) ? implode(' | ', $rangeParts) : 'N/A';
 
@@ -1347,105 +1413,199 @@ class TicketGenerationService
         @set_time_limit(300);
 
         return DB::transaction(function () use ($event) {
-            $categories = [
-                'fisica' => [
-                    'title' => 'Boletos Físicos Regulares',
-                    'query' => EventTicket::where('event_id', $event->id)
-                        ->where(function ($q) {
-                            $q->where('ticket_type', 'fisica')
-                              ->orWhere(function ($sq) {
-                                  $sq->whereNull('ticket_type')
-                                     ->where('source', '!=', 'web_checkout')
-                                     ->where('zone_name', 'NOT LIKE', 'CORTES%');
-                              });
-                        }),
-                    'prefix' => 'vg_f_',
-                    'target_type' => 'fisica',
-                ],
-                'cortesia_fisica' => [
-                    'title' => 'Cortesías Físicas (Planchas)',
-                    'query' => EventTicket::where('event_id', $event->id)
-                        ->where(function ($q) {
-                            $q->where('ticket_type', 'cortesia')
-                              ->where('source', '!=', 'web_checkout');
-                        }),
-                    'prefix' => 'vg_cp_',
-                    'target_type' => 'cortesia',
-                ],
-                'digital' => [
-                    'title' => 'Boletos Digitales Regulares',
-                    'query' => EventTicket::where('event_id', $event->id)
-                        ->where('ticket_type', 'digital'),
-                    'prefix' => 'vg_d_',
-                    'target_type' => 'digital',
-                ],
-                'cortesia_digital' => [
-                    'title' => 'Cortesías Digitales (Web / POS)',
-                    'query' => EventTicket::where('event_id', $event->id)
-                        ->where(function ($q) {
-                            $q->where('ticket_type', 'cortesia_digital')
-                              ->orWhere(function ($sq) {
-                                  $sq->where('ticket_type', 'cortesia')
-                                     ->whereIn('source', ['web_checkout', 'pos_courtesy']);
-                              });
-                        }),
-                    'prefix' => 'vg_cd_',
-                    'target_type' => 'cortesia_digital',
-                ],
-            ];
-
             $results = [];
             $totalProcessed = 0;
             $salesToUpdate = [];
 
-            foreach ($categories as $catKey => $cat) {
-                $tickets = $cat['query']->orderBy('ticket_number', 'asc')->orderBy('id', 'asc')->get();
-                $count = $tickets->count();
-                $currentSeq = 1;
+            // 1. Normalizar todas las ventas existentes en ticket_sales:
+            // Todas las ventas realizadas hasta ahora son ventas digitales / POS (no planchas de talonario físico)
+            $existingSales = \App\Models\TicketSale::where('event_id', $event->id)->get();
+            foreach ($existingSales as $s) {
+                $isCourtesySale = ($s->payment_method === 'Cortesía' || ($s->sale_mode ?? '') === 'courtesy');
+                $targetType = $isCourtesySale ? 'cortesia_digital' : 'digital';
+                $targetSource = $isCourtesySale ? 'pos_courtesy' : ($s->seller_name ?: 'pos_sale');
 
-                if ($count === 0) {
-                    $results[$catKey] = [
-                        'title' => $cat['title'],
-                        'count' => 0,
-                        'range' => 'Sin boletos',
-                    ];
-                    continue;
-                }
+                EventTicket::where('ticket_sale_id', $s->id)
+                    ->update([
+                        'ticket_type' => $targetType,
+                        'source' => $targetSource,
+                    ]);
+            }
 
-                foreach ($tickets as $t) {
-                    $newNum = $currentSeq++;
+            // 2. Boletos Físicos Regulares (Planchas de Impresión):
+            // Cada zona física tiene su propia serie independiente iniciando desde 1 (N° 00001)
+            $physTickets = EventTicket::where('event_id', $event->id)
+                ->where(function ($q) {
+                    $q->where('ticket_type', 'fisica')
+                      ->orWhere(function ($sq) {
+                          $sq->whereNull('ticket_type')
+                             ->where('source', '!=', 'web_checkout')
+                             ->where('zone_name', 'NOT LIKE', 'CORTES%');
+                      });
+                })
+                ->where(function ($q) {
+                    $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
+                })
+                ->orderBy('id', 'asc')
+                ->get();
+
+            $physByZone = [];
+            foreach ($physTickets as $t) {
+                $zBase = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $t->zone_name)));
+                $physByZone[$zBase][] = $t;
+            }
+
+            foreach ($physByZone as $zoneNameKey => $zoneTickets) {
+                $zoneSeq = 1;
+                foreach ($zoneTickets as $t) {
+                    $newNum = $zoneSeq++;
                     $newCode = 'N° ' . str_pad($newNum, 5, '0', STR_PAD_LEFT);
-                    $newHash = 'VG' . strtoupper(substr(md5(uniqid($cat['prefix'], true) . $event->id . $t->id . $newNum), 0, 8));
+                    $newHash = 'VG' . strtoupper(substr(md5('vg_f_' . $event->id . $t->id . $newNum), 0, 8));
                     $newQr = "VIVEGO|EVT-{$event->id}|TICK-{$newNum}|HASH-{$newHash}";
 
                     $t->update([
                         'ticket_number' => $newNum,
                         'ticket_code' => $newCode,
-                        'ticket_type' => $cat['target_type'],
+                        'ticket_type' => 'fisica',
+                        'source' => 'pdf_batch',
                         'validation_hash' => $newHash,
                         'qr_payload' => $newQr,
                     ]);
-
-                    if (!empty($t->ticket_sale_id)) {
-                        $salesToUpdate[$t->ticket_sale_id][] = [
-                            'event_ticket_id' => $t->id,
-                            'ticket_number' => $newNum,
-                            'ticket_code' => $newCode,
-                            'validation_hash' => $newHash,
-                            'qr_payload' => $newQr,
-                            'ticket_type' => $cat['target_type'],
-                        ];
-                    }
-
                     $totalProcessed++;
                 }
 
-                $results[$catKey] = [
-                    'title' => $cat['title'],
-                    'count' => $count,
-                    'range' => 'N° 00001 → N° ' . str_pad($count, 5, '0', STR_PAD_LEFT),
+                $zoneCount = count($zoneTickets);
+                $results["fisica_{$zoneNameKey}"] = [
+                    'title' => "Boletos Físicos ({$zoneNameKey})",
+                    'count' => $zoneCount,
+                    'range' => 'N° 00001 → N° ' . str_pad($zoneCount, 5, '0', STR_PAD_LEFT),
                 ];
             }
+
+            // 3. Cortesías Físicas (Planchas de Impresión):
+            // Serie independiente iniciando en 1 (N° 00001)
+            $cortPhysTickets = EventTicket::where('event_id', $event->id)
+                ->where('ticket_type', 'cortesia')
+                ->where('source', '!=', 'web_checkout')
+                ->where(function ($q) {
+                    $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
+                })
+                ->orderBy('id', 'asc')
+                ->get();
+
+            $cortSeq = 1;
+            foreach ($cortPhysTickets as $t) {
+                $newNum = $cortSeq++;
+                $newCode = 'N° ' . str_pad($newNum, 5, '0', STR_PAD_LEFT);
+                $newHash = 'VG' . strtoupper(substr(md5('vg_cp_' . $event->id . $t->id . $newNum), 0, 8));
+                $newQr = "VIVEGO|EVT-{$event->id}|TICK-{$newNum}|HASH-{$newHash}";
+
+                $t->update([
+                    'ticket_number' => $newNum,
+                    'ticket_code' => $newCode,
+                    'ticket_type' => 'cortesia',
+                    'source' => 'pdf_batch',
+                    'validation_hash' => $newHash,
+                    'qr_payload' => $newQr,
+                ]);
+                $totalProcessed++;
+            }
+            $cortCount = $cortPhysTickets->count();
+            $results['cortesia_fisica'] = [
+                'title' => 'Cortesías Físicas (Planchas)',
+                'count' => $cortCount,
+                'range' => $cortCount > 0 ? ('N° 00001 → N° ' . str_pad($cortCount, 5, '0', STR_PAD_LEFT)) : 'Sin boletos',
+            ];
+
+            // 4. Boletos Digitales Regulares (Ventas Web y POS):
+            // Serie independiente iniciando en 1 (N° 00001)
+            $digitalTickets = EventTicket::where('event_id', $event->id)
+                ->where('ticket_type', 'digital')
+                ->orderBy('ticket_sale_id', 'asc')
+                ->orderBy('id', 'asc')
+                ->get();
+
+            $digSeq = 1;
+            foreach ($digitalTickets as $t) {
+                $newNum = $digSeq++;
+                $newCode = 'N° ' . str_pad($newNum, 5, '0', STR_PAD_LEFT);
+                $newHash = 'VG' . strtoupper(substr(md5('vg_d_' . $event->id . $t->id . $newNum), 0, 8));
+                $newQr = "VIVEGO|EVT-{$event->id}|TICK-{$newNum}|HASH-{$newHash}";
+
+                $t->update([
+                    'ticket_number' => $newNum,
+                    'ticket_code' => $newCode,
+                    'ticket_type' => 'digital',
+                    'validation_hash' => $newHash,
+                    'qr_payload' => $newQr,
+                ]);
+
+                if (!empty($t->ticket_sale_id)) {
+                    $salesToUpdate[$t->ticket_sale_id][] = [
+                        'event_ticket_id' => $t->id,
+                        'ticket_number' => $newNum,
+                        'ticket_code' => $newCode,
+                        'validation_hash' => $newHash,
+                        'qr_payload' => $newQr,
+                        'ticket_type' => 'digital',
+                    ];
+                }
+                $totalProcessed++;
+            }
+            $digCount = $digitalTickets->count();
+            $results['digital'] = [
+                'title' => 'Boletos Digitales Regulares',
+                'count' => $digCount,
+                'range' => $digCount > 0 ? ('N° 00001 → N° ' . str_pad($digCount, 5, '0', STR_PAD_LEFT)) : 'Sin boletos',
+            ];
+
+            // 5. Cortesías Digitales (Web y POS):
+            // Serie independiente iniciando en 1 (N° 00001)
+            $cortDigTickets = EventTicket::where('event_id', $event->id)
+                ->where(function ($q) {
+                    $q->where('ticket_type', 'cortesia_digital')
+                      ->orWhere(function ($sq) {
+                          $sq->where('ticket_type', 'cortesia')
+                             ->whereIn('source', ['web_checkout', 'pos_courtesy']);
+                      });
+                })
+                ->orderBy('ticket_sale_id', 'asc')
+                ->orderBy('id', 'asc')
+                ->get();
+
+            $cortDigSeq = 1;
+            foreach ($cortDigTickets as $t) {
+                $newNum = $cortDigSeq++;
+                $newCode = 'N° ' . str_pad($newNum, 5, '0', STR_PAD_LEFT);
+                $newHash = 'VG' . strtoupper(substr(md5('vg_cd_' . $event->id . $t->id . $newNum), 0, 8));
+                $newQr = "VIVEGO|EVT-{$event->id}|TICK-{$newNum}|HASH-{$newHash}";
+
+                $t->update([
+                    'ticket_number' => $newNum,
+                    'ticket_code' => $newCode,
+                    'ticket_type' => 'cortesia_digital',
+                    'validation_hash' => $newHash,
+                    'qr_payload' => $newQr,
+                ]);
+
+                if (!empty($t->ticket_sale_id)) {
+                    $salesToUpdate[$t->ticket_sale_id][] = [
+                        'event_ticket_id' => $t->id,
+                        'ticket_number' => $newNum,
+                        'ticket_code' => $newCode,
+                        'validation_hash' => $newHash,
+                        'qr_payload' => $newQr,
+                        'ticket_type' => 'cortesia_digital',
+                    ];
+                }
+                $totalProcessed++;
+            }
+            $cortDigCount = $cortDigTickets->count();
+            $results['cortesia_digital'] = [
+                'title' => 'Cortesías Digitales (Web / POS)',
+                'count' => $cortDigCount,
+                'range' => $cortDigCount > 0 ? ('N° 00001 → N° ' . str_pad($cortDigCount, 5, '0', STR_PAD_LEFT)) : 'Sin boletos',
+            ];
 
             // Sincronizar ticket_sales vinculados
             $salesUpdatedCount = 0;
