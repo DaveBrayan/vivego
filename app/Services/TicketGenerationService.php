@@ -1069,6 +1069,223 @@ class TicketGenerationService
     }
 
     /**
+     * Restablece las ventas físicas y/o regenera los códigos QR o números correlativos
+     * de los boletos físicos de un evento específico para planchas y taquilla.
+     *
+     * @param Event $event Evento seleccionado
+     * @param string $actionMode 'both' | 'qr_only' | 'correlative_only'
+     * @param int $startCorrelative Correlativo inicial
+     * @param bool $resetSales Si true, desvincula las ventas y libera los boletos vendidos dejándolos en blanco
+     * @param string $ticketScope 'all_physical' | 'regular_only' | 'courtesy_only'
+     * @return array
+     */
+    public static function resetPhysicalTicketsAndSales(
+        Event $event,
+        string $actionMode = 'both',
+        int $startCorrelative = 1,
+        bool $resetSales = true,
+        string $ticketScope = 'all_physical'
+    ): array {
+        @set_time_limit(300);
+
+        return DB::transaction(function () use ($event, $actionMode, $startCorrelative, $resetSales, $ticketScope) {
+            $query = EventTicket::where('event_id', $event->id);
+
+            if ($ticketScope === 'regular_only') {
+                $query->where('ticket_type', 'fisica');
+            } elseif ($ticketScope === 'courtesy_only') {
+                $query->where('ticket_type', 'cortesia')->where('source', 'pdf_batch');
+            } else {
+                $query->where(function ($q) {
+                    $q->where('ticket_type', 'fisica')
+                      ->orWhere(function ($sq) {
+                          $sq->where('ticket_type', 'cortesia')->where('source', 'pdf_batch');
+                      });
+                });
+            }
+
+            $tickets = $query->orderBy('ticket_number', 'asc')->orderBy('id', 'asc')->get();
+
+            if ($tickets->isEmpty()) {
+                return [
+                    'success' => false,
+                    'message' => 'No se encontraron boletos físicos registrados para el evento #' . $event->id . ' (' . $event->title . '). Si aún no has generado los boletos de plancha o aforo físico, genera o sincroniza el aforo primero.',
+                    'tickets_count' => 0,
+                    'sales_reset_count' => 0,
+                    'correlative_range' => 'N/A',
+                    'action_mode' => $actionMode,
+                    'details' => [],
+                ];
+            }
+
+            $salesResetCount = 0;
+
+            // 1. Restablecer ventas físicas si fue solicitado
+            if ($resetSales) {
+                $soldTicketSaleIds = $tickets->pluck('ticket_sale_id')->filter(function ($id) {
+                    return !empty($id) && (int)$id > 0;
+                })->unique()->values()->all();
+
+                $physicalSaleIds = \App\Models\TicketSale::where('event_id', $event->id)
+                    ->where(function ($q) use ($soldTicketSaleIds) {
+                        $q->where('sale_type', 'fisica')
+                          ->orWhereIn('id', $soldTicketSaleIds);
+                    })
+                    ->where('status', '!=', 'cancelled')
+                    ->pluck('id')
+                    ->all();
+
+                $allSaleIdsToCancel = array_unique(array_merge($soldTicketSaleIds, $physicalSaleIds));
+
+                if (!empty($allSaleIdsToCancel)) {
+                    $salesResetCount = \App\Models\TicketSale::whereIn('id', $allSaleIdsToCancel)
+                        ->update([
+                            'status' => 'cancelled',
+                        ]);
+                }
+            }
+
+            // 2. Procesar correlativos, QR y hashes según el modo seleccionado
+            $currentCorrelative = max(1, $startCorrelative);
+            $minCorrelative = null;
+            $maxCorrelative = null;
+            $processedTickets = 0;
+            $details = [];
+
+            // Agrupación para actualizar tickets_data en ventas si no se restablecieron ventas
+            $salesToUpdate = [];
+
+            foreach ($tickets as $ticket) {
+                $oldNum = (int)$ticket->ticket_number;
+                $oldCode = $ticket->ticket_code ?: ('N° ' . str_pad($oldNum, 5, '0', STR_PAD_LEFT));
+                $oldHash = $ticket->validation_hash;
+                $oldQr = $ticket->qr_payload;
+
+                $newNum = $oldNum;
+                $newCode = $oldCode;
+                $newHash = $oldHash;
+                $newQr = $oldQr;
+
+                // Correlativo y código de boleto
+                if ($actionMode === 'both' || $actionMode === 'correlative_only') {
+                    $newNum = $currentCorrelative++;
+                    $newCode = 'N° ' . str_pad($newNum, 5, '0', STR_PAD_LEFT);
+                }
+
+                if ($minCorrelative === null || $newNum < $minCorrelative) {
+                    $minCorrelative = $newNum;
+                }
+                if ($maxCorrelative === null || $newNum > $maxCorrelative) {
+                    $maxCorrelative = $newNum;
+                }
+
+                // Código QR y Hash de Validación
+                if ($actionMode === 'both' || $actionMode === 'qr_only') {
+                    $randomHex = strtoupper(substr(md5(uniqid('vg_phys_reset_', true) . $event->id . $ticket->id . $newNum . microtime(true)), 0, 8));
+                    $newHash = 'VG' . $randomHex;
+                    $newQr = "VIVEGO|EVT-{$event->id}|TICK-{$newNum}|HASH-{$newHash}";
+                } elseif ($actionMode === 'correlative_only') {
+                    $hashToKeep = !empty($oldHash) ? $oldHash : ('VG' . strtoupper(substr(md5(uniqid('vg_phys_corr_', true) . $newNum), 0, 8)));
+                    $newHash = $hashToKeep;
+                    $newQr = "VIVEGO|EVT-{$event->id}|TICK-{$newNum}|HASH-{$newHash}";
+                }
+
+                $ticketUpdate = [
+                    'ticket_number' => $newNum,
+                    'ticket_code' => $newCode,
+                    'validation_hash' => $newHash,
+                    'qr_payload' => $newQr,
+                ];
+
+                if ($resetSales) {
+                    $isCort = ($ticket->ticket_type === 'cortesia');
+                    $ticketUpdate['ticket_sale_id'] = null;
+                    $ticketUpdate['buyer_name'] = $isCort ? 'Pase de Cortesía Físico' : 'Talonario Físico / Taquilla';
+                    $ticketUpdate['buyer_dni'] = '00000000';
+                    $ticketUpdate['is_used'] = false;
+                    $ticketUpdate['checked_in_at'] = null;
+                    $ticketUpdate['scanned_by'] = null;
+                    $ticketUpdate['status'] = 'valid';
+                    $ticketUpdate['source'] = 'pdf_batch';
+                }
+
+                $ticket->update($ticketUpdate);
+                $processedTickets++;
+
+                // Si no se cancelaron ventas pero el boleto está vinculado a una venta, registrar para actualizar tickets_data
+                if (!$resetSales && !empty($ticket->ticket_sale_id)) {
+                    $salesToUpdate[$ticket->ticket_sale_id][] = [
+                        'event_ticket_id' => $ticket->id,
+                        'ticket_number' => $newNum,
+                        'ticket_code' => $newCode,
+                        'validation_hash' => $newHash,
+                        'qr_payload' => $newQr,
+                    ];
+                }
+
+                $details[] = [
+                    'ticket_id' => $ticket->id,
+                    'zone_name' => $ticket->zone_name,
+                    'old_ticket_code' => $oldCode,
+                    'new_ticket_code' => $newCode,
+                    'old_hash' => $oldHash,
+                    'new_hash' => $newHash,
+                    'new_qr' => $newQr,
+                    'was_sold' => !empty($ticket->ticket_sale_id),
+                ];
+            }
+
+            // Si se mantuvieron ventas, actualizar tickets_data de cada venta afectada
+            if (!$resetSales && !empty($salesToUpdate)) {
+                foreach ($salesToUpdate as $saleId => $updatedItems) {
+                    $sale = \App\Models\TicketSale::find($saleId);
+                    if (!$sale) continue;
+                    $raw = $sale->tickets_data;
+                    $tData = is_array($raw) ? $raw : (json_decode($raw ?? '[]', true) ?: []);
+                    $isItemsFormat = isset($tData['items']) && is_array($tData['items']);
+                    $items = $isItemsFormat ? $tData['items'] : (is_array($tData) ? $tData : []);
+
+                    foreach ($items as &$item) {
+                        foreach ($updatedItems as $u) {
+                            if ((isset($item['event_ticket_id']) && $item['event_ticket_id'] == $u['event_ticket_id']) ||
+                                (isset($item['ticket_number']) && $item['ticket_number'] == $u['ticket_number'])) {
+                                $item['ticket_number'] = $u['ticket_number'];
+                                $item['ticket_code'] = $u['ticket_code'];
+                                $item['validation_hash'] = $u['validation_hash'];
+                                $item['qr_payload'] = $u['qr_payload'];
+                            }
+                        }
+                    }
+                    unset($item);
+
+                    if ($isItemsFormat) {
+                        $tData['items'] = $items;
+                        $sale->update(['tickets_data' => $tData]);
+                    } else {
+                        $sale->update(['tickets_data' => $items]);
+                    }
+                }
+            }
+
+            $correlativeRange = ($minCorrelative !== null && $maxCorrelative !== null)
+                ? ('N° ' . str_pad($minCorrelative, 5, '0', STR_PAD_LEFT) . ' → N° ' . str_pad($maxCorrelative, 5, '0', STR_PAD_LEFT))
+                : 'N/A';
+
+            return [
+                'success' => true,
+                'message' => 'Boletos físicos restablecidos y actualizados con éxito.',
+                'tickets_count' => $processedTickets,
+                'sales_reset_count' => $salesResetCount,
+                'correlative_range' => $correlativeRange,
+                'action_mode' => $actionMode,
+                'reset_sales' => $resetSales,
+                'ticket_scope' => $ticketScope,
+                'details' => $details,
+            ];
+        });
+    }
+
+    /**
      * Calcula el hash entero de 32-bit de un string compatible con JavaScript String.hashCode()
      */
     protected static function jsHashCode(string $str): int

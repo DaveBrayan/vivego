@@ -30,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'actualizar-password-temporal',
             'recuperar-password',
             'regenerar-qr-ventas-pos',
+            'restablecer-boletos-fisicos',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
