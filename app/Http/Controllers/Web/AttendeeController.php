@@ -86,44 +86,17 @@ class AttendeeController extends Controller
         // Asegurar que si hay ventas previas en ticket_sales pero no en event_tickets, se sincronicen
         $this->syncLegacySalesTickets($event);
 
-        $ticketsIssued = EventTicket::where('event_id', $event->id)->where('status', '!=', 'upgraded')->where('status', '!=', 'cancelled')->count();
-        $checkedInCount = EventTicket::where('event_id', $event->id)->where('is_used', true)->where('status', '!=', 'upgraded')->where('status', '!=', 'cancelled')->count();
-        $pendingCount = max(0, $ticketsIssued - $checkedInCount);
-        $attendanceRate = $ticketsIssued > 0 ? min(100, round(($checkedInCount / $ticketsIssued) * 100, 1)) : 0;
+        $metrics = $this->getAttendanceMetrics($event->id);
+        $zonesAttendance = $this->getZonesAttendance($event);
 
         // Historial reciente de ingresos (últimos 25)
         $recentCheckins = EventTicket::where('event_id', $event->id)
             ->where('is_used', true)
             ->where('status', '!=', 'upgraded')
+            ->where('status', '!=', 'cancelled')
             ->orderBy('checked_in_at', 'desc')
             ->take(25)
             ->get();
-
-        // Métricas por zona
-        $zones = is_array($event->zones) ? $event->zones : [];
-        $zonesAttendance = [];
-        foreach ($zones as $z) {
-            $zName = $z['name'] ?? 'General';
-            $zIssued = EventTicket::where('event_id', $event->id)->where('zone_name', $zName)->where('status', '!=', 'upgraded')->where('status', '!=', 'cancelled')->count();
-            $zChecked = EventTicket::where('event_id', $event->id)->where('zone_name', $zName)->where('is_used', true)->where('status', '!=', 'upgraded')->where('status', '!=', 'cancelled')->count();
-            $zRate = $zIssued > 0 ? round(($zChecked / $zIssued) * 100, 1) : 0;
-
-            $zonesAttendance[] = [
-                'name' => $zName,
-                'price' => $z['price'] ?? 0,
-                'issued' => $zIssued,
-                'checked_in' => $zChecked,
-                'pending' => max(0, $zIssued - $zChecked),
-                'rate' => $zRate,
-            ];
-        }
-
-        $metrics = [
-            'tickets_issued' => $ticketsIssued,
-            'checked_in_count' => $checkedInCount,
-            'pending_count' => $pendingCount,
-            'attendance_rate' => $attendanceRate,
-        ];
 
         return view('web.attendees_scanner', compact('event', 'metrics', 'recentCheckins', 'zonesAttendance', 'settings', 'organizer'));
     }
@@ -241,10 +214,8 @@ class AttendeeController extends Controller
         $hashVal = $ticket->validation_hash ?: ('VG' . strtoupper(substr(md5($ticket->id), 0, 8)));
 
         // Recalcular métricas en vivo (excluyendo upgrades)
-        $ticketsIssued = EventTicket::where('event_id', $event->id)->where('status', '!=', 'upgraded')->where('status', '!=', 'cancelled')->count();
-        $checkedInCount = EventTicket::where('event_id', $event->id)->where('is_used', true)->where('status', '!=', 'upgraded')->where('status', '!=', 'cancelled')->count();
-        $pendingCount = max(0, $ticketsIssued - $checkedInCount);
-        $attendanceRate = $ticketsIssued > 0 ? min(100, round(($checkedInCount / $ticketsIssued) * 100, 1)) : 0;
+        $metrics = $this->getAttendanceMetrics($event->id);
+        $zonesAttendance = $this->getZonesAttendance($event);
 
         return response()->json([
             'success' => true,
@@ -262,13 +233,11 @@ class AttendeeController extends Controller
                 'checked_in_at' => $ticket->checked_in_at->format('h:i:s A'),
                 'checked_in_date' => $ticket->checked_in_at->format('d/m/Y'),
                 'scanned_by' => $ticket->scanned_by,
+                'ticket_type' => $ticket->ticket_type,
+                'is_digital' => in_array($ticket->ticket_type, ['digital', 'cortesia_digital']),
             ],
-            'metrics' => [
-                'tickets_issued' => $ticketsIssued,
-                'checked_in_count' => $checkedInCount,
-                'pending_count' => $pendingCount,
-                'attendance_rate' => $attendanceRate,
-            ],
+            'metrics' => $metrics,
+            'zones' => $zonesAttendance,
         ]);
     }
 
@@ -295,21 +264,16 @@ class AttendeeController extends Controller
         $targetEventId = $eventObj ? $eventObj->id : $ticketObj->event_id;
 
         // Recalcular métricas en vivo
-        $ticketsIssued = EventTicket::where('event_id', $targetEventId)->count();
-        $checkedInCount = EventTicket::where('event_id', $targetEventId)->where('is_used', true)->count();
-        $pendingCount = max(0, $ticketsIssued - $checkedInCount);
-        $attendanceRate = $ticketsIssued > 0 ? min(100, round(($checkedInCount / $ticketsIssued) * 100, 1)) : 0;
+        $metrics = $this->getAttendanceMetrics($targetEventId);
+        $targetEvent = Event::find($targetEventId);
+        $zonesAttendance = $targetEvent ? $this->getZonesAttendance($targetEvent) : [];
 
         return response()->json([
             'success' => true,
             'message' => "El ingreso del boleto {$ticketObj->ticket_code} fue anulado correctamente. Ya puede volver a ser escaneado.",
             'ticket_id' => $ticketObj->id,
-            'metrics' => [
-                'tickets_issued' => $ticketsIssued,
-                'checked_in_count' => $checkedInCount,
-                'pending_count' => $pendingCount,
-                'attendance_rate' => $attendanceRate,
-            ],
+            'metrics' => $metrics,
+            'zones' => $zonesAttendance,
         ]);
     }
 
@@ -323,23 +287,15 @@ class AttendeeController extends Controller
 
         $this->syncLegacySalesTickets($event);
 
-        $ticketsIssued = EventTicket::where('event_id', $event->id)->count();
-        $checkedInCount = EventTicket::where('event_id', $event->id)->where('is_used', true)->count();
-        $pendingCount = max(0, $ticketsIssued - $checkedInCount);
-        $attendanceRate = $ticketsIssued > 0 ? min(100, round(($checkedInCount / $ticketsIssued) * 100, 1)) : 0;
+        $metrics = $this->getAttendanceMetrics($event->id);
 
         $recentCheckins = EventTicket::where('event_id', $event->id)
             ->where('is_used', true)
+            ->where('status', '!=', 'upgraded')
+            ->where('status', '!=', 'cancelled')
             ->orderBy('checked_in_at', 'desc')
             ->take(15)
             ->get();
-
-        $metrics = [
-            'tickets_issued' => $ticketsIssued,
-            'checked_in_count' => $checkedInCount,
-            'pending_count' => $pendingCount,
-            'attendance_rate' => $attendanceRate,
-        ];
 
         return view('web.attendees_mobile_scanner', compact('event', 'metrics', 'recentCheckins', 'settings', 'organizer'));
     }
@@ -351,6 +307,8 @@ class AttendeeController extends Controller
     {
         $newCheckins = EventTicket::where('event_id', $event->id)
             ->where('is_used', true)
+            ->where('status', '!=', 'upgraded')
+            ->where('status', '!=', 'cancelled')
             ->orderBy('checked_in_at', 'desc')
             ->take(50)
             ->get()
@@ -366,46 +324,18 @@ class AttendeeController extends Controller
                     'checked_in_at' => $ticket->checked_in_at ? $ticket->checked_in_at->format('h:i:s A') : '',
                     'checked_in_date' => $ticket->checked_in_at ? $ticket->checked_in_at->format('d/m/Y') : '',
                     'scanned_by' => $ticket->scanned_by ?: 'Móvil Scanner',
+                    'ticket_type' => $ticket->ticket_type,
+                    'is_digital' => in_array($ticket->ticket_type, ['digital', 'cortesia_digital']),
                 ];
             });
 
-        // Consulta agregada única de 1 solo paso para máximo rendimiento en tiempo real
-        $statsByZone = EventTicket::where('event_id', $event->id)
-            ->selectRaw('zone_name, count(*) as total, sum(case when is_used = 1 then 1 else 0 end) as checked_in')
-            ->groupBy('zone_name')
-            ->get()
-            ->keyBy('zone_name');
-
-        $ticketsIssued = 0;
-        $checkedInCount = 0;
-        foreach ($statsByZone as $st) {
-            $ticketsIssued += (int) $st->total;
-            $checkedInCount += (int) $st->checked_in;
-        }
-
-        $pendingCount = max(0, $ticketsIssued - $checkedInCount);
-        $attendanceRate = $ticketsIssued > 0 ? min(100, round(($checkedInCount / $ticketsIssued) * 100, 1)) : 0;
-
-        $zones = is_array($event->zones) ? $event->zones : [];
-        $zonesAttendance = [];
-        foreach ($zones as $z) {
-            $zName = $z['name'] ?? 'General';
-            $st = $statsByZone->get($zName);
-            $zIssued = $st ? (int) $st->total : 0;
-            $zChecked = $st ? (int) $st->checked_in : 0;
-            $zRate = $zIssued > 0 ? round(($zChecked / $zIssued) * 100, 1) : 0;
-
-            $zonesAttendance[] = [
-                'name' => $zName,
-                'issued' => $zIssued,
-                'checked_in' => $zChecked,
-                'pending' => max(0, $zIssued - $zChecked),
-                'rate' => $zRate,
-            ];
-        }
+        $metrics = $this->getAttendanceMetrics($event->id);
+        $zonesAttendance = $this->getZonesAttendance($event);
 
         $activeCheckinIds = EventTicket::where('event_id', $event->id)
             ->where('is_used', true)
+            ->where('status', '!=', 'upgraded')
+            ->where('status', '!=', 'cancelled')
             ->pluck('id')
             ->toArray();
 
@@ -413,14 +343,113 @@ class AttendeeController extends Controller
             'success' => true,
             'new_checkins' => $newCheckins,
             'active_checkin_ids' => $activeCheckinIds,
-            'metrics' => [
-                'tickets_issued' => $ticketsIssued,
-                'checked_in_count' => $checkedInCount,
-                'pending_count' => $pendingCount,
-                'attendance_rate' => $attendanceRate,
-            ],
+            'metrics' => $metrics,
             'zones' => $zonesAttendance,
         ]);
+    }
+
+    /**
+     * Calcula métricas globales de asistencia separando boletos digitales y físicos.
+     */
+    private function getAttendanceMetrics(int $eventId): array
+    {
+        $stats = EventTicket::where('event_id', $eventId)
+            ->where('status', '!=', 'upgraded')
+            ->where('status', '!=', 'cancelled')
+            ->selectRaw("
+                count(id) as total,
+                coalesce(sum(case when is_used = 1 then 1 else 0 end), 0) as checked_in,
+                coalesce(sum(case when ticket_type in ('digital', 'cortesia_digital') then 1 else 0 end), 0) as digital_total,
+                coalesce(sum(case when ticket_type in ('digital', 'cortesia_digital') and is_used = 1 then 1 else 0 end), 0) as digital_checked,
+                coalesce(sum(case when ticket_type in ('fisica', 'cortesia') then 1 else 0 end), 0) as physical_total,
+                coalesce(sum(case when ticket_type in ('fisica', 'cortesia') and is_used = 1 then 1 else 0 end), 0) as physical_checked
+            ")
+            ->first();
+
+        $ticketsIssued = (int) ($stats->total ?? 0);
+        $checkedInCount = (int) ($stats->checked_in ?? 0);
+        $pendingCount = max(0, $ticketsIssued - $checkedInCount);
+        $attendanceRate = $ticketsIssued > 0 ? min(100, round(($checkedInCount / $ticketsIssued) * 100, 1)) : 0;
+
+        $digitalIssued = (int) ($stats->digital_total ?? 0);
+        $digitalChecked = (int) ($stats->digital_checked ?? 0);
+        $digitalPending = max(0, $digitalIssued - $digitalChecked);
+        $digitalRate = $digitalIssued > 0 ? min(100, round(($digitalChecked / $digitalIssued) * 100, 1)) : 0;
+
+        $physicalIssued = (int) ($stats->physical_total ?? 0);
+        $physicalChecked = (int) ($stats->physical_checked ?? 0);
+        $physicalPending = max(0, $physicalIssued - $physicalChecked);
+        $physicalRate = $physicalIssued > 0 ? min(100, round(($physicalChecked / $physicalIssued) * 100, 1)) : 0;
+
+        return [
+            'tickets_issued' => $ticketsIssued,
+            'checked_in_count' => $checkedInCount,
+            'pending_count' => $pendingCount,
+            'attendance_rate' => $attendanceRate,
+            'digital_issued' => $digitalIssued,
+            'digital_checked' => $digitalChecked,
+            'digital_pending' => $digitalPending,
+            'digital_rate' => $digitalRate,
+            'physical_issued' => $physicalIssued,
+            'physical_checked' => $physicalChecked,
+            'physical_pending' => $physicalPending,
+            'physical_rate' => $physicalRate,
+        ];
+    }
+
+    /**
+     * Calcula métricas de asistencia por zona con desglose digital y físico.
+     */
+    private function getZonesAttendance(Event $event): array
+    {
+        $statsByZone = EventTicket::where('event_id', $event->id)
+            ->where('status', '!=', 'upgraded')
+            ->where('status', '!=', 'cancelled')
+            ->selectRaw("
+                zone_name,
+                count(id) as total,
+                coalesce(sum(case when is_used = 1 then 1 else 0 end), 0) as checked_in,
+                coalesce(sum(case when ticket_type in ('digital', 'cortesia_digital') then 1 else 0 end), 0) as digital_total,
+                coalesce(sum(case when ticket_type in ('digital', 'cortesia_digital') and is_used = 1 then 1 else 0 end), 0) as digital_checked,
+                coalesce(sum(case when ticket_type in ('fisica', 'cortesia') then 1 else 0 end), 0) as physical_total,
+                coalesce(sum(case when ticket_type in ('fisica', 'cortesia') and is_used = 1 then 1 else 0 end), 0) as physical_checked
+            ")
+            ->groupBy('zone_name')
+            ->get()
+            ->keyBy('zone_name');
+
+        $zones = is_array($event->zones) ? $event->zones : [];
+        $zonesAttendance = [];
+
+        foreach ($zones as $z) {
+            $zName = $z['name'] ?? 'General';
+            $st = $statsByZone->get($zName);
+            $zIssued = $st ? (int) $st->total : 0;
+            $zChecked = $st ? (int) $st->checked_in : 0;
+            $zRate = $zIssued > 0 ? round(($zChecked / $zIssued) * 100, 1) : 0;
+
+            $zDigitalIssued = $st ? (int) $st->digital_total : 0;
+            $zDigitalChecked = $st ? (int) $st->digital_checked : 0;
+            $zPhysicalIssued = $st ? (int) $st->physical_total : 0;
+            $zPhysicalChecked = $st ? (int) $st->physical_checked : 0;
+
+            $zonesAttendance[] = [
+                'name' => $zName,
+                'price' => $z['price'] ?? 0,
+                'issued' => $zIssued,
+                'checked_in' => $zChecked,
+                'pending' => max(0, $zIssued - $zChecked),
+                'rate' => $zRate,
+                'digital_issued' => $zDigitalIssued,
+                'digital_checked' => $zDigitalChecked,
+                'digital_pending' => max(0, $zDigitalIssued - $zDigitalChecked),
+                'physical_issued' => $zPhysicalIssued,
+                'physical_checked' => $zPhysicalChecked,
+                'physical_pending' => max(0, $zPhysicalIssued - $zPhysicalChecked),
+            ];
+        }
+
+        return $zonesAttendance;
     }
 
     /**
