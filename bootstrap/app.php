@@ -29,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin/asistentes/*/anular-escaneo/*',
             'actualizar-password-temporal',
             'recuperar-password',
+            'regenerar-qr-ventas-pos',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -334,33 +334,66 @@ class BoxOfficeController extends Controller
             ? $event->courtesy_settings
             : (json_decode($event->courtesy_settings ?? '[]', true) ?? []);
 
+        $splitSettings = is_array($event->quota_split_settings) 
+            ? $event->quota_split_settings 
+            : (json_decode($event->quota_split_settings ?? '[]', true) ?: []);
+        $isSplitActive = !empty($splitSettings['enabled']);
+
         if ($isCourtesy) {
             $courtesyZonesConfig = $courtesySettings['zones'] ?? [];
+            $targetCz = null;
             if (!empty($courtesyZonesConfig) && is_array($courtesyZonesConfig)) {
                 foreach ($courtesyZonesConfig as $cz) {
                     if (($cz['name'] ?? '') === $validated['zone_name']) {
-                        if (isset($cz['enabled']) && !$cz['enabled']) {
-                            return response()->json([
-                                'success' => false,
-                                'message' => "Las entradas de cortesía están deshabilitadas para el sector {$validated['zone_name']}.",
-                            ], 422);
-                        }
-                        if (isset($cz['stock']) && $cz['stock'] !== null && $cz['stock'] !== '') {
-                            $maxCourtesyStock = (int) $cz['stock'];
-                            $alreadySoldCourtesy = TicketSale::where('event_id', $event->id)
-                                ->whereIn('payment_method', ['Cortesía', 'cortesia'])
-                                ->where('zone_name', $validated['zone_name'])
-                                ->sum('quantity');
-                            if (($alreadySoldCourtesy + $validated['quantity']) > $maxCourtesyStock) {
-                                $remCourtesy = max(0, $maxCourtesyStock - $alreadySoldCourtesy);
-                                return response()->json([
-                                    'success' => false,
-                                    'message' => "Cupo de cortesías agotado para {$validated['zone_name']}. Cupo asignado: {$maxCourtesyStock}, disponibles: {$remCourtesy}.",
-                                ], 422);
-                            }
-                        }
+                        $targetCz = $cz;
                         break;
                     }
+                }
+            }
+
+            $cleanZName = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $validated['zone_name'])));
+            $targetSplitZone = null;
+            if (!empty($splitSettings['zones']) && is_array($splitSettings['zones'])) {
+                foreach ($splitSettings['zones'] as $sz) {
+                    if (!empty($sz['name']) && strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $sz['name']))) === $cleanZName) {
+                        $targetSplitZone = $sz;
+                        break;
+                    }
+                }
+            }
+
+            if ($targetCz && isset($targetCz['enabled']) && !$targetCz['enabled']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Las entradas de cortesía están deshabilitadas para el sector {$validated['zone_name']}.",
+                ], 422);
+            }
+
+            // En Taquilla POS, las cortesías emitidas son DIGITALES (las físicas se imprimen en plancha)
+            $digitalCourtesyStock = null;
+            if ($targetSplitZone && isset($targetSplitZone['courtesy_virtual']) && is_numeric($targetSplitZone['courtesy_virtual'])) {
+                $digitalCourtesyStock = (int) $targetSplitZone['courtesy_virtual'];
+            } elseif ($targetCz && isset($targetCz['virtual_stock']) && is_numeric($targetCz['virtual_stock'])) {
+                $digitalCourtesyStock = (int) $targetCz['virtual_stock'];
+            } elseif ($targetCz && isset($targetCz['stock']) && is_numeric($targetCz['stock']) && !$isSplitActive) {
+                $digitalCourtesyStock = (int) $targetCz['stock'];
+            }
+
+            if ($digitalCourtesyStock !== null) {
+                $soldDigitalCourtesy = TicketSale::where('event_id', $event->id)
+                    ->whereIn('payment_method', ['Cortesía', 'cortesia'])
+                    ->where(function ($q) use ($validated, $cleanZName) {
+                        $q->where('zone_name', $validated['zone_name'])
+                          ->orWhere('zone_name', 'LIKE', $cleanZName . '%');
+                    })
+                    ->sum('quantity');
+
+                if (($soldDigitalCourtesy + $validated['quantity']) > $digitalCourtesyStock) {
+                    $remCourtesy = max(0, $digitalCourtesyStock - $soldDigitalCourtesy);
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Cupo de cortesías digitales agotado para {$validated['zone_name']}. Cupo asignado digital: {$digitalCourtesyStock}, disponibles: {$remCourtesy}.",
+                    ], 422);
                 }
             }
 
@@ -419,11 +452,21 @@ class BoxOfficeController extends Controller
         $matchedPhysicalTickets = [];
         $cleanBaseZone = preg_replace('/\s*\([^)]*\)$/', '', trim($validated['zone_name']));
 
+        $saleMode = $request->input('sale_mode', 'digital'); // 'digital' o 'fisica'
+        $isPhysicalSale = ($saleMode === 'fisica');
+
         $splitSettings = is_array($event->quota_split_settings) 
             ? $event->quota_split_settings 
             : (json_decode($event->quota_split_settings ?? '[]', true) ?: []);
         $isSplitActive = !empty($splitSettings['enabled']);
-        $requiredTicketType = $isSplitActive ? ($isCourtesy ? 'cortesia' : 'fisica') : null;
+
+        if ($isCourtesy) {
+            $requiredTicketType = 'cortesia_digital';
+        } elseif ($isPhysicalSale) {
+            $requiredTicketType = 'fisica';
+        } else {
+            $requiredTicketType = 'digital';
+        }
 
         for ($i = 1; $i <= $validated['quantity']; $i++) {
             $effectiveTicketPrice = $isCourtesy ? 0.00 : $unitPrice;
@@ -432,58 +475,33 @@ class BoxOfficeController extends Controller
 
             $physicalTicket = null;
 
-            if ($seatCode) {
-                // Caso Butacas Numeradas: buscar el boleto físico pre-generado para esta butaca específica
-                $seatDigits = preg_replace('/[^0-9]/', '', $seatCode);
-                $seatLetter = preg_replace('/[^A-Za-z]/', '', $seatCode);
+            if ($isPhysicalSale) {
+                // VENTA FÍSICA: Usar boletos físicos pre-generados para la plancha
+                if ($seatCode) {
+                    $seatDigits = preg_replace('/[^0-9]/', '', $seatCode);
+                    $seatLetter = preg_replace('/[^A-Za-z]/', '', $seatCode);
 
-                $physicalTicket = \App\Models\EventTicket::where('event_id', $event->id)
-                    ->where(function($q) {
-                        $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
-                    })
-                    ->whereNotIn('id', array_keys($matchedPhysicalTickets))
-                    ->when($requiredTicketType, function ($q) use ($requiredTicketType) {
-                        $q->where('ticket_type', $requiredTicketType)
-                          ->where('source', '!=', 'web_checkout');
-                    })
-                    ->where(function ($q) use ($zoneWithSeat, $seatCode, $seatLetter, $seatDigits) {
-                        $q->where('zone_name', $zoneWithSeat)
-                          ->orWhere('zone_name', 'LIKE', "%({$seatCode})%")
-                          ->orWhere('zone_name', 'LIKE', "%({$seatLetter}-{$seatDigits})%")
-                          ->orWhere('zone_name', 'LIKE', "%({$seatLetter} {$seatDigits})%");
-                    })
-                    ->orderBy('id', 'asc')
-                    ->first();
-            } else {
-                // Caso Zona General: buscar el siguiente boleto físico pre-impreso disponible en orden
-                $physicalTicket = \App\Models\EventTicket::where('event_id', $event->id)
-                    ->where(function($q) {
-                        $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
-                    })
-                    ->whereNotIn('id', array_keys($matchedPhysicalTickets))
-                    ->when($requiredTicketType, function ($q) use ($requiredTicketType) {
-                        $q->where('ticket_type', $requiredTicketType)
-                          ->where('source', '!=', 'web_checkout');
-                    })
-                    ->where(function ($q) use ($validated, $cleanBaseZone) {
-                        $q->where('zone_name', $validated['zone_name'])
-                          ->orWhere('zone_name', 'LIKE', $cleanBaseZone . '%');
-                    })
-                    ->where('zone_name', 'NOT LIKE', '%(%')
-                    ->orderBy('ticket_number', 'asc')
-                    ->orderBy('id', 'asc')
-                    ->first();
-
-                if (!$physicalTicket) {
                     $physicalTicket = \App\Models\EventTicket::where('event_id', $event->id)
                         ->where(function($q) {
                             $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
                         })
                         ->whereNotIn('id', array_keys($matchedPhysicalTickets))
-                        ->when($requiredTicketType, function ($q) use ($requiredTicketType) {
-                            $q->where('ticket_type', $requiredTicketType)
-                              ->where('source', '!=', 'web_checkout');
+                        ->where('ticket_type', 'fisica')
+                        ->where(function ($q) use ($zoneWithSeat, $seatCode, $seatLetter, $seatDigits) {
+                            $q->where('zone_name', $zoneWithSeat)
+                              ->orWhere('zone_name', 'LIKE', "%({$seatCode})%")
+                              ->orWhere('zone_name', 'LIKE', "%({$seatLetter}-{$seatDigits})%")
+                              ->orWhere('zone_name', 'LIKE', "%({$seatLetter} {$seatDigits})%");
                         })
+                        ->orderBy('id', 'asc')
+                        ->first();
+                } else {
+                    $physicalTicket = \App\Models\EventTicket::where('event_id', $event->id)
+                        ->where(function($q) {
+                            $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
+                        })
+                        ->whereNotIn('id', array_keys($matchedPhysicalTickets))
+                        ->where('ticket_type', 'fisica')
                         ->where(function ($q) use ($validated, $cleanBaseZone) {
                             $q->where('zone_name', $validated['zone_name'])
                               ->orWhere('zone_name', 'LIKE', $cleanBaseZone . '%');
@@ -492,25 +510,60 @@ class BoxOfficeController extends Controller
                         ->orderBy('id', 'asc')
                         ->first();
                 }
-            }
 
-            if ($physicalTicket) {
-                // USAR EL MISMO BOLETO FÍSICO QUE SE IMPRIMIÓ EN LA PLANCHA (Mismo QR, Hash y Código)
-                $ticketCode = $physicalTicket->ticket_code;
-                $currentSeq = $physicalTicket->ticket_number;
-                $validationHash = $physicalTicket->validation_hash;
-                $qrPayload = $physicalTicket->qr_payload;
-                if (!empty($physicalTicket->zone_name)) {
-                    $zoneWithSeat = $physicalTicket->zone_name;
+                if ($physicalTicket) {
+                    $ticketCode = $physicalTicket->ticket_code;
+                    $currentSeq = $physicalTicket->ticket_number;
+                    $validationHash = $physicalTicket->validation_hash;
+                    $qrPayload = $physicalTicket->qr_payload;
+                    if (!empty($physicalTicket->zone_name)) {
+                        $zoneWithSeat = $physicalTicket->zone_name;
+                    }
+                    $matchedPhysicalTickets[$physicalTicket->id] = $physicalTicket;
+                } else {
+                    $currentSeq = $startSeq + ($i - 1);
+                    $ticketCode = 'N° ' . str_pad($currentSeq, 5, '0', STR_PAD_LEFT);
+                    $validationHash = 'VG' . strtoupper(substr(md5(uniqid('vg_phys_', true) . $event->id . $receiptNumber . $currentSeq), 0, 8));
+                    $qrPayload = "VIVEGO|EVT-{$event->id}|TICK-{$currentSeq}|HASH-{$validationHash}";
                 }
-                $matchedPhysicalTickets[$physicalTicket->id] = $physicalTicket;
             } else {
-                // Fallback: Generar nuevo código único virtual solo si no existe boleto físico pre-impreso
-                $currentSeq = $startSeq + ($i - 1);
-                $ticketCode = 'TK-' . strtoupper(substr(Str::slug($event->title), 0, 3)) . '-' . str_pad($currentSeq, 5, '0', STR_PAD_LEFT);
-                $validationHash = strtoupper(Str::random(10));
-                $encryptedToken = strtoupper(substr(hash_hmac('sha256', "VIVEGO_ENC_{$event->id}_{$receiptNumber}_{$validationHash}_{$i}", config('app.key', 'ViveGoSecretKey2026')), 0, 24));
-                $qrPayload = "VGENC:{$encryptedToken}";
+                // VENTA DIGITAL POS: Generar códigos digitales con formato estándar ViveGo
+                $digitalTicket = null;
+                if ($seatCode) {
+                    $seatDigits = preg_replace('/[^0-9]/', '', $seatCode);
+                    $seatLetter = preg_replace('/[^A-Za-z]/', '', $seatCode);
+
+                    $digitalTicket = \App\Models\EventTicket::where('event_id', $event->id)
+                        ->where(function($q) {
+                            $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
+                        })
+                        ->whereNotIn('id', array_keys($matchedPhysicalTickets))
+                        ->where('ticket_type', 'digital')
+                        ->where(function ($q) use ($zoneWithSeat, $seatCode, $seatLetter, $seatDigits) {
+                            $q->where('zone_name', $zoneWithSeat)
+                              ->orWhere('zone_name', 'LIKE', "%({$seatCode})%")
+                              ->orWhere('zone_name', 'LIKE', "%({$seatLetter}-{$seatDigits})%")
+                              ->orWhere('zone_name', 'LIKE', "%({$seatLetter} {$seatDigits})%");
+                        })
+                        ->orderBy('id', 'asc')
+                        ->first();
+                }
+
+                if ($digitalTicket) {
+                    $ticketCode = $digitalTicket->ticket_code;
+                    $currentSeq = $digitalTicket->ticket_number;
+                    $validationHash = $digitalTicket->validation_hash;
+                    $qrPayload = $digitalTicket->qr_payload;
+                    if (!empty($digitalTicket->zone_name)) {
+                        $zoneWithSeat = $digitalTicket->zone_name;
+                    }
+                    $matchedPhysicalTickets[$digitalTicket->id] = $digitalTicket;
+                } else {
+                    $currentSeq = $startSeq + ($i - 1);
+                    $ticketCode = 'N° ' . str_pad($currentSeq, 5, '0', STR_PAD_LEFT);
+                    $validationHash = 'VG' . strtoupper(substr(md5(uniqid('vg_pos_dig_', true) . $event->id . $receiptNumber . $currentSeq), 0, 8));
+                    $qrPayload = "VIVEGO|EVT-{$event->id}|TICK-{$currentSeq}|HASH-{$validationHash}";
+                }
             }
 
             $ticketsData[] = [
@@ -528,7 +581,7 @@ class BoxOfficeController extends Controller
                 'buyer_phone' => $buyerPhone,
                 'buyer_email' => $buyerEmail,
                 'is_courtesy' => $isCourtesy,
-                'event_ticket_id' => $physicalTicket ? $physicalTicket->id : null,
+                'event_ticket_id' => $physicalTicket ? $physicalTicket->id : ($digitalTicket ?? null ? $digitalTicket->id : null),
             ];
         }
 
@@ -551,6 +604,7 @@ class BoxOfficeController extends Controller
             'quantity' => $validated['quantity'],
             'total_amount' => $totalAmount,
             'payment_method' => $validated['payment_method'],
+            'sale_type' => $isPhysicalSale ? 'fisica' : 'digital',
             'amount_paid' => $amountPaid,
             'change_amount' => $changeAmount,
             'tickets_data' => $ticketsData,
@@ -566,6 +620,8 @@ class BoxOfficeController extends Controller
                     'buyer_name' => $tData['buyer_name'],
                     'buyer_dni' => $tData['buyer_dni'],
                     'unit_price' => $tData['price'],
+                    'ticket_type' => $requiredTicketType ?: ($isCourtesy ? 'cortesia' : ($isPhysicalSale ? 'fisica' : 'digital')),
+                    'source' => $isPhysicalSale ? 'pos_physical' : ($isCourtesy ? 'pos_courtesy' : 'pos_sale'),
                     'status' => 'valid',
                     'is_used' => false,
                 ]);
@@ -581,8 +637,8 @@ class BoxOfficeController extends Controller
                     'validation_hash' => $tData['validation_hash'],
                     'buyer_name' => $tData['buyer_name'],
                     'buyer_dni' => $tData['buyer_dni'],
-                    'source' => 'pos_sale',
-                    'ticket_type' => $requiredTicketType ?: ($isCourtesy ? 'cortesia' : 'fisica'),
+                    'source' => $isPhysicalSale ? 'pos_physical' : ($isCourtesy ? 'pos_courtesy' : 'pos_sale'),
+                    'ticket_type' => $requiredTicketType ?: ($isCourtesy ? 'cortesia' : ($isPhysicalSale ? 'fisica' : 'digital')),
                     'is_used' => false,
                     'status' => 'valid',
                 ]);
@@ -620,7 +676,7 @@ class BoxOfficeController extends Controller
         }
 
         $emailSent = false;
-        if (!empty($effectiveEmail) && filter_var($effectiveEmail, FILTER_VALIDATE_EMAIL)) {
+        if (!empty($effectiveEmail) && filter_var($effectiveEmail, FILTER_VALIDATE_EMAIL) && !$isPhysicalSale) {
             $user = \App\Models\User::where('email', $effectiveEmail)->first();
             $tempPassword = null;
             $isNewUser = false;
@@ -658,8 +714,9 @@ class BoxOfficeController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => '¡Venta registrada con éxito en Taquilla!',
+            'message' => $isPhysicalSale ? '¡Venta física registrada con éxito!' : '¡Venta registrada con éxito en Taquilla!',
             'sale' => $sale,
+            'sale_mode' => $saleMode,
             'email_sent' => $emailSent,
             'recipient' => $effectiveEmail,
             'metrics' => [
@@ -933,15 +990,28 @@ class BoxOfficeController extends Controller
                 return $tClean === $cleanZone;
             });
 
-            $physSold = $zoneSoldTickets->where('ticket_type', 'fisica')->count();
-            $virtSold = $zoneSoldTickets->where('ticket_type', 'digital')->count();
+            // Conteo exacto por tickets en BD (Físicas vs Digitales)
+            $physSold = 0;
+            $virtSold = 0;
+            foreach ($zoneSoldTickets as $t) {
+                if (in_array($t->ticket_type, ['cortesia', 'cortesia_digital'])) {
+                    continue;
+                }
+                $isPhys = ($t->ticket_type === 'fisica' && ($t->ticketSale?->sale_type === 'fisica' || $t->source === 'pos_physical'));
+                if ($isPhys) {
+                    $physSold++;
+                } else {
+                    $virtSold++;
+                }
+            }
 
             // Si hay ventas históricas sin boletos explícitos asignados, complementar por canal
+            // Solo sale_type === 'fisica' o pos_physical cuenta como FÍSICA. Todo lo demás es DIGITAL.
             if (($physSold + $virtSold) < $rawZoneSold) {
-                $webQty = (int) $zoneSales->filter(fn($s) => $s->seller_name === 'Web Checkout' || in_array($s->payment_method, ['Tarjeta', 'Online', 'MercadoPago', 'Culqi']))->sum('quantity');
-                $posQty = (int) $zoneSales->filter(fn($s) => $s->seller_name !== 'Web Checkout' && !in_array($s->payment_method, ['Tarjeta', 'Online', 'MercadoPago', 'Culqi']))->sum('quantity');
-                $physSold = max($physSold, $posQty);
-                $virtSold = max($virtSold, $webQty);
+                $posPhysQty = (int) $zoneSales->filter(fn($s) => ($s->sale_type ?? '') === 'fisica' || ($s->source ?? '') === 'pos_physical')->sum('quantity');
+                $digitQty = (int) $zoneSales->filter(fn($s) => ($s->sale_type ?? 'digital') !== 'fisica' && ($s->source ?? '') !== 'pos_physical')->sum('quantity');
+                $physSold = max($physSold, $posPhysQty);
+                $virtSold = max($virtSold, $digitQty);
             }
 
             $zSold = max($rawZoneSold, ($physSold + $virtSold));
@@ -988,18 +1058,31 @@ class BoxOfficeController extends Controller
                 $tClean = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $t->zone_name ?? '')));
                 return (str_contains($tClean, 'CORTESIA') || str_contains($tClean, 'CORTESÍA')) && str_contains($tClean, $cleanZone);
             });
-            $courtesyPhysSold = $courtesySoldTickets->where('ticket_type', 'cortesia')->where('source', '!=', 'web_checkout')->count();
-            $courtesyVirtSold = $courtesySoldTickets->where(fn($t) => $t->ticket_type === 'cortesia_digital' || ($t->ticket_type === 'cortesia' && $t->source === 'web_checkout'))->count();
+            $courtesyVirtSold = $courtesySoldTickets->where(fn($t) => $t->ticket_type === 'cortesia_digital' || ($t->ticket_type === 'cortesia' && in_array($t->source, ['web_checkout', 'pos_courtesy', 'pos_sale'])))->count();
+            $courtesyPhysSold = $courtesySoldTickets->where('ticket_type', 'cortesia')->whereNotIn('source', ['web_checkout', 'pos_courtesy', 'pos_sale'])->count();
 
             $courtesySalesQty = (int) $courtesySales->filter(function ($s) use ($zName, $cleanZone) {
                 $sClean = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $s->zone_name ?? '')));
                 return $s->zone_name === $zName || $sClean === $cleanZone;
             })->sum('quantity');
 
+            // Las ventas de cortesía en taquilla son digitales
+            if (($courtesyVirtSold + $courtesyPhysSold) < $courtesySalesQty) {
+                $courtesyVirtSold = max($courtesyVirtSold, $courtesySalesQty);
+            }
+
             $zCourtesySold = max($courtesySalesQty, ($courtesyPhysSold + $courtesyVirtSold));
             $zCourtesyAvailable = $zCourtesyMaxStock !== null
                 ? max(0, $zCourtesyMaxStock - $zCourtesySold)
                 : $zAvail;
+
+            $hasCourtesySplit = ($courtesyPhysCap + $courtesyVirtCap) > 0;
+            $courtesyVirtAvail = $courtesyVirtCap > 0 
+                ? max(0, $courtesyVirtCap - $courtesyVirtSold) 
+                : ($hasCourtesySplit ? 0 : $zCourtesyAvailable);
+            $courtesyPhysAvail = $courtesyPhysCap > 0 
+                ? max(0, $courtesyPhysCap - $courtesyPhysSold) 
+                : ($hasCourtesySplit ? 0 : $zCourtesyAvailable);
 
             $zonesWithStats[] = [
                 'name' => $zName,
@@ -1023,6 +1106,8 @@ class BoxOfficeController extends Controller
                 'courtesy_max_stock' => $zCourtesyMaxStock,
                 'courtesy_sold' => $zCourtesySold,
                 'courtesy_available' => $zCourtesyAvailable,
+                'courtesy_digital_available' => $courtesyVirtAvail,
+                'courtesy_physical_available' => $courtesyPhysAvail,
                 'courtesy_physical_capacity' => $courtesyPhysCap,
                 'courtesy_digital_capacity' => $courtesyVirtCap,
                 'courtesy_physical_sold' => $courtesyPhysSold,

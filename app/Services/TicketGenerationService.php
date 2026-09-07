@@ -865,7 +865,15 @@ class TicketGenerationService
                 ];
             }
 
-            $currentCorrelative = max(1, (int)$startCorrelative);
+            if ($startCorrelative <= 0) {
+                $existingMax = (int) EventTicket::where('event_id', $event->id)
+                    ->where('ticket_type', 'digital')
+                    ->whereNotIn('ticket_sale_id', $sales->pluck('id'))
+                    ->max('ticket_number');
+                $currentCorrelative = max(1, $existingMax + 1);
+            } else {
+                $currentCorrelative = max(1, (int)$startCorrelative);
+            }
             $minCorrelative = $currentCorrelative;
             $maxCorrelative = $currentCorrelative;
 
@@ -950,6 +958,10 @@ class TicketGenerationService
                             ->first();
                     }
 
+                    $isCourtesy = ($sale->payment_method === 'Cortesía' || !empty($t['is_courtesy']));
+                    $ticketType = 'digital';
+                    $source = $isCourtesy ? 'pos_courtesy' : 'pos_sale';
+
                     if ($et) {
                         $et->update([
                             'ticket_sale_id' => $sale->id,
@@ -961,7 +973,8 @@ class TicketGenerationService
                             'buyer_dni' => $buyerDni,
                             'unit_price' => $unitPrice,
                             'zone_name' => $zoneName,
-                            'source' => 'pos_sale',
+                            'source' => $source,
+                            'ticket_type' => $ticketType,
                             'status' => 'valid',
                         ]);
                     } else {
@@ -976,8 +989,8 @@ class TicketGenerationService
                             'buyer_dni' => $buyerDni,
                             'unit_price' => $unitPrice,
                             'zone_name' => $zoneName,
-                            'source' => 'pos_sale',
-                            'ticket_type' => 'fisica',
+                            'source' => $source,
+                            'ticket_type' => $ticketType,
                             'is_used' => false,
                             'status' => 'valid',
                         ]);

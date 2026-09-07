@@ -262,8 +262,7 @@ Route::get('/optimizar-sistema', function () {
                             <strong style="color: #FCD34D;">Solo afectará al evento que selecciones</strong>. Actualiza tanto <code>ticket_sales</code> como <code>event_tickets</code>.
                         </p>
 
-                        <form action="/regenerar-qr-ventas-pos" method="POST" onsubmit="return confirm(\'⚠️ ¿Estás seguro de regenerar los códigos QR y números correlativos de las ventas para el evento seleccionado? Esta acción asignará nuevos códigos QR y hashes únicos a cada boleto vendido.\');">
-                            <input type="hidden" name="_token" value="' . csrf_token() . '">
+                        <form action="/regenerar-qr-ventas-pos" method="GET" onsubmit="return confirm(\'⚠️ ¿Estás seguro de regenerar los códigos QR y números correlativos de las ventas para el evento seleccionado? Esta acción asignará nuevos códigos QR y hashes únicos a cada boleto vendido.\');">
                             
                             <div style="display: grid; grid-template-columns: 1fr; gap: 0.85rem; margin-bottom: 1rem;">
                                 <div>
@@ -281,7 +280,8 @@ Route::get('/optimizar-sistema', function () {
                                         <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #CBD5E1; margin-bottom: 0.35rem; text-transform: uppercase;">
                                             Correlativo Inicial
                                         </label>
-                                        <input type="number" name="start_correlative" value="1" min="1" required style="width: 100%; box-sizing: border-box; background: #0A0A10; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 0.6rem 0.8rem; color: #FFFFFF; font-size: 0.85rem; font-family: monospace; outline: none;">
+                                        <input type="number" name="start_correlative" value="1" min="1" placeholder="Ej: 1 (vacío = automático)" style="width: 100%; box-sizing: border-box; background: #0A0A10; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 0.6rem 0.8rem; color: #FFFFFF; font-size: 0.85rem; font-family: monospace; outline: none;">
+                                        <small style="color: #94A3B8; font-size: 0.72rem; display: block; margin-top: 0.25rem;">Por defecto 1. O déjalo vacío para continuar tras el último digital.</small>
                                     </div>
 
                                     <div>
@@ -335,7 +335,7 @@ Route::get('/optimizar-sistema', function () {
 Route::match(['get', 'post'], '/regenerar-qr-ventas-pos', function (\Illuminate\Http\Request $request) {
     try {
         $eventId = $request->input('event_id');
-        $startCorrelative = max(1, (int)$request->input('start_correlative', 1));
+        $startCorrelative = $request->filled('start_correlative') ? max(1, (int)$request->input('start_correlative')) : 0;
         $scope = $request->input('scope', 'pos_only') === 'all_sales' ? 'all_sales' : 'pos_only';
 
         if (!$eventId) {

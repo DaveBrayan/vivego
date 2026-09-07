@@ -22,6 +22,7 @@ class TicketSale extends Model
         'quantity',
         'total_amount',
         'payment_method',
+        'sale_type',
         'amount_paid',
         'change_amount',
         'tickets_data',

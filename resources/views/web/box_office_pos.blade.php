@@ -550,44 +550,48 @@
             <div class="dash-container">
                 
                 <!-- HEADER PRINCIPAL DE LA TAQUILLA DEL EVENTO -->
-                <div class="pos-header-card">
-                    <div style="display: flex; align-items: center; gap: 1.25rem; flex: 1; min-width: 300px;">
-                        <div style="width: 72px; height: 72px; border-radius: 16px; overflow: hidden; flex-shrink: 0; border: 1.5px solid rgba(255, 85, 0, 0.4); background: #000;">
+                <div class="pos-header-card" style="display: flex; flex-direction: column; gap: 1.25rem; padding: 1.5rem; border-radius: 20px;">
+                    <!-- INFORMACIÓN DEL EVENTO: BANNER, TÍTULO PROMINENTE Y METADATA -->
+                    <div style="display: flex; align-items: center; gap: 1.5rem; width: 100%; flex-wrap: wrap;">
+                        <div style="width: 86px; height: 86px; border-radius: 18px; overflow: hidden; flex-shrink: 0; border: 2px solid rgba(255, 85, 0, 0.5); background: #000; box-shadow: 0 6px 18px rgba(255, 85, 0, 0.25);">
                             <img src="{{ $event->banner_image ?? 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=600&q=80' }}" alt="{{ $event->title }}" style="width: 100%; height: 100%; object-fit: cover;">
                         </div>
-                        <div>
-                            <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.35rem;">
-                                <a href="{{ route('web.box_office') }}" class="dash-badge-custom badge-blue" style="text-decoration: none; font-size: 0.75rem;">← Volver a Taquillas</a>
+                        <div style="flex: 1; min-width: 280px;">
+                            <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.45rem;">
+                                <a href="{{ route('web.box_office') }}" class="dash-badge-custom badge-blue" style="text-decoration: none; font-size: 0.75rem; padding: 0.25rem 0.65rem;">← Volver a Taquillas</a>
                                 @if(($event->sales_type ?? 'fisica') === 'ambos')
-                                    <span class="dash-badge-custom badge-purple" style="font-size: 0.75rem; background: rgba(168, 85, 247, 0.15); color: #C084FC; border: 1px solid rgba(168, 85, 247, 0.4);">🎫🌐 Venta Híbrida (Taquilla + Online)</span>
+                                    <span class="dash-badge-custom badge-purple" style="font-size: 0.75rem; padding: 0.25rem 0.65rem; background: rgba(168, 85, 247, 0.15); color: #C084FC; border: 1px solid rgba(168, 85, 247, 0.4);">🎫🌐 Venta Híbrida (Taquilla + Online)</span>
                                 @elseif(($event->sales_type ?? 'fisica') === 'fisica')
-                                    <span class="dash-badge-custom badge-orange" style="font-size: 0.75rem;">🎫 Venta Física (Taquilla)</span>
+                                    <span class="dash-badge-custom badge-orange" style="font-size: 0.75rem; padding: 0.25rem 0.65rem;">🎫 Venta Física (Taquilla)</span>
                                 @else
-                                    <span class="dash-badge-custom badge-cyan" style="font-size: 0.75rem; color: #00F0FF; border: 1px solid rgba(0,240,255,0.4); background: rgba(0,240,255,0.1);">🌐 Venta Virtual (Online)</span>
+                                    <span class="dash-badge-custom badge-cyan" style="font-size: 0.75rem; padding: 0.25rem 0.65rem; color: #00F0FF; border: 1px solid rgba(0,240,255,0.4); background: rgba(0,240,255,0.1);">🌐 Venta Virtual (Online)</span>
                                 @endif
-                                <span class="dash-badge-custom badge-green" style="font-size: 0.75rem;">✓ Caja Abierta</span>
+                                <span class="dash-badge-custom badge-green" style="font-size: 0.75rem; padding: 0.25rem 0.65rem;">✓ Caja Abierta</span>
                             </div>
-                            <h1 style="font-size: 1.45rem; font-weight: 900; color: #FFFFFF; margin: 0 0 0.25rem 0;">{{ $event->title }}</h1>
-                            <div style="display: flex; align-items: center; gap: 1rem; color: #94A3B8; font-size: 0.85rem; font-weight: 600;">
-                                <span>🗓️ {{ !empty($event->event_date) ? (is_string($event->event_date) ? substr($event->event_date, 0, 10) : $event->event_date->format('d/m/Y')) : '10/04/2025' }}</span>
-                                <span>⏰ {{ $event->event_time ?? '18:00' }}</span>
-                                <span>📍 {{ $event->venue_name ?? 'Complejo San Luis' }} ({{ $event->address ?? 'Ayacucho' }})</span>
+                            <h1 style="font-size: 1.85rem; font-weight: 900; color: #FFFFFF; margin: 0 0 0.45rem 0; line-height: 1.25; letter-spacing: -0.5px; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">
+                                {{ $event->title }}
+                            </h1>
+                            <div style="display: flex; align-items: center; gap: 0.75rem; color: #94A3B8; font-size: 0.85rem; font-weight: 600; flex-wrap: wrap;">
+                                <span style="background: rgba(255,255,255,0.04); padding: 0.25rem 0.6rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); display: inline-flex; align-items: center; gap: 0.35rem;">🗓️ {{ !empty($event->event_date) ? (is_string($event->event_date) ? substr($event->event_date, 0, 10) : $event->event_date->format('d/m/Y')) : '10/04/2025' }}</span>
+                                <span style="background: rgba(255,255,255,0.04); padding: 0.25rem 0.6rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); display: inline-flex; align-items: center; gap: 0.35rem;">⏰ {{ $event->event_time ?? '18:00' }}</span>
+                                <span style="background: rgba(255,255,255,0.04); padding: 0.25rem 0.6rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); display: inline-flex; align-items: center; gap: 0.35rem;">📍 {{ $event->venue_name ?? 'Complejo San Luis' }} ({{ $event->address ?? 'Ayacucho' }})</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- BOTONES PRINCIPALES DE TAQUILLA (VENTA + CORTESÍA O PLANCHA) -->
-                    <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                        <button type="button" class="btn btn-primary" onclick="openPosSaleModal()" style="font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 22px rgba(255, 85, 0, 0.45); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer;">
+                    <!-- BOTONES PRINCIPALES DE TAQUILLA: COLOCADOS ABAJO -->
+                    <!-- Orden solicitado: 1. Venta POS (F1) -> 2. Venta Física (F2) -> 3. Cortesía (F3) -> 4. Generar Plancha -->
+                    <div style="display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1.15rem; width: 100%;">
+                        <button type="button" class="btn" onclick="openPosSaleModal('digital')" style="background: linear-gradient(135deg, #FF5500, #EA580C); color: #FFFFFF; font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 20px rgba(255, 85, 0, 0.45); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer; border: none; transition: transform 0.2s ease, box-shadow 0.2s ease;">
                             <span style="font-size: 1.25rem;">🛒</span>
-                            <span>+ REGISTRAR VENTA (F1)</span>
+                            <span>+ VENTA POS (F1)</span>
                         </button>
-                        @if(in_array(($event->sales_type ?? 'fisica'), ['fisica', 'ambos']))
-                            <button type="button" class="btn" onclick="openPlanchaModalCurrentEvent()" style="background: linear-gradient(135deg, #2563EB, #1D4ED8); color: #FFFFFF; font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 22px rgba(37, 99, 235, 0.4); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer; border: none; transition: all 0.2s ease;">
-                                <span style="font-size: 1.25rem;">🖨️</span>
-                                <span>+ GENERAR PLANCHA PDF</span>
-                            </button>
-                        @endif
+
+                        <button type="button" class="btn" onclick="openPosSaleModal('fisica')" style="background: linear-gradient(135deg, #F59E0B, #D97706); color: #FFFFFF; font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer; border: none; transition: transform 0.2s ease, box-shadow 0.2s ease;">
+                            <span style="font-size: 1.25rem;">🎟️</span>
+                            <span>+ VENTA FÍSICA (F2)</span>
+                        </button>
+
                         @php
                             $cSettings = is_array($event->courtesy_settings) 
                                 ? $event->courtesy_settings 
@@ -595,9 +599,16 @@
                             $isCourtesyActive = !empty($cSettings['enabled']);
                         @endphp
                         @if($isCourtesyActive)
-                            <button type="button" class="btn" onclick="openPosCourtesyModal()" style="background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 22px rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer; border: none; transition: all 0.2s ease;">
+                            <button type="button" class="btn" onclick="openPosCourtesyModal()" style="background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer; border: none; transition: transform 0.2s ease, box-shadow 0.2s ease;">
                                 <span style="font-size: 1.25rem;">🎁</span>
-                                <span>+ NUEVA CORTESÍA (F2)</span>
+                                <span>+ CORTESÍA (F3)</span>
+                            </button>
+                        @endif
+
+                        @if(in_array(($event->sales_type ?? 'fisica'), ['fisica', 'ambos']))
+                            <button type="button" class="btn" onclick="openPlanchaModalCurrentEvent()" style="background: linear-gradient(135deg, #2563EB, #1D4ED8); color: #FFFFFF; font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer; border: none; transition: transform 0.2s ease, box-shadow 0.2s ease;">
+                                <span style="font-size: 1.25rem;">🖨️</span>
+                                <span>+ GENERAR PLANCHA</span>
                             </button>
                         @endif
                     </div>
@@ -841,6 +852,7 @@
                                                     <span>🧾</span>
                                                     <span>Recibo</span>
                                                 </button>
+                                                @if(($sale->source ?? '') !== 'pos_physical')
                                                 <button type="button" class="btn btn-secondary btn-sm" onclick="downloadPosSalePdf({{ $sale->id }})" title="Descargar Entrada PDF" style="background: linear-gradient(135deg, #06B6D4, #0284C7); border: 1px solid rgba(6,182,212,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3); cursor: pointer;">
                                                     <span>🎟️</span>
                                                     <span>Entrada PDF</span>
@@ -849,6 +861,7 @@
                                                     <span>✉️</span>
                                                     <span>Enviar Correo</span>
                                                 </button>
+                                                @endif
                                                 <button type="button" class="btn btn-danger btn-sm" onclick="deletePosSale({{ $sale->id }})" title="Borrar Entrada" style="background: linear-gradient(135deg, #EF4444, #DC2626); border: 1px solid rgba(239,68,68,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); cursor: pointer;">
                                                     <span>🗑️</span>
                                                     <span>Borrar Entrada</span>
@@ -880,16 +893,22 @@
             
             <div class="admin-modal-header" style="margin-bottom: 1rem; padding-bottom: 0.65rem; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
                 <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0; flex: 1;">
-                    <div class="card-header-icon" style="width: 36px; height: 36px; background: rgba(255, 85, 0, 0.15); border-color: rgba(255, 85, 0, 0.3); color: var(--color-primary-orange); display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 1.15rem; flex-shrink: 0;">🛒</div>
+                    <div class="card-header-icon" id="posSaleModalIcon" style="width: 36px; height: 36px; background: rgba(255, 85, 0, 0.15); border-color: rgba(255, 85, 0, 0.3); color: var(--color-primary-orange); display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 1.15rem; flex-shrink: 0;">🛒</div>
                     <div style="min-width: 0; flex: 1;">
-                        <h3 class="card-header-title" style="font-size: 1.05rem; margin: 0; color: #FFFFFF; font-weight: 900; line-height: 1.2;">Nueva Venta de Taquilla (POS)</h3>
-                        <p class="card-header-subtitle" style="margin: 0; font-size: 0.775rem; color: #94A3B8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $event->title }} · Emisión inmediata de boletos</p>
+                        <h3 class="card-header-title" id="posSaleModalTitle" style="font-size: 1.05rem; margin: 0; color: #FFFFFF; font-weight: 900; line-height: 1.2;">Nueva Venta de Taquilla (POS)</h3>
+                        <p class="card-header-subtitle" id="posSaleModalSubtitle" style="margin: 0; font-size: 0.775rem; color: #94A3B8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $event->title }} · Emisión inmediata de boletos</p>
                     </div>
                 </div>
                 <button type="button" class="admin-modal-close" onclick="closePosSaleModal()" style="font-size: 1.2rem; color: #94A3B8; background: transparent; border: none; cursor: pointer; flex-shrink: 0; padding: 0.2rem 0.4rem;" aria-label="Cerrar">✕</button>
             </div>
 
             <form id="posSaleForm" onsubmit="handlePosSaleSubmit(event)">
+                <!-- BANNER INFORMATIVO CUANDO ES VENTA FÍSICA -->
+                <div id="posPhysicalModeBanner" style="display: none; background: rgba(245, 158, 11, 0.12); border: 1.5px solid rgba(245, 158, 11, 0.35); border-radius: 12px; padding: 0.6rem 0.85rem; margin-bottom: 0.85rem; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #F59E0B; font-weight: 700;">
+                    <span style="font-size: 1.1rem;">🎟️</span> 
+                    <span><strong>Modo Venta Física:</strong> Se registrará el cobro y se emitirá únicamente el recibo térmico de caja (el cliente recibe su boleto físico de plancha).</span>
+                </div>
+
                 <!-- GRID DE 3 COLUMNAS PRINCIPALES -->
                 <div class="pos-modal-three-columns">
                     
@@ -1165,9 +1184,12 @@
                                 @foreach($zonesWithStats as $index => $z)
                                     @php
                                         $cEnabled = $z['courtesy_enabled'] ?? true;
-                                        $cAvail = $z['courtesy_available'] ?? $z['available'];
-                                        $cMaxStock = $z['courtesy_max_stock'] ?? null;
-                                        $isAvailable = $cEnabled && ($cAvail > 0);
+                                        $hasSplitCourtesy = !empty($z['has_split']) || (($z['courtesy_physical_capacity'] ?? 0) + ($z['courtesy_digital_capacity'] ?? 0)) > 0;
+                                        $cAvail = $hasSplitCourtesy
+                                            ? ($z['courtesy_digital_available'] ?? 0)
+                                            : ($z['courtesy_available'] ?? $z['available']);
+                                        $cMaxDigital = $hasSplitCourtesy ? ($z['courtesy_digital_capacity'] ?? 0) : ($z['courtesy_max_stock'] ?? null);
+                                        $isAvailable = $cEnabled && ($cAvail > 0) && (!$hasSplitCourtesy || $cMaxDigital > 0);
                                         if ($isAvailable && $firstActiveIndex === null) {
                                             $firstActiveIndex = $index;
                                         }
@@ -1178,25 +1200,25 @@
                                          data-regular-available="{{ $z['available'] }}"
                                          data-courtesy-enabled="{{ $cEnabled ? '1' : '0' }}"
                                          onclick="selectCourtesyZoneCard('{{ addslashes($z['name']) }}', {{ $cAvail }}, this)"
-                                         style="padding: 0.55rem 0.75rem; border-radius: 12px;">
+                                         style="padding: 0.55rem 0.75rem; border-radius: 12px; {{ !$isAvailable ? 'opacity: 0.45; cursor: not-allowed; border-color: rgba(239, 68, 68, 0.3);' : '' }}">
                                         <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
                                             <div style="display: flex; align-items: center; gap: 0.55rem; min-width: 0; flex: 1;">
                                                 <div class="zone-radio-indicator" style="width: 14px; height: 14px; border-color: #10B981;"></div>
                                                 <div style="min-width: 0; flex: 1;">
                                                     <strong class="zone-card-name" style="font-size: 0.85rem; word-break: break-word;">{{ $z['name'] }}</strong>
                                                     <div style="margin-top: 0.1rem;">
-                                                        @if(!$cEnabled)
-                                                            <span class="zone-stock-badge sold-out" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">🚫 DESHABILITADA</span>
+                                                        @if(!$cEnabled || ($hasSplitCourtesy && $cMaxDigital <= 0))
+                                                            <span class="zone-stock-badge sold-out" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">🚫 NO DISPONIBLE (Digital)</span>
                                                         @elseif($cAvail > 0)
-                                                            <span class="zone-stock-badge available" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">🎁 {{ number_format($cAvail) }} libres</span>
+                                                            <span class="zone-stock-badge available" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">🎁 {{ number_format($cAvail) }} libres (Digital)</span>
                                                         @else
-                                                            <span class="zone-stock-badge sold-out" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">🚫 AGOTADO</span>
+                                                            <span class="zone-stock-badge sold-out" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">🚫 AGOTADO (Digital)</span>
                                                         @endif
                                                     </div>
                                                 </div>
                                             </div>
                                             <div style="text-align: right; flex-shrink: 0;">
-                                                <span style="display: inline-block; background: rgba(16,185,129,0.15); color: #10B981; border: 1px solid rgba(16,185,129,0.35); font-weight: 800; font-size: 0.72rem; padding: 0.15rem 0.45rem; border-radius: 6px;">FREE</span>
+                                                <span style="display: inline-block; background: rgba(16,185,129,0.15); color: #10B981; border: 1px solid rgba(16,185,129,0.35); font-weight: 800; font-size: 0.72rem; padding: 0.15rem 0.45rem; border-radius: 6px;">FREE DIGITAL</span>
                                             </div>
                                         </div>
                                     </div>
@@ -2534,11 +2556,149 @@
             calculatePosTotal();
         }
 
-        function openPosSaleModal() {
+        window.currentPosSaleMode = 'digital';
+        window.allZonesWithStats = {!! json_encode($zonesWithStats) !!};
+
+        /**
+         * Renderiza las zonas en el modal según el modo de venta:
+         * - Modo 'fisica': muestra únicamente las zonas y cantidades disponibles como venta física.
+         * - Modo 'digital': muestra las zonas y cantidades disponibles como venta digital / POS.
+         */
+        function renderPosModalZoneCards(mode = 'digital') {
+            const container = document.getElementById('zoneCardsContainer');
+            if (!container || !Array.isArray(window.allZonesWithStats)) return;
+
+            const isPhysical = (mode === 'fisica');
+            container.innerHTML = '';
+
+            let firstSelectable = null;
+            let anyAvailable = false;
+
+            window.allZonesWithStats.forEach((z) => {
+                let avail = 0;
+                let cap = 0;
+                let modeLabel = '';
+
+                if (isPhysical) {
+                    avail = parseInt(z.physical_available !== undefined ? z.physical_available : (z.has_split ? Math.max(0, (z.physical_capacity || 0) - (z.physical_sold || 0)) : z.available), 10);
+                    cap = parseInt(z.physical_capacity || z.capacity, 10);
+                    modeLabel = 'Física';
+                } else {
+                    avail = parseInt(z.digital_available !== undefined ? z.digital_available : (z.has_split ? Math.max(0, (z.digital_capacity || 0) - (z.digital_sold || 0)) : z.available), 10);
+                    cap = parseInt(z.digital_capacity || z.capacity, 10);
+                    modeLabel = 'Digital';
+                }
+
+                if (avail < 0) avail = 0;
+                const isAgotado = (avail <= 0);
+
+                if (!isAgotado && !firstSelectable) {
+                    firstSelectable = { zone: z, avail: avail };
+                }
+                if (!isAgotado) {
+                    anyAvailable = true;
+                }
+
+                const card = document.createElement('div');
+                card.className = `zone-card-item ${isAgotado ? 'disabled' : ''}`;
+                card.setAttribute('data-name', z.name);
+                card.setAttribute('data-price', z.price);
+                card.setAttribute('data-available', avail);
+                card.style.padding = '0.55rem 0.75rem';
+                card.style.borderRadius = '12px';
+                if (isAgotado) {
+                    card.style.opacity = '0.45';
+                    card.style.cursor = 'not-allowed';
+                    card.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                }
+
+                const badgeHtml = (!isAgotado)
+                    ? `<span class="zone-stock-badge available" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">📦 ${avail} disponibles (${modeLabel})</span>`
+                    : `<span class="zone-stock-badge sold-out" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">🚫 0 disponibles (${modeLabel})</span>`;
+
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.55rem; min-width: 0; flex: 1;">
+                            <div class="zone-radio-indicator" style="width: 14px; height: 14px;"></div>
+                            <div style="min-width: 0; flex: 1;">
+                                <strong class="zone-card-name" style="font-size: 0.85rem; word-break: break-word;">${z.name}</strong>
+                                <div style="margin-top: 0.1rem;">
+                                    ${badgeHtml}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="text-align: right; flex-shrink: 0;">
+                            <span class="zone-card-price" style="font-size: 0.95rem; white-space: nowrap;">S/ ${parseFloat(z.price).toFixed(2)}</span>
+                        </div>
+                    </div>
+                `;
+
+                if (!isAgotado) {
+                    card.onclick = function () {
+                        selectZoneCard(z.name, z.price, avail, this);
+                    };
+                }
+
+                container.appendChild(card);
+            });
+
+            if (!anyAvailable && isPhysical) {
+                const emptyAlert = document.createElement('div');
+                emptyAlert.style.cssText = 'padding: 0.65rem; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 10px; color: #EF4444; font-size: 0.775rem; font-weight: 700; text-align: center; margin-top: 0.35rem;';
+                emptyAlert.innerHTML = '⚠️ No hay stock físico asignado o disponible para este evento.';
+                container.appendChild(emptyAlert);
+            }
+
+            if (firstSelectable) {
+                const targetCard = container.querySelector(`[data-name="${CSS.escape(firstSelectable.zone.name)}"]`);
+                selectZoneCard(firstSelectable.zone.name, firstSelectable.zone.price, firstSelectable.avail, targetCard);
+            } else {
+                selectedZoneName = '';
+                selectedZonePrice = 0;
+                selectedZoneAvailable = 0;
+                const zoneInput = document.getElementById('pos_zone_select');
+                if (zoneInput) zoneInput.value = '';
+                calculatePosTotal();
+            }
+        }
+
+        function openPosSaleModal(mode = 'digital') {
+            window.currentPosSaleMode = mode || 'digital';
             const modal = document.getElementById('posSaleModal');
             if (modal) {
                 modal.classList.add('active');
                 closeSaleClientDropdown();
+
+                // Actualizar textos y badges del modal según el modo (Digital vs Física)
+                const titleEl = document.getElementById('posSaleModalTitle');
+                const subtitleEl = document.getElementById('posSaleModalSubtitle');
+                const submitBtn = document.getElementById('btnSubmitPosSale');
+                const bannerEl = document.getElementById('posPhysicalModeBanner');
+                const iconEl = document.getElementById('posSaleModalIcon');
+
+                if (window.currentPosSaleMode === 'fisica') {
+                    if (titleEl) titleEl.textContent = 'Registrar Venta Física (Entrega de Boleto Impreso)';
+                    if (subtitleEl) subtitleEl.textContent = '{{ $event->title }} · Emisión de recibo térmico de caja (el cliente recibe su boleto físico de plancha)';
+                    if (submitBtn) submitBtn.innerHTML = '🧾 Confirmar Venta Física & Imprimir Recibo';
+                    if (bannerEl) bannerEl.style.display = 'flex';
+                    if (iconEl) {
+                        iconEl.textContent = '🎟️';
+                        iconEl.style.background = 'rgba(245, 158, 11, 0.15)';
+                        iconEl.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+                        iconEl.style.color = '#F59E0B';
+                    }
+                } else {
+                    if (titleEl) titleEl.textContent = 'Registrar Venta POS / Digital';
+                    if (subtitleEl) subtitleEl.textContent = '{{ $event->title }} · Emisión en caja con código QR digital y recibo';
+                    if (submitBtn) submitBtn.innerHTML = '🧾 Confirmar Venta & Imprimir Recibo';
+                    if (bannerEl) bannerEl.style.display = 'none';
+                    if (iconEl) {
+                        iconEl.textContent = '🛒';
+                        iconEl.style.background = 'rgba(255, 85, 0, 0.15)';
+                        iconEl.style.borderColor = 'rgba(255, 85, 0, 0.3)';
+                        iconEl.style.color = 'var(--color-primary-orange)';
+                    }
+                }
                 
                 const btnFetch = document.getElementById('btnFetchClientDni');
                 const badgeFound = document.getElementById('dniClientFoundBadge');
@@ -2546,16 +2706,8 @@
                 if (badgeFound) badgeFound.style.display = 'none';
                 posMatchedClientByDni = null;
 
-                // Auto-seleccionar primer sector disponible si ninguno está activo
-                const activeCard = document.querySelector('.zone-card-item.active') || document.querySelector('.zone-card-item:not(.disabled)');
-                if (activeCard) {
-                    const name = activeCard.getAttribute('data-name');
-                    const price = activeCard.getAttribute('data-price');
-                    const available = activeCard.getAttribute('data-available');
-                    selectZoneCard(name, price, available, activeCard);
-                } else {
-                    calculatePosTotal();
-                }
+                // Renderizar y filtrar zonas según el modo de venta (Física o Digital)
+                renderPosModalZoneCards(window.currentPosSaleMode);
 
                 // Por defecto seleccionar Efectivo
                 const cashPill = document.querySelector('#paymentMethodsGroup .payment-method-pill');
@@ -2575,9 +2727,114 @@
             closeSaleClientDropdown();
         }
 
-        // CONTROL DEL MODAL DE CORTESÍA
+        // CONTROL DEL MODAL DE CORTESÍA (SOLO CUPOS DIGITALES)
         let selectedCourtesyZoneName = "{{ $zonesWithStats[$firstActiveIndex ?? 0]['name'] ?? ($zonesWithStats[0]['name'] ?? '') }}";
-        let selectedCourtesyZoneAvailable = {{ $zonesWithStats[$firstActiveIndex ?? 0]['courtesy_available'] ?? ($zonesWithStats[0]['available'] ?? 100) }};
+        let selectedCourtesyZoneAvailable = {{ $zonesWithStats[$firstActiveIndex ?? 0]['courtesy_digital_available'] ?? ($zonesWithStats[$firstActiveIndex ?? 0]['courtesy_available'] ?? 0) }};
+
+        /**
+         * Renderiza dinámicamente las zonas de cortesía en el modal mostrando exclusivamente
+         * el cupo y disponibilidad DIGITAL (las físicas se imprimen en planchas).
+         */
+        function renderPosCourtesyZoneCards() {
+            const container = document.getElementById('courtesyZoneCardsContainer');
+            if (!container || !Array.isArray(window.allZonesWithStats)) return;
+
+            container.innerHTML = '';
+            let firstSelectable = null;
+            let anyAvailable = false;
+
+            window.allZonesWithStats.forEach((z) => {
+                const cEnabled = z.courtesy_enabled !== false;
+                const hasSplitCourtesy = (z.has_split || ((z.courtesy_physical_capacity || 0) + (z.courtesy_digital_capacity || 0)) > 0);
+
+                let cAvail = 0;
+                let cMaxDigital = 0;
+
+                if (hasSplitCourtesy) {
+                    cAvail = parseInt(z.courtesy_digital_available !== undefined ? z.courtesy_digital_available : Math.max(0, (z.courtesy_digital_capacity || 0) - (z.courtesy_digital_sold || 0)), 10);
+                    cMaxDigital = parseInt(z.courtesy_digital_capacity || 0, 10);
+                } else {
+                    cAvail = parseInt(z.courtesy_available !== undefined ? z.courtesy_available : z.available, 10);
+                    cMaxDigital = parseInt(z.courtesy_max_stock || z.capacity || 0, 10);
+                }
+
+                if (cAvail < 0) cAvail = 0;
+                const isSelectable = cEnabled && (cAvail > 0) && (!hasSplitCourtesy || cMaxDigital > 0);
+
+                if (isSelectable && !firstSelectable) {
+                    firstSelectable = { zone: z, avail: cAvail };
+                }
+                if (isSelectable) {
+                    anyAvailable = true;
+                }
+
+                const card = document.createElement('div');
+                card.className = `zone-card-item courtesy-zone-card ${!isSelectable ? 'disabled' : ''}`;
+                card.setAttribute('data-name', z.name);
+                card.setAttribute('data-available', cAvail);
+                card.style.padding = '0.55rem 0.75rem';
+                card.style.borderRadius = '12px';
+                if (!isSelectable) {
+                    card.style.opacity = '0.45';
+                    card.style.cursor = 'not-allowed';
+                    card.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                }
+
+                let badgeText = '';
+                let badgeClass = 'sold-out';
+                if (!cEnabled || (hasSplitCourtesy && cMaxDigital <= 0)) {
+                    badgeText = '🚫 NO DISPONIBLE (Digital)';
+                } else if (cAvail > 0) {
+                    badgeText = `🎁 ${cAvail} libres (Digital)`;
+                    badgeClass = 'available';
+                } else {
+                    badgeText = '🚫 AGOTADO (Digital)';
+                }
+
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.55rem; min-width: 0; flex: 1;">
+                            <div class="zone-radio-indicator" style="width: 14px; height: 14px; border-color: #10B981;"></div>
+                            <div style="min-width: 0; flex: 1;">
+                                <strong class="zone-card-name" style="font-size: 0.85rem; word-break: break-word;">${z.name}</strong>
+                                <div style="margin-top: 0.1rem;">
+                                    <span class="zone-stock-badge ${badgeClass}" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">${badgeText}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="text-align: right; flex-shrink: 0;">
+                            <span style="display: inline-block; background: rgba(16,185,129,0.15); color: #10B981; border: 1px solid rgba(16,185,129,0.35); font-weight: 800; font-size: 0.72rem; padding: 0.15rem 0.45rem; border-radius: 6px;">FREE DIGITAL</span>
+                        </div>
+                    </div>
+                `;
+
+                if (isSelectable) {
+                    card.onclick = function () {
+                        selectCourtesyZoneCard(z.name, cAvail, this);
+                    };
+                }
+
+                container.appendChild(card);
+            });
+
+            if (!anyAvailable) {
+                const emptyAlert = document.createElement('div');
+                emptyAlert.style.cssText = 'padding: 0.65rem; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 10px; color: #EF4444; font-size: 0.775rem; font-weight: 700; text-align: center; margin-top: 0.35rem;';
+                emptyAlert.innerHTML = '⚠️ No hay cupos de cortesía digital asignados o disponibles para este evento.';
+                container.appendChild(emptyAlert);
+            }
+
+            if (firstSelectable) {
+                const targetCard = container.querySelector(`[data-name="${CSS.escape(firstSelectable.zone.name)}"]`);
+                selectCourtesyZoneCard(firstSelectable.zone.name, firstSelectable.avail, targetCard);
+            } else {
+                selectedCourtesyZoneName = '';
+                selectedCourtesyZoneAvailable = 0;
+                const zoneInput = document.getElementById('pos_courtesy_zone_select');
+                if (zoneInput) zoneInput.value = '';
+                updateCourtesySummary();
+            }
+        }
 
         function openPosCourtesyModal() {
             @if(!$isCourtesyActive)
@@ -2594,15 +2851,8 @@
                 if (badgeFound) badgeFound.style.display = 'none';
                 posMatchedCourtesyClientByDni = null;
 
-                // Auto-seleccionar primer sector de cortesía disponible si ninguno está activo
-                const activeCard = document.querySelector('.courtesy-zone-card.active:not(.disabled)') || document.querySelector('.courtesy-zone-card:not(.disabled)');
-                if (activeCard) {
-                    const name = activeCard.getAttribute('data-name');
-                    const available = activeCard.getAttribute('data-available');
-                    selectCourtesyZoneCard(name, available, activeCard);
-                } else {
-                    updateCourtesySummary();
-                }
+                // Renderizar dinámicamente las zonas con cupo digital de cortesía
+                renderPosCourtesyZoneCards();
 
                 setTimeout(() => {
                     document.getElementById('pos_courtesy_dni')?.focus();
@@ -4236,6 +4486,7 @@
             }
 
             const payload = {
+                sale_mode: window.currentPosSaleMode || 'digital',
                 zone_name: zoneName,
                 quantity: finalQuantity,
                 selected_seats: (hasSeats && posSelectedSeats.length > 0) ? posSelectedSeats : null,
@@ -4260,7 +4511,9 @@
             .then(data => {
                 if (btnSubmit) {
                     btnSubmit.disabled = false;
-                    btnSubmit.textContent = '🧾 Confirmar Venta & Imprimir Recibo';
+                    btnSubmit.textContent = (window.currentPosSaleMode === 'fisica') 
+                        ? '🧾 Confirmar Venta Física & Imprimir Recibo' 
+                        : '🧾 Confirmar Venta & Imprimir Recibo';
                 }
 
                 if (data.success) {
@@ -4295,6 +4548,31 @@
                         } else if (data.sale.payment_method !== 'Efectivo') {
                             paymentBadge = `<span class="dash-badge-custom badge-blue" style="font-size: 0.75rem;">💳 ${data.sale.payment_method}</span>`;
                         }
+
+                        let rowActionBtns = `
+                            <button type="button" class="btn btn-primary btn-sm" onclick="reprintReceipt(${data.sale.id})" title="Reimprimir Recibo Térmico" style="background: linear-gradient(135deg, #FF5500, #FF7733); border: 1px solid rgba(255,85,0,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(255, 85, 0, 0.3); cursor: pointer;">
+                                <span>🧾</span>
+                                <span>Recibo</span>
+                            </button>
+                        `;
+                        if (data.sale_mode !== 'fisica') {
+                            rowActionBtns += `
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="downloadPosSalePdf(${data.sale.id})" title="Descargar Entrada PDF" style="background: linear-gradient(135deg, #06B6D4, #0284C7); border: 1px solid rgba(6,182,212,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3); cursor: pointer;">
+                                    <span>🎟️</span>
+                                    <span>Entrada PDF</span>
+                                </button>
+                                <button type="button" class="btn btn-info btn-sm" onclick="emailPosSalePdf(${data.sale.id})" title="Enviar Entrada al Correo" style="background: linear-gradient(135deg, #6366F1, #4F46E5); border: 1px solid rgba(99,102,241,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); cursor: pointer;">
+                                    <span>✉️</span>
+                                    <span>Enviar Correo</span>
+                                </button>
+                            `;
+                        }
+                        rowActionBtns += `
+                            <button type="button" class="btn btn-danger btn-sm" onclick="deletePosSale(${data.sale.id})" title="Borrar Entrada" style="background: linear-gradient(135deg, #EF4444, #DC2626); border: 1px solid rgba(239,68,68,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); cursor: pointer;">
+                                <span>🗑️</span>
+                                <span>Borrar Entrada</span>
+                            </button>
+                        `;
 
                         newRow.innerHTML = `
                             <td>
@@ -4333,22 +4611,7 @@
                             </td>
                             <td style="text-align: right;">
                                 <div style="display: inline-flex; align-items: center; gap: 0.4rem; justify-content: flex-end;">
-                                    <button type="button" class="btn btn-primary btn-sm" onclick="reprintReceipt(${data.sale.id})" title="Reimprimir Recibo Térmico" style="background: linear-gradient(135deg, #FF5500, #FF7733); border: 1px solid rgba(255,85,0,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(255, 85, 0, 0.3); cursor: pointer;">
-                                        <span>🧾</span>
-                                        <span>Recibo</span>
-                                    </button>
-                                    <button type="button" class="btn btn-secondary btn-sm" onclick="downloadPosSalePdf(${data.sale.id})" title="Descargar Entrada PDF" style="background: linear-gradient(135deg, #06B6D4, #0284C7); border: 1px solid rgba(6,182,212,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3); cursor: pointer;">
-                                        <span>🎟️</span>
-                                        <span>Entrada PDF</span>
-                                    </button>
-                                    <button type="button" class="btn btn-info btn-sm" onclick="emailPosSalePdf(${data.sale.id})" title="Enviar Entrada al Correo" style="background: linear-gradient(135deg, #6366F1, #4F46E5); border: 1px solid rgba(99,102,241,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); cursor: pointer;">
-                                        <span>✉️</span>
-                                        <span>Enviar Correo</span>
-                                    </button>
-                                    <button type="button" class="btn btn-danger btn-sm" onclick="deletePosSale(${data.sale.id})" title="Borrar Entrada" style="background: linear-gradient(135deg, #EF4444, #DC2626); border: 1px solid rgba(239,68,68,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); cursor: pointer;">
-                                        <span>🗑️</span>
-                                        <span>Borrar Entrada</span>
-                                    </button>
+                                    ${rowActionBtns}
                                 </div>
                             </td>
                         `;
@@ -4434,23 +4697,12 @@
                                     if (cAvailEl && z.courtesy_available !== undefined) cAvailEl.textContent = z.courtesy_available;
                                 }
 
-                                const zoneModalCard = document.querySelector(`.zone-card-item[data-name="${z.name}"]:not(.courtesy-zone-card)`);
-                                if (zoneModalCard) {
-                                    const effectivePosAvail = (z.has_split && z.physical_available !== undefined) ? z.physical_available : z.available;
-                                    zoneModalCard.setAttribute('data-available', effectivePosAvail);
-                                    const modalBadge = zoneModalCard.querySelector('.zone-stock-badge');
-                                    if (modalBadge) {
-                                        if (effectivePosAvail > 0) {
-                                            modalBadge.className = 'zone-stock-badge available';
-                                            modalBadge.textContent = `📦 Stock: ${effectivePosAvail} libres${z.has_split ? ' (físico)' : ''}`;
-                                            zoneModalCard.classList.remove('disabled');
-                                        } else {
-                                            modalBadge.className = 'zone-stock-badge sold-out';
-                                            modalBadge.textContent = '🚫 AGOTADO';
-                                            zoneModalCard.classList.add('disabled');
-                                            zoneModalCard.classList.remove('active');
-                                        }
-                                    }
+                                window.allZonesWithStats = data.metrics.zones;
+                                if (typeof renderPosModalZoneCards === 'function') {
+                                    renderPosModalZoneCards(window.currentPosSaleMode || 'digital');
+                                }
+                                if (typeof renderPosCourtesyZoneCards === 'function') {
+                                    renderPosCourtesyZoneCards();
                                 }
 
                                 const courtesyZoneCard = document.querySelector(`.courtesy-zone-card[data-name="${z.name}"]`);
@@ -4499,9 +4751,9 @@
                         console.warn('[POS Thermal Print Error]', errPrint);
                     }
 
-                    // 6. Enviar automáticamente entrada oficial en PDF idéntica a la plancha
+                    // 6. Enviar automáticamente entrada oficial en PDF sólo si NO es venta física
                     const targetEmail = (buyerEmail && buyerEmail.includes('@')) ? buyerEmail : ((data.recipient && data.recipient.includes('@')) ? data.recipient : null);
-                    if (targetEmail) {
+                    if (targetEmail && data.sale_mode !== 'fisica') {
                         (async () => {
                             try {
                                 const { pdf } = await generatePosTicketPdfDoc(data.sale);
@@ -4526,50 +4778,82 @@
                         })();
                     }
 
-                    // 7. Modal Interactivo de Confirmación (Recibo + Entrada PDF)
-                    const emailSentMsg = targetEmail 
-                        ? `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #10B981; font-weight: 700; background: rgba(16,185,129,0.12); padding: 0.4rem 0.75rem; border-radius: 10px; border: 1px solid rgba(16,185,129,0.3);">✉️ Boleto oficial idéntico enviado a <strong>${escapePosHtml(targetEmail)}</strong></div>` 
-                        : '';
+                    // 7. Modal Interactivo de Confirmación
+                    if (data.sale_mode === 'fisica') {
+                        // MODO FÍSICO: Solo imprimir recibo, no emitir boleto virtual
+                        Swal.fire({
+                            title: `🎉 ¡Venta Física Registrada!`,
+                            html: `
+                                <div style="font-size: 0.95rem; color: #CBD5E1; margin-bottom: 1.25rem;">
+                                    N° Recibo: <b style="color: #F59E0B; font-family: monospace;">${data.receipt.receipt_number}</b> | Monto: <b style="color: #10B981;">${data.receipt.total_amount_formatted}</b>
+                                    <div style="margin-top: 0.75rem; font-size: 0.85rem; color: #F59E0B; font-weight: 700; background: rgba(245,158,11,0.12); padding: 0.5rem 0.75rem; border-radius: 10px; border: 1px solid rgba(245,158,11,0.3);">
+                                        🎟️ Entregar boleto impreso físico al cliente junto con su recibo térmico de caja.
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+                                    <button type="button" id="btnAlertPrintReceipt" class="btn btn-primary btn-sm" style="background: linear-gradient(135deg, #F59E0B, #D97706); border: none; color: #FFFFFF; padding: 0.75rem 1.4rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(245,158,11,0.4);">
+                                        <span>🧾</span> Imprimir Recibo
+                                    </button>
+                                </div>
+                            `,
+                            showConfirmButton: false,
+                            showCancelButton: true,
+                            cancelButtonText: 'Cerrar',
+                            background: '#14141E',
+                            color: '#FFFFFF',
+                            didOpen: () => {
+                                const btnR = document.getElementById('btnAlertPrintReceipt');
+                                if (btnR) btnR.addEventListener('click', () => {
+                                    reprintReceipt(data.sale.id);
+                                });
+                            }
+                        });
+                    } else {
+                        // MODO POS / DIGITAL: Recibo + Descargar Entrada PDF + Enviar al Correo
+                        const emailSentMsg = targetEmail 
+                            ? `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #10B981; font-weight: 700; background: rgba(16,185,129,0.12); padding: 0.4rem 0.75rem; border-radius: 10px; border: 1px solid rgba(16,185,129,0.3);">✉️ Boleto oficial idéntico enviado a <strong>${escapePosHtml(targetEmail)}</strong></div>` 
+                            : '';
 
-                    Swal.fire({
-                        title: `🎉 ¡Venta Registrada Exitosamente!`,
-                        html: `
-                            <div style="font-size: 0.95rem; color: #CBD5E1; margin-bottom: 1.25rem;">
-                                N° Recibo: <b style="color: #FF5500; font-family: monospace;">${data.receipt.receipt_number}</b> | Monto: <b style="color: #10B981;">${data.receipt.total_amount_formatted}</b>
-                                ${emailSentMsg}
-                            </div>
-                            <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
-                                <button type="button" id="btnAlertPrintReceipt" class="btn btn-primary btn-sm" style="background: linear-gradient(135deg, #FF5500, #FF7733); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(255,85,0,0.3);">
-                                    <span>🧾</span> Imprimir Recibo
-                                </button>
-                                <button type="button" id="btnAlertDownloadPdf" class="btn btn-secondary btn-sm" style="background: linear-gradient(135deg, #06B6D4, #0284C7); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(6,182,212,0.3);">
-                                    <span>🎟️</span> Descargar Entrada PDF
-                                </button>
-                                <button type="button" id="btnAlertEmailPdf" class="btn btn-info btn-sm" style="background: linear-gradient(135deg, #6366F1, #4F46E5); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(99,102,241,0.3);">
-                                    <span>✉️</span> Enviar al Correo
-                                </button>
-                            </div>
-                        `,
-                        showConfirmButton: false,
-                        showCancelButton: true,
-                        cancelButtonText: 'Cerrar',
-                        background: '#14141E',
-                        color: '#FFFFFF',
-                        didOpen: () => {
-                            const btnR = document.getElementById('btnAlertPrintReceipt');
-                            if (btnR) btnR.addEventListener('click', () => {
-                                reprintReceipt(data.sale.id);
-                            });
-                            const btnP = document.getElementById('btnAlertDownloadPdf');
-                            if (btnP) btnP.addEventListener('click', () => {
-                                downloadPosSalePdf(data.sale.id);
-                            });
-                            const btnE = document.getElementById('btnAlertEmailPdf');
-                            if (btnE) btnE.addEventListener('click', () => {
-                                emailPosSalePdf(data.sale.id);
-                            });
-                        }
-                    });
+                        Swal.fire({
+                            title: `🎉 ¡Venta Registrada Exitosamente!`,
+                            html: `
+                                <div style="font-size: 0.95rem; color: #CBD5E1; margin-bottom: 1.25rem;">
+                                    N° Recibo: <b style="color: #FF5500; font-family: monospace;">${data.receipt.receipt_number}</b> | Monto: <b style="color: #10B981;">${data.receipt.total_amount_formatted}</b>
+                                    ${emailSentMsg}
+                                </div>
+                                <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+                                    <button type="button" id="btnAlertPrintReceipt" class="btn btn-primary btn-sm" style="background: linear-gradient(135deg, #FF5500, #FF7733); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(255,85,0,0.3);">
+                                        <span>🧾</span> Imprimir Recibo
+                                    </button>
+                                    <button type="button" id="btnAlertDownloadPdf" class="btn btn-secondary btn-sm" style="background: linear-gradient(135deg, #06B6D4, #0284C7); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(6,182,212,0.3);">
+                                        <span>🎟️</span> Descargar Entrada PDF
+                                    </button>
+                                    <button type="button" id="btnAlertEmailPdf" class="btn btn-info btn-sm" style="background: linear-gradient(135deg, #6366F1, #4F46E5); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(99,102,241,0.3);">
+                                        <span>✉️</span> Enviar al Correo
+                                    </button>
+                                </div>
+                            `,
+                            showConfirmButton: false,
+                            showCancelButton: true,
+                            cancelButtonText: 'Cerrar',
+                            background: '#14141E',
+                            color: '#FFFFFF',
+                            didOpen: () => {
+                                const btnR = document.getElementById('btnAlertPrintReceipt');
+                                if (btnR) btnR.addEventListener('click', () => {
+                                    reprintReceipt(data.sale.id);
+                                });
+                                const btnP = document.getElementById('btnAlertDownloadPdf');
+                                if (btnP) btnP.addEventListener('click', () => {
+                                    downloadPosSalePdf(data.sale.id);
+                                });
+                                const btnE = document.getElementById('btnAlertEmailPdf');
+                                if (btnE) btnE.addEventListener('click', () => {
+                                    emailPosSalePdf(data.sale.id);
+                                });
+                            }
+                        });
+                    }
                 } else {
                     Swal.fire({
                         title: 'Error al procesar venta',
@@ -4583,7 +4867,9 @@
             .catch(err => {
                 if (btnSubmit) {
                     btnSubmit.disabled = false;
-                    btnSubmit.textContent = '🧾 Confirmar Venta & Imprimir Recibo';
+                    btnSubmit.textContent = (window.currentPosSaleMode === 'fisica') 
+                        ? '🧾 Confirmar Venta Física & Imprimir Recibo' 
+                        : '🧾 Confirmar Venta & Imprimir Recibo';
                 }
                 Swal.fire({
                     title: 'Error de Red',
@@ -4925,12 +5211,15 @@
             });
         }
 
-        // Atajos de teclado: F1 para Venta POS, F2 para Cortesía, Escape para cerrar
+        // Atajos de teclado: F1 para Venta POS, F2 para Venta Física, F3 para Cortesía, Escape para cerrar
         window.addEventListener('keydown', function (e) {
             if (e.key === 'F1') {
                 e.preventDefault();
-                openPosSaleModal();
+                openPosSaleModal('digital');
             } else if (e.key === 'F2') {
+                e.preventDefault();
+                openPosSaleModal('fisica');
+            } else if (e.key === 'F3') {
                 e.preventDefault();
                 @if($isCourtesyActive)
                     openPosCourtesyModal();
