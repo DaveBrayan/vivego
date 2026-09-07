@@ -826,6 +826,236 @@ class TicketGenerationService
     }
 
     /**
+     * Regenera nuevos códigos QR, hashes de validación y números correlativos secuenciales
+     * para las ventas de POS / Taquilla de un evento específico.
+     *
+     * Actualiza simultáneamente la tabla `ticket_sales` (campo tickets_data) y `event_tickets`,
+     * garantizando que las reimpresiones en POS y las validaciones de escaneo en puerta
+     * funcionen coordinadamente con los nuevos códigos generados.
+     */
+    public static function regeneratePosSalesQrs(Event $event, int $startCorrelative = 1, string $scope = 'pos_only'): array
+    {
+        @set_time_limit(300);
+
+        return DB::transaction(function () use ($event, $startCorrelative, $scope) {
+            $query = \App\Models\TicketSale::where('event_id', $event->id)
+                ->where('status', '!=', 'cancelled');
+
+            if ($scope === 'pos_only') {
+                $query->where(function ($q) {
+                    $q->where('seller_name', 'LIKE', '%Taquilla%')
+                      ->orWhere('seller_name', 'LIKE', '%POS%')
+                      ->orWhere('seller_name', 'LIKE', '%Admin%')
+                      ->orWhere('payment_method', 'Efectivo')
+                      ->orWhere('payment_method', 'POS')
+                      ->orWhere('payment_method', 'Cortesía');
+                });
+            }
+
+            $sales = $query->orderBy('id', 'asc')->get();
+
+            if ($sales->isEmpty()) {
+                return [
+                    'success' => false,
+                    'message' => 'No se encontraron ventas ' . ($scope === 'pos_only' ? 'de POS / Taquilla' : '') . ' para el evento seleccionado.',
+                    'sales_count' => 0,
+                    'tickets_count' => 0,
+                    'correlative_range' => 'N/A',
+                    'details' => [],
+                ];
+            }
+
+            $currentCorrelative = max(1, (int)$startCorrelative);
+            $minCorrelative = $currentCorrelative;
+            $maxCorrelative = $currentCorrelative;
+
+            $processedSales = 0;
+            $regeneratedTickets = 0;
+            $details = [];
+
+            foreach ($sales as $sale) {
+                $raw = $sale->tickets_data;
+                $tData = is_array($raw) ? $raw : (json_decode($raw ?? '[]', true) ?: []);
+
+                $ticketsList = [];
+                $isItemsFormat = false;
+                if (isset($tData['items']) && is_array($tData['items'])) {
+                    $ticketsList = $tData['items'];
+                    $isItemsFormat = true;
+                } elseif (is_array($tData)) {
+                    $numericItems = array_filter($tData, function ($k) {
+                        return is_numeric($k);
+                    }, ARRAY_FILTER_USE_KEY);
+                    if (!empty($numericItems)) {
+                        $ticketsList = array_values($numericItems);
+                    }
+                }
+
+                $qty = (int)$sale->quantity > 0 ? (int)$sale->quantity : 1;
+                if (empty($ticketsList)) {
+                    for ($k = 0; $k < $qty; $k++) {
+                        $ticketsList[] = [
+                            'ticket_number' => $k + 1,
+                            'zone' => $sale->zone_name,
+                            'price' => $sale->unit_price,
+                        ];
+                    }
+                }
+
+                $linkedEventTickets = EventTicket::where('ticket_sale_id', $sale->id)
+                    ->orderBy('id', 'asc')
+                    ->get()
+                    ->keyBy('id');
+                $linkedList = $linkedEventTickets->values();
+
+                $updatedTicketsList = [];
+
+                foreach ($ticketsList as $i => $t) {
+                    $oldNum = isset($t['ticket_number']) ? $t['ticket_number'] : (isset($t['number']) ? $t['number'] : ($i + 1));
+                    $oldCode = $t['ticket_code'] ?? ('N° ' . str_pad($oldNum, 5, '0', STR_PAD_LEFT));
+                    $oldHash = $t['validation_hash'] ?? ($t['hash'] ?? '');
+                    $oldQr = $t['qr_payload'] ?? ($t['qr'] ?? '');
+
+                    $newNum = $currentCorrelative++;
+                    $maxCorrelative = $newNum;
+                    $newTicketCode = 'N° ' . str_pad($newNum, 5, '0', STR_PAD_LEFT);
+
+                    // Hash único fresco y payload QR oficial
+                    $randomHex = strtoupper(substr(md5(uniqid('vg_pos_qr_', true) . $event->id . $sale->id . $newNum . microtime(true)), 0, 8));
+                    $newValHash = 'VG' . $randomHex;
+                    $newQrPayload = "VIVEGO|EVT-{$event->id}|TICK-{$newNum}|HASH-{$newValHash}";
+
+                    $buyerName = !empty($t['buyer_name']) ? $t['buyer_name'] : $sale->buyer_name;
+                    $buyerDni = !empty($t['buyer_dni']) ? $t['buyer_dni'] : ($sale->buyer_dni ?: '00000000');
+                    $zoneName = !empty($t['zone']) ? $t['zone'] : (!empty($t['zone_name']) ? $t['zone_name'] : $sale->zone_name);
+                    $unitPrice = isset($t['price']) ? (float)$t['price'] : (float)$sale->unit_price;
+
+                    // Localizar el boleto físico correspondiente en event_tickets
+                    $et = null;
+                    if (!empty($t['event_ticket_id']) && isset($linkedEventTickets[$t['event_ticket_id']])) {
+                        $et = $linkedEventTickets[$t['event_ticket_id']];
+                    } elseif (isset($linkedList[$i])) {
+                        $et = $linkedList[$i];
+                    } else {
+                        $et = EventTicket::where('ticket_sale_id', $sale->id)
+                            ->where('ticket_number', $oldNum)
+                            ->first();
+                    }
+
+                    if (!$et) {
+                        // Buscar si existe un boleto físico no vendido con ese correlativo en el evento
+                        $et = EventTicket::where('event_id', $event->id)
+                            ->where('ticket_number', $oldNum)
+                            ->whereNull('ticket_sale_id')
+                            ->first();
+                    }
+
+                    if ($et) {
+                        $et->update([
+                            'ticket_sale_id' => $sale->id,
+                            'ticket_number' => $newNum,
+                            'ticket_code' => $newTicketCode,
+                            'validation_hash' => $newValHash,
+                            'qr_payload' => $newQrPayload,
+                            'buyer_name' => $buyerName,
+                            'buyer_dni' => $buyerDni,
+                            'unit_price' => $unitPrice,
+                            'zone_name' => $zoneName,
+                            'source' => 'pos_sale',
+                            'status' => 'valid',
+                        ]);
+                    } else {
+                        $et = EventTicket::create([
+                            'event_id' => $event->id,
+                            'ticket_sale_id' => $sale->id,
+                            'ticket_number' => $newNum,
+                            'ticket_code' => $newTicketCode,
+                            'validation_hash' => $newValHash,
+                            'qr_payload' => $newQrPayload,
+                            'buyer_name' => $buyerName,
+                            'buyer_dni' => $buyerDni,
+                            'unit_price' => $unitPrice,
+                            'zone_name' => $zoneName,
+                            'source' => 'pos_sale',
+                            'ticket_type' => 'fisica',
+                            'is_used' => false,
+                            'status' => 'valid',
+                        ]);
+                    }
+
+                    $t['event_ticket_id'] = $et->id;
+                    $t['ticket_number'] = $newNum;
+                    $t['ticket_code'] = $newTicketCode;
+                    $t['validation_hash'] = $newValHash;
+                    $t['qr_payload'] = $newQrPayload;
+                    $updatedTicketsList[] = $t;
+                    $regeneratedTickets++;
+
+                    $details[] = [
+                        'sale_id' => $sale->id,
+                        'receipt_number' => $sale->receipt_number,
+                        'buyer_name' => $buyerName,
+                        'zone_name' => $zoneName,
+                        'old_ticket_code' => $oldCode,
+                        'new_ticket_code' => $newTicketCode,
+                        'old_hash' => $oldHash,
+                        'new_hash' => $newValHash,
+                        'new_qr' => $newQrPayload,
+                        'event_ticket_id' => $et->id,
+                    ];
+                }
+
+                // Guardar la estructura actualizada en tickets_data
+                if ($isItemsFormat) {
+                    $tData['items'] = $updatedTicketsList;
+                    $sale->update(['tickets_data' => $tData]);
+                } else {
+                    $sale->update(['tickets_data' => $updatedTicketsList]);
+                }
+                $processedSales++;
+            }
+
+            // Reconciliar boletos no vendidos para que no colisionen con los correlativos asignados a ventas
+            $unsoldColliding = EventTicket::where('event_id', $event->id)
+                ->whereNull('ticket_sale_id')
+                ->where('ticket_number', '<=', $maxCorrelative)
+                ->orderBy('id', 'asc')
+                ->get();
+
+            if ($unsoldColliding->isNotEmpty()) {
+                $maxExistingNum = EventTicket::where('event_id', $event->id)->max('ticket_number') ?? $maxCorrelative;
+                $startShift = max($maxCorrelative + 1, $maxExistingNum + 1);
+
+                foreach ($unsoldColliding as $ut) {
+                    $shiftNum = $startShift++;
+                    $shiftCode = 'N° ' . str_pad($shiftNum, 5, '0', STR_PAD_LEFT);
+                    $shiftHash = 'VG' . strtoupper(substr(md5(uniqid('vg_shift_', true) . $event->id . $shiftNum), 0, 8));
+                    $shiftQr = "VIVEGO|EVT-{$event->id}|TICK-{$shiftNum}|HASH-{$shiftHash}";
+                    $ut->update([
+                        'ticket_number' => $shiftNum,
+                        'ticket_code' => $shiftCode,
+                        'validation_hash' => $shiftHash,
+                        'qr_payload' => $shiftQr,
+                    ]);
+                }
+            }
+
+            $correlativeRange = 'N° ' . str_pad($minCorrelative, 5, '0', STR_PAD_LEFT) . ' → N° ' . str_pad($maxCorrelative, 5, '0', STR_PAD_LEFT);
+
+            return [
+                'success' => true,
+                'message' => 'Se regeneraron con éxito los códigos QR y correlativos de las ventas seleccionadas.',
+                'sales_count' => $processedSales,
+                'tickets_count' => $regeneratedTickets,
+                'correlative_range' => $correlativeRange,
+                'min_correlative' => $minCorrelative,
+                'max_correlative' => $maxCorrelative,
+                'details' => $details,
+            ];
+        });
+    }
+
+    /**
      * Calcula el hash entero de 32-bit de un string compatible con JavaScript String.hashCode()
      */
     protected static function jsHashCode(string $str): int
@@ -842,3 +1072,4 @@ class TicketGenerationService
         return $hash;
     }
 }
+

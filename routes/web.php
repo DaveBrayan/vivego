@@ -219,9 +219,26 @@ Route::get('/optimizar-sistema', function () {
         \Illuminate\Support\Facades\Artisan::call('route:cache');
         \Illuminate\Support\Facades\Artisan::call('view:cache');
 
+        $events = \App\Models\Event::orderBy('id', 'desc')->get();
+        $eventsOptionsHtml = '';
+        foreach ($events as $evt) {
+            $posSalesCount = \App\Models\TicketSale::where('event_id', $evt->id)
+                ->where('status', '!=', 'cancelled')
+                ->where(function ($q) {
+                    $q->where('seller_name', 'LIKE', '%Taquilla%')
+                      ->orWhere('seller_name', 'LIKE', '%POS%')
+                      ->orWhere('seller_name', 'LIKE', '%Admin%')
+                      ->orWhere('payment_method', 'Efectivo')
+                      ->orWhere('payment_method', 'POS')
+                      ->orWhere('payment_method', 'Cortesía');
+                })->count();
+            $totalSalesCount = \App\Models\TicketSale::where('event_id', $evt->id)->where('status', '!=', 'cancelled')->count();
+            $eventsOptionsHtml .= '<option value="' . $evt->id . '">#' . $evt->id . ' — ' . htmlspecialchars($evt->title) . ' (' . $posSalesCount . ' ventas POS / ' . $totalSalesCount . ' total)</option>';
+        }
+
         return response('
             <div style="font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; background: #0A0A10; display: flex; align-items: center; justify-content: center; padding: 1.5rem; color: #FFFFFF;">
-                <div style="background: #14141E; border: 1px solid rgba(255,85,0,0.3); padding: 2.5rem; border-radius: 20px; max-width: 600px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.6); text-align: center;">
+                <div style="background: #14141E; border: 1px solid rgba(255,85,0,0.3); padding: 2.5rem; border-radius: 20px; max-width: 640px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.6); text-align: center;">
                     <div style="font-size: 3rem; margin-bottom: 0.5rem;">⚡</div>
                     <h2 style="color: #FF5500; font-size: 1.6rem; font-weight: 900; margin: 0 0 0.5rem 0;">¡Sistema ViveGo Optimizado & Migrado!</h2>
                     <p style="color: #94A3B8; font-size: 0.95rem; margin-bottom: 1.5rem;">Las migraciones de base de datos y todos los cachés han sido procesados con éxito.</p>
@@ -233,6 +250,57 @@ Route::get('/optimizar-sistema', function () {
                         <div>✔ Caché de Optimización lista</div>
                     </div>
                     ' . (!empty(trim($migrateOutput)) ? '<div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 0.75rem 1rem; text-align: left; font-family: monospace; font-size: 0.8rem; color: #CBD5E1; max-height: 140px; overflow-y: auto; margin-bottom: 1.5rem; white-space: pre-wrap;">' . htmlspecialchars($migrateOutput) . '</div>' : '') . '
+
+                    <!-- TARJETA DE ACCIÓN: REGENERAR QR Y CORRELATIVOS PARA VENTAS POS POR EVENTO -->
+                    <div style="background: rgba(16,185,129,0.06); border: 1.5px solid rgba(16,185,129,0.3); border-radius: 14px; padding: 1.35rem; margin-bottom: 1.5rem; text-align: left;">
+                        <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem;">
+                            <span style="font-size: 1.4rem;">🔄</span>
+                            <strong style="color: #10B981; font-size: 1.05rem;">Regenerar Códigos QR y Correlativos de Ventas POS</strong>
+                        </div>
+                        <p style="color: #94A3B8; font-size: 0.83rem; margin: 0 0 1rem 0; line-height: 1.45;">
+                            Asigna nuevos códigos QR oficiales, hashes de validación y números correlativos continuos a las ventas realizadas por taquilla/POS. 
+                            <strong style="color: #FCD34D;">Solo afectará al evento que selecciones</strong>. Actualiza tanto <code>ticket_sales</code> como <code>event_tickets</code>.
+                        </p>
+
+                        <form action="/regenerar-qr-ventas-pos" method="POST" onsubmit="return confirm(\'⚠️ ¿Estás seguro de regenerar los códigos QR y números correlativos de las ventas para el evento seleccionado? Esta acción asignará nuevos códigos QR y hashes únicos a cada boleto vendido.\');">
+                            <input type="hidden" name="_token" value="' . csrf_token() . '">
+                            
+                            <div style="display: grid; grid-template-columns: 1fr; gap: 0.85rem; margin-bottom: 1rem;">
+                                <div>
+                                    <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #CBD5E1; margin-bottom: 0.35rem; text-transform: uppercase;">
+                                        Seleccionar Evento <span style="color: #EF4444;">*</span>
+                                    </label>
+                                    <select name="event_id" required style="width: 100%; box-sizing: border-box; background: #0A0A10; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 0.65rem 0.8rem; color: #FFFFFF; font-size: 0.85rem; outline: none;">
+                                        <option value="" disabled selected>-- Elige un evento --</option>
+                                        ' . $eventsOptionsHtml . '
+                                    </select>
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                                    <div>
+                                        <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #CBD5E1; margin-bottom: 0.35rem; text-transform: uppercase;">
+                                            Correlativo Inicial
+                                        </label>
+                                        <input type="number" name="start_correlative" value="1" min="1" required style="width: 100%; box-sizing: border-box; background: #0A0A10; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 0.6rem 0.8rem; color: #FFFFFF; font-size: 0.85rem; font-family: monospace; outline: none;">
+                                    </div>
+
+                                    <div>
+                                        <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #CBD5E1; margin-bottom: 0.35rem; text-transform: uppercase;">
+                                            Alcance
+                                        </label>
+                                        <select name="scope" style="width: 100%; box-sizing: border-box; background: #0A0A10; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 0.6rem 0.8rem; color: #FFFFFF; font-size: 0.85rem; outline: none;">
+                                            <option value="pos_only" selected>Solo Ventas POS / Taquilla</option>
+                                            <option value="all_sales">Todas las Ventas del Evento</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="submit" style="cursor: pointer; width: 100%; background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; font-weight: 800; border: none; padding: 0.8rem 1.4rem; border-radius: 10px; font-size: 0.9rem; box-shadow: 0 4px 15px rgba(16,185,129,0.35); transition: transform 0.15s ease;">
+                                ⚡ Regenerar QR y Correlativos para este Evento
+                            </button>
+                        </form>
+                    </div>
 
                     <!-- TARJETA DE ACCIÓN: SINCRONIZAR VENTAS ANTIGUAS A BOLETOS DE PLANCHA -->
                     <div style="background: rgba(37,99,235,0.08); border: 1.5px solid rgba(37,99,235,0.3); border-radius: 14px; padding: 1.25rem; margin-bottom: 1.5rem; text-align: left;">
@@ -261,6 +329,125 @@ Route::get('/optimizar-sistema', function () {
         ', 200)->header('Content-Type', 'text/html');
     } catch (\Exception $e) {
         return response('<div style="font-family: sans-serif; padding: 2rem; background: #14141E; color: #EF4444;"><h3 style="color:#EF4444;">Error al optimizar y migrar:</h3><pre style="background: #000; padding: 1rem; border-radius: 8px; color: #FCA5A5;">' . htmlspecialchars($e->getMessage()) . '</pre></div>', 500);
+    }
+});
+
+Route::match(['get', 'post'], '/regenerar-qr-ventas-pos', function (\Illuminate\Http\Request $request) {
+    try {
+        $eventId = $request->input('event_id');
+        $startCorrelative = max(1, (int)$request->input('start_correlative', 1));
+        $scope = $request->input('scope', 'pos_only') === 'all_sales' ? 'all_sales' : 'pos_only';
+
+        if (!$eventId) {
+            return response('
+                <div style="font-family: system-ui, sans-serif; min-height: 100vh; background: #0A0A10; display: flex; align-items: center; justify-content: center; padding: 1.5rem; color: #FFF;">
+                    <div style="background: #14141E; border: 1px solid rgba(239,68,68,0.4); padding: 2rem; border-radius: 16px; max-width: 500px; text-align: center;">
+                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">⚠️</div>
+                        <h3 style="color: #EF4444; margin-top: 0;">Evento no seleccionado</h3>
+                        <p style="color: #94A3B8; font-size: 0.9rem;">Debes seleccionar un evento para regenerar sus códigos QR y correlativos.</p>
+                        <a href="/optimizar-sistema" style="display: inline-block; background: #2563EB; color: #FFF; text-decoration: none; padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: 700;">← Volver a Optimizar Sistema</a>
+                    </div>
+                </div>
+            ', 400)->header('Content-Type', 'text/html');
+        }
+
+        $event = \App\Models\Event::find($eventId);
+        if (!$event) {
+            return response('
+                <div style="font-family: system-ui, sans-serif; min-height: 100vh; background: #0A0A10; display: flex; align-items: center; justify-content: center; padding: 1.5rem; color: #FFF;">
+                    <div style="background: #14141E; border: 1px solid rgba(239,68,68,0.4); padding: 2rem; border-radius: 16px; max-width: 500px; text-align: center;">
+                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">❌</div>
+                        <h3 style="color: #EF4444; margin-top: 0;">Evento no encontrado</h3>
+                        <p style="color: #94A3B8; font-size: 0.9rem;">El evento con ID #' . htmlspecialchars($eventId) . ' no fue encontrado en la base de datos.</p>
+                        <a href="/optimizar-sistema" style="display: inline-block; background: #2563EB; color: #FFF; text-decoration: none; padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: 700;">← Volver a Optimizar Sistema</a>
+                    </div>
+                </div>
+            ', 404)->header('Content-Type', 'text/html');
+        }
+
+        $res = \App\Services\TicketGenerationService::regeneratePosSalesQrs($event, $startCorrelative, $scope);
+
+        if (!$res['success']) {
+            return response('
+                <div style="font-family: system-ui, sans-serif; min-height: 100vh; background: #0A0A10; display: flex; align-items: center; justify-content: center; padding: 1.5rem; color: #FFF;">
+                    <div style="background: #14141E; border: 1px solid rgba(245,158,11,0.4); padding: 2rem; border-radius: 16px; max-width: 500px; text-align: center;">
+                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">ℹ️</div>
+                        <h3 style="color: #F59E0B; margin-top: 0;">Sin ventas para procesar</h3>
+                        <p style="color: #94A3B8; font-size: 0.9rem;">' . htmlspecialchars($res['message']) . '</p>
+                        <a href="/optimizar-sistema" style="display: inline-block; background: #2563EB; color: #FFF; text-decoration: none; padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: 700;">← Volver a Optimizar Sistema</a>
+                    </div>
+                </div>
+            ', 200)->header('Content-Type', 'text/html');
+        }
+
+        $rowsHtml = '';
+        foreach (array_slice($res['details'], 0, 100) as $d) {
+            $rowsHtml .= '<tr style="border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.78rem;">
+                <td style="padding: 0.5rem 0.65rem; color: #94A3B8;">#' . $d['sale_id'] . '<br><span style="font-size:0.7rem; color:#64748B;">' . htmlspecialchars($d['receipt_number'] ?? '') . '</span></td>
+                <td style="padding: 0.5rem 0.65rem; color: #CBD5E1; font-weight: 600;">' . htmlspecialchars($d['buyer_name']) . '<br><span style="font-size:0.7rem; color:#94A3B8;">' . htmlspecialchars($d['zone_name']) . '</span></td>
+                <td style="padding: 0.5rem 0.65rem; font-family: monospace; color: #EF4444; text-decoration: line-through;">' . htmlspecialchars($d['old_ticket_code']) . '<br><span style="font-size:0.7rem; color:#64748B;">' . htmlspecialchars($d['old_hash']) . '</span></td>
+                <td style="padding: 0.5rem 0.65rem; font-family: monospace; color: #10B981; font-weight: 800;">' . htmlspecialchars($d['new_ticket_code']) . '<br><span style="font-size:0.7rem; color:#34D399;">' . htmlspecialchars($d['new_hash']) . '</span></td>
+                <td style="padding: 0.5rem 0.65rem; font-family: monospace; font-size: 0.7rem; color: #60A5FA; word-break: break-all; max-width: 220px;">' . htmlspecialchars($d['new_qr']) . '</td>
+                <td style="padding: 0.5rem 0.65rem; text-align: center;"><span style="background: rgba(16,185,129,0.15); color: #10B981; border: 1px solid rgba(16,185,129,0.4); padding: 0.15rem 0.45rem; border-radius: 6px; font-weight: 800; font-size: 0.68rem;">✔ OK</span></td>
+            </tr>';
+        }
+
+        return response('
+            <div style="font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; background: #0A0A10; display: flex; align-items: center; justify-content: center; padding: 1.5rem; color: #FFFFFF;">
+                <div style="background: #14141E; border: 1px solid rgba(16,185,129,0.35); padding: 2.2rem; border-radius: 20px; max-width: 860px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.6); text-align: center;">
+                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">🎉</div>
+                    <h2 style="color: #10B981; font-size: 1.55rem; font-weight: 900; margin: 0 0 0.4rem 0;">¡Códigos QR y Correlativos POS Regenerados!</h2>
+                    <p style="color: #94A3B8; font-size: 0.9rem; margin-bottom: 1.3rem;">
+                        Evento: <strong style="color: #FFFFFF;">' . htmlspecialchars($event->title) . ' (ID #' . $event->id . ')</strong>
+                    </p>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; text-align: center;">
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 0.85rem;">
+                            <span style="font-size: 0.75rem; color: #94A3B8; display: block;">Ventas Actualizadas</span>
+                            <strong style="font-size: 1.35rem; color: #60A5FA;">' . $res['sales_count'] . '</strong>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 0.85rem;">
+                            <span style="font-size: 0.75rem; color: #94A3B8; display: block;">Boletos Regenerados</span>
+                            <strong style="font-size: 1.35rem; color: #10B981;">' . $res['tickets_count'] . '</strong>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 0.85rem;">
+                            <span style="font-size: 0.75rem; color: #94A3B8; display: block;">Rango Correlativos</span>
+                            <strong style="font-size: 1.1rem; color: #F59E0B; font-family: monospace;">' . $res['correlative_range'] . '</strong>
+                        </div>
+                    </div>
+
+                    <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; overflow: hidden; margin-bottom: 1.5rem; max-height: 280px; overflow-y: auto;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                            <thead>
+                                <tr style="background: rgba(255,255,255,0.04); font-size: 0.72rem; color: #94A3B8; text-transform: uppercase;">
+                                    <th style="padding: 0.5rem 0.65rem;">Venta / Recibo</th>
+                                    <th style="padding: 0.5rem 0.65rem;">Comprador</th>
+                                    <th style="padding: 0.5rem 0.65rem;">Anterior</th>
+                                    <th style="padding: 0.5rem 0.65rem;">NUEVO Correlativo</th>
+                                    <th style="padding: 0.5rem 0.65rem;">Nuevo Payload QR</th>
+                                    <th style="padding: 0.5rem 0.65rem; text-align: center;">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>' . $rowsHtml . '</tbody>
+                        </table>
+                    </div>
+
+                    <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+                        <a href="/optimizar-sistema" style="display: inline-block; background: #1E1E2E; border: 1px solid rgba(255,255,255,0.15); color: #FFFFFF; font-weight: 700; text-decoration: none; padding: 0.85rem 1.4rem; border-radius: 12px;">
+                            ← Volver a Optimizar Sistema
+                        </a>
+                        <a href="' . route('web.box_office.manage', $event->id) . '" style="display: inline-block; background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; font-weight: 800; text-decoration: none; padding: 0.85rem 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(16,185,129,0.4);">
+                            🎟️ Ir a Taquilla del Evento
+                        </a>
+                        <a href="' . route('web.home') . '" style="display: inline-block; background: linear-gradient(135deg, #FF5500, #E04B00); color: #FFFFFF; font-weight: 800; text-decoration: none; padding: 0.85rem 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(255,85,0,0.4);">
+                            Ir al Inicio
+                        </a>
+                    </div>
+                </div>
+            </div>
+        ', 200)->header('Content-Type', 'text/html');
+    } catch (\Exception $e) {
+        return response('<div style="font-family: sans-serif; padding: 2rem; background: #14141E; color: #EF4444;"><h3 style="color:#EF4444;">Error al regenerar códigos QR y correlativos:</h3><pre style="background: #000; padding: 1rem; border-radius: 8px; color: #FCA5A5;">' . htmlspecialchars($e->getMessage() . "\n" . $e->getTraceAsString()) . '</pre></div>', 500);
     }
 });
 
