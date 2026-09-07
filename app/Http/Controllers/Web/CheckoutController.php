@@ -1339,8 +1339,15 @@ class CheckoutController extends Controller
 
         // 2. Generar boletos individuales en la tabla event_tickets para la nueva venta
         if ($targetEvent) {
-            $lastTicket = \App\Models\EventTicket::where('event_id', $targetEvent->id)->orderBy('id', 'desc')->first();
-            $startSeq = $lastTicket ? ((int) preg_replace('/[^0-9]/', '', (string) $lastTicket->ticket_number) + 1) : 1;
+            $isCourtesySale = (in_array(strtolower($sale->payment_method ?? ''), ['cortesía', 'cortesia']) || (float)$sale->total_amount == 0);
+            $maxDigitalSeq = (int) \App\Models\EventTicket::where('event_id', $targetEvent->id)->where('ticket_type', 'digital')->max('ticket_number') ?: 0;
+            $maxCourtesySeq = (int) \App\Models\EventTicket::where('event_id', $targetEvent->id)->where(function ($q) {
+                $q->where('ticket_type', 'cortesia_digital')
+                  ->orWhere(function ($sq) {
+                      $sq->where('ticket_type', 'cortesia')->where('source', 'web_checkout');
+                  });
+            })->max('ticket_number') ?: 0;
+            $startSeq = $isCourtesySale ? ($maxCourtesySeq + 1) : ($maxDigitalSeq + 1);
 
             $itemsToProcess = [];
             if (!empty($ticketsData) && is_array($ticketsData)) {

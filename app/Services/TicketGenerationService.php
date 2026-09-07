@@ -481,7 +481,7 @@ class TicketGenerationService
                 // =========================================================================
                 // MODO 2: COMPORTAMIENTO ORIGINAL UNIFICADO (100% RETROCOMPATIBLE)
                 // =========================================================================
-                $maxCorrelative = (int) EventTicket::where('event_id', $event->id)->max('ticket_number') ?: 0;
+                $maxCorrelative = (int) EventTicket::where('event_id', $event->id)->where('ticket_type', 'fisica')->max('ticket_number') ?: 0;
                 $nextCorrelative = $maxCorrelative + 1;
 
                 foreach ($zones as $idx => $zone) {
@@ -580,6 +580,9 @@ class TicketGenerationService
                         }
                     }
 
+                    $maxCourtesyCorrelative = (int) EventTicket::where('event_id', $event->id)->where('ticket_type', 'cortesia')->max('ticket_number') ?: 0;
+                    $nextCourtesyCorrelative = $maxCourtesyCorrelative + 1;
+
                     foreach ($zones as $idx => $zone) {
                         $zoneName = trim($zone['name'] ?? $zone['capacity_type'] ?? ('Zona ' . ($idx + 1)));
                         $cleanZoneUpper = strtoupper($zoneName);
@@ -603,7 +606,7 @@ class TicketGenerationService
                         $missingCount = max(0, $czCap - $currentInDb);
 
                         for ($k = 0; $k < $missingCount; $k++) {
-                            $ticketNumber = $nextCorrelative++;
+                            $ticketNumber = $nextCourtesyCorrelative++;
                             $ticketCode = 'N° ' . str_pad($ticketNumber, 5, '0', STR_PAD_LEFT);
                             $validationHash = 'VG' . strtoupper(substr(md5(uniqid('vg_', true) . $event->id . $ticketNumber), 0, 8));
                             $qrPayload = "VIVEGO|EVT-{$event->id}|TICK-{$ticketNumber}|HASH-{$validationHash}";
@@ -865,17 +868,34 @@ class TicketGenerationService
                 ];
             }
 
+            // Secuencia correlativa para ventas digitales regulares
             if ($startCorrelative <= 0) {
                 $existingMax = (int) EventTicket::where('event_id', $event->id)
                     ->where('ticket_type', 'digital')
                     ->whereNotIn('ticket_sale_id', $sales->pluck('id'))
                     ->max('ticket_number');
-                $currentCorrelative = max(1, $existingMax + 1);
+                $currentRegularCorrelative = max(1, $existingMax + 1);
             } else {
-                $currentCorrelative = max(1, (int)$startCorrelative);
+                $currentRegularCorrelative = max(1, (int)$startCorrelative);
             }
-            $minCorrelative = $currentCorrelative;
-            $maxCorrelative = $currentCorrelative;
+            $startRegularSeq = $currentRegularCorrelative;
+
+            // Secuencia correlativa independiente para cortesías digitales (inicia estrictamente desde 1 o startCorrelative)
+            if ($startCorrelative === null) {
+                $courtesyMax = (int) EventTicket::where('event_id', $event->id)
+                    ->where(function($q) {
+                        $q->where('ticket_type', 'cortesia_digital')
+                          ->orWhere(function($sq) {
+                              $sq->where('ticket_type', 'cortesia')->where('source', 'web_checkout');
+                          });
+                    })
+                    ->whereNotIn('ticket_sale_id', $sales->pluck('id'))
+                    ->max('ticket_number');
+                $currentCourtesyCorrelative = max(1, $courtesyMax + 1);
+            } else {
+                $currentCourtesyCorrelative = max(1, (int)$startCorrelative);
+            }
+            $startCourtesySeq = $currentCourtesyCorrelative;
 
             $processedSales = 0;
             $regeneratedTickets = 0;
@@ -917,15 +937,24 @@ class TicketGenerationService
                 $linkedList = $linkedEventTickets->values();
 
                 $updatedTicketsList = [];
+                $isSaleCourtesy = ($sale->payment_method === 'Cortesía' || $sale->sale_type === 'cortesia');
 
                 foreach ($ticketsList as $i => $t) {
+                    $isTicketCourtesy = $isSaleCourtesy || !empty($t['is_courtesy']);
+                    $ticketType = $isTicketCourtesy ? 'cortesia_digital' : 'digital';
+                    $source = $isTicketCourtesy ? 'pos_courtesy' : 'pos_sale';
+
                     $oldNum = isset($t['ticket_number']) ? $t['ticket_number'] : (isset($t['number']) ? $t['number'] : ($i + 1));
                     $oldCode = $t['ticket_code'] ?? ('N° ' . str_pad($oldNum, 5, '0', STR_PAD_LEFT));
                     $oldHash = $t['validation_hash'] ?? ($t['hash'] ?? '');
                     $oldQr = $t['qr_payload'] ?? ($t['qr'] ?? '');
 
-                    $newNum = $currentCorrelative++;
-                    $maxCorrelative = $newNum;
+                    // Asignar número correlativo según si es cortesía o venta regular
+                    if ($isTicketCourtesy) {
+                        $newNum = $currentCourtesyCorrelative++;
+                    } else {
+                        $newNum = $currentRegularCorrelative++;
+                    }
                     $newTicketCode = 'N° ' . str_pad($newNum, 5, '0', STR_PAD_LEFT);
 
                     // Hash único fresco y payload QR oficial
@@ -938,7 +967,7 @@ class TicketGenerationService
                     $zoneName = !empty($t['zone']) ? $t['zone'] : (!empty($t['zone_name']) ? $t['zone_name'] : $sale->zone_name);
                     $unitPrice = isset($t['price']) ? (float)$t['price'] : (float)$sale->unit_price;
 
-                    // Localizar el boleto físico correspondiente en event_tickets
+                    // Localizar el boleto correspondiente en event_tickets
                     $et = null;
                     if (!empty($t['event_ticket_id']) && isset($linkedEventTickets[$t['event_ticket_id']])) {
                         $et = $linkedEventTickets[$t['event_ticket_id']];
@@ -951,16 +980,26 @@ class TicketGenerationService
                     }
 
                     if (!$et) {
-                        // Buscar si existe un boleto físico no vendido con ese correlativo en el evento
-                        $et = EventTicket::where('event_id', $event->id)
-                            ->where('ticket_number', $oldNum)
-                            ->whereNull('ticket_sale_id')
-                            ->first();
+                        // Buscar boleto libre en BD acorde al tipo
+                        if ($isTicketCourtesy) {
+                            $et = EventTicket::where('event_id', $event->id)
+                                ->where(function($q) {
+                                    $q->where('ticket_type', 'cortesia_digital')
+                                      ->orWhere(function($sq) {
+                                          $sq->where('ticket_type', 'cortesia')->where('source', 'web_checkout');
+                                      });
+                                })
+                                ->whereNull('ticket_sale_id')
+                                ->orderBy('ticket_number', 'asc')
+                                ->first();
+                        } else {
+                            $et = EventTicket::where('event_id', $event->id)
+                                ->where('ticket_type', 'digital')
+                                ->whereNull('ticket_sale_id')
+                                ->orderBy('ticket_number', 'asc')
+                                ->first();
+                        }
                     }
-
-                    $isCourtesy = ($sale->payment_method === 'Cortesía' || !empty($t['is_courtesy']));
-                    $ticketType = 'digital';
-                    $source = $isCourtesy ? 'pos_courtesy' : 'pos_sale';
 
                     if ($et) {
                         $et->update([
@@ -1001,6 +1040,7 @@ class TicketGenerationService
                     $t['ticket_code'] = $newTicketCode;
                     $t['validation_hash'] = $newValHash;
                     $t['qr_payload'] = $newQrPayload;
+                    $t['is_courtesy'] = $isTicketCourtesy;
                     $updatedTicketsList[] = $t;
                     $regeneratedTickets++;
 
@@ -1015,45 +1055,29 @@ class TicketGenerationService
                         'new_hash' => $newValHash,
                         'new_qr' => $newQrPayload,
                         'event_ticket_id' => $et->id,
+                        'ticket_type' => $ticketType,
                     ];
                 }
 
-                // Guardar la estructura actualizada en tickets_data
+                // Guardar la estructura actualizada en tickets_data y asegurar sale_type digital
+                $updatePayload = ['sale_type' => 'digital'];
                 if ($isItemsFormat) {
                     $tData['items'] = $updatedTicketsList;
-                    $sale->update(['tickets_data' => $tData]);
+                    $updatePayload['tickets_data'] = $tData;
                 } else {
-                    $sale->update(['tickets_data' => $updatedTicketsList]);
+                    $updatePayload['tickets_data'] = $updatedTicketsList;
                 }
+                $sale->update($updatePayload);
                 $processedSales++;
             }
 
-            // Reconciliar boletos no vendidos para que no colisionen con los correlativos asignados a ventas
-            $unsoldColliding = EventTicket::where('event_id', $event->id)
-                ->whereNull('ticket_sale_id')
-                ->where('ticket_number', '<=', $maxCorrelative)
-                ->orderBy('id', 'asc')
-                ->get();
+            $maxRegular = max($startRegularSeq, $currentRegularCorrelative - 1);
+            $maxCourtesy = max($startCourtesySeq, $currentCourtesyCorrelative - 1);
 
-            if ($unsoldColliding->isNotEmpty()) {
-                $maxExistingNum = EventTicket::where('event_id', $event->id)->max('ticket_number') ?? $maxCorrelative;
-                $startShift = max($maxCorrelative + 1, $maxExistingNum + 1);
-
-                foreach ($unsoldColliding as $ut) {
-                    $shiftNum = $startShift++;
-                    $shiftCode = 'N° ' . str_pad($shiftNum, 5, '0', STR_PAD_LEFT);
-                    $shiftHash = 'VG' . strtoupper(substr(md5(uniqid('vg_shift_', true) . $event->id . $shiftNum), 0, 8));
-                    $shiftQr = "VIVEGO|EVT-{$event->id}|TICK-{$shiftNum}|HASH-{$shiftHash}";
-                    $ut->update([
-                        'ticket_number' => $shiftNum,
-                        'ticket_code' => $shiftCode,
-                        'validation_hash' => $shiftHash,
-                        'qr_payload' => $shiftQr,
-                    ]);
-                }
+            $correlativeRange = 'Regulares: N° ' . str_pad($startRegularSeq, 5, '0', STR_PAD_LEFT) . ' → N° ' . str_pad($maxRegular, 5, '0', STR_PAD_LEFT);
+            if ($currentCourtesyCorrelative > $startCourtesySeq) {
+                $correlativeRange .= ' | Cortesías: N° ' . str_pad($startCourtesySeq, 5, '0', STR_PAD_LEFT) . ' → N° ' . str_pad($maxCourtesy, 5, '0', STR_PAD_LEFT);
             }
-
-            $correlativeRange = 'N° ' . str_pad($minCorrelative, 5, '0', STR_PAD_LEFT) . ' → N° ' . str_pad($maxCorrelative, 5, '0', STR_PAD_LEFT);
 
             return [
                 'success' => true,
@@ -1061,8 +1085,8 @@ class TicketGenerationService
                 'sales_count' => $processedSales,
                 'tickets_count' => $regeneratedTickets,
                 'correlative_range' => $correlativeRange,
-                'min_correlative' => $minCorrelative,
-                'max_correlative' => $maxCorrelative,
+                'min_correlative' => $startRegularSeq,
+                'max_correlative' => $maxRegular,
                 'details' => $details,
             ];
         });
@@ -1104,7 +1128,10 @@ class TicketGenerationService
                 });
             }
 
-            $tickets = $query->orderBy('ticket_number', 'asc')->orderBy('id', 'asc')->get();
+            $tickets = $query->orderByRaw("CASE WHEN ticket_type = 'cortesia' THEN 1 ELSE 0 END ASC")
+                ->orderBy('ticket_number', 'asc')
+                ->orderBy('id', 'asc')
+                ->get();
 
             if ($tickets->isEmpty()) {
                 return [
@@ -1146,9 +1173,15 @@ class TicketGenerationService
             }
 
             // 2. Procesar correlativos, QR y hashes según el modo seleccionado
-            $currentCorrelative = max(1, $startCorrelative);
-            $minCorrelative = null;
-            $maxCorrelative = null;
+            // Regular física y cortesía física tienen cada una su propia secuencia independiente iniciando en startCorrelative (por defecto 1)
+            $currentRegularCorrelative = max(1, $startCorrelative);
+            $currentCourtesyCorrelative = max(1, $startCorrelative);
+            $startRegularSeq = $currentRegularCorrelative;
+            $startCourtesySeq = $currentCourtesyCorrelative;
+            $minRegular = null;
+            $maxRegular = null;
+            $minCourtesy = null;
+            $maxCourtesy = null;
             $processedTickets = 0;
             $details = [];
 
@@ -1160,23 +1193,33 @@ class TicketGenerationService
                 $oldCode = $ticket->ticket_code ?: ('N° ' . str_pad($oldNum, 5, '0', STR_PAD_LEFT));
                 $oldHash = $ticket->validation_hash;
                 $oldQr = $ticket->qr_payload;
+                $isCort = ($ticket->ticket_type === 'cortesia');
 
                 $newNum = $oldNum;
                 $newCode = $oldCode;
                 $newHash = $oldHash;
                 $newQr = $oldQr;
 
-                // Correlativo y código de boleto
+                // Correlativo y código de boleto: física regular y cortesía física tienen numeración separada
                 if ($actionMode === 'both' || $actionMode === 'correlative_only') {
-                    $newNum = $currentCorrelative++;
+                    $newNum = $isCort ? $currentCourtesyCorrelative++ : $currentRegularCorrelative++;
                     $newCode = 'N° ' . str_pad($newNum, 5, '0', STR_PAD_LEFT);
                 }
 
-                if ($minCorrelative === null || $newNum < $minCorrelative) {
-                    $minCorrelative = $newNum;
-                }
-                if ($maxCorrelative === null || $newNum > $maxCorrelative) {
-                    $maxCorrelative = $newNum;
+                if ($isCort) {
+                    if ($minCourtesy === null || $newNum < $minCourtesy) {
+                        $minCourtesy = $newNum;
+                    }
+                    if ($maxCourtesy === null || $newNum > $maxCourtesy) {
+                        $maxCourtesy = $newNum;
+                    }
+                } else {
+                    if ($minRegular === null || $newNum < $minRegular) {
+                        $minRegular = $newNum;
+                    }
+                    if ($maxRegular === null || $newNum > $maxRegular) {
+                        $maxRegular = $newNum;
+                    }
                 }
 
                 // Código QR y Hash de Validación
@@ -1267,9 +1310,14 @@ class TicketGenerationService
                 }
             }
 
-            $correlativeRange = ($minCorrelative !== null && $maxCorrelative !== null)
-                ? ('N° ' . str_pad($minCorrelative, 5, '0', STR_PAD_LEFT) . ' → N° ' . str_pad($maxCorrelative, 5, '0', STR_PAD_LEFT))
-                : 'N/A';
+            $rangeParts = [];
+            if ($minRegular !== null && $maxRegular !== null) {
+                $rangeParts[] = 'Físicos Regulares: N° ' . str_pad($minRegular, 5, '0', STR_PAD_LEFT) . ' → N° ' . str_pad($maxRegular, 5, '0', STR_PAD_LEFT);
+            }
+            if ($minCourtesy !== null && $maxCourtesy !== null) {
+                $rangeParts[] = 'Cortesías Plancha: N° ' . str_pad($minCourtesy, 5, '0', STR_PAD_LEFT) . ' → N° ' . str_pad($maxCourtesy, 5, '0', STR_PAD_LEFT);
+            }
+            $correlativeRange = !empty($rangeParts) ? implode(' | ', $rangeParts) : 'N/A';
 
             return [
                 'success' => true,
@@ -1281,6 +1329,166 @@ class TicketGenerationService
                 'reset_sales' => $resetSales,
                 'ticket_scope' => $ticketScope,
                 'details' => $details,
+            ];
+        });
+    }
+
+    /**
+     * Renumera todas las categorías de boletos de un evento iniciando limpiamente desde 1:
+     * 1. Boletos Físicos Regulares (fisica): 1..N
+     * 2. Cortesías Físicas de Plancha (cortesia, source != web_checkout): 1..M
+     * 3. Boletos Digitales Regulares (digital): 1..X
+     * 4. Cortesías Digitales (cortesia_digital / web_checkout): 1..Y
+     *
+     * Además actualiza los códigos, hashes, QR y los JSON de ticket_sales asociados.
+     */
+    public static function renumberEventTicketCategories(Event $event): array
+    {
+        @set_time_limit(300);
+
+        return DB::transaction(function () use ($event) {
+            $categories = [
+                'fisica' => [
+                    'title' => 'Boletos Físicos Regulares',
+                    'query' => EventTicket::where('event_id', $event->id)
+                        ->where(function ($q) {
+                            $q->where('ticket_type', 'fisica')
+                              ->orWhere(function ($sq) {
+                                  $sq->whereNull('ticket_type')
+                                     ->where('source', '!=', 'web_checkout')
+                                     ->where('zone_name', 'NOT LIKE', 'CORTES%');
+                              });
+                        }),
+                    'prefix' => 'vg_f_',
+                    'target_type' => 'fisica',
+                ],
+                'cortesia_fisica' => [
+                    'title' => 'Cortesías Físicas (Planchas)',
+                    'query' => EventTicket::where('event_id', $event->id)
+                        ->where(function ($q) {
+                            $q->where('ticket_type', 'cortesia')
+                              ->where('source', '!=', 'web_checkout');
+                        }),
+                    'prefix' => 'vg_cp_',
+                    'target_type' => 'cortesia',
+                ],
+                'digital' => [
+                    'title' => 'Boletos Digitales Regulares',
+                    'query' => EventTicket::where('event_id', $event->id)
+                        ->where('ticket_type', 'digital'),
+                    'prefix' => 'vg_d_',
+                    'target_type' => 'digital',
+                ],
+                'cortesia_digital' => [
+                    'title' => 'Cortesías Digitales (Web / POS)',
+                    'query' => EventTicket::where('event_id', $event->id)
+                        ->where(function ($q) {
+                            $q->where('ticket_type', 'cortesia_digital')
+                              ->orWhere(function ($sq) {
+                                  $sq->where('ticket_type', 'cortesia')
+                                     ->whereIn('source', ['web_checkout', 'pos_courtesy']);
+                              });
+                        }),
+                    'prefix' => 'vg_cd_',
+                    'target_type' => 'cortesia_digital',
+                ],
+            ];
+
+            $results = [];
+            $totalProcessed = 0;
+            $salesToUpdate = [];
+
+            foreach ($categories as $catKey => $cat) {
+                $tickets = $cat['query']->orderBy('ticket_number', 'asc')->orderBy('id', 'asc')->get();
+                $count = $tickets->count();
+                $currentSeq = 1;
+
+                if ($count === 0) {
+                    $results[$catKey] = [
+                        'title' => $cat['title'],
+                        'count' => 0,
+                        'range' => 'Sin boletos',
+                    ];
+                    continue;
+                }
+
+                foreach ($tickets as $t) {
+                    $newNum = $currentSeq++;
+                    $newCode = 'N° ' . str_pad($newNum, 5, '0', STR_PAD_LEFT);
+                    $newHash = 'VG' . strtoupper(substr(md5(uniqid($cat['prefix'], true) . $event->id . $t->id . $newNum), 0, 8));
+                    $newQr = "VIVEGO|EVT-{$event->id}|TICK-{$newNum}|HASH-{$newHash}";
+
+                    $t->update([
+                        'ticket_number' => $newNum,
+                        'ticket_code' => $newCode,
+                        'ticket_type' => $cat['target_type'],
+                        'validation_hash' => $newHash,
+                        'qr_payload' => $newQr,
+                    ]);
+
+                    if (!empty($t->ticket_sale_id)) {
+                        $salesToUpdate[$t->ticket_sale_id][] = [
+                            'event_ticket_id' => $t->id,
+                            'ticket_number' => $newNum,
+                            'ticket_code' => $newCode,
+                            'validation_hash' => $newHash,
+                            'qr_payload' => $newQr,
+                            'ticket_type' => $cat['target_type'],
+                        ];
+                    }
+
+                    $totalProcessed++;
+                }
+
+                $results[$catKey] = [
+                    'title' => $cat['title'],
+                    'count' => $count,
+                    'range' => 'N° 00001 → N° ' . str_pad($count, 5, '0', STR_PAD_LEFT),
+                ];
+            }
+
+            // Sincronizar ticket_sales vinculados
+            $salesUpdatedCount = 0;
+            if (!empty($salesToUpdate)) {
+                foreach ($salesToUpdate as $saleId => $updatedItems) {
+                    $sale = \App\Models\TicketSale::find($saleId);
+                    if (!$sale) continue;
+                    $raw = $sale->tickets_data;
+                    $tData = is_array($raw) ? $raw : (json_decode($raw ?? '[]', true) ?: []);
+                    $isItemsFormat = isset($tData['items']) && is_array($tData['items']);
+                    $items = $isItemsFormat ? $tData['items'] : (is_array($tData) ? $tData : []);
+
+                    foreach ($items as &$item) {
+                        foreach ($updatedItems as $u) {
+                            if ((isset($item['event_ticket_id']) && $item['event_ticket_id'] == $u['event_ticket_id']) ||
+                                (isset($item['ticket_number']) && $item['ticket_number'] == $u['ticket_number'])) {
+                                $item['ticket_number'] = $u['ticket_number'];
+                                $item['ticket_code'] = $u['ticket_code'];
+                                $item['validation_hash'] = $u['validation_hash'];
+                                $item['qr_payload'] = $u['qr_payload'];
+                                if (isset($u['ticket_type'])) {
+                                    $item['ticket_type'] = $u['ticket_type'];
+                                }
+                            }
+                        }
+                    }
+                    unset($item);
+
+                    if ($isItemsFormat) {
+                        $tData['items'] = $items;
+                        $sale->update(['tickets_data' => $tData]);
+                    } else {
+                        $sale->update(['tickets_data' => $items]);
+                    }
+                    $salesUpdatedCount++;
+                }
+            }
+
+            return [
+                'success' => true,
+                'total_tickets' => $totalProcessed,
+                'sales_updated' => $salesUpdatedCount,
+                'categories' => $results,
             ];
         });
     }

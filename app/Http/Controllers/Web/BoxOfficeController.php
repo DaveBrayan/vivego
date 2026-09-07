@@ -443,9 +443,15 @@ class BoxOfficeController extends Controller
         $nextNum = $lastSale ? ($lastSale->id + 1) : 1;
         $receiptNumber = 'REC-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
 
-        // Obtener la secuencia inicial de boletos para el evento como fallback
-        $lastTicket = \App\Models\EventTicket::where('event_id', $event->id)->orderBy('id', 'desc')->first();
-        $startSeq = $lastTicket ? ((int) preg_replace('/[^0-9]/', '', $lastTicket->ticket_number) + 1) : 1;
+        // Secuencias de fallback separadas por tipo de boleto
+        $startSeqPhysical = ((int) \App\Models\EventTicket::where('event_id', $event->id)->where('ticket_type', 'fisica')->max('ticket_number') ?: 0) + 1;
+        $startSeqDigital = ((int) \App\Models\EventTicket::where('event_id', $event->id)->where('ticket_type', 'digital')->max('ticket_number') ?: 0) + 1;
+        $startSeqCourtesy = ((int) \App\Models\EventTicket::where('event_id', $event->id)->where(function($q) {
+            $q->where('ticket_type', 'cortesia_digital')
+              ->orWhere(function($sq) {
+                  $sq->where('ticket_type', 'cortesia')->where('source', 'web_checkout');
+              });
+        })->max('ticket_number') ?: 0) + 1;
 
         // Generar códigos e información para cada boleto, reutilizando boletos físicos ya pre-impresos
         $ticketsData = [];
@@ -474,6 +480,8 @@ class BoxOfficeController extends Controller
             $zoneWithSeat = $seatCode ? formatZoneWithSeat($validated['zone_name'], $seatCode) : $validated['zone_name'];
 
             $physicalTicket = null;
+            $courtesyTicket = null;
+            $digitalTicket = null;
 
             if ($isPhysicalSale) {
                 // VENTA FÍSICA: Usar boletos físicos pre-generados para la plancha
@@ -521,13 +529,51 @@ class BoxOfficeController extends Controller
                     }
                     $matchedPhysicalTickets[$physicalTicket->id] = $physicalTicket;
                 } else {
-                    $currentSeq = $startSeq + ($i - 1);
+                    $currentSeq = $startSeqPhysical + ($i - 1);
                     $ticketCode = 'N° ' . str_pad($currentSeq, 5, '0', STR_PAD_LEFT);
                     $validationHash = 'VG' . strtoupper(substr(md5(uniqid('vg_phys_', true) . $event->id . $receiptNumber . $currentSeq), 0, 8));
                     $qrPayload = "VIVEGO|EVT-{$event->id}|TICK-{$currentSeq}|HASH-{$validationHash}";
                 }
+            } elseif ($isCourtesy) {
+                // CORTESÍA DIGITAL: Consumir boletos pre-generados de tipo 'cortesia_digital' con su propio correlativo
+                $courtesyTicket = \App\Models\EventTicket::where('event_id', $event->id)
+                    ->where(function($q) {
+                        $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
+                    })
+                    ->whereNotIn('id', array_keys($matchedPhysicalTickets))
+                    ->where(function($q) {
+                        $q->where('ticket_type', 'cortesia_digital')
+                          ->orWhere(function($sq) {
+                              $sq->where('ticket_type', 'cortesia')->where('source', 'web_checkout');
+                          });
+                    })
+                    ->where(function ($q) use ($validated, $cleanBaseZone) {
+                        $q->where('zone_name', $validated['zone_name'])
+                          ->orWhere('zone_name', 'LIKE', $cleanBaseZone . '%')
+                          ->orWhere('zone_name', 'LIKE', '%CORTESÍA - ' . $cleanBaseZone . '%')
+                          ->orWhere('zone_name', 'LIKE', '%CORTESIA - ' . $cleanBaseZone . '%');
+                    })
+                    ->orderBy('ticket_number', 'asc')
+                    ->orderBy('id', 'asc')
+                    ->first();
+
+                if ($courtesyTicket) {
+                    $ticketCode = $courtesyTicket->ticket_code;
+                    $currentSeq = $courtesyTicket->ticket_number;
+                    $validationHash = $courtesyTicket->validation_hash;
+                    $qrPayload = $courtesyTicket->qr_payload;
+                    if (!empty($courtesyTicket->zone_name)) {
+                        $zoneWithSeat = $courtesyTicket->zone_name;
+                    }
+                    $matchedPhysicalTickets[$courtesyTicket->id] = $courtesyTicket;
+                } else {
+                    $currentSeq = $startSeqCourtesy + ($i - 1);
+                    $ticketCode = 'N° ' . str_pad($currentSeq, 5, '0', STR_PAD_LEFT);
+                    $validationHash = 'VG' . strtoupper(substr(md5(uniqid('vg_pos_cort_', true) . $event->id . $receiptNumber . $currentSeq), 0, 8));
+                    $qrPayload = "VIVEGO|EVT-{$event->id}|TICK-{$currentSeq}|HASH-{$validationHash}";
+                }
             } else {
-                // VENTA DIGITAL POS: Generar códigos digitales con formato estándar ViveGo
+                // VENTA DIGITAL POS REGULAR: Generar códigos digitales o consumir boletos digitales
                 $digitalTicket = null;
                 if ($seatCode) {
                     $seatDigits = preg_replace('/[^0-9]/', '', $seatCode);
@@ -547,6 +593,21 @@ class BoxOfficeController extends Controller
                         })
                         ->orderBy('id', 'asc')
                         ->first();
+                } else {
+                    // Zona digital general: consumir boleto digital no numerado si existe pre-generado
+                    $digitalTicket = \App\Models\EventTicket::where('event_id', $event->id)
+                        ->where(function($q) {
+                            $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
+                        })
+                        ->whereNotIn('id', array_keys($matchedPhysicalTickets))
+                        ->where('ticket_type', 'digital')
+                        ->where(function ($q) use ($validated, $cleanBaseZone) {
+                            $q->where('zone_name', $validated['zone_name'])
+                              ->orWhere('zone_name', 'LIKE', $cleanBaseZone . '%');
+                        })
+                        ->orderBy('ticket_number', 'asc')
+                        ->orderBy('id', 'asc')
+                        ->first();
                 }
 
                 if ($digitalTicket) {
@@ -559,7 +620,7 @@ class BoxOfficeController extends Controller
                     }
                     $matchedPhysicalTickets[$digitalTicket->id] = $digitalTicket;
                 } else {
-                    $currentSeq = $startSeq + ($i - 1);
+                    $currentSeq = $startSeqDigital + ($i - 1);
                     $ticketCode = 'N° ' . str_pad($currentSeq, 5, '0', STR_PAD_LEFT);
                     $validationHash = 'VG' . strtoupper(substr(md5(uniqid('vg_pos_dig_', true) . $event->id . $receiptNumber . $currentSeq), 0, 8));
                     $qrPayload = "VIVEGO|EVT-{$event->id}|TICK-{$currentSeq}|HASH-{$validationHash}";
@@ -581,7 +642,7 @@ class BoxOfficeController extends Controller
                 'buyer_phone' => $buyerPhone,
                 'buyer_email' => $buyerEmail,
                 'is_courtesy' => $isCourtesy,
-                'event_ticket_id' => $physicalTicket ? $physicalTicket->id : ($digitalTicket ?? null ? $digitalTicket->id : null),
+                'event_ticket_id' => $physicalTicket ? $physicalTicket->id : ($courtesyTicket ?? null ? $courtesyTicket->id : ($digitalTicket ?? null ? $digitalTicket->id : null)),
             ];
         }
 

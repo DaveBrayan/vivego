@@ -222,6 +222,7 @@ Route::get('/optimizar-sistema', function () {
         $events = \App\Models\Event::orderBy('id', 'desc')->get();
         $eventsOptionsHtml = '';
         $eventsPhysicalOptionsHtml = '';
+        $eventsAllOptionsHtml = '';
         foreach ($events as $evt) {
             $posSalesCount = \App\Models\TicketSale::where('event_id', $evt->id)
                 ->where('status', '!=', 'cancelled')
@@ -255,6 +256,15 @@ Route::get('/optimizar-sistema', function () {
                 })->count();
 
             $eventsPhysicalOptionsHtml .= '<option value="' . $evt->id . '">#' . $evt->id . ' — ' . htmlspecialchars($evt->title) . ' (' . $physCount . ' boletos físicos / ' . $physSoldCount . ' vendidos)</option>';
+
+            $fCount = \App\Models\EventTicket::where('event_id', $evt->id)->where('ticket_type', 'fisica')->count();
+            $cpCount = \App\Models\EventTicket::where('event_id', $evt->id)->where('ticket_type', 'cortesia')->where('source', '!=', 'web_checkout')->count();
+            $dCount = \App\Models\EventTicket::where('event_id', $evt->id)->where('ticket_type', 'digital')->count();
+            $cdCount = \App\Models\EventTicket::where('event_id', $evt->id)->where(function($q) {
+                $q->where('ticket_type', 'cortesia_digital')->orWhere(function($sq) { $sq->where('ticket_type', 'cortesia')->where('source', 'web_checkout'); });
+            })->count();
+
+            $eventsAllOptionsHtml .= '<option value="' . $evt->id . '">#' . $evt->id . ' — ' . htmlspecialchars($evt->title) . ' (' . $fCount . ' fís, ' . $cpCount . ' cort. plancha, ' . $dCount . ' dig, ' . $cdCount . ' cort. dig)</option>';
         }
 
         return response('
@@ -393,6 +403,38 @@ Route::get('/optimizar-sistema', function () {
 
                             <button type="submit" style="cursor: pointer; width: 100%; background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; font-weight: 800; border: none; padding: 0.8rem 1.4rem; border-radius: 10px; font-size: 0.9rem; box-shadow: 0 4px 15px rgba(16,185,129,0.35); transition: transform 0.15s ease;">
                                 ⚡ Regenerar QR y Correlativos para este Evento
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- TARJETA DE ACCIÓN: RENUMERAR TODAS LAS CATEGORÍAS DESDE EL N° 1 -->
+                    <div style="background: rgba(139, 92, 246, 0.08); border: 1.5px solid rgba(139, 92, 246, 0.4); border-radius: 14px; padding: 1.35rem; margin-bottom: 1.5rem; text-align: left;">
+                        <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem;">
+                            <span style="font-size: 1.4rem;">🔢</span>
+                            <strong style="color: #A78BFA; font-size: 1.05rem;">Renumerar Todas las Categorías desde N° 1</strong>
+                        </div>
+                        <p style="color: #94A3B8; font-size: 0.83rem; margin: 0 0 1rem 0; line-height: 1.45;">
+                            Renumera independientemente cada una de las 4 categorías iniciando limpiamente desde <b>N° 00001</b>:
+                            <br><span style="color: #FCD34D;">1. Físicos Regulares (1..N)</span> &bull; 
+                            <span style="color: #34D399;">2. Cortesías Plancha (1..M)</span> &bull; 
+                            <span style="color: #60A5FA;">3. Digitales Regulares (1..X)</span> &bull; 
+                            <span style="color: #C084FC;">4. Cortesías Digitales (1..Y)</span>.
+                            <br>Sincroniza códigos QR, hashes y los registros de ventas vinculados.
+                        </p>
+
+                        <form action="/renumerar-todas-categorias" method="GET" onsubmit="return confirm(\'⚠️ ¿Estás seguro de renumerar todas las categorías para este evento? Cada categoría iniciará su propia secuencia independiente desde N° 00001.\');">
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #CBD5E1; margin-bottom: 0.35rem; text-transform: uppercase;">
+                                    Seleccionar Evento <span style="color: #EF4444;">*</span>
+                                </label>
+                                <select name="event_id" required style="width: 100%; box-sizing: border-box; background: #0A0A10; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 0.65rem 0.8rem; color: #FFFFFF; font-size: 0.85rem; outline: none;">
+                                    <option value="" disabled selected>-- Elige un evento --</option>
+                                    ' . $eventsAllOptionsHtml . '
+                                </select>
+                            </div>
+
+                            <button type="submit" style="cursor: pointer; width: 100%; background: linear-gradient(135deg, #8B5CF6, #6D28D9); color: #FFFFFF; font-weight: 800; border: none; padding: 0.8rem 1.4rem; border-radius: 10px; font-size: 0.9rem; box-shadow: 0 4px 15px rgba(139,92,246,0.35); transition: transform 0.15s ease;">
+                                🔢 Renumerar Todas las Categorías desde N° 1
                             </button>
                         </form>
                     </div>
@@ -687,6 +729,101 @@ Route::match(['get', 'post'], '/restablecer-boletos-fisicos', function (\Illumin
         ', 200)->header('Content-Type', 'text/html');
     } catch (\Exception $e) {
         return response('<div style="font-family: sans-serif; padding: 2rem; background: #14141E; color: #EF4444;"><h3 style="color:#EF4444;">Error al restablecer boletos físicos:</h3><pre style="background: #000; padding: 1rem; border-radius: 8px; color: #FCA5A5;">' . htmlspecialchars($e->getMessage() . "\n" . $e->getTraceAsString()) . '</pre></div>', 500);
+    }
+});
+
+Route::match(['get', 'post'], '/renumerar-todas-categorias', function (\Illuminate\Http\Request $request) {
+    try {
+        $eventId = $request->input('event_id');
+        if (!$eventId) {
+            return response('
+                <div style="font-family: system-ui, sans-serif; min-height: 100vh; background: #0A0A10; display: flex; align-items: center; justify-content: center; padding: 1.5rem; color: #FFF;">
+                    <div style="background: #14141E; border: 1px solid rgba(239,68,68,0.4); padding: 2rem; border-radius: 16px; max-width: 500px; text-align: center;">
+                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">⚠️</div>
+                        <h3 style="color: #EF4444; margin-top: 0;">Evento no seleccionado</h3>
+                        <p style="color: #94A3B8; font-size: 0.9rem;">Debes seleccionar un evento para renumerar sus categorías.</p>
+                        <a href="/optimizar-sistema" style="display: inline-block; background: #2563EB; color: #FFF; text-decoration: none; padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: 700;">← Volver a Optimizar Sistema</a>
+                    </div>
+                </div>
+            ', 400)->header('Content-Type', 'text/html');
+        }
+
+        $event = \App\Models\Event::find($eventId);
+        if (!$event) {
+            return response('
+                <div style="font-family: system-ui, sans-serif; min-height: 100vh; background: #0A0A10; display: flex; align-items: center; justify-content: center; padding: 1.5rem; color: #FFF;">
+                    <div style="background: #14141E; border: 1px solid rgba(239,68,68,0.4); padding: 2rem; border-radius: 16px; max-width: 500px; text-align: center;">
+                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">❌</div>
+                        <h3 style="color: #EF4444; margin-top: 0;">Evento no encontrado</h3>
+                        <p style="color: #94A3B8; font-size: 0.9rem;">El evento con ID #' . htmlspecialchars($eventId) . ' no fue encontrado en la base de datos.</p>
+                        <a href="/optimizar-sistema" style="display: inline-block; background: #2563EB; color: #FFF; text-decoration: none; padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: 700;">← Volver a Optimizar Sistema</a>
+                    </div>
+                </div>
+            ', 404)->header('Content-Type', 'text/html');
+        }
+
+        $res = \App\Services\TicketGenerationService::renumberEventTicketCategories($event);
+
+        $categoriesHtml = '';
+        $colors = [
+            'fisica' => '#F59E0B',
+            'cortesia_fisica' => '#10B981',
+            'digital' => '#3B82F6',
+            'cortesia_digital' => '#8B5CF6',
+        ];
+        foreach ($res['categories'] as $key => $cat) {
+            $color = $colors[$key] ?? '#60A5FA';
+            $categoriesHtml .= '<div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1rem; text-align: left;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <span style="font-size: 0.85rem; font-weight: 700; color: ' . $color . ';">' . htmlspecialchars($cat['title']) . '</span>
+                    <span style="background: ' . $color . '22; color: ' . $color . '; border: 1px solid ' . $color . '55; padding: 0.15rem 0.5rem; border-radius: 6px; font-weight: 800; font-size: 0.72rem;">' . $cat['count'] . ' boletos</span>
+                </div>
+                <div style="font-family: monospace; font-size: 0.95rem; font-weight: 800; color: #FFFFFF;">
+                    ' . htmlspecialchars($cat['range']) . '
+                </div>
+            </div>';
+        }
+
+        return response('
+            <div style="font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; background: #0A0A10; display: flex; align-items: center; justify-content: center; padding: 1.5rem; color: #FFFFFF;">
+                <div style="background: #14141E; border: 1px solid rgba(139,92,246,0.35); padding: 2.2rem; border-radius: 20px; max-width: 720px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.6); text-align: center;">
+                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">🎉</div>
+                    <h2 style="color: #A78BFA; font-size: 1.55rem; font-weight: 900; margin: 0 0 0.4rem 0;">¡Todas las Categorías Renumeradas desde N° 1!</h2>
+                    <p style="color: #94A3B8; font-size: 0.9rem; margin-bottom: 1.3rem;">
+                        Evento: <strong style="color: #FFFFFF;">' . htmlspecialchars($event->title) . ' (ID #' . $event->id . ')</strong>
+                    </p>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; text-align: center;">
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 0.85rem;">
+                            <span style="font-size: 0.75rem; color: #94A3B8; display: block;">Total Boletos Renumerados</span>
+                            <strong style="font-size: 1.35rem; color: #10B981;">' . $res['total_tickets'] . '</strong>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 0.85rem;">
+                            <span style="font-size: 0.75rem; color: #94A3B8; display: block;">Ventas Sincronizadas</span>
+                            <strong style="font-size: 1.35rem; color: #60A5FA;">' . $res['sales_updated'] . '</strong>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 0.75rem; margin-bottom: 1.5rem;">
+                        ' . $categoriesHtml . '
+                    </div>
+
+                    <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+                        <a href="/optimizar-sistema" style="display: inline-block; background: #1E1E2E; border: 1px solid rgba(255,255,255,0.15); color: #FFFFFF; font-weight: 700; text-decoration: none; padding: 0.85rem 1.4rem; border-radius: 12px;">
+                            ← Volver a Optimizar Sistema
+                        </a>
+                        <a href="' . route('web.box_office.manage', $event->id) . '" style="display: inline-block; background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; font-weight: 800; text-decoration: none; padding: 0.85rem 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(16,185,129,0.4);">
+                            🎟️ Ir a Taquilla del Evento
+                        </a>
+                        <a href="' . route('web.home') . '" style="display: inline-block; background: linear-gradient(135deg, #FF5500, #E04B00); color: #FFFFFF; font-weight: 800; text-decoration: none; padding: 0.85rem 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(255,85,0,0.4);">
+                            Ir al Inicio
+                        </a>
+                    </div>
+                </div>
+            </div>
+        ', 200)->header('Content-Type', 'text/html');
+    } catch (\Exception $e) {
+        return response('<div style="font-family: sans-serif; padding: 2rem; background: #14141E; color: #EF4444;"><h3 style="color:#EF4444;">Error al renumerar categorías:</h3><pre style="background: #000; padding: 1rem; border-radius: 8px; color: #FCA5A5;">' . htmlspecialchars($e->getMessage() . "\n" . $e->getTraceAsString()) . '</pre></div>', 500);
     }
 });
 

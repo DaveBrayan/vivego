@@ -31,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'recuperar-password',
             'regenerar-qr-ventas-pos',
             'restablecer-boletos-fisicos',
+            'renumerar-todas-categorias',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -1317,8 +1317,15 @@
             return;
         }
 
-        // Ordenar correlativamente
-        candidateTickets.sort((a, b) => a.ticketNumberVal - b.ticketNumberVal);
+        // Ordenar correlativamente agrupando regulares primero y cortesías después
+        candidateTickets.sort((a, b) => {
+            const aIsCort = !!a.isCourtesy;
+            const bIsCort = !!b.isCourtesy;
+            if (aIsCort !== bIsCort) {
+                return aIsCort ? 1 : -1;
+            }
+            return a.ticketNumberVal - b.ticketNumberVal;
+        });
 
         const formatTitle = isA4 ? 'Hoja A4' : `Plancha ${planchaSizeLabel}`;
         const sheetUnitName = isA4 ? 'hoja(s) A4' : 'plancha(s)';
