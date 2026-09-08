@@ -759,15 +759,16 @@ class BoxOfficeController extends Controller
                 }
             }
 
-            if (!empty($pdfBase64)) {
-                try {
-                    Mail::to($effectiveEmail)->send(new TicketPurchaseMail($sale, $tempPassword, $isNewUser, $pdfBase64));
-                    $emailSent = true;
-                    Log::info("Boleto oficial enviado automáticamente a {$effectiveEmail} tras emisión en Taquilla POS");
-                } catch (\Throwable $e) {
-                    Log::warning("No se pudo enviar el correo tras registrar venta/cortesía en Taquilla: " . $e->getMessage());
-                }
-            }
+            // Registrar y enviar a través de EmailLogService (auditoría en Registro de Correos)
+            $mailResult = \App\Services\EmailLogService::sendTicketPurchaseMail(
+                $sale,
+                $tempPassword,
+                $isNewUser,
+                $pdfBase64,
+                $effectiveEmail,
+                $isCourtesy ? 'courtesy' : 'pos_sale'
+            );
+            $emailSent = $mailResult['success'];
         }
 
         // Cargar boletos físicos y relación de evento para el frontend
@@ -926,19 +927,24 @@ class BoxOfficeController extends Controller
         $pdfBase64 = $request->input('ticket_pdf_base64');
         $sale->loadMissing(['eventTickets', 'event']);
 
-        try {
-            Mail::to($recipient)->send(new TicketPurchaseMail($sale, null, false, $pdfBase64));
+        $mailResult = \App\Services\EmailLogService::sendTicketPurchaseMail(
+            $sale,
+            null,
+            false,
+            $pdfBase64,
+            $recipient,
+            'pos_resend'
+        );
 
+        if ($mailResult['success']) {
             return response()->json([
                 'success' => true,
                 'message' => "¡Boleto oficial enviado exitosamente a {$recipient}!"
             ]);
-        } catch (\Throwable $e) {
-            Log::error('Error enviando boleto por correo desde Taquilla POS: ' . $e->getMessage());
-
+        } else {
             return response()->json([
                 'success' => false,
-                'message' => 'Error al enviar el correo: ' . $e->getMessage()
+                'message' => $mailResult['message']
             ], 500);
         }
     }

@@ -20,6 +20,7 @@ class EmailLogController extends Controller
     {
         $search = trim($request->input('q', ''));
         $status = $request->input('status', 'all');
+        $type = $request->input('type', 'all');
         $eventId = $request->input('event_id');
 
         $query = EmailLog::with(['ticketSale', 'event'])->latest('id');
@@ -30,7 +31,9 @@ class EmailLogController extends Controller
                   ->orWhere('recipient_name', 'like', "%{$search}%")
                   ->orWhere('subject', 'like', "%{$search}%")
                   ->orWhereHas('ticketSale', function ($sq) use ($search) {
-                      $sq->where('receipt_number', 'like', "%{$search}%");
+                      $sq->where('receipt_number', 'like', "%{$search}%")
+                        ->orWhere('buyer_dni', 'like', "%{$search}%")
+                        ->orWhere('seller_name', 'like', "%{$search}%");
                   });
             });
         }
@@ -39,6 +42,14 @@ class EmailLogController extends Controller
             $query->where('status', 'sent');
         } elseif ($status === 'failed') {
             $query->where('status', 'failed');
+        }
+
+        if ($type === 'pos') {
+            $query->whereIn('mail_type', ['pos_sale', 'pos_resend']);
+        } elseif ($type === 'web') {
+            $query->where('mail_type', 'ticket_purchase');
+        } elseif ($type === 'courtesy') {
+            $query->where('mail_type', 'courtesy');
         }
 
         if (!empty($eventId)) {
@@ -51,6 +62,8 @@ class EmailLogController extends Controller
         $totalEmails = EmailLog::count();
         $sentEmails = EmailLog::where('status', 'sent')->count();
         $failedEmails = EmailLog::where('status', 'failed')->count();
+        $posEmails = EmailLog::whereIn('mail_type', ['pos_sale', 'pos_resend'])->count();
+        $webEmails = EmailLog::where('mail_type', 'ticket_purchase')->count();
         $successRate = $totalEmails > 0 ? round(($sentEmails / $totalEmails) * 100, 1) : 100;
 
         $events = Event::orderBy('title', 'asc')->get(['id', 'title']);
@@ -60,10 +73,13 @@ class EmailLogController extends Controller
             'totalEmails',
             'sentEmails',
             'failedEmails',
+            'posEmails',
+            'webEmails',
             'successRate',
             'events',
             'search',
             'status',
+            'type',
             'eventId'
         ));
     }

@@ -17,19 +17,37 @@ class EmailLogService
         TicketSale $sale,
         ?string $tempPassword = null,
         bool $isNewUser = false,
-        ?string $customPdfBase64 = null
+        ?string $customPdfBase64 = null,
+        ?string $forcedRecipient = null,
+        string $mailType = 'ticket_purchase'
     ): array {
         $sale->loadMissing(['event', 'eventTickets']);
 
-        $recipientEmail = trim($sale->buyer_email ?: '');
+        $recipientEmail = trim($forcedRecipient ?: ($sale->buyer_email ?: ''));
         if (empty($recipientEmail)) {
             $tData = is_array($sale->tickets_data) ? $sale->tickets_data : json_decode($sale->tickets_data ?? '[]', true);
             $recipientEmail = $tData['customer_email'] ?? ($tData['buyer_email'] ?? '');
         }
 
+        // Si aún está vacío, buscar por DNI o Nombre en la tabla users
+        if (empty($recipientEmail) && !empty($sale->buyer_dni) && $sale->buyer_dni !== '00000000') {
+            $userFound = \App\Models\User::where('dni', $sale->buyer_dni)->first();
+            if ($userFound && !empty($userFound->email)) {
+                $recipientEmail = $userFound->email;
+            }
+        }
+
         $recipientName = $sale->customer_name ?: ($sale->buyer_name ?: 'Cliente');
         $eventName = $sale->event?->title ?? 'Evento ViveGo';
         $subject = "🎟️ Tus Entradas Oficiales - {$eventName} (#{$sale->receipt_number})";
+
+        $sourceLabel = match($mailType) {
+            'pos_sale' => 'Venta POS / Taquilla',
+            'pos_resend' => 'Reenvío desde Taquilla',
+            'ticket_resend' => 'Reenvío Portal Cliente',
+            'courtesy' => 'Entrada de Cortesía',
+            default => 'Venta Tienda Web'
+        };
 
         if (empty($recipientEmail) || !filter_var($recipientEmail, FILTER_VALIDATE_EMAIL)) {
             $log = EmailLog::create([
@@ -38,13 +56,15 @@ class EmailLogService
                 'recipient_name' => $recipientName,
                 'recipient_email' => $recipientEmail ?: 'sin-correo@vivego.pe',
                 'subject' => $subject,
-                'mail_type' => 'ticket_purchase',
+                'mail_type' => $mailType,
                 'status' => 'failed',
                 'error_message' => 'Dirección de correo electrónico vacía o inválida.',
                 'details' => [
                     'event_title' => $eventName,
                     'receipt_number' => $sale->receipt_number,
                     'sale_id' => $sale->id,
+                    'source_label' => $sourceLabel,
+                    'seller_name' => $sale->seller_name ?: 'Sistema',
                     'error_type' => 'ValidationError'
                 ],
                 'attempts' => 1,
@@ -66,7 +86,7 @@ class EmailLogService
                 'recipient_name' => $recipientName,
                 'recipient_email' => $recipientEmail,
                 'subject' => $subject,
-                'mail_type' => 'ticket_purchase',
+                'mail_type' => $mailType,
                 'status' => 'sent',
                 'error_message' => null,
                 'details' => [
@@ -74,13 +94,15 @@ class EmailLogService
                     'receipt_number' => $sale->receipt_number,
                     'quantity' => $sale->quantity,
                     'sale_id' => $sale->id,
+                    'source_label' => $sourceLabel,
+                    'seller_name' => $sale->seller_name ?: 'Sistema',
                     'sent_via' => config('mail.default', 'smtp'),
                 ],
                 'attempts' => 1,
                 'sent_at' => now(),
             ]);
 
-            Log::info("Email enviado exitosamente a {$recipientEmail} para la venta #{$sale->id}");
+            Log::info("Email enviado exitosamente a {$recipientEmail} para la venta #{$sale->id} [Origen: {$sourceLabel}]");
 
             return [
                 'success' => true,
@@ -97,13 +119,15 @@ class EmailLogService
                 'recipient_name' => $recipientName,
                 'recipient_email' => $recipientEmail,
                 'subject' => $subject,
-                'mail_type' => 'ticket_purchase',
+                'mail_type' => $mailType,
                 'status' => 'failed',
                 'error_message' => $errorMsg,
                 'details' => [
                     'event_title' => $eventName,
                     'receipt_number' => $sale->receipt_number,
                     'sale_id' => $sale->id,
+                    'source_label' => $sourceLabel,
+                    'seller_name' => $sale->seller_name ?: 'Sistema',
                     'exception' => get_class($e),
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),

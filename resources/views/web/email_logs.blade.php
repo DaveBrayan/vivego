@@ -135,6 +135,22 @@
                                 </a>
                             </div>
 
+                            <!-- Filtro Canal / Origen -->
+                            <div style="display: inline-flex; background: rgba(0,0,0,0.3); padding: 0.25rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+                                <a href="{{ route('web.email_logs', array_merge(request()->query(), ['type' => 'all'])) }}" 
+                                   style="padding: 0.45rem 0.85rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; text-decoration: none; {{ $type === 'all' ? 'background: #3B82F6; color: #FFFFFF;' : 'color: #94A3B8;' }}">
+                                    Todos los Canales
+                                </a>
+                                <a href="{{ route('web.email_logs', array_merge(request()->query(), ['type' => 'pos'])) }}" 
+                                   style="padding: 0.45rem 0.85rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; text-decoration: none; {{ $type === 'pos' ? 'background: #06B6D4; color: #FFFFFF; box-shadow: 0 2px 8px rgba(6,182,212,0.4);' : 'color: #94A3B8;' }}">
+                                    🎟️ Ventas POS ({{ $posEmails }})
+                                </a>
+                                <a href="{{ route('web.email_logs', array_merge(request()->query(), ['type' => 'web'])) }}" 
+                                   style="padding: 0.45rem 0.85rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; text-decoration: none; {{ $type === 'web' ? 'background: #FF5500; color: #FFFFFF; box-shadow: 0 2px 8px rgba(255,85,0,0.4);' : 'color: #94A3B8;' }}">
+                                    🌐 Web ({{ $webEmails }})
+                                </a>
+                            </div>
+
                             <!-- Selector de Evento -->
                             <div style="min-width: 200px;">
                                 <select name="event_id" onchange="this.form.submit()" style="width: 100%; background: #0B0B12; border: 1px solid rgba(255,255,255,0.12); color: #FFFFFF; padding: 0.55rem 0.85rem; border-radius: 10px; font-size: 0.825rem;">
@@ -153,7 +169,7 @@
                         </div>
 
                         <!-- Reset Filtros -->
-                        @if(!empty($search) || $status !== 'all' || !empty($eventId))
+                        @if(!empty($search) || $status !== 'all' || $type !== 'all' || !empty($eventId))
                             <div>
                                 <a href="{{ route('web.email_logs') }}" style="color: #94A3B8; font-size: 0.825rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.5rem 0.85rem; background: rgba(255,255,255,0.04); border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
                                     ✕ Limpiar Filtros
@@ -172,7 +188,7 @@
                             </div>
                             <div>
                                 <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #FFFFFF;">Historial Detallado de Correos</h3>
-                                <p style="margin: 0.2rem 0 0 0; font-size: 0.8rem; color: #94A3B8;">Mostrando registros ordenados cronológicamente</p>
+                                <p style="margin: 0.2rem 0 0 0; font-size: 0.8rem; color: #94A3B8;">Mostrando registros ordenados cronológicamente (Ventas POS y Web)</p>
                             </div>
                         </div>
                         <span style="font-size: 0.8rem; color: #94A3B8; background: rgba(255,255,255,0.04); padding: 0.35rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
@@ -187,7 +203,7 @@
                                     <th style="padding: 0.85rem 1rem;">ID / Fecha</th>
                                     <th style="padding: 0.85rem 1rem;">Persona Destinataria</th>
                                     <th style="padding: 0.85rem 1rem;">Correo Electrónico</th>
-                                    <th style="padding: 0.85rem 1rem;">Evento & Venta</th>
+                                    <th style="padding: 0.85rem 1rem;">Evento & Canal</th>
                                     <th style="padding: 0.85rem 1rem;">Estado</th>
                                     <th style="padding: 0.85rem 1rem;">Detalle de Error / Diagnóstico</th>
                                     <th style="padding: 0.85rem 1rem; text-align: right;">Acciones</th>
@@ -240,11 +256,27 @@
                                             <strong style="display: block; color: #FFFFFF; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $eventName }}">
                                                 🎪 {{ $eventName }}
                                             </strong>
-                                            @if($receiptNum)
-                                                <span style="display: inline-block; font-size: 0.75rem; color: #60A5FA; font-family: monospace; background: rgba(37,99,235,0.12); padding: 0.1rem 0.45rem; border-radius: 4px; border: 1px solid rgba(37,99,235,0.25); margin-top: 0.2rem;">
-                                                    Recibo: {{ $receiptNum }}
-                                                </span>
-                                            @endif
+                                            <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; margin-top: 0.25rem;">
+                                                @if($receiptNum)
+                                                    <span style="font-size: 0.72rem; color: #60A5FA; font-family: monospace; background: rgba(37,99,235,0.12); padding: 0.1rem 0.4rem; border-radius: 4px; border: 1px solid rgba(37,99,235,0.25);">
+                                                        #{{ $receiptNum }}
+                                                    </span>
+                                                @endif
+
+                                                @if(in_array($log->mail_type, ['pos_sale', 'pos_resend']))
+                                                    <span style="font-size: 0.7rem; font-weight: 800; color: #06B6D4; background: rgba(6,182,212,0.15); border: 1px solid rgba(6,182,212,0.3); padding: 0.1rem 0.45rem; border-radius: 4px;">
+                                                        🎟️ VENTA POS
+                                                    </span>
+                                                @elseif($log->mail_type === 'courtesy')
+                                                    <span style="font-size: 0.7rem; font-weight: 800; color: #A855F7; background: rgba(168,85,247,0.15); border: 1px solid rgba(168,85,247,0.3); padding: 0.1rem 0.45rem; border-radius: 4px;">
+                                                        🎁 CORTESÍA
+                                                    </span>
+                                                @else
+                                                    <span style="font-size: 0.7rem; font-weight: 800; color: #FF5500; background: rgba(255,85,0,0.15); border: 1px solid rgba(255,85,0,0.3); padding: 0.1rem 0.45rem; border-radius: 4px;">
+                                                        🌐 TIENDA WEB
+                                                    </span>
+                                                @endif
+                                            </div>
                                         </td>
 
                                         <!-- Estado -->
