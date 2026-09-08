@@ -2376,7 +2376,9 @@
 
             let ticketPdfBase64 = '';
             try {
-                if (typeof window.generateTicketPdfDoc === 'function') {
+                // Solo intentar compilación ligera en cliente si es 1 solo boleto para evitar sobrecargar memoria y peticiones pesadas (>S/ 30)
+                const totalTicketsQty = cartItems.reduce((acc, it) => acc + parseInt(it.quantity || 1, 10), 0);
+                if (totalTicketsQty <= 1 && typeof window.generateTicketPdfDoc === 'function') {
                     const simulatedSale = {
                         receipt_number: 'REC-PENDING',
                         buyer_name: document.getElementById('buyerFullName')?.value || 'Cliente ViveGo',

@@ -24,6 +24,7 @@ use App\Http\Controllers\Web\LegalController;
 use App\Http\Controllers\Web\ClaimBookController;
 use App\Http\Controllers\Web\ClaimAdminController;
 use App\Http\Controllers\Web\DeviceController;
+use App\Http\Controllers\Web\EmailLogController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -177,6 +178,12 @@ Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group
     Route::post('/admin/metodos-pago/izipay/test', [PaymentGatewayController::class, 'testIzipayConnection'])->name('web.payment_methods.test_izipay');
     Route::post('/admin/metodos-pago/culqi', [PaymentGatewayController::class, 'updateCulqi'])->name('web.payment_methods.update_culqi');
     Route::post('/admin/metodos-pago/culqi/test', [PaymentGatewayController::class, 'testCulqiConnection'])->name('web.payment_methods.test_culqi');
+
+    // Registro de Correos Electrónicos (Auditoría de Envíos y Diagnóstico de Fallas)
+    Route::get('/admin/registro-correos', [EmailLogController::class, 'index'])->name('web.email_logs');
+    Route::get('/admin/registro-correos/{id}', [EmailLogController::class, 'show'])->name('web.email_logs.show');
+    Route::post('/admin/registro-correos/{id}/reenviar', [EmailLogController::class, 'resend'])->name('web.email_logs.resend');
+    Route::delete('/admin/registro-correos/{id}', [EmailLogController::class, 'destroy'])->name('web.email_logs.destroy');
 
     // Información Empresarial: Compañías
     Route::get('/admin/compania', [CompanyController::class, 'index'])->name('web.companies');

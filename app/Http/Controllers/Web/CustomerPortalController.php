@@ -521,18 +521,17 @@ class CustomerPortalController extends Controller
         }
 
         $pdfBase64 = $request->input('ticket_pdf_base64');
+        $result = \App\Services\EmailLogService::sendTicketPurchaseMail($sale, null, false, $pdfBase64);
 
-        try {
-            \Illuminate\Support\Facades\Mail::to($recipient)->send(new \App\Mail\TicketPurchaseMail($sale, null, false, $pdfBase64));
+        if ($result['success']) {
             return response()->json([
                 'success' => true,
                 'message' => "¡Boleto oficial enviado exitosamente a {$recipient}!"
             ]);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Error enviando boleto por correo desde el portal: ' . $e->getMessage());
+        } else {
             return response()->json([
                 'success' => false,
-                'message' => 'Error al enviar el correo: ' . $e->getMessage()
+                'message' => $result['message']
             ], 500);
         }
     }

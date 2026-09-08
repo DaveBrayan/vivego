@@ -686,15 +686,9 @@ class CheckoutController extends Controller
             ]);
         }
 
-        // 2. Enviar Correo Electrónico Automático con Recibo, Boletos y Credenciales
+        // 2. Enviar Correo Electrónico Automático con Recibo, Boletos y Credenciales y registrar en EmailLog
         if (!empty($buyerEmail) && filter_var($buyerEmail, FILTER_VALIDATE_EMAIL)) {
-            try {
-                $customPdfBase64 = $request->input('ticket_pdf_base64');
-                \Illuminate\Support\Facades\Mail::to($buyerEmail)->send(new \App\Mail\TicketPurchaseMail($sale, $tempPassword, $isNewUser, $customPdfBase64));
-                Log::info('Correo de confirmación de compra enviado exitosamente a: ' . $buyerEmail);
-            } catch (\Throwable $mailError) {
-                Log::warning('No se pudo enviar el correo de compra (verifique configuración SMTP): ' . $mailError->getMessage());
-            }
+            \App\Services\EmailLogService::sendTicketPurchaseMail($sale, $tempPassword, $isNewUser, $request->input('ticket_pdf_base64'));
         }
 
         return response()->json([
@@ -1056,15 +1050,9 @@ class CheckoutController extends Controller
             ]);
         }
 
-        // 2. Enviar Correo Electrónico Automático con Recibo, Boletos y Credenciales
+        // 2. Enviar Correo Electrónico Automático con Recibo, Boletos y Credenciales y registrar en EmailLog
         if (!empty($buyerEmail) && filter_var($buyerEmail, FILTER_VALIDATE_EMAIL)) {
-            try {
-                $customPdfBase64 = $request->input('ticket_pdf_base64');
-                \Illuminate\Support\Facades\Mail::to($buyerEmail)->send(new \App\Mail\TicketPurchaseMail($sale, $tempPassword, $isNewUser, $customPdfBase64));
-                Log::info('Correo de confirmación de compra enviado exitosamente a: ' . $buyerEmail);
-            } catch (\Throwable $mailError) {
-                Log::warning('No se pudo enviar el correo de compra Culqi: ' . $mailError->getMessage());
-            }
+            \App\Services\EmailLogService::sendTicketPurchaseMail($sale, $tempPassword, $isNewUser, $request->input('ticket_pdf_base64'));
         }
 
         return response()->json([
@@ -1269,15 +1257,9 @@ class CheckoutController extends Controller
             ]);
         }
 
-        // Enviar Correo Electrónico Automático con Boletos y Recibo
+        // Enviar Correo Electrónico Automático con Boletos y Recibo y registrar en EmailLog
         if (!empty($buyerEmail) && filter_var($buyerEmail, FILTER_VALIDATE_EMAIL)) {
-            try {
-                $customPdfBase64 = $request->input('ticket_pdf_base64');
-                \Illuminate\Support\Facades\Mail::to($buyerEmail)->send(new \App\Mail\TicketPurchaseMail($sale, $tempPassword, $isNewUser, $customPdfBase64));
-                \Illuminate\Support\Facades\Log::info('Correo de confirmación de cortesía enviado exitosamente a: ' . $buyerEmail);
-            } catch (\Throwable $mailError) {
-                \Illuminate\Support\Facades\Log::warning('No se pudo enviar el correo de cortesía (verifique configuración SMTP): ' . $mailError->getMessage());
-            }
+            \App\Services\EmailLogService::sendTicketPurchaseMail($sale, $tempPassword, $isNewUser, $request->input('ticket_pdf_base64'));
         }
 
         // Limpiar carrito en sesión

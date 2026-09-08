@@ -460,6 +460,12 @@
 
         <div class="dash-nav-section-title" style="margin-top: 1.5rem;">ADMINISTRACIÓN</div>
         <ul class="dash-nav-list">
+            <li class="dash-nav-item {{ request()->routeIs('web.email_logs*') ? 'active' : '' }}">
+                <a href="{{ route('web.email_logs') }}" class="dash-nav-link">
+                    <span class="dash-nav-icon">📬</span>
+                    <span class="dash-nav-text">Registro de Correos</span>
+                </a>
+            </li>
             <li class="dash-nav-item {{ request()->routeIs('web.payment_methods*') ? 'active' : '' }}">
                 <a href="{{ route('web.payment_methods') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">💳</span>

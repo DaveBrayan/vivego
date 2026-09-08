@@ -147,7 +147,28 @@
         $tData = is_array($sale->tickets_data) ? $sale->tickets_data : json_decode($sale->tickets_data, true);
         $rawItems = $tData['items'] ?? (is_array($tData) ? $tData : []);
         $items = array_values(array_filter($rawItems, fn($x) => is_array($x) && (!empty($x['zone']) || !empty($x['zone_name']) || !empty($x['name']) || !empty($x['ticket_code']) || isset($x['price']))));
-        $totalTickets = count($items) > 0 ? count($items) : max(1, $sale->quantity);
+
+        // Desempaquetar items por cantidad si vienen agrupados
+        $expandedItems = [];
+        foreach ($items as $it) {
+            $itQty = isset($it['quantity']) && (int)$it['quantity'] > 0 ? (int)$it['quantity'] : 1;
+            for ($q = 0; $q < $itQty; $q++) {
+                $expandedItems[] = $it;
+            }
+        }
+
+        // Si hay boletos oficiales en eventTickets, sincronizar el total
+        $hasEventTickets = $sale->eventTickets && $sale->eventTickets->count() > 0;
+        $totalTickets = $hasEventTickets ? $sale->eventTickets->count() : (count($expandedItems) > 0 ? count($expandedItems) : max(1, (int)$sale->quantity));
+
+        // Si totalTickets es menor que la cantidad de venta, completar hasta sale->quantity
+        if (!$hasEventTickets && $totalTickets < (int)$sale->quantity) {
+            $lastItem = end($expandedItems) ?: [];
+            while (count($expandedItems) < (int)$sale->quantity) {
+                $expandedItems[] = $lastItem;
+            }
+            $totalTickets = count($expandedItems);
+        }
 
         $eventTitle = strtoupper($event?->title ?? 'CONCIERTO EN VIVO');
         $eventVenue = $event?->venue_name ?? 'LOCAL: DEJAVU DISCOTECA';
@@ -158,8 +179,13 @@
 
     @for($i = 0; $i < $totalTickets; $i++)
         @php
-            $ticketItem = $items[$i] ?? null;
-            $rawZone = $ticketItem['zone'] ?? ($ticketItem['zone_name'] ?? ($ticketItem['name'] ?? $sale->zone_name));
+            $realTicket = null;
+            if ($sale->eventTickets && isset($sale->eventTickets[$i])) {
+                $realTicket = $sale->eventTickets[$i];
+            }
+
+            $ticketItem = $expandedItems[$i] ?? ($items[$i] ?? null);
+            $rawZone = $realTicket?->zone_name ?? ($ticketItem['zone'] ?? ($ticketItem['zone_name'] ?? ($ticketItem['name'] ?? $sale->zone_name)));
             if (preg_match('/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?(.+)/iu', $rawZone, $m)) {
                 $zoneName = trim($m[1]);
             } else {
@@ -176,39 +202,41 @@
                 $itemSeats = is_array($ticketItem['seats']) ? $ticketItem['seats'] : (json_decode($ticketItem['seats'], true) ?: []);
                 $seatAssigned = $itemSeats[$i] ?? null;
             }
-            if (!$seatAssigned && $sale->eventTickets && isset($sale->eventTickets[$i])) {
-                $et = $sale->eventTickets[$i];
-                if (!empty($et->zone_name)) {
-                    $zoneName = $et->zone_name;
-                    $seatAssigned = null;
-                }
+            if (!$seatAssigned && $realTicket && !empty($realTicket->zone_name)) {
+                $zoneName = $realTicket->zone_name;
+                $seatAssigned = null;
             }
             if ($seatAssigned) {
                 $zoneName = formatZoneWithSeat($zoneName, $seatAssigned);
             }
 
-            $ticketPrice = $ticketItem['regular_price'] ?? ($ticketItem['price'] ?? $sale->unit_price);
-            
-            $realTicket = null;
-            if ($sale->eventTickets && isset($sale->eventTickets[$i])) {
-                $realTicket = $sale->eventTickets[$i];
-            }
+            $ticketPrice = $realTicket?->unit_price ?? ($ticketItem['regular_price'] ?? ($ticketItem['price'] ?? $sale->unit_price));
             
             $numSeq = $realTicket?->ticket_number ?? ($ticketItem['ticket_number'] ?? ($sale->id ? ($sale->id + $i) : ($i + 1)));
             $ticketNumStr = $realTicket?->ticket_code ?? ($ticketItem['ticket_code'] ?? ('N° ' . str_pad($numSeq, 5, '0', STR_PAD_LEFT)));
             $hashVal = $realTicket?->validation_hash ?? ($ticketItem['validation_hash'] ?? ('VG' . strtoupper(substr(md5($sale->receipt_number . $i . $sale->id), 0, 8))));
             $qrPayload = $realTicket?->qr_payload ?? ($ticketItem['qr_payload'] ?? "VIVEGO|{$sale->receipt_number}|EVT-{$sale->event_id}|DNI-{$sale->buyer_dni}|TICK-" . ($i + 1));
-            $qrApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=0&data=" . urlencode($qrPayload);
             
-            $qrImageContent = @file_get_contents($qrApiUrl);
-            if (!$qrImageContent && function_exists('curl_init')) {
-                $ch = curl_init($qrApiUrl);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                $qrImageContent = curl_exec($ch);
-                curl_close($ch);
+            // Generación de código QR local ultra-rápida (in-memory SVG)
+            $qrBase64 = '';
+            try {
+                $svgQr = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')
+                    ->size(250)
+                    ->margin(0)
+                    ->generate($qrPayload);
+                $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode($svgQr);
+            } catch (\Throwable $e) {
+                $qrApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=0&data=" . urlencode($qrPayload);
+                $qrImageContent = @file_get_contents($qrApiUrl);
+                if (!$qrImageContent && function_exists('curl_init')) {
+                    $ch = curl_init($qrApiUrl);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                    $qrImageContent = curl_exec($ch);
+                    curl_close($ch);
+                }
+                $qrBase64 = $qrImageContent ? ('data:image/png;base64,' . base64_encode($qrImageContent)) : '';
             }
-            $qrBase64 = $qrImageContent ? ('data:image/png;base64,' . base64_encode($qrImageContent)) : '';
         @endphp
 
         <div class="page-sheet">

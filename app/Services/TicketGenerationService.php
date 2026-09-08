@@ -758,6 +758,47 @@ class TicketGenerationService
                 }
 
                 $qty = (int)$sale->quantity > 0 ? (int)$sale->quantity : 1;
+                $existingForSale = EventTicket::where('ticket_sale_id', $sale->id)->orderBy('id', 'asc')->get();
+
+                if ($existingForSale->count() >= $qty) {
+                    // La venta ya tiene todos sus boletos oficiales en event_tickets.
+                    // Protegemos las entradas existentes y nunca creamos duplicados.
+                    $updatedTicketsList = [];
+                    foreach ($existingForSale as $idx => $et) {
+                        $updatedTicketsList[] = [
+                            'event_ticket_id' => $et->id,
+                            'ticket_number' => $et->ticket_number,
+                            'ticket_code' => $et->ticket_code,
+                            'validation_hash' => $et->validation_hash,
+                            'qr_payload' => $et->qr_payload,
+                            'zone' => $et->zone_name,
+                            'price' => $et->unit_price,
+                            'buyer_name' => $et->buyer_name ?: ($sale->customer_name ?: $sale->buyer_name),
+                            'buyer_dni' => $et->buyer_dni ?: ($sale->customer_dni ?: $sale->buyer_dni),
+                        ];
+                        $details[] = [
+                            'sale_id' => $sale->id,
+                            'event_id' => $sale->event_id,
+                            'ticket_number' => $et->ticket_number,
+                            'ticket_code' => $et->ticket_code,
+                            'validation_hash' => $et->validation_hash,
+                            'buyer_name' => $et->buyer_name ?: ($sale->customer_name ?: $sale->buyer_name),
+                            'event_ticket_id' => $et->id,
+                            'action' => 'Protegido (Existente)',
+                        ];
+                        $updatedTickets++;
+                    }
+
+                    if ($isItemsFormat) {
+                        $tData['items'] = $updatedTicketsList;
+                        $sale->update(['tickets_data' => $tData]);
+                    } else {
+                        $sale->update(['tickets_data' => $updatedTicketsList]);
+                    }
+                    $syncedSales++;
+                    continue;
+                }
+
                 if (empty($ticketsList)) {
                     for ($k = 0; $k < $qty; $k++) {
                         $ticketsList[] = [
