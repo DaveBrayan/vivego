@@ -675,9 +675,6 @@
                                     <p class="card-header-subtitle">Establece la capacidad y precio de cada zona para este evento (Modo Estándar o Diseñador Interactivo)</p>
                                 </div>
                             </div>
-                            <button type="button" class="btn btn-primary btn-save-settings" style="font-size: 0.85rem; padding: 0.65rem 1.25rem;" onclick="addDynamicZoneRow()">
-                                ➕ Añadir Nueva Zona / Sector
-                            </button>
                         </div>
 
                         <!-- SELECTOR DE MODO PASO 2 & CONSTRUCTOR INTERACTIVO EN 2 COLUMNAS (ELEMENTOR + CANVA) -->
@@ -685,6 +682,18 @@
 
                         <!-- MODO 1: CONTENEDOR ESTÁNDAR (TABLA DE TARIFAS Y CORTESÍAS) -->
                         <div id="step2StandardContainer">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+                                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                    <span style="font-size: 1.2rem;">🎟️</span>
+                                    <div>
+                                        <h4 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: #FFFFFF;">Zonas y Tarifas de Venta</h4>
+                                        <p style="margin: 0.15rem 0 0 0; font-size: 0.775rem; color: #94A3B8;">Establece la capacidad y precio de cada zona para este evento</p>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-primary btn-save-settings" style="font-size: 0.85rem; padding: 0.55rem 1.15rem;" onclick="addNewZoneRow()">
+                                    ➕ Añadir Nueva Zona / Sector
+                                </button>
+                            </div>
                             <div class="dash-table-container" style="margin-bottom: 1.5rem;">
                             <table class="dash-table" id="zonesDynamicTable">
                                 <thead>
@@ -3032,25 +3041,34 @@
 
         function addDynamicZoneRow() {
             const tbody = document.getElementById('zonesTableBody');
+            if (!tbody) return;
             
             const row = document.createElement('tr');
             row.className = 'zone-row';
             row.innerHTML = `
                 <td>
-                    <select class="form-select-custom zone-capacity-type" style="font-size: 0.85rem; padding: 0.55rem;">
-                        <option value="Aforo VIP">🏟️ Aforo VIP</option>
-                        <option value="Aforo Preferencial">🏟️ Aforo Preferencial</option>
-                        <option value="Aforo General" selected>🏟️ Aforo General</option>
+                    <select class="form-select-custom zone-capacity-type" style="font-size: 0.85rem; padding: 0.55rem;" onchange="if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function')SeatMapEditor.syncFromStandardTable();">
+                        @if(isset($capacityTypes) && count($capacityTypes) > 0)
+                            @foreach($capacityTypes as $ct)
+                                <option value="{{ is_array($ct) ? $ct['name'] : $ct->name }}">
+                                    🏟️ {{ is_array($ct) ? $ct['name'] : $ct->name }}
+                                </option>
+                            @endforeach
+                        @else
+                            <option value="Aforo VIP">🏟️ Aforo VIP</option>
+                            <option value="Aforo Preferencial">🏟️ Aforo Preferencial</option>
+                            <option value="Aforo General" selected>🏟️ Aforo General</option>
+                        @endif
                     </select>
                 </td>
                 <td>
-                    <input type="text" class="form-input-custom zone-name-input" value="NUEVA ZONA" style="font-size: 0.85rem; padding: 0.55rem;" oninput="syncCourtesyZonesTable()">
+                    <input type="text" class="form-input-custom zone-name-input" value="NUEVA ZONA" style="font-size: 0.85rem; padding: 0.55rem;" oninput="if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function') SeatMapEditor.syncFromStandardTable();">
                 </td>
                 <td>
-                    <input type="number" class="form-input-custom zone-capacity-input" value="100" min="1" style="font-size: 0.85rem; padding: 0.55rem;" oninput="recalculateTotalCapacity(); syncCourtesyZonesTable();">
+                    <input type="number" class="form-input-custom zone-capacity-input" value="100" min="1" style="font-size: 0.85rem; padding: 0.55rem;" oninput="if(typeof recalculateTotalCapacity==='function') recalculateTotalCapacity(); if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function') SeatMapEditor.syncFromStandardTable();">
                 </td>
                 <td>
-                    <input type="number" step="0.50" class="form-input-custom zone-price-input" value="50.00" min="0" style="font-size: 0.85rem; padding: 0.55rem; color: #10B981; font-weight: 800;" oninput="updateZonePresaleCalc(this); recalculateTotalCapacity(); syncCourtesyZonesTable();">
+                    <input type="number" step="0.50" class="form-input-custom zone-price-input" value="50.00" min="0" style="font-size: 0.85rem; padding: 0.55rem; color: #10B981; font-weight: 800;" oninput="if(typeof updateZonePresaleCalc==='function') updateZonePresaleCalc(this); if(typeof recalculateTotalCapacity==='function') recalculateTotalCapacity(); if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function') SeatMapEditor.syncFromStandardTable();">
                 </td>
                 <td>
                     <button type="button" class="btn btn-sm btn-toggle-presale" style="background: rgba(255,85,0,0.15); border: 1.5px solid #FF5500; color: #FF5500; font-size: 0.775rem; font-weight: 800; padding: 0.45rem 0.65rem; border-radius: 8px; width: 100%; text-align: center;" onclick="toggleZonePresaleBox(this)">
@@ -3115,6 +3133,12 @@
             syncCourtesyZonesTable();
             if (typeof syncQuotaSplitTable === 'function') syncQuotaSplitTable();
         }
+
+        function addNewZoneRow() {
+            addDynamicZoneRow();
+        }
+        window.addNewZoneRow = addNewZoneRow;
+        window.addDynamicZoneRow = addDynamicZoneRow;
 
         function removeZoneRow(btn) {
             const row = btn.closest('tr');
@@ -3412,6 +3436,8 @@
                         name: row.querySelector('.zone-name-input').value,
                         capacity: parseInt(row.querySelector('.zone-capacity-input').value) || 0,
                         price: parseFloat(row.querySelector('.zone-price-input').value) || 0,
+                        zone_mode: 'standard',
+                        is_interactive: false,
                         has_presale: isPresaleEnabled && presaleDiscount > 0,
                         presale_discount: isPresaleEnabled ? presaleDiscount : 0,
                         presale_price: isPresaleEnabled ? presalePrice : null,

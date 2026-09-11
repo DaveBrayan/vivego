@@ -108,9 +108,21 @@
             this.zones = [];
 
             if (Array.isArray(phpInitialZones) && phpInitialZones.length > 0) {
+                const hasExplicitInteractive = phpInitialZones.some(pz => pz.is_interactive === true || pz.zone_mode === 'interactive');
+                const hasExplicitStandard = phpInitialZones.some(pz => pz.is_interactive === false || pz.zone_mode === 'standard');
+                const hasNumberedSeats = phpInitialZones.some(pz => (Array.isArray(pz.seats) && pz.seats.length > 0) || (pz.capacity_type === 'Butacas Numeradas'));
+
+                if (hasExplicitInteractive) {
+                    hasInteractiveZones = true;
+                } else if (hasExplicitStandard) {
+                    hasInteractiveZones = false;
+                } else if (hasNumberedSeats) {
+                    hasInteractiveZones = true;
+                } else {
+                    hasInteractiveZones = false;
+                }
+
                 phpInitialZones.forEach((pz, idx) => {
-                    const hasPts = Array.isArray(pz.points) && pz.points.length >= 3;
-                    if (hasPts) hasInteractiveZones = true;
 
                     const yOffset = 70 + (idx * 105);
                     const defaultPoints = [
@@ -128,6 +140,8 @@
                         if (uniqueR.size > 0) sRows = uniqueR.size;
                         if (uniqueC.size > 0) sCols = uniqueC.size;
                     }
+
+                    const hasPts = Array.isArray(pz.points) && pz.points.length >= 3;
 
                     this.zones.push({
                         id: pz.id || ('zone_' + Date.now() + '_' + idx),
@@ -232,20 +246,28 @@
                     row.className = 'zone-row';
                     row.innerHTML = `
                         <td>
-                            <select class="form-select-custom zone-capacity-type" style="font-size: 0.85rem; padding: 0.55rem;">
-                                <option value="Aforo VIP" ${z.capacity_type === 'Aforo VIP' ? 'selected' : ''}>🏟️ Aforo VIP</option>
-                                <option value="Aforo Preferencial" ${z.capacity_type === 'Aforo Preferencial' ? 'selected' : ''}>🏟️ Aforo Preferencial</option>
-                                <option value="Aforo General" ${(!z.capacity_type || z.capacity_type === 'Aforo General') ? 'selected' : ''}>🏟️ Aforo General</option>
+                            <select class="form-select-custom zone-capacity-type" style="font-size: 0.85rem; padding: 0.55rem;" onchange="if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function')SeatMapEditor.syncFromStandardTable();">
+                                @if(isset($capacityTypes) && count($capacityTypes) > 0)
+                                    @foreach($capacityTypes as $ct)
+                                        <option value="{{ is_array($ct) ? $ct['name'] : $ct->name }}" ${z.capacity_type === '{{ is_array($ct) ? $ct['name'] : $ct->name }}' ? 'selected' : ''}>
+                                            🏟️ {{ is_array($ct) ? $ct['name'] : $ct->name }}
+                                        </option>
+                                    @endforeach
+                                @else
+                                    <option value="Aforo VIP" ${z.capacity_type === 'Aforo VIP' ? 'selected' : ''}>🏟️ Aforo VIP</option>
+                                    <option value="Aforo Preferencial" ${z.capacity_type === 'Aforo Preferencial' ? 'selected' : ''}>🏟️ Aforo Preferencial</option>
+                                    <option value="Aforo General" ${(!z.capacity_type || z.capacity_type === 'Aforo General') ? 'selected' : ''}>🏟️ Aforo General</option>
+                                @endif
                             </select>
                         </td>
                         <td>
-                            <input type="text" class="form-input-custom zone-name-input" value="${escapeStr(z.name || '')}" style="font-size: 0.85rem; padding: 0.55rem;" oninput="if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable()">
+                            <input type="text" class="form-input-custom zone-name-input" value="${escapeStr(z.name || '')}" style="font-size: 0.85rem; padding: 0.55rem;" oninput="if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function') SeatMapEditor.syncFromStandardTable();">
                         </td>
                         <td>
-                            <input type="number" class="form-input-custom zone-capacity-input" value="${z.capacity || 100}" min="1" style="font-size: 0.85rem; padding: 0.55rem;" oninput="if(typeof recalculateTotalCapacity==='function') recalculateTotalCapacity(); if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable();">
+                            <input type="number" class="form-input-custom zone-capacity-input" value="${z.capacity || 100}" min="1" style="font-size: 0.85rem; padding: 0.55rem;" oninput="if(typeof recalculateTotalCapacity==='function') recalculateTotalCapacity(); if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function') SeatMapEditor.syncFromStandardTable();">
                         </td>
                         <td>
-                            <input type="number" step="0.50" class="form-input-custom zone-price-input" value="${(parseFloat(z.price) || 0).toFixed(2)}" min="0" style="font-size: 0.85rem; padding: 0.55rem; color: #10B981; font-weight: 800;" oninput="if(typeof updateZonePresaleCalc==='function') updateZonePresaleCalc(this); if(typeof recalculateTotalCapacity==='function') recalculateTotalCapacity(); if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable();">
+                            <input type="number" step="0.50" class="form-input-custom zone-price-input" value="${(parseFloat(z.price) || 0).toFixed(2)}" min="0" style="font-size: 0.85rem; padding: 0.55rem; color: #10B981; font-weight: 800;" oninput="if(typeof updateZonePresaleCalc==='function') updateZonePresaleCalc(this); if(typeof recalculateTotalCapacity==='function') recalculateTotalCapacity(); if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function') SeatMapEditor.syncFromStandardTable();">
                         </td>
                         <td>
                             <button type="button" class="btn btn-sm btn-toggle-presale" style="background: rgba(255,85,0,0.15); border: 1.5px solid #FF5500; color: #FF5500; font-size: 0.775rem; font-weight: 800; padding: 0.45rem 0.65rem; border-radius: 8px; width: 100%; text-align: center;" onclick="if(typeof toggleZonePresaleBox==='function') toggleZonePresaleBox(this)">
@@ -256,6 +278,7 @@
                             <button type="button" class="dash-btn-icon-action btn-delete-action" onclick="if(typeof removeZoneRow==='function') removeZoneRow(this)" title="Eliminar Zona">🗑️</button>
                         </td>
                     `;
+
 
                     const presaleRow = document.createElement('tr');
                     presaleRow.className = 'zone-presale-row';
@@ -369,6 +392,9 @@
             if (!this.selectedZoneId && this.zones.length > 0) {
                 this.selectedZoneId = this.zones[0].id;
             }
+            if (typeof this.render === 'function') {
+                this.render();
+            }
         },
 
         getExportZones: function() {
@@ -378,6 +404,8 @@
                 capacity_type: z.capacity_type || 'Aforo General',
                 capacity: parseInt(z.capacity) || 0,
                 price: parseFloat(z.price) || 0,
+                zone_mode: 'interactive',
+                is_interactive: true,
                 color: z.color || '#FF5500',
                 points: Array.isArray(z.points) ? z.points : [],
                 has_presale: !!z.presale_enabled,
@@ -2306,117 +2334,8 @@
             this.syncToStandardTable();
         },
 
-        syncToStandardTable: function() {
-            const tbody = document.getElementById('zonesTableBody');
-            if (!tbody) return;
-
-            tbody.innerHTML = '';
-
-            this.zones.forEach((z) => {
-                const tr = document.createElement('tr');
-                tr.className = 'zone-row';
-                tr.innerHTML = `
-                    <td>
-                        <select class="form-select-custom zone-capacity-type" style="font-size: 0.85rem; padding: 0.55rem;" onchange="SeatMapEditor.syncFromStandardTable()">
-                            @foreach($capacityTypes as $ct)
-                                <option value="{{ is_array($ct) ? $ct['name'] : $ct->name }}" ${z.capacity_type === '{{ is_array($ct) ? $ct['name'] : $ct->name }}' ? 'selected' : ''}>
-                                    🏟️ {{ is_array($ct) ? $ct['name'] : $ct->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </td>
-                    <td>
-                        <input type="text" class="form-input-custom zone-name-input" value="${z.name}" style="font-size: 0.85rem; padding: 0.55rem;" oninput="SeatMapEditor.syncFromStandardTable()">
-                    </td>
-                    <td>
-                        <input type="number" class="form-input-custom zone-capacity-input" value="${z.capacity}" min="0" style="font-size: 0.85rem; padding: 0.55rem;" oninput="if(typeof recalculateTotalCapacity==='function')recalculateTotalCapacity(); SeatMapEditor.syncFromStandardTable()">
-                    </td>
-                    <td>
-                        <input type="number" step="0.50" class="form-input-custom zone-price-input" value="${z.price.toFixed(2)}" min="0" style="font-size: 0.85rem; padding: 0.55rem; color: #10B981; font-weight: 800;" oninput="if(typeof updateZonePresaleCalc==='function')updateZonePresaleCalc(this); if(typeof recalculateTotalCapacity==='function')recalculateTotalCapacity(); SeatMapEditor.syncFromStandardTable()">
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn-sm btn-toggle-presale" style="background: ${z.presale_enabled ? 'var(--color-primary-orange)' : 'rgba(255,85,0,0.15)'}; border: 1.5px solid #FF5500; color: ${z.presale_enabled ? '#FFFFFF' : '#FF5500'}; font-size: 0.775rem; font-weight: 800; padding: 0.45rem 0.65rem; border-radius: 8px; width: 100%; text-align: center;" onclick="if(typeof toggleZonePresaleBox==='function')toggleZonePresaleBox(this)">
-                            🔥 ${z.presale_enabled ? 'Preventa Activa' : 'Configurar'}
-                        </button>
-                    </td>
-                    <td style="text-align: center;">
-                        <button type="button" class="dash-btn-icon-action btn-delete-action" onclick="if(typeof removeZoneRow==='function')removeZoneRow(this)" title="Eliminar Zona">🗑️</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-
-                const pDisc = z.presale_discount || 20;
-                const pPrice = z.price * (1 - (pDisc / 100));
-                const trPresale = document.createElement('tr');
-                trPresale.className = 'zone-presale-row';
-                trPresale.style.display = z.presale_enabled ? 'table-row' : 'none';
-                trPresale.style.background = 'rgba(255, 85, 0, 0.03)';
-                trPresale.innerHTML = `
-                    <td colspan="6" style="padding: 0.85rem 1.25rem; border-bottom: 1.5px solid rgba(255,85,0,0.25);">
-                        <div style="background: rgba(15,23,42,0.8); border: 1.5px dashed rgba(255,85,0,0.4); border-radius: 12px; padding: 1rem 1.25rem;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin: 0;">
-                                    <input type="checkbox" class="zone-presale-enabled" ${z.presale_enabled ? 'checked' : ''} onchange="if(typeof togglePresaleInputs==='function')togglePresaleInputs(this)" style="accent-color: #FF5500; width: 18px; height: 18px;">
-                                    <strong style="color: #FF5500; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px;">🔥 Activar Preventa para esta Zona</strong>
-                                </label>
-                                <span class="presale-preview-badge" style="font-size: 0.75rem; font-weight: 800; color: #FFFFFF; background: linear-gradient(135deg, #FF5500, #FF1E3C); padding: 3px 10px; border-radius: 6px;">
-                                    🔥 Precio Preventa: S/ ${pPrice.toFixed(2)} (-${pDisc}%)
-                                </span>
-                            </div>
-                            <div class="zone-presale-inputs-grid" style="display: grid; grid-template-columns: 1fr 1.2fr 1.5fr 1.5fr 1.2fr; gap: 0.75rem;">
-                                <div>
-                                    <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">% DESCUENTO</label>
-                                    <input type="number" class="form-input-custom zone-presale-discount" value="${pDisc}" min="0" max="99" style="font-size: 0.825rem; padding: 0.45rem;" oninput="if(typeof updateZonePresaleCalc==='function')updateZonePresaleCalc(this)">
-                                </div>
-                                <div>
-                                    <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">PRECIO PREVENTA (S/)</label>
-                                    <input type="number" step="0.50" class="form-input-custom zone-presale-price" value="${pPrice.toFixed(2)}" min="0" style="font-size: 0.825rem; padding: 0.45rem; color: #38BDF8; font-weight: 800;" readonly>
-                                </div>
-                                <div>
-                                    <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">FECHA INICIO</label>
-                                    <input type="date" class="form-input-custom zone-presale-start" value="${z.presale_start_date ? z.presale_start_date.split('T')[0].split(' ')[0] : new Date().toISOString().slice(0,10)}" style="font-size: 0.825rem; padding: 0.45rem;">
-                                </div>
-                                <div>
-                                    <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">FECHA FIN (LÍMITE)</label>
-                                    <input type="date" class="form-input-custom zone-presale-end" value="${z.presale_end_date ? z.presale_end_date.split('T')[0].split(' ')[0] : new Date(Date.now() + 15*86400000).toISOString().slice(0,10)}" style="font-size: 0.825rem; padding: 0.45rem;">
-                                </div>
-                                <div>
-                                    <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">STOCK PREVENTA</label>
-                                    <input type="number" class="form-input-custom zone-presale-stock" value="" min="0" style="font-size: 0.825rem; padding: 0.45rem;" placeholder="Hasta agotar">
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-                `;
-                tbody.appendChild(trPresale);
-            });
-
-            if (typeof recalculateTotalCapacity === 'function') recalculateTotalCapacity();
-            if (typeof syncCourtesyZonesTable === 'function') syncCourtesyZonesTable();
-        },
-
-        syncFromStandardTable: function() {
-            const rows = document.querySelectorAll('#zonesTableBody .zone-row');
-            if (rows.length === 0) return;
-
-            rows.forEach((row, idx) => {
-                const name = row.querySelector('.zone-name-input')?.value?.trim() || `Zona ${idx + 1}`;
-                const cap = parseInt(row.querySelector('.zone-capacity-input')?.value) || 0;
-                const price = parseFloat(row.querySelector('.zone-price-input')?.value) || 0;
-                const capType = row.querySelector('.zone-capacity-type')?.value || 'Campo';
-
-                if (this.zones[idx]) {
-                    this.zones[idx].name = name;
-                    this.zones[idx].capacity = cap;
-                    this.zones[idx].price = price;
-                    this.zones[idx].capacity_type = capType;
-                }
-            });
-
-            this.render();
-        },
-
         getSvgCoordinates: function(e) {
+
             const svg = document.getElementById('seatMapSvg');
             if (!svg) return { x: 0, y: 0 };
             const pt = svg.createSVGPoint();

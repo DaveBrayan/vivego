@@ -676,10 +676,6 @@
                                     <p class="card-header-subtitle">Configura las zonas de tickets, precios y aforo total (Modo Estándar o Diseñador Interactivo)</p>
                                 </div>
                             </div>
-
-                            <button type="button" class="btn btn-primary btn-save-settings" onclick="addNewZoneRow()">
-                                ➕ Agregar Nueva Zona
-                            </button>
                         </div>
 
                         <!-- SELECTOR DE MODO PASO 2 & CONSTRUCTOR INTERACTIVO EN 2 COLUMNAS (ELEMENTOR + CANVA) -->
@@ -689,6 +685,18 @@
                             <!-- MODO 1: CONTENEDOR ESTÁNDAR (TABLA DE TARIFAS Y CORTESÍAS) -->
                             <div id="step2StandardContainer">
                                 <div style="background: rgba(255,255,255,0.02); border: 1.5px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 1.25rem; margin-bottom: 1.75rem;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+                                        <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                            <span style="font-size: 1.2rem;">🎟️</span>
+                                            <div>
+                                                <h4 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: #FFFFFF;">Zonas y Tarifas de Venta</h4>
+                                                <p style="margin: 0.15rem 0 0 0; font-size: 0.775rem; color: #94A3B8;">Configura el tipo de aforo, nombre del sector, capacidad y precios para este evento</p>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-primary btn-save-settings" style="font-size: 0.825rem; padding: 0.55rem 1.15rem;" onclick="addNewZoneRow()">
+                                            ➕ Agregar Nueva Zona
+                                        </button>
+                                    </div>
                                     <table class="admin-table" style="margin: 0; width: 100%;">
                                     <thead>
                                         <tr>
@@ -713,7 +721,7 @@
                                             @endphp
                                             <tr class="zone-row">
                                                 <td>
-                                                    <select class="form-select-custom zone-capacity-type" style="font-size: 0.85rem; padding: 0.55rem;">
+                                                    <select class="form-select-custom zone-capacity-type" style="font-size: 0.85rem; padding: 0.55rem;" onchange="if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function')SeatMapEditor.syncFromStandardTable();">
                                                         @foreach($capacityTypes as $ct)
                                                             <option value="{{ is_array($ct) ? $ct['name'] : $ct->name }}" {{ ($zone['capacity_type'] ?? '') === (is_array($ct) ? $ct['name'] : $ct->name) ? 'selected' : '' }}>
                                                                 🏟️ {{ is_array($ct) ? $ct['name'] : $ct->name }}
@@ -722,13 +730,13 @@
                                                     </select>
                                                 </td>
                                                 <td>
-                                                    <input type="text" class="form-input-custom zone-name-input" value="{{ $zone['name'] ?? 'ZONA VIP' }}" style="font-size: 0.85rem; padding: 0.55rem;">
+                                                    <input type="text" class="form-input-custom zone-name-input" value="{{ $zone['name'] ?? 'ZONA VIP' }}" style="font-size: 0.85rem; padding: 0.55rem;" oninput="if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function') SeatMapEditor.syncFromStandardTable();">
                                                 </td>
                                                 <td>
-                                                    <input type="number" class="form-input-custom zone-capacity-input" value="{{ $zone['capacity'] ?? 100 }}" min="1" style="font-size: 0.85rem; padding: 0.55rem;" oninput="recalculateTotalCapacity()">
+                                                    <input type="number" class="form-input-custom zone-capacity-input" value="{{ $zone['capacity'] ?? 100 }}" min="1" style="font-size: 0.85rem; padding: 0.55rem;" oninput="recalculateTotalCapacity(); if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function') SeatMapEditor.syncFromStandardTable();">
                                                 </td>
                                                 <td>
-                                                    <input type="number" step="0.50" class="form-input-custom zone-price-input" value="{{ number_format($regPrice, 2, '.', '') }}" min="0" style="font-size: 0.85rem; padding: 0.55rem; color: #10B981; font-weight: 800;" oninput="updateZonePresaleCalc(this); recalculateTotalCapacity();">
+                                                    <input type="number" step="0.50" class="form-input-custom zone-price-input" value="{{ number_format($regPrice, 2, '.', '') }}" min="0" style="font-size: 0.85rem; padding: 0.55rem; color: #10B981; font-weight: 800;" oninput="updateZonePresaleCalc(this); recalculateTotalCapacity(); if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function') SeatMapEditor.syncFromStandardTable();">
                                                 </td>
                                                 <td>
                                                     <button type="button" class="btn btn-sm btn-toggle-presale" style="background: {{ $hasPresale ? 'var(--color-primary-orange)' : 'rgba(255,85,0,0.15)' }}; border: 1.5px solid #FF5500; color: {{ $hasPresale ? '#FFFFFF' : '#FF5500' }}; font-size: 0.775rem; font-weight: 800; padding: 0.45rem 0.65rem; border-radius: 8px; width: 100%; text-align: center;" onclick="toggleZonePresaleBox(this)">
@@ -1009,7 +1017,7 @@
                                     <span style="color: #94A3B8; font-size: 0.825rem;">
                                         🗺️ Zonas configuradas: <strong id="navInteractiveZoneCountBadge" style="color: #10B981; font-weight: 800;">0</strong>
                                     </span>
-                                    <button type="submit" class="btn btn-primary btn-save-settings" style="padding: 0.85rem 2.2rem; font-size: 1rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(255, 85, 0, 0.4);" onclick="if(typeof SeatMapEditor !== 'undefined' && typeof SeatMapEditor.syncToStandardTable === 'function') { SeatMapEditor.syncToStandardTable(); }">
+                                    <button type="submit" class="btn btn-primary btn-save-settings" style="padding: 0.85rem 2.2rem; font-size: 1rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(255, 85, 0, 0.4);" onclick="if(typeof SeatMapEditor !== 'undefined') { if(window.currentStep2ZoneMode === 'interactive' && typeof SeatMapEditor.syncToStandardTable === 'function') { SeatMapEditor.syncToStandardTable(); } else if(typeof SeatMapEditor.syncFromStandardTable === 'function') { SeatMapEditor.syncFromStandardTable(); } }">
                                         <span>Continuar a Plantilla Canva (Paso 3)</span> ➔
                                     </button>
                                 </div>
@@ -1771,9 +1779,14 @@
             }
 
             try {
-                if (typeof SeatMapEditor !== 'undefined' && typeof SeatMapEditor.syncToStandardTable === 'function') {
-                    SeatMapEditor.syncToStandardTable();
-                    console.log('[ViveGo Stepper] ✓ Zonas interactivas sincronizadas con éxito.');
+                if (typeof SeatMapEditor !== 'undefined') {
+                    if (window.currentStep2ZoneMode === 'interactive' && typeof SeatMapEditor.syncToStandardTable === 'function') {
+                        SeatMapEditor.syncToStandardTable();
+                        console.log('[ViveGo Stepper] ✓ Zonas interactivas sincronizadas con éxito.');
+                    } else if (typeof SeatMapEditor.syncFromStandardTable === 'function') {
+                        SeatMapEditor.syncFromStandardTable();
+                        console.log('[ViveGo Stepper] ✓ Zonas estándar sincronizadas con éxito.');
+                    }
                 }
             } catch(e) {
                 console.warn('[ViveGo Stepper] ⚠️ Error al sincronizar SeatMapEditor:', e);
@@ -3067,25 +3080,34 @@
 
         function addDynamicZoneRow() {
             const tbody = document.getElementById('zonesTableBody');
+            if (!tbody) return;
             
             const row = document.createElement('tr');
             row.className = 'zone-row';
             row.innerHTML = `
                 <td>
-                    <select class="form-select-custom zone-capacity-type" style="font-size: 0.85rem; padding: 0.55rem;">
-                        <option value="Aforo VIP">🏟️ Aforo VIP</option>
-                        <option value="Aforo Preferencial">🏟️ Aforo Preferencial</option>
-                        <option value="Aforo General" selected>🏟️ Aforo General</option>
+                    <select class="form-select-custom zone-capacity-type" style="font-size: 0.85rem; padding: 0.55rem;" onchange="if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function')SeatMapEditor.syncFromStandardTable();">
+                        @if(isset($capacityTypes) && count($capacityTypes) > 0)
+                            @foreach($capacityTypes as $ct)
+                                <option value="{{ is_array($ct) ? $ct['name'] : $ct->name }}">
+                                    🏟️ {{ is_array($ct) ? $ct['name'] : $ct->name }}
+                                </option>
+                            @endforeach
+                        @else
+                            <option value="Aforo VIP">🏟️ Aforo VIP</option>
+                            <option value="Aforo Preferencial">🏟️ Aforo Preferencial</option>
+                            <option value="Aforo General" selected>🏟️ Aforo General</option>
+                        @endif
                     </select>
                 </td>
                 <td>
-                    <input type="text" class="form-input-custom zone-name-input" value="NUEVA ZONA" style="font-size: 0.85rem; padding: 0.55rem;" oninput="syncCourtesyZonesTable()">
+                    <input type="text" class="form-input-custom zone-name-input" value="NUEVA ZONA" style="font-size: 0.85rem; padding: 0.55rem;" oninput="if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function') SeatMapEditor.syncFromStandardTable();">
                 </td>
                 <td>
-                    <input type="number" class="form-input-custom zone-capacity-input" value="100" min="1" style="font-size: 0.85rem; padding: 0.55rem;" oninput="recalculateTotalCapacity(); syncCourtesyZonesTable();">
+                    <input type="number" class="form-input-custom zone-capacity-input" value="100" min="1" style="font-size: 0.85rem; padding: 0.55rem;" oninput="if(typeof recalculateTotalCapacity==='function') recalculateTotalCapacity(); if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function') SeatMapEditor.syncFromStandardTable();">
                 </td>
                 <td>
-                    <input type="number" step="0.50" class="form-input-custom zone-price-input" value="50.00" min="0" style="font-size: 0.85rem; padding: 0.55rem; color: #10B981; font-weight: 800;" oninput="updateZonePresaleCalc(this); recalculateTotalCapacity(); syncCourtesyZonesTable();">
+                    <input type="number" step="0.50" class="form-input-custom zone-price-input" value="50.00" min="0" style="font-size: 0.85rem; padding: 0.55rem; color: #10B981; font-weight: 800;" oninput="if(typeof updateZonePresaleCalc==='function') updateZonePresaleCalc(this); if(typeof recalculateTotalCapacity==='function') recalculateTotalCapacity(); if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function') SeatMapEditor.syncFromStandardTable();">
                 </td>
                 <td>
                     <button type="button" class="btn btn-sm btn-toggle-presale" style="background: rgba(255,85,0,0.15); border: 1.5px solid #FF5500; color: #FF5500; font-size: 0.775rem; font-weight: 800; padding: 0.45rem 0.65rem; border-radius: 8px; width: 100%; text-align: center;" onclick="toggleZonePresaleBox(this)">
@@ -3149,7 +3171,16 @@
             recalculateTotalCapacity();
             syncCourtesyZonesTable();
             if (typeof syncQuotaSplitTable === 'function') syncQuotaSplitTable();
+            if (typeof SeatMapEditor !== 'undefined' && typeof SeatMapEditor.syncFromStandardTable === 'function') {
+                SeatMapEditor.syncFromStandardTable();
+            }
         }
+
+        function addNewZoneRow() {
+            addDynamicZoneRow();
+        }
+        window.addNewZoneRow = addNewZoneRow;
+        window.addDynamicZoneRow = addDynamicZoneRow;
 
         function removeZoneRow(btn) {
             const row = btn.closest('tr');
@@ -3162,6 +3193,9 @@
                 recalculateTotalCapacity();
                 syncCourtesyZonesTable();
                 if (typeof syncQuotaSplitTable === 'function') syncQuotaSplitTable();
+                if (typeof SeatMapEditor !== 'undefined' && typeof SeatMapEditor.syncFromStandardTable === 'function') {
+                    SeatMapEditor.syncFromStandardTable();
+                }
             } else {
                 Swal.fire({
                     title: 'Atención',
@@ -3401,7 +3435,16 @@
             }
 
             let zones = [];
-            const currentMode = (typeof window.currentStep2ZoneMode !== 'undefined') ? window.currentStep2ZoneMode : 'standard';
+            const standardContainer = document.getElementById('step2StandardContainer');
+            const isStandardVisible = standardContainer && (standardContainer.style.display !== 'none');
+            const currentMode = isStandardVisible ? 'standard' : ((typeof window.currentStep2ZoneMode !== 'undefined') ? window.currentStep2ZoneMode : 'standard');
+
+            if (currentMode === 'standard' && typeof SeatMapEditor !== 'undefined' && typeof SeatMapEditor.syncFromStandardTable === 'function') {
+                SeatMapEditor.syncFromStandardTable();
+            }
+            if (typeof syncQuotaSplitTable === 'function') {
+                syncQuotaSplitTable();
+            }
 
             if (currentMode === 'interactive') {
                 if (typeof SeatMapEditor !== 'undefined' && typeof SeatMapEditor.validateUnpopulatedSeats === 'function') {
@@ -3442,11 +3485,22 @@
                         presaleStock = parseInt(presaleRow.querySelector('.zone-presale-stock')?.value) || null;
                     }
 
+                    const zoneName = (row.querySelector('.zone-name-input')?.value || '').trim() || 'NUEVA ZONA';
+                    const smMatch = (typeof SeatMapEditor !== 'undefined' && SeatMapEditor.zones) 
+                        ? SeatMapEditor.zones.find(sz => (sz.name || '').trim().toUpperCase() === zoneName.toUpperCase()) 
+                        : null;
+
                     zones.push({
+                        id: smMatch ? smMatch.id : undefined,
                         capacity_type: row.querySelector('.zone-capacity-type').value,
-                        name: row.querySelector('.zone-name-input').value,
+                        name: zoneName,
                         capacity: parseInt(row.querySelector('.zone-capacity-input').value) || 0,
                         price: parseFloat(row.querySelector('.zone-price-input').value) || 0,
+                        zone_mode: 'standard',
+                        is_interactive: false,
+                        color: smMatch ? smMatch.color : undefined,
+                        points: smMatch ? smMatch.points : undefined,
+                        seats: smMatch ? smMatch.seats : undefined,
                         has_presale: isPresaleEnabled && presaleDiscount > 0,
                         presale_discount: isPresaleEnabled ? presaleDiscount : 0,
                         presale_price: isPresaleEnabled ? presalePrice : null,
