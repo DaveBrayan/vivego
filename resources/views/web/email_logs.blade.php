@@ -2,6 +2,77 @@
 
 @section('title', 'Registro de Correos Electrónicos | Vive Go')
 
+@push('styles')
+    <style>
+        /* Estilos de Paginación */
+        .dt-page-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #CBD5E1;
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 0.4rem 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 34px;
+            text-decoration: none !important;
+            user-select: none;
+            line-height: 1.2;
+        }
+
+        .dt-page-btn:hover:not(.disabled):not(.active) {
+            background: rgba(255, 85, 0, 0.15);
+            border-color: rgba(255, 85, 0, 0.4);
+            color: #FF5500;
+            transform: translateY(-1px);
+        }
+
+        .dt-page-btn.active {
+            background: linear-gradient(135deg, #FF5500, #FF7700) !important;
+            border-color: #FF5500 !important;
+            color: #FFFFFF !important;
+            font-weight: 900;
+            box-shadow: 0 2px 8px rgba(255, 85, 0, 0.4);
+            cursor: default;
+        }
+
+        .dt-page-btn.disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            pointer-events: none;
+            color: #64748B;
+        }
+
+        .dt-page-dots {
+            color: #64748B;
+            padding: 0 0.35rem;
+            font-weight: 700;
+            user-select: none;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .theme-light .dt-page-btn {
+            background: #F1F5F9;
+            border-color: #CBD5E1;
+            color: #334155;
+        }
+
+        .theme-light .dt-page-btn.active {
+            color: #FFFFFF !important;
+        }
+
+        .theme-light .dt-page-btn.disabled {
+            opacity: 0.4;
+            color: #94A3B8;
+        }
+    </style>
+@endpush
+
 @section('content')
     <div class="dashboard-root-wrapper">
         <!-- SIDEBAR DE NAVEGACIÓN HEREDADO -->
@@ -350,12 +421,64 @@
 
                     <!-- PAGINACIÓN -->
                     @if($logs->hasPages())
-                        <div style="padding: 1.25rem 1.5rem; border-top: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: space-between;">
-                            <span style="font-size: 0.825rem; color: #94A3B8;">
-                                Mostrando {{ $logs->firstItem() }} a {{ $logs->lastItem() }} de {{ $logs->total() }} registros
-                            </span>
-                            <div>
-                                {{ $logs->links() }}
+                        @php
+                            $currentPage = $logs->currentPage();
+                            $lastPage = $logs->lastPage();
+                            $maxButtons = 5;
+                            $startPage = max(1, $currentPage - floor($maxButtons / 2));
+                            $endPage = min($lastPage, $startPage + $maxButtons - 1);
+                            if ($endPage - $startPage + 1 < $maxButtons) {
+                                $startPage = max(1, $endPage - $maxButtons + 1);
+                            }
+                        @endphp
+                        <div class="dash-pagination-container" style="padding: 1rem 1.5rem; border-top: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; background: rgba(255, 255, 255, 0.01); border-radius: 0 0 16px 16px;">
+                            <div style="font-size: 0.825rem; color: #94A3B8; font-weight: 600;">
+                                Mostrando <strong style="color: #FFFFFF;">{{ $logs->firstItem() }}</strong> a <strong style="color: #FFFFFF;">{{ $logs->lastItem() }}</strong> de <strong style="color: #FFFFFF;">{{ $logs->total() }}</strong> registros de correos
+                            </div>
+                            
+                            <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
+                                {{-- Botón Primera Página --}}
+                                @if($logs->onFirstPage())
+                                    <span class="dt-page-btn disabled" title="Primera página">«</span>
+                                    <span class="dt-page-btn disabled" title="Página anterior">‹ Ant</span>
+                                @else
+                                    <a href="{{ $logs->url(1) }}" class="dt-page-btn" title="Primera página">«</a>
+                                    <a href="{{ $logs->previousPageUrl() }}" class="dt-page-btn" title="Página anterior">‹ Ant</a>
+                                @endif
+
+                                {{-- Primera página si está fuera del rango --}}
+                                @if($startPage > 1)
+                                    <a href="{{ $logs->url(1) }}" class="dt-page-btn">1</a>
+                                    @if($startPage > 2)
+                                        <span class="dt-page-dots">...</span>
+                                    @endif
+                                @endif
+
+                                {{-- Rango de páginas centrales --}}
+                                @for($page = $startPage; $page <= $endPage; $page++)
+                                    @if($page == $currentPage)
+                                        <span class="dt-page-btn active">{{ $page }}</span>
+                                    @else
+                                        <a href="{{ $logs->url($page) }}" class="dt-page-btn">{{ $page }}</a>
+                                    @endif
+                                @endfor
+
+                                {{-- Última página si está fuera del rango --}}
+                                @if($endPage < $lastPage)
+                                    @if($endPage < $lastPage - 1)
+                                        <span class="dt-page-dots">...</span>
+                                    @endif
+                                    <a href="{{ $logs->url($lastPage) }}" class="dt-page-btn">{{ $lastPage }}</a>
+                                @endif
+
+                                {{-- Botón Siguiente y Última Página --}}
+                                @if($logs->hasMorePages())
+                                    <a href="{{ $logs->nextPageUrl() }}" class="dt-page-btn" title="Página siguiente">Sig ›</a>
+                                    <a href="{{ $logs->url($lastPage) }}" class="dt-page-btn" title="Última página">»</a>
+                                @else
+                                    <span class="dt-page-btn disabled" title="Página siguiente">Sig ›</span>
+                                    <span class="dt-page-btn disabled" title="Última página">»</span>
+                                @endif
                             </div>
                         </div>
                     @endif
