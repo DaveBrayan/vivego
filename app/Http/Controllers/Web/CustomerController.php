@@ -105,6 +105,15 @@ class CustomerController extends Controller
      */
     public function destroy(int $id): JsonResponse
     {
+        $adminId = session('admin_id');
+        $loggedAdmin = $adminId ? \App\Models\Administrator::find($adminId) : null;
+        if ($loggedAdmin && !$loggedAdmin->canDelete()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permisos para eliminar clientes.',
+            ], 403);
+        }
+
         $customer = User::findOrFail($id);
         $customerName = $customer->name;
 

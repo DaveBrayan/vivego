@@ -33,12 +33,22 @@ class DashboardController extends Controller
         ];
 
         // 2. Eventos reales de la base de datos
-        $dbEvents = Event::orderBy('id', 'desc')->get();
+        $eventsQuery = Event::orderBy('id', 'desc');
+        if ($admin && $admin->allowed_scope === 'specific') {
+            $eventsQuery->whereIn('id', $admin->getAllowedEventIds());
+        }
+        $dbEvents = $eventsQuery->get();
         $totalEventsCount = $dbEvents->count();
+        $allowedEventIds = $dbEvents->pluck('id')->toArray();
 
         // 3. Métricas reales calculadas
-        $totalTicketsSold = EventTicket::count();
-        $totalPosSales = TicketSale::count();
+        $totalTicketsSold = $admin && $admin->allowed_scope === 'specific' 
+            ? EventTicket::whereIn('event_id', $allowedEventIds)->count() 
+            : EventTicket::count();
+
+        $totalPosSales = $admin && $admin->allowed_scope === 'specific' 
+            ? TicketSale::whereIn('event_id', $allowedEventIds)->count() 
+            : TicketSale::count();
 
         // Capacidad global sumando todas las zonas de los eventos
         $totalCapacity = 0;
@@ -55,15 +65,24 @@ class DashboardController extends Controller
         if ($totalCapacity == 0) $totalCapacity = max($totalTicketsSold, 100);
 
         // Recaudación total real de tickets y taquilla
-        $ticketRevenue = (float) EventTicket::sum('unit_price');
-        $posRevenue = (float) TicketSale::sum('total_amount');
+        $ticketRevenue = (float) ($admin && $admin->allowed_scope === 'specific'
+            ? EventTicket::whereIn('event_id', $allowedEventIds)->sum('unit_price')
+            : EventTicket::sum('unit_price'));
+
+        $posRevenue = (float) ($admin && $admin->allowed_scope === 'specific'
+            ? TicketSale::whereIn('event_id', $allowedEventIds)->sum('total_amount')
+            : TicketSale::sum('total_amount'));
+
         $totalSales = $ticketRevenue + $posRevenue;
 
         // Porcentaje de ocupación global
         $ticketsPercentage = $totalCapacity > 0 ? min(100, round(($totalTicketsSold / $totalCapacity) * 100, 1)) : 0;
 
         // Tasa de asistencia (check-ins confirmados)
-        $usedTicketsCount = EventTicket::where('is_used', true)->orWhereNotNull('checked_in_at')->count();
+        $usedTicketsCount = $admin && $admin->allowed_scope === 'specific'
+            ? EventTicket::whereIn('event_id', $allowedEventIds)->where(function($q){ $q->where('is_used', true)->orWhereNotNull('checked_in_at'); })->count()
+            : EventTicket::where('is_used', true)->orWhereNotNull('checked_in_at')->count();
+
         $attendanceRate = $totalTicketsSold > 0 ? round(($usedTicketsCount / $totalTicketsSold) * 100, 1) : 0;
 
         // Ingresos netos estimados

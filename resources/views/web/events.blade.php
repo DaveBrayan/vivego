@@ -55,11 +55,13 @@
                         <h1 class="settings-page-title">Mis Eventos</h1>
                         <p class="settings-page-subtitle">Administra tu catálogo de conciertos, espectáculos, obras de teatro y festivales en tiempo real.</p>
                     </div>
+                    @if(!isset($canDelete) || $canDelete)
                     <div>
                         <a href="{{ route('web.events.create') }}" class="btn btn-primary btn-save-settings" style="white-space: nowrap; padding: 0.85rem 1.6rem; font-size: 0.95rem; text-decoration: none;">
                             ➕ Crear Nuevo Evento
                         </a>
                     </div>
+                    @endif
                 </div>
 
                 <!-- TABLA DE EVENTOS -->
@@ -160,8 +162,10 @@
                                             <div class="dash-actions-cell" style="justify-content: flex-end;">
                                                 <a href="{{ route('web.event.detail', $evt['slug']) }}" class="dash-btn-icon-action" title="Previsualizar Evento" target="_blank" style="color: var(--color-neon-cyan);">👁️</a>
                                                 <a href="{{ route('web.events.edit', $evt['id']) }}" class="dash-btn-icon-action" title="Editar Evento">✏️</a>
+                                                @if(!isset($canDelete) || $canDelete)
                                                 <button type="button" class="dash-btn-icon-action btn-duplicate-event" data-id="{{ $evt['id'] }}" data-title="{{ $evt['title'] }}" title="Duplicar Evento Completo" style="color: #A855F7;">📋</button>
                                                 <button type="button" class="dash-btn-icon-action btn-delete-event" data-id="{{ $evt['id'] }}" data-title="{{ $evt['title'] }}" title="Eliminar Evento" style="color: #FF1E3C;">🗑️</button>
+                                                @endif
                                             </div>
                                         </td>
                                     </tr>

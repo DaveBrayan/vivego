@@ -35,8 +35,16 @@ class EventController extends Controller
 
         $companies = Company::all();
 
+        $adminId = session('admin_id');
+        $loggedAdmin = $adminId ? \App\Models\Administrator::find($adminId) : null;
+        $canDelete = $loggedAdmin ? $loggedAdmin->canDelete() : true;
+
         // Obtener eventos guardados en MySQL con sus ventas asociadas
-        $dbEvents = Event::with(['template', 'sales'])->orderBy('id', 'desc')->get();
+        $eventsQuery = Event::with(['template', 'sales'])->orderBy('id', 'desc');
+        if ($loggedAdmin && $loggedAdmin->allowed_scope === 'specific') {
+            $eventsQuery->whereIn('id', $loggedAdmin->getAllowedEventIds());
+        }
+        $dbEvents = $eventsQuery->get();
 
         $events = [];
 
@@ -202,7 +210,7 @@ class EventController extends Controller
             ];
         }
 
-        return view('web.events', compact('events', 'companies', 'settings', 'organizer'));
+        return view('web.events', compact('events', 'companies', 'settings', 'organizer', 'canDelete'));
     }
 
     /**
@@ -707,6 +715,28 @@ class EventController extends Controller
      */
     public function destroy(Event $event): JsonResponse|RedirectResponse
     {
+        $adminId = session('admin_id');
+        $loggedAdmin = $adminId ? \App\Models\Administrator::find($adminId) : null;
+        if ($loggedAdmin && !$loggedAdmin->canDelete()) {
+            if (request()->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permisos para eliminar eventos.',
+                ], 403);
+            }
+            return redirect()->back()->with('error', 'No tienes permisos para eliminar eventos.');
+        }
+
+        if ($loggedAdmin && !$loggedAdmin->canAccessEvent($event->id)) {
+            if (request()->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes acceso a este evento.',
+                ], 403);
+            }
+            return redirect()->back()->with('error', 'No tienes acceso a este evento.');
+        }
+
         // Eliminar en cascada todos los boletos, QR generados y ventas del evento
         $event->tickets()->delete();
         $event->sales()->delete();
@@ -727,6 +757,15 @@ class EventController extends Controller
      */
     public function duplicate(Request $request, Event $event): JsonResponse
     {
+        $adminId = session('admin_id');
+        $loggedAdmin = $adminId ? \App\Models\Administrator::find($adminId) : null;
+        if ($loggedAdmin && !$loggedAdmin->canAccessEvent($event->id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes acceso para duplicar este evento.',
+            ], 403);
+        }
+
         $baseTitle = $event->title;
         $newTitle = '[Copia] ' . $baseTitle;
         $slug = Str::slug($newTitle) . '-' . rand(100, 999);
@@ -969,6 +1008,22 @@ class EventController extends Controller
      */
     public function destroyBatchTickets(Request $request, Event $event): JsonResponse
     {
+        $adminId = session('admin_id');
+        $loggedAdmin = $adminId ? \App\Models\Administrator::find($adminId) : null;
+        if ($loggedAdmin && !$loggedAdmin->canDelete()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permisos para eliminar boletos generados.',
+            ], 403);
+        }
+
+        if ($loggedAdmin && !$loggedAdmin->canAccessEvent($event->id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes acceso a este evento.',
+            ], 403);
+        }
+
         $query = \App\Models\EventTicket::where('event_id', $event->id)
             ->where(function ($q) {
                 $q->where('source', 'pdf_batch')

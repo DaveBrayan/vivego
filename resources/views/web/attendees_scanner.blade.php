@@ -1,5 +1,11 @@
 @extends('layouts.app')
 
+@php
+    $adminId = session('admin_id');
+    $loggedAdmin = $adminId ? \App\Models\Administrator::find($adminId) : null;
+    $canDeleteScans = $loggedAdmin ? $loggedAdmin->canDelete() : true;
+@endphp
+
 @section('title', 'Scanner QR & Control de Acceso: ' . $event->title . ' | Vive Go')
 
 @push('styles')
@@ -361,6 +367,7 @@
                                             </span>
                                         </td>
                                         <td style="text-align: right;">
+                                            @if($canDeleteScans)
                                             <button type="button" 
                                                     onclick="resetCheckin({{ $chk->id }}, '{{ $chk->ticket_code }}')" 
                                                     class="btn btn-sm"
@@ -370,6 +377,9 @@
                                                     onmouseleave="this.style.background='rgba(239, 68, 68, 0.15)'; this.style.color='#EF4444';">
                                                 <span>🗑️</span> <span>Anular Escaneo</span>
                                             </button>
+                                            @else
+                                            <span style="color: #64748B; font-size: 0.75rem; font-weight: 700;">🔒 Protegido</span>
+                                            @endif
                                         </td>
                                     </tr>
                                 @empty
@@ -518,6 +528,7 @@
         const eventTitle = "{{ addslashes($event->title) }}";
         const verifyUrl = "{{ route('web.attendees.verify_qr', $event->id) }}";
         const csrfToken = "{{ csrf_token() }}";
+        const canDeleteScans = {{ $canDeleteScans ? 'true' : 'false' }};
 
         let isProcessingScan = false;
 
@@ -955,6 +966,7 @@
                 <td><span style="color: #E2E8F0; font-size: 0.85rem;">${ticket.scanned_by || 'Puerta Principal'}</span></td>
                 <td><span class="dash-badge-custom badge-green" style="font-size: 0.75rem;">✓ Ingresado</span></td>
                 <td style="text-align: right;">
+                    ${canDeleteScans ? `
                     <button type="button" 
                             onclick="resetCheckin(${ticket.id}, '${ticket.ticket_code}')" 
                             class="btn btn-sm"
@@ -964,6 +976,7 @@
                             onmouseleave="this.style.background='rgba(239, 68, 68, 0.15)'; this.style.color='#EF4444';">
                         <span>🗑️</span> <span>Anular Escaneo</span>
                     </button>
+                    ` : '<span style="color: #64748B; font-size: 0.75rem; font-weight: 700;">🔒 Protegido</span>'}
                 </td>
             `;
 

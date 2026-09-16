@@ -25,7 +25,24 @@
                 background-attachment: fixed;
                 z-index: -2;
             }
-            /* Dispositivos Móviles y Tablets: Activa el Fondo 9:16 (1080x1920 px) */
+            /* Orden estricto para Plantilla 2 en todas las pantallas móviles y tablets */
+            @media (max-width: 1024px) {
+                #artistHeroWrapper {
+                    order: 1 !important;
+                }
+                .public-seatmap-wrapper {
+                    order: 2 !important;
+                    width: 100% !important;
+                    margin-bottom: 0 !important;
+                }
+                .template2-booking-card {
+                    order: 3 !important;
+                }
+                .template2-info-blocks-wrapper {
+                    order: 4 !important;
+                }
+            }
+            /* Dispositivos Móviles: Activa el Fondo 9:16 (1080x1920 px) y Espaciados Optimizados */
             @media (max-width: 768px) {
                 .template2-backdrop {
                     background-image: url('{{ $event['background_mobile_image'] ?: ($event['background_image'] ?: $event['banner_image']) }}') !important;
@@ -36,6 +53,7 @@
                 .template2-main-container {
                     padding-left: 0.75rem !important;
                     padding-right: 0.75rem !important;
+                    gap: 1.25rem !important;
                 }
                 .template2-booking-card {
                     padding: 1.25rem 1rem !important;
@@ -198,7 +216,7 @@
             </div>
 
             <!-- Información Adicional Desplegable (Ubicación / Detalles) (TEMA BLANCO) -->
-            <div style="width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 0.85rem; margin-top: 0.25rem;">
+            <div class="template2-info-blocks-wrapper" style="width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 0.85rem; margin-top: 0.25rem;">
                 
                 <!-- Recinto / Local Blanco -->
                 <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 1.15rem 1.35rem; box-shadow: 0 10px 30px rgba(0,0,0,0.12);">

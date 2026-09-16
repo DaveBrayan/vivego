@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Administrator;
+use App\Models\Event;
 use App\Models\Setting;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -15,10 +16,20 @@ class AdminController extends Controller
     /**
      * Muestra la lista de administradores del sistema.
      */
-    public function index(): View
+    public function index(): View|RedirectResponse
     {
+        // Verificar que el usuario en sesión tenga permisos de administración
+        $loggedAdminId = session('admin_id');
+        $loggedAdmin = $loggedAdminId ? Administrator::find($loggedAdminId) : null;
+
+        if ($loggedAdmin && !$loggedAdmin->canDelete()) {
+            return redirect()->route('web.dashboard')
+                ->with('error', '⛔ Acceso denegado: Tu rol actual no tiene permisos para gestionar administradores.');
+        }
+
         $administrators = Administrator::orderBy('id', 'asc')->get();
         $settings = Setting::current();
+        $events = Event::orderBy('id', 'desc')->get();
 
         $organizer = [
             'name' => 'Christian Gómez',
@@ -40,7 +51,7 @@ class AdminController extends Controller
             ['code' => '+55',  'iso' => 'br', 'flag' => '🇧🇷', 'display' => '🇧🇷 +55'],
         ];
 
-        return view('web.admins', compact('administrators', 'settings', 'organizer', 'countries'));
+        return view('web.admins', compact('administrators', 'settings', 'organizer', 'countries', 'events'));
     }
 
     /**
@@ -56,8 +67,14 @@ class AdminController extends Controller
             'country_code' => 'required|string|max:10',
             'country_iso' => 'required|string|max:5',
             'phone' => 'required|string|max:20',
-            'role' => 'required|string|in:Administrador Principal,Administrador',
+            'role' => 'required|string|in:Administrador Principal,Administrador,Ventas,Validador de Entradas',
+            'allowed_scope' => 'required|string|in:all,specific',
+            'allowed_events' => 'nullable|array',
+            'allowed_events.*' => 'integer|exists:events,id',
         ]);
+
+        $allowedScope = $validated['allowed_scope'];
+        $allowedEvents = $allowedScope === 'specific' ? array_map('intval', (array)($request->input('allowed_events') ?? [])) : null;
 
         // Generar contraseña segura automáticamente por el sistema
         $generatedPassword = 'VG' . rand(100, 999) . '!' . \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(4));
@@ -72,12 +89,14 @@ class AdminController extends Controller
             'country_iso' => strtolower($validated['country_iso']),
             'phone' => $validated['phone'],
             'role' => $validated['role'],
+            'allowed_scope' => $allowedScope,
+            'allowed_events' => $allowedEvents,
             'status' => 'Activo',
             'avatar' => 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80',
         ]);
 
         return redirect()->back()
-            ->with('success', '¡El administrador ha sido registrado correctamente!')
+            ->with('success', '¡El usuario ha sido registrado correctamente!')
             ->with('created_admin', [
                 'name' => $admin->full_name,
                 'username' => $admin->username,
@@ -86,6 +105,7 @@ class AdminController extends Controller
                 'phone' => $admin->country_code . ' ' . $admin->phone,
                 'role' => $admin->role,
                 'flag' => $admin->flag_emoji,
+                'allowed_scope' => $allowedScope,
             ]);
     }
 
@@ -102,9 +122,15 @@ class AdminController extends Controller
             'country_code' => 'required|string|max:10',
             'country_iso' => 'required|string|max:5',
             'phone' => 'required|string|max:20',
-            'role' => 'required|string|in:Administrador Principal,Administrador',
+            'role' => 'required|string|in:Administrador Principal,Administrador,Ventas,Validador de Entradas',
+            'allowed_scope' => 'required|string|in:all,specific',
+            'allowed_events' => 'nullable|array',
+            'allowed_events.*' => 'integer|exists:events,id',
             'status' => 'required|string|in:Activo,Inactivo',
         ]);
+
+        $allowedScope = $validated['allowed_scope'];
+        $allowedEvents = $allowedScope === 'specific' ? array_map('intval', (array)($request->input('allowed_events') ?? [])) : null;
 
         $administrator->update([
             'first_name' => $validated['first_name'],
@@ -115,6 +141,8 @@ class AdminController extends Controller
             'country_iso' => strtolower($validated['country_iso']),
             'phone' => $validated['phone'],
             'role' => $validated['role'],
+            'allowed_scope' => $allowedScope,
+            'allowed_events' => $allowedEvents,
             'status' => $validated['status'],
         ]);
 
@@ -126,6 +154,17 @@ class AdminController extends Controller
      */
     public function destroy(Administrator $administrator): RedirectResponse
     {
+        $loggedAdminId = session('admin_id');
+        $loggedAdmin = $loggedAdminId ? Administrator::find($loggedAdminId) : null;
+
+        if (!$loggedAdmin || !$loggedAdmin->canDelete()) {
+            return redirect()->back()->with('error', '⛔ No tienes permisos para eliminar administradores ni registros.');
+        }
+
+        if ($administrator->id === $loggedAdmin->id) {
+            return redirect()->back()->with('error', 'No puedes eliminar tu propia cuenta de administrador.');
+        }
+
         $administrator->delete();
 
         return redirect()->back()->with('success', '¡El administrador ha sido eliminado del sistema!');
@@ -136,6 +175,13 @@ class AdminController extends Controller
      */
     public function resetPassword(Administrator $administrator): RedirectResponse
     {
+        $loggedAdminId = session('admin_id');
+        $loggedAdmin = $loggedAdminId ? Administrator::find($loggedAdminId) : null;
+
+        if (!$loggedAdmin || !$loggedAdmin->canDelete()) {
+            return redirect()->back()->with('error', '⛔ No tienes permisos para restablecer contraseñas.');
+        }
+
         $newPassword = 'VG' . rand(100, 999) . '!' . \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(4));
 
         $administrator->update([
@@ -155,3 +201,4 @@ class AdminController extends Controller
             ]);
     }
 }
+

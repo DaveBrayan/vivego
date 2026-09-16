@@ -76,9 +76,11 @@ class EventDetailController extends Controller
                     $zoneName = $zone['name'] ?? $zone['capacity_type'] ?? ('Zona ' . ($idx + 1));
                     $cleanZoneName = strtoupper(trim($zoneName));
 
-                    // Omitir elementos decorativos o no comercializables (Escenario / Tarima)
+                    // Omitir elementos decorativos o no comercializables (Escenario / Tarima sin precio ni aforo)
                     if ($cleanZoneName === 'ESCENARIO' || $cleanZoneName === 'TARIMA' || ($zone['capacity_type'] ?? '') === 'Escenario' || ($zone['type'] ?? '') === 'stage') {
-                        continue;
+                        if (empty($zone['price']) || empty($zone['capacity'])) {
+                            continue;
+                        }
                     }
 
                     $splitSettings = is_array($eventModel->quota_split_settings) ? $eventModel->quota_split_settings : (json_decode($eventModel->quota_split_settings ?? '[]', true) ?: []);
@@ -383,17 +385,9 @@ class EventDetailController extends Controller
                 'tags' => $tags,
                 'zones' => $zones,
                 'interactive_zones' => array_values(array_filter($zones, function($z) {
-                    $name = strtoupper(trim($z['name'] ?? ''));
-                    if ($name === 'ESCENARIO' || $name === 'TARIMA' || ($z['capacity_type'] ?? '') === 'Escenario' || ($z['type'] ?? '') === 'stage') {
-                        return false;
-                    }
                     return !empty($z['points']) && is_array($z['points']) && count($z['points']) >= 3;
                 })),
                 'has_interactive_zones' => !empty(array_filter($zones, function($z) {
-                    $name = strtoupper(trim($z['name'] ?? ''));
-                    if ($name === 'ESCENARIO' || $name === 'TARIMA' || ($z['capacity_type'] ?? '') === 'Escenario' || ($z['type'] ?? '') === 'stage') {
-                        return false;
-                    }
                     return !empty($z['points']) && is_array($z['points']) && count($z['points']) >= 3;
                 })),
             ];

@@ -132,6 +132,15 @@ class DeviceController extends Controller
      */
     public function destroy(Device $device): JsonResponse
     {
+        $adminId = session('admin_id');
+        $loggedAdmin = $adminId ? \App\Models\Administrator::find($adminId) : null;
+        if ($loggedAdmin && !$loggedAdmin->canDelete()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permisos para eliminar dispositivos.',
+            ], 403);
+        }
+
         $name = $device->name;
         $device->delete();
 

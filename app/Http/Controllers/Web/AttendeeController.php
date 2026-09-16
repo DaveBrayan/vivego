@@ -23,7 +23,14 @@ class AttendeeController extends Controller
         $settings = Setting::first();
         $organizer = Company::first();
 
-        $dbEvents = Event::orderBy('event_date', 'desc')->get();
+        $adminId = session('admin_id');
+        $loggedAdmin = $adminId ? \App\Models\Administrator::find($adminId) : null;
+
+        $eventsQuery = Event::orderBy('event_date', 'desc');
+        if ($loggedAdmin && $loggedAdmin->allowed_scope === 'specific') {
+            $eventsQuery->whereIn('id', $loggedAdmin->getAllowedEventIds());
+        }
+        $dbEvents = $eventsQuery->get();
         $events = [];
 
         foreach ($dbEvents as $ev) {
@@ -80,6 +87,12 @@ class AttendeeController extends Controller
      */
     public function scanner(Event $event): View
     {
+        $adminId = session('admin_id');
+        $loggedAdmin = $adminId ? \App\Models\Administrator::find($adminId) : null;
+        if ($loggedAdmin && !$loggedAdmin->canAccessEvent($event->id)) {
+            return redirect()->route('web.attendees')->with('error', 'No tienes permisos para acceder a este evento.');
+        }
+
         $settings = Setting::first();
         $organizer = Company::first();
 
@@ -246,6 +259,15 @@ class AttendeeController extends Controller
      */
     public function resetCheckin(Request $request, $event, $ticket): JsonResponse
     {
+        $adminId = session('admin_id');
+        $loggedAdmin = $adminId ? \App\Models\Administrator::find($adminId) : null;
+        if ($loggedAdmin && !$loggedAdmin->canDelete()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permisos para anular escaneos de asistencia.',
+            ], 403);
+        }
+
         $eventObj = $event instanceof Event ? $event : Event::find($event);
         $ticketObj = $ticket instanceof EventTicket ? $ticket : (EventTicket::find($ticket) ?: EventTicket::where('ticket_code', $ticket)->orWhere('validation_hash', $ticket)->first());
 
@@ -282,6 +304,12 @@ class AttendeeController extends Controller
      */
     public function mobileScanner(Event $event): View
     {
+        $adminId = session('admin_id');
+        $loggedAdmin = $adminId ? \App\Models\Administrator::find($adminId) : null;
+        if ($loggedAdmin && !$loggedAdmin->canAccessEvent($event->id)) {
+            return redirect()->route('web.attendees')->with('error', 'No tienes permisos para acceder a este evento.');
+        }
+
         $settings = Setting::first();
         $organizer = Company::first();
 

@@ -32,8 +32,15 @@ class BoxOfficeController extends Controller
             'status' => 'Verificado Pro',
         ];
 
+        $adminId = session('admin_id');
+        $loggedAdmin = $adminId ? \App\Models\Administrator::find($adminId) : null;
+
         // Obtener eventos con sus ventas acumuladas
-        $dbEvents = Event::with(['template', 'sales'])->orderBy('id', 'desc')->get();
+        $eventsQuery = Event::with(['template', 'sales'])->orderBy('id', 'desc');
+        if ($loggedAdmin && $loggedAdmin->allowed_scope === 'specific') {
+            $eventsQuery->whereIn('id', $loggedAdmin->getAllowedEventIds());
+        }
+        $dbEvents = $eventsQuery->get();
 
         $events = [];
         $globalTotalRevenue = 0;
@@ -152,6 +159,12 @@ class BoxOfficeController extends Controller
      */
     public function manage($id): View
     {
+        $adminId = session('admin_id');
+        $loggedAdmin = $adminId ? \App\Models\Administrator::find($adminId) : null;
+        if ($loggedAdmin && !$loggedAdmin->canAccessEvent($id)) {
+            return redirect()->route('web.box_office')->with('error', 'No tienes permisos para acceder a este evento.');
+        }
+
         $settings = Setting::current();
 
         $organizer = [
@@ -295,6 +308,15 @@ class BoxOfficeController extends Controller
         $buyerDni = !empty(trim($validated['buyer_dni'] ?? '')) ? trim($validated['buyer_dni']) : '00000000';
         $buyerPhone = !empty(trim($validated['buyer_phone'] ?? '')) ? trim($validated['buyer_phone']) : '-';
         $buyerEmail = !empty(trim($validated['buyer_email'] ?? '')) ? trim($validated['buyer_email']) : null;
+
+        $adminId = session('admin_id');
+        $loggedAdmin = $adminId ? \App\Models\Administrator::find($adminId) : null;
+        if ($loggedAdmin && !$loggedAdmin->canAccessEvent($id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permisos para registrar ventas en este evento.',
+            ], 403);
+        }
 
         $event = Event::findOrFail($id);
         $zones = is_array($event->zones) ? $event->zones : [];
@@ -821,12 +843,28 @@ class BoxOfficeController extends Controller
      */
     public function destroySale($id): JsonResponse
     {
+        $adminId = session('admin_id');
+        $loggedAdmin = $adminId ? \App\Models\Administrator::find($adminId) : null;
+        if ($loggedAdmin && !$loggedAdmin->canDelete()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permisos para anular o eliminar ventas.',
+            ], 403);
+        }
+
         $sale = TicketSale::find($id);
         if (!$sale) {
             return response()->json([
                 'success' => false,
                 'message' => 'La venta especificada no existe.'
             ], 404);
+        }
+
+        if ($loggedAdmin && !$loggedAdmin->canAccessEvent($sale->event_id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permisos para gestionar este evento.',
+            ], 403);
         }
 
         $event = Event::find($sale->event_id);

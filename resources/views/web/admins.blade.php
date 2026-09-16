@@ -67,13 +67,19 @@
                     </div>
 
                     <div class="dash-table-wrapper" style="margin-top: 1rem;">
+                    @php
+                        $loggedUser = \App\Models\Administrator::find(session('admin_id'));
+                    @endphp
+
+                    <div class="dash-table-wrapper" style="margin-top: 1rem;">
                         <table class="dash-table" id="adminsTable">
                             <thead>
                                 <tr>
                                     <th>ADMINISTRADOR</th>
                                     <th>CORREO ELECTRÓNICO</th>
                                     <th>TELÉFONO / CELULAR</th>
-                                    <th>ROL</th>
+                                    <th>ROL DE ACCESO</th>
+                                    <th>ALCANCE DE EVENTOS</th>
                                     <th>ESTADO</th>
                                     <th style="text-align: right;">ACCIONES</th>
                                 </tr>
@@ -101,9 +107,29 @@
                                         </td>
                                         <td>
                                             @if($admin->role === 'Administrador Principal')
-                                                <span class="dash-badge-custom badge-orange">👑 {{ $admin->role }}</span>
+                                                <span class="dash-badge-custom badge-orange" style="font-weight: 800;">👑 Administrador Principal</span>
+                                            @elseif($admin->role === 'Administrador')
+                                                <span class="dash-badge-custom badge-blue" style="font-weight: 800;">🛡️ Administrador</span>
+                                            @elseif($admin->role === 'Ventas')
+                                                <span class="dash-badge-custom badge-green" style="font-weight: 800; background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.35);">💰 Ventas (Taquilla)</span>
+                                            @elseif($admin->role === 'Validador de Entradas')
+                                                <span class="dash-badge-custom badge-cyan" style="font-weight: 800; background: rgba(0, 240, 255, 0.15); color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.35);">📲 Validador de Entradas</span>
                                             @else
-                                                <span class="dash-badge-custom badge-blue">🛡️ {{ $admin->role }}</span>
+                                                <span class="dash-badge-custom badge-gray">{{ $admin->role }}</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if(($admin->allowed_scope ?? 'all') === 'specific' && !empty($admin->allowed_events))
+                                                @php
+                                                    $allowedCount = count((array)$admin->allowed_events);
+                                                @endphp
+                                                <span class="dash-badge-custom badge-orange" style="font-size: 0.75rem; font-weight: 800; background: rgba(255, 85, 0, 0.12); color: #FF7733; border: 1px solid rgba(255, 85, 0, 0.3);">
+                                                    🎟️ {{ $allowedCount }} {{ $allowedCount === 1 ? 'Evento' : 'Eventos' }}
+                                                </span>
+                                            @else
+                                                <span class="dash-badge-custom badge-purple" style="font-size: 0.75rem; font-weight: 800;">
+                                                    🌐 Todos los Eventos
+                                                </span>
                                             @endif
                                         </td>
                                         <td>
@@ -116,16 +142,23 @@
                                         <td style="text-align: right;">
                                             <div class="dash-actions-cell" style="justify-content: flex-end;">
                                                 <button type="button" class="dash-btn-icon-action btn-edit-admin" data-admin='@json($admin)' title="Editar Administrador">✏️</button>
-                                                <button type="button" class="dash-btn-icon-action btn-reset-admin" data-id="{{ $admin->id }}" data-name="{{ $admin->full_name }}" title="Restablecer Contraseña" style="color: var(--color-primary-orange);">🔑</button>
-                                                <button type="button" class="dash-btn-icon-action btn-delete-admin" data-id="{{ $admin->id }}" data-name="{{ $admin->full_name }}" title="Eliminar Administrador" style="color: #FF1E3C;">🗑️</button>
                                                 
-                                                <form id="reset-form-{{ $admin->id }}" action="{{ route('web.admins.reset-password', $admin->id) }}" method="POST" style="display: none;">
-                                                    @csrf
-                                                </form>
-                                                <form id="delete-form-{{ $admin->id }}" action="{{ route('web.admins.destroy', $admin->id) }}" method="POST" style="display: none;">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                </form>
+                                                @if($loggedUser && $loggedUser->canDelete())
+                                                    <button type="button" class="dash-btn-icon-action btn-reset-admin" data-id="{{ $admin->id }}" data-name="{{ $admin->full_name }}" title="Restablecer Contraseña" style="color: var(--color-primary-orange);">🔑</button>
+                                                    
+                                                    @if($loggedUser->id !== $admin->id)
+                                                        <button type="button" class="dash-btn-icon-action btn-delete-admin" data-id="{{ $admin->id }}" data-name="{{ $admin->full_name }}" title="Eliminar Administrador" style="color: #FF1E3C;">🗑️</button>
+                                                        
+                                                        <form id="delete-form-{{ $admin->id }}" action="{{ route('web.admins.destroy', $admin->id) }}" method="POST" style="display: none;">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                        </form>
+                                                    @endif
+
+                                                    <form id="reset-form-{{ $admin->id }}" action="{{ route('web.admins.reset-password', $admin->id) }}" method="POST" style="display: none;">
+                                                        @csrf
+                                                    </form>
+                                                @endif
                                             </div>
                                         </td>
                                     </tr>
@@ -140,13 +173,13 @@
 
     <!-- MODAL CREAR NUEVO ADMINISTRADOR -->
     <div class="admin-modal-overlay" id="createAdminModal">
-        <div class="admin-modal-card">
+        <div class="admin-modal-card" style="max-width: 680px;">
             <div class="admin-modal-header">
                 <div style="display: flex; align-items: center; gap: 0.85rem;">
                     <div class="card-header-icon" style="width: 42px; height: 42px;">👤</div>
                     <div>
-                        <h3 class="card-header-title" style="font-size: 1.15rem;">Crear Nuevo Administrador</h3>
-                        <p class="card-header-subtitle">Ingresa los datos personales y credenciales de acceso</p>
+                        <h3 class="card-header-title" style="font-size: 1.15rem;">Crear Nuevo Usuario / Administrador</h3>
+                        <p class="card-header-subtitle">Ingresa los datos personales, asigna el rol y define el alcance de eventos</p>
                     </div>
                 </div>
                 <button class="admin-modal-close" id="btnCloseCreateAdminModal">✕</button>
@@ -181,10 +214,12 @@
 
                     <!-- Rol del Administrador -->
                     <div class="form-group-custom">
-                        <label for="role" class="form-label-custom">Rol de Administrador <span class="required-star">*</span></label>
+                        <label for="role" class="form-label-custom">Rol de Acceso <span class="required-star">*</span></label>
                         <select id="role" name="role" class="form-select-custom" required>
                             <option value="Administrador" selected>🛡️ Administrador</option>
                             <option value="Administrador Principal">👑 Administrador Principal</option>
+                            <option value="Ventas">💰 Ventas (Taquilla & POS)</option>
+                            <option value="Validador de Entradas">📲 Validador de Entradas (Control & Scanner)</option>
                         </select>
                     </div>
 
@@ -205,6 +240,51 @@
                         </div>
                     </div>
 
+                    <!-- Alcance de Eventos Asignados -->
+                    <div class="form-group-custom" style="grid-column: span 2; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 1.1rem;">
+                        <label class="form-label-custom" style="margin-bottom: 0.65rem; display: flex; align-items: center; justify-content: space-between;">
+                            <span>🎟️ Alcance de Eventos Permitidos <span class="required-star">*</span></span>
+                            <span style="font-size: 0.72rem; color: #94A3B8; font-weight: 600;">Define si accede a todos o solo a ciertos eventos</span>
+                        </label>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                            <label style="display: flex; align-items: center; gap: 0.6rem; background: rgba(0, 240, 255, 0.06); border: 1.5px solid rgba(0, 240, 255, 0.3); border-radius: 12px; padding: 0.75rem 0.95rem; cursor: pointer; color: #FFFFFF; font-weight: 800; font-size: 0.85rem;">
+                                <input type="radio" name="allowed_scope" value="all" checked onchange="toggleEventScopeSelection('create', this.value)" style="accent-color: #00F0FF; width: 18px; height: 18px;">
+                                <span>🌐 Todos los Eventos</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.6rem; background: rgba(255, 85, 0, 0.06); border: 1.5px solid rgba(255, 85, 0, 0.3); border-radius: 12px; padding: 0.75rem 0.95rem; cursor: pointer; color: #FFFFFF; font-weight: 800; font-size: 0.85rem;">
+                                <input type="radio" name="allowed_scope" value="specific" onchange="toggleEventScopeSelection('create', this.value)" style="accent-color: #FF5500; width: 18px; height: 18px;">
+                                <span>🎟️ Solo Eventos Específicos</span>
+                            </label>
+                        </div>
+
+                        <!-- Contenedor con lista de eventos con checkboxes -->
+                        <div id="create_specific_events_box" style="display: none; border-top: 1px dashed rgba(255, 255, 255, 0.12); padding-top: 0.85rem; margin-top: 0.5rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                                <span style="font-size: 0.75rem; color: #94A3B8; font-weight: 800; text-transform: uppercase;">Selecciona los eventos permitidos:</span>
+                                <div style="display: flex; gap: 0.6rem;">
+                                    <button type="button" onclick="selectAllEvents('create', true)" style="background: none; border: none; color: #00F0FF; font-size: 0.75rem; font-weight: 800; cursor: pointer;">✓ Marcar todos</button>
+                                    <span style="color: #64748B;">|</span>
+                                    <button type="button" onclick="selectAllEvents('create', false)" style="background: none; border: none; color: #EF4444; font-size: 0.75rem; font-weight: 800; cursor: pointer;">✕ Desmarcar</button>
+                                </div>
+                            </div>
+
+                            <div class="events-checkbox-scroll" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; padding-right: 0.3rem;">
+                                @forelse($events as $ev)
+                                    <label style="display: flex; align-items: center; gap: 0.75rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 0.6rem 0.8rem; cursor: pointer; transition: all 0.2s ease;">
+                                        <input type="checkbox" name="allowed_events[]" value="{{ $ev->id }}" class="create-event-cb" style="accent-color: #FF5500; width: 17px; height: 17px;">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <strong style="color: #FFFFFF; font-size: 0.85rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $ev->title }}</strong>
+                                            <small style="color: #94A3B8; font-size: 0.72rem;">📍 {{ $ev->venue_name ?? 'Local Principal' }} &nbsp;|&nbsp; 🗓️ {{ $ev->event_date }}</small>
+                                        </div>
+                                    </label>
+                                @empty
+                                    <p style="color: #94A3B8; font-size: 0.8rem; text-align: center; margin: 0.5rem 0;">No hay eventos registrados aún.</p>
+                                @endforelse
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Aviso de Contraseña Generada -->
                     <div class="auto-password-notice" style="grid-column: span 2;">
                         <div class="notice-icon">🔐</div>
@@ -216,7 +296,7 @@
 
                 <div class="admin-modal-footer">
                     <button type="button" class="btn btn-cancel-custom" id="btnCancelCreateAdmin">Cancelar</button>
-                    <button type="submit" class="btn btn-primary btn-save-settings">💾 Registrar Administrador</button>
+                    <button type="submit" class="btn btn-primary btn-save-settings">💾 Registrar Usuario</button>
                 </div>
             </form>
         </div>
@@ -224,13 +304,13 @@
 
     <!-- MODAL EDITAR ADMINISTRADOR -->
     <div class="admin-modal-overlay" id="editAdminModal">
-        <div class="admin-modal-card">
+        <div class="admin-modal-card" style="max-width: 680px;">
             <div class="admin-modal-header">
                 <div style="display: flex; align-items: center; gap: 0.85rem;">
                     <div class="card-header-icon" style="width: 42px; height: 42px; background: rgba(0, 242, 254, 0.15); border-color: rgba(0, 242, 254, 0.4); color: var(--color-neon-cyan);">✏️</div>
                     <div>
-                        <h3 class="card-header-title" style="font-size: 1.15rem;">Editar Administrador</h3>
-                        <p class="card-header-subtitle">Modifica los datos personales, rol y estado de la cuenta</p>
+                        <h3 class="card-header-title" style="font-size: 1.15rem;">Editar Administrador / Usuario</h3>
+                        <p class="card-header-subtitle">Modifica los datos personales, rol, alcance de eventos y estado de la cuenta</p>
                     </div>
                 </div>
                 <button class="admin-modal-close" id="btnCloseEditAdminModal">✕</button>
@@ -266,10 +346,12 @@
 
                     <!-- Rol del Administrador -->
                     <div class="form-group-custom">
-                        <label for="edit_role" class="form-label-custom">Rol <span class="required-star">*</span></label>
+                        <label for="edit_role" class="form-label-custom">Rol de Acceso <span class="required-star">*</span></label>
                         <select id="edit_role" name="role" class="form-select-custom" required>
                             <option value="Administrador">🛡️ Administrador</option>
                             <option value="Administrador Principal">👑 Administrador Principal</option>
+                            <option value="Ventas">💰 Ventas (Taquilla & POS)</option>
+                            <option value="Validador de Entradas">📲 Validador de Entradas (Control & Scanner)</option>
                         </select>
                     </div>
 
@@ -298,6 +380,51 @@
                             <input type="text" id="edit_phone" name="phone" class="form-input-custom" style="flex: 1;" required>
                         </div>
                     </div>
+
+                    <!-- Alcance de Eventos Asignados en Edición -->
+                    <div class="form-group-custom" style="grid-column: span 2; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 1.1rem;">
+                        <label class="form-label-custom" style="margin-bottom: 0.65rem; display: flex; align-items: center; justify-content: space-between;">
+                            <span>🎟️ Alcance de Eventos Permitidos <span class="required-star">*</span></span>
+                            <span style="font-size: 0.72rem; color: #94A3B8; font-weight: 600;">Modifica los eventos a los que este usuario tiene acceso</span>
+                        </label>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                            <label style="display: flex; align-items: center; gap: 0.6rem; background: rgba(0, 240, 255, 0.06); border: 1.5px solid rgba(0, 240, 255, 0.3); border-radius: 12px; padding: 0.75rem 0.95rem; cursor: pointer; color: #FFFFFF; font-weight: 800; font-size: 0.85rem;">
+                                <input type="radio" id="edit_scope_all" name="allowed_scope" value="all" onchange="toggleEventScopeSelection('edit', this.value)" style="accent-color: #00F0FF; width: 18px; height: 18px;">
+                                <span>🌐 Todos los Eventos</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.6rem; background: rgba(255, 85, 0, 0.06); border: 1.5px solid rgba(255, 85, 0, 0.3); border-radius: 12px; padding: 0.75rem 0.95rem; cursor: pointer; color: #FFFFFF; font-weight: 800; font-size: 0.85rem;">
+                                <input type="radio" id="edit_scope_specific" name="allowed_scope" value="specific" onchange="toggleEventScopeSelection('edit', this.value)" style="accent-color: #FF5500; width: 18px; height: 18px;">
+                                <span>🎟️ Solo Eventos Específicos</span>
+                            </label>
+                        </div>
+
+                        <!-- Contenedor con lista de eventos con checkboxes en edición -->
+                        <div id="edit_specific_events_box" style="display: none; border-top: 1px dashed rgba(255, 255, 255, 0.12); padding-top: 0.85rem; margin-top: 0.5rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                                <span style="font-size: 0.75rem; color: #94A3B8; font-weight: 800; text-transform: uppercase;">Selecciona los eventos permitidos:</span>
+                                <div style="display: flex; gap: 0.6rem;">
+                                    <button type="button" onclick="selectAllEvents('edit', true)" style="background: none; border: none; color: #00F0FF; font-size: 0.75rem; font-weight: 800; cursor: pointer;">✓ Marcar todos</button>
+                                    <span style="color: #64748B;">|</span>
+                                    <button type="button" onclick="selectAllEvents('edit', false)" style="background: none; border: none; color: #EF4444; font-size: 0.75rem; font-weight: 800; cursor: pointer;">✕ Desmarcar</button>
+                                </div>
+                            </div>
+
+                            <div class="events-checkbox-scroll" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; padding-right: 0.3rem;">
+                                @forelse($events as $ev)
+                                    <label style="display: flex; align-items: center; gap: 0.75rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 0.6rem 0.8rem; cursor: pointer; transition: all 0.2s ease;">
+                                        <input type="checkbox" name="allowed_events[]" value="{{ $ev->id }}" class="edit-event-cb" id="edit_ev_{{ $ev->id }}" style="accent-color: #FF5500; width: 17px; height: 17px;">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <strong style="color: #FFFFFF; font-size: 0.85rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $ev->title }}</strong>
+                                            <small style="color: #94A3B8; font-size: 0.72rem;">📍 {{ $ev->venue_name ?? 'Local Principal' }} &nbsp;|&nbsp; 🗓️ {{ $ev->event_date }}</small>
+                                        </div>
+                                    </label>
+                                @empty
+                                    <p style="color: #94A3B8; font-size: 0.8rem; text-align: center; margin: 0.5rem 0;">No hay eventos registrados aún.</p>
+                                @endforelse
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="admin-modal-footer">
@@ -316,7 +443,7 @@
                     <div style="display: flex; align-items: center; gap: 0.85rem;">
                         <div class="card-header-icon" style="width: 48px; height: 48px; background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4); color: #10B981;">🎉</div>
                         <div>
-                            <h3 class="card-header-title" style="font-size: 1.2rem; color: #10B981;">¡Administrador Creado con Éxito!</h3>
+                            <h3 class="card-header-title" style="font-size: 1.2rem; color: #10B981;">¡Usuario Registrado con Éxito!</h3>
                             <p class="card-header-subtitle">Credenciales de acceso generadas automáticamente</p>
                         </div>
                     </div>
@@ -345,6 +472,10 @@
                             <span class="cred-label">👑 Rol:</span>
                             <span class="cred-val">{{ session('created_admin.role') }}</span>
                         </div>
+                        <div class="cred-row">
+                            <span class="cred-label">🎟️ Alcance:</span>
+                            <span class="cred-val">{{ (session('created_admin.allowed_scope') ?? 'all') === 'specific' ? 'Eventos Específicos Asignados' : 'Todos los Eventos' }}</span>
+                        </div>
 
                         <!-- Cajón de Contraseña -->
                         <div class="password-highlight-box">
@@ -355,7 +486,7 @@
                             <button type="button" 
                                     class="btn-copy-pass" 
                                     id="btnCopyPass" 
-                                    data-copy-text="👋 ¡Hola, {{ session('created_admin.name') }}!&#10;&#10;Se han generado exitosamente tus credenciales para el sistema Vive Go.&#10;&#10;🌐 Enlace de Ingreso:&#10;{{ route('web.admins') }}&#10;&#10;🔑 Tus Credenciales de Acceso:&#10;• Email: {{ session('created_admin.email') }}&#10;• Contraseña Temporal: {{ session('created_admin.password') }}&#10;• Rol Asignado: {{ session('created_admin.role') }}&#10;&#10;⚠️ NOTA DE SEGURIDAD:&#10;Esta es una contraseña temporal. Por tu seguridad, por favor cámbiala inmediatamente al realizar tu primer inicio de sesión."
+                                    data-copy-text="👋 ¡Hola, {{ session('created_admin.name') }}!&#10;&#10;Se han generado exitosamente tus credenciales para el sistema Vive Go.&#10;&#10;🌐 Enlace de Ingreso:&#10;{{ route('web.login') }}&#10;&#10;🔑 Tus Credenciales de Acceso:&#10;• Email: {{ session('created_admin.email') }}&#10;• Contraseña Temporal: {{ session('created_admin.password') }}&#10;• Rol Asignado: {{ session('created_admin.role') }}&#10;&#10;⚠️ NOTA DE SEGURIDAD:&#10;Esta es una contraseña temporal. Por tu seguridad, por favor cámbiala inmediatamente al realizar tu primer inicio de sesión."
                                     onclick="copyCredentialsFromBtn(this)">
                                 <span class="copy-icon-span">📋</span> <span class="copy-text-span">Copiar Credenciales</span>
                             </button>
@@ -411,7 +542,7 @@
                             <button type="button" 
                                     class="btn-copy-pass" 
                                     id="btnCopyResetPass" 
-                                    data-copy-text="👋 ¡Hola, {{ session('reset_password_credentials.name') }}!&#10;&#10;Se ha restablecido exitosamente tu contraseña para el sistema Vive Go.&#10;&#10;🌐 Enlace de Ingreso:&#10;{{ route('web.admins') }}&#10;&#10;🔑 Tus Nuevas Credenciales de Acceso:&#10;• Email: {{ session('reset_password_credentials.email') }}&#10;• Nueva Contraseña Temporal: {{ session('reset_password_credentials.password') }}&#10;• Rol Asignado: {{ session('reset_password_credentials.role') }}&#10;&#10;⚠️ NOTA DE SEGURIDAD:&#10;Tu contraseña anterior ha sido invalidada. Por favor, ingresa con tu nueva clave temporal y cámbiala inmediatamente al realizar tu primer inicio de sesión."
+                                    data-copy-text="👋 ¡Hola, {{ session('reset_password_credentials.name') }}!&#10;&#10;Se ha restablecido exitosamente tu contraseña para el sistema Vive Go.&#10;&#10;🌐 Enlace de Ingreso:&#10;{{ route('web.login') }}&#10;&#10;🔑 Tus Nuevas Credenciales de Acceso:&#10;• Email: {{ session('reset_password_credentials.email') }}&#10;• Nueva Contraseña Temporal: {{ session('reset_password_credentials.password') }}&#10;• Rol Asignado: {{ session('reset_password_credentials.role') }}&#10;&#10;⚠️ NOTA DE SEGURIDAD:&#10;Tu contraseña anterior ha sido invalidada. Por favor, ingresa con tu nueva clave temporal y cámbiala inmediatamente al realizar tu primer inicio de sesión."
                                     onclick="copyCredentialsFromBtn(this)">
                                 <span class="copy-icon-span">📋</span> <span class="copy-text-span">Copiar Nuevas Credenciales</span>
                             </button>
@@ -432,6 +563,20 @@
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        function toggleEventScopeSelection(modalType, value) {
+            const box = document.getElementById(`${modalType}_specific_events_box`);
+            if (box) {
+                box.style.display = value === 'specific' ? 'block' : 'none';
+            }
+        }
+
+        function selectAllEvents(modalType, check) {
+            const checkboxes = document.querySelectorAll(`.${modalType}-event-cb`);
+            checkboxes.forEach(cb => {
+                cb.checked = check;
+            });
+        }
+
         function copyCredentialsFromBtn(btn) {
             const textToCopy = btn.getAttribute('data-copy-text');
             if (!textToCopy) return;
@@ -536,6 +681,25 @@
                     document.getElementById('edit_phone').value = data.phone || '';
                     document.getElementById('edit_role').value = data.role || 'Administrador';
                     document.getElementById('edit_status').value = data.status || 'Activo';
+
+                    // Scope & Events
+                    const scope = data.allowed_scope || 'all';
+                    const scopeAllRadio = document.getElementById('edit_scope_all');
+                    const scopeSpecificRadio = document.getElementById('edit_scope_specific');
+                    if (scope === 'specific') {
+                        if (scopeSpecificRadio) scopeSpecificRadio.checked = true;
+                        toggleEventScopeSelection('edit', 'specific');
+                    } else {
+                        if (scopeAllRadio) scopeAllRadio.checked = true;
+                        toggleEventScopeSelection('edit', 'all');
+                    }
+
+                    // Reset edit checkboxes and check assigned
+                    const allowedEvents = Array.isArray(data.allowed_events) ? data.allowed_events.map(Number) : [];
+                    const editCheckboxes = document.querySelectorAll('.edit-event-cb');
+                    editCheckboxes.forEach(cb => {
+                        cb.checked = allowedEvents.includes(Number(cb.value));
+                    });
 
                     const countrySelect = document.getElementById('edit_country_selector');
                     if (countrySelect) {

@@ -1781,29 +1781,58 @@
             if (!group) return;
             group.innerHTML = '';
 
-            const seatSize = Math.max(5, 9 / Math.sqrt(this.zoom));
+            const seatSize = Math.max(8, 13 / Math.sqrt(this.zoom));
             const halfSize = seatSize / 2;
             const strokeW = (1.2 / Math.sqrt(this.zoom)).toFixed(2);
+            const numFontSize = Math.max(6, Math.min(10, Math.round(seatSize * 0.50)));
 
             this.zones.forEach(z => {
                 if (Array.isArray(z.seats) && z.seats.length > 0) {
-                    z.seats.forEach(s => {
+                    z.seats.forEach((s, sIdx) => {
+                        const seatG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                        seatG.style.cursor = 'pointer';
+
                         const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                         rect.setAttribute('x', s.x - halfSize);
                         rect.setAttribute('y', s.y - halfSize);
                         rect.setAttribute('width', seatSize);
                         rect.setAttribute('height', seatSize);
-                        rect.setAttribute('rx', '2');
-                        rect.setAttribute('fill', '#FFFFFF');
-                        rect.setAttribute('stroke', z.color);
+                        rect.setAttribute('rx', '2.5');
+                        rect.setAttribute('fill', z.color || '#2563EB');
+                        rect.setAttribute('stroke', '#FFFFFF');
                         rect.setAttribute('stroke-width', strokeW);
-                        rect.style.cursor = 'pointer';
 
                         const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-                        title.textContent = `${z.name} - Butaca ${s.label} (S/ ${z.price.toFixed(2)})`;
+                        title.textContent = `${z.name} - Butaca ${s.label || s.number} (S/ ${z.price.toFixed(2)})`;
                         rect.appendChild(title);
+                        seatG.appendChild(rect);
 
-                        group.appendChild(rect);
+                        let displayNum = '';
+                        if (s.col !== undefined && s.col !== null && s.col !== '') {
+                            displayNum = String(s.col);
+                        } else if (s.number) {
+                            const p = String(s.number).split('-');
+                            displayNum = p.length > 1 ? p[p.length - 1] : String(s.number);
+                        } else {
+                            displayNum = String(sIdx + 1);
+                        }
+
+                        if (seatSize >= 9) {
+                            const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                            txt.setAttribute('x', s.x);
+                            txt.setAttribute('y', s.y);
+                            txt.setAttribute('text-anchor', 'middle');
+                            txt.setAttribute('dominant-baseline', 'central');
+                            txt.setAttribute('fill', '#FFFFFF');
+                            txt.setAttribute('font-size', numFontSize);
+                            txt.setAttribute('font-weight', '900');
+                            txt.setAttribute('font-family', 'sans-serif');
+                            txt.setAttribute('pointer-events', 'none');
+                            txt.textContent = displayNum;
+                            seatG.appendChild(txt);
+                        }
+
+                        group.appendChild(seatG);
                     });
                 }
             });

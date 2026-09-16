@@ -14,6 +14,10 @@
     }
 
     $pendingClaimsCount = \Illuminate\Support\Facades\Schema::hasTable('claims') ? \App\Models\Claim::where('status', 'Pendiente')->count() : 0;
+
+    $isValidador = $loggedUserRole === 'Validador de Entradas' || ($loggedAdmin && $loggedAdmin->isValidador());
+    $isVentas = $loggedUserRole === 'Ventas' || ($loggedAdmin && $loggedAdmin->isVentas());
+    $isAdmin = !$isValidador && !$isVentas;
 @endphp
 
 <!-- ESTILOS DIRECTOS DEL SISTEMA RESPONSIVE MÓVIL (OFFCANVAS + TABLAS + BANNERS) -->
@@ -379,26 +383,33 @@
                     <span class="dash-nav-text">Mis Eventos</span>
                 </a>
             </li>
+            @if($isAdmin || $isVentas)
             <li class="dash-nav-item {{ request()->routeIs('web.box_office*') ? 'active' : '' }}">
                 <a href="{{ route('web.box_office') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">💰</span>
                     <span class="dash-nav-text">Taquilla & Ventas</span>
                 </a>
             </li>
+            @endif
+            @if($isAdmin || $isValidador)
             <li class="dash-nav-item {{ request()->routeIs('web.attendees*') ? 'active' : '' }}">
                 <a href="{{ route('web.attendees') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">👥</span>
                     <span class="dash-nav-text">Asistentes & Scanner</span>
                 </a>
             </li>
+            @endif
+            @if($isAdmin)
             <li class="dash-nav-item {{ request()->routeIs('web.devices*') ? 'active' : '' }}">
                 <a href="{{ route('web.devices') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">📱</span>
                     <span class="dash-nav-text">Dispositivos</span>
                 </a>
             </li>
+            @endif
         </ul>
 
+        @if($isAdmin)
         <div class="dash-nav-section-title" style="margin-top: 1.5rem;">GESTIÓN & HERRAMIENTAS</div>
         <ul class="dash-nav-list">
             <li class="dash-nav-item {{ request()->routeIs('web.campaigns*') ? 'active' : '' }}">
@@ -420,7 +431,9 @@
                 </a>
             </li>
         </ul>
+        @endif
 
+        @if($isAdmin || $isVentas)
         <div class="dash-nav-section-title" style="margin-top: 1.5rem;">INFORMACIÓN EMPRESARIAL</div>
         <ul class="dash-nav-list">
             <li class="dash-nav-item {{ (request()->routeIs('web.customers*') || request()->is('admin/clientes*')) ? 'active' : '' }}">
@@ -429,6 +442,7 @@
                     <span class="dash-nav-text">Clientes</span>
                 </a>
             </li>
+            @if($isAdmin)
             <li class="dash-nav-item {{ request()->routeIs('web.companies*') ? 'active' : '' }}">
                 <a href="{{ route('web.companies') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">🏢</span>
@@ -456,8 +470,11 @@
                     @endif
                 </a>
             </li>
+            @endif
         </ul>
+        @endif
 
+        @if($isAdmin)
         <div class="dash-nav-section-title" style="margin-top: 1.5rem;">ADMINISTRACIÓN</div>
         <ul class="dash-nav-list">
             <li class="dash-nav-item {{ request()->routeIs('web.email_logs*') ? 'active' : '' }}">
@@ -485,6 +502,7 @@
                 </a>
             </li>
         </ul>
+        @endif
     </nav>
 
     <!-- Footer Sidebar: Botón Cambiar Contraseña & Salir -->
