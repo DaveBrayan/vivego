@@ -967,6 +967,10 @@ class EventController extends Controller
         }
 
         $tickets = $ticketsQuery
+            ->where(function($q) {
+                $q->whereRaw("UPPER(TRIM(COALESCE(zone_name, ''))) NOT LIKE '%ESCENARIO%'")
+                  ->whereRaw("UPPER(TRIM(COALESCE(zone_name, ''))) NOT LIKE '%TARIMA%'");
+            })
             ->orderBy('ticket_number', 'asc')
             ->orderBy('id', 'asc')
             ->get()

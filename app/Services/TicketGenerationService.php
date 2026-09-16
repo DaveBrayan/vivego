@@ -10,6 +10,28 @@ use Illuminate\Support\Str;
 class TicketGenerationService
 {
     /**
+     * Determina si una zona corresponde a un escenario o tarima no comercializable.
+     */
+    protected static function isStageZone($zone): bool
+    {
+        if (!is_array($zone)) {
+            return false;
+        }
+
+        $name = strtoupper(trim((string) ($zone['name'] ?? '')));
+        $capType = (string) ($zone['capacity_type'] ?? '');
+        $type = (string) ($zone['type'] ?? '');
+
+        return in_array($name, ['ESCENARIO', 'TARIMA'])
+            || str_contains($name, 'ESCENARIO')
+            || str_contains($name, 'TARIMA')
+            || strcasecmp($capType, 'Escenario') === 0
+            || strcasecmp($type, 'stage') === 0
+            || !empty($zone['is_stage'])
+            || !empty($zone['is_area']);
+    }
+
+    /**
      * Sincroniza y pre-genera automáticamente todos los boletos oficiales (QR, correlativo y hash)
      * para el aforo configurado en las zonas del evento.
      *
@@ -83,12 +105,12 @@ class TicketGenerationService
                 }
 
                 foreach ($zones as $idx => $zone) {
-                    $zoneName = trim($zone['name'] ?? $zone['capacity_type'] ?? ('Zona ' . ($idx + 1)));
-                    $cleanZoneUpper = strtoupper($zoneName);
-
-                    if (in_array($cleanZoneUpper, ['ESCENARIO', 'TARIMA']) || ($zone['capacity_type'] ?? '') === 'Escenario' || ($zone['type'] ?? '') === 'stage') {
+                    if (self::isStageZone($zone)) {
                         continue;
                     }
+
+                    $zoneName = trim($zone['name'] ?? $zone['capacity_type'] ?? ('Zona ' . ($idx + 1)));
+                    $cleanZoneUpper = strtoupper($zoneName);
 
                     $zonePrice = isset($zone['price']) ? (float)$zone['price'] : 0.00;
                     $targetTotalCapacity = isset($zone['capacity']) ? (int)$zone['capacity'] : 0;
@@ -347,12 +369,12 @@ class TicketGenerationService
                     }
 
                     foreach ($zones as $idx => $zone) {
-                        $zoneName = trim($zone['name'] ?? $zone['capacity_type'] ?? ('Zona ' . ($idx + 1)));
-                        $cleanZoneUpper = strtoupper($zoneName);
-
-                        if (in_array($cleanZoneUpper, ['ESCENARIO', 'TARIMA']) || ($zone['capacity_type'] ?? '') === 'Escenario' || ($zone['type'] ?? '') === 'stage') {
+                        if (self::isStageZone($zone)) {
                             continue;
                         }
+
+                        $zoneName = trim($zone['name'] ?? $zone['capacity_type'] ?? ('Zona ' . ($idx + 1)));
+                        $cleanZoneUpper = strtoupper($zoneName);
 
                         $szConfig = $zoneSplitMap[$cleanZoneUpper] ?? null;
                         $czConfig = $courtesyConfigMap[$cleanZoneUpper] ?? null;
@@ -531,12 +553,12 @@ class TicketGenerationService
                 $courtesyZoneCounters = [];
 
                 foreach ($zones as $idx => $zone) {
-                    $zoneName = trim($zone['name'] ?? $zone['capacity_type'] ?? ('Zona ' . ($idx + 1)));
-                    $cleanZoneUpper = strtoupper($zoneName);
-
-                    if (in_array($cleanZoneUpper, ['ESCENARIO', 'TARIMA']) || ($zone['capacity_type'] ?? '') === 'Escenario' || ($zone['type'] ?? '') === 'stage') {
+                    if (self::isStageZone($zone)) {
                         continue;
                     }
+
+                    $zoneName = trim($zone['name'] ?? $zone['capacity_type'] ?? ('Zona ' . ($idx + 1)));
+                    $cleanZoneUpper = strtoupper($zoneName);
 
                     if (!isset($zoneCounters[$cleanZoneUpper])) {
                         $maxZone = (int) EventTicket::where('event_id', $event->id)
@@ -639,12 +661,12 @@ class TicketGenerationService
                     }
 
                     foreach ($zones as $idx => $zone) {
-                        $zoneName = trim($zone['name'] ?? $zone['capacity_type'] ?? ('Zona ' . ($idx + 1)));
-                        $cleanZoneUpper = strtoupper($zoneName);
-
-                        if (in_array($cleanZoneUpper, ['ESCENARIO', 'TARIMA']) || ($zone['capacity_type'] ?? '') === 'Escenario' || ($zone['type'] ?? '') === 'stage') {
+                        if (self::isStageZone($zone)) {
                             continue;
                         }
+
+                        $zoneName = trim($zone['name'] ?? $zone['capacity_type'] ?? ('Zona ' . ($idx + 1)));
+                        $cleanZoneUpper = strtoupper($zoneName);
 
                         $czConfig = $courtesyConfigMap[$cleanZoneUpper] ?? null;
                         $czCap = 0;

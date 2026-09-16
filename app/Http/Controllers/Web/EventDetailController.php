@@ -76,11 +76,9 @@ class EventDetailController extends Controller
                     $zoneName = $zone['name'] ?? $zone['capacity_type'] ?? ('Zona ' . ($idx + 1));
                     $cleanZoneName = strtoupper(trim($zoneName));
 
-                    // Omitir elementos decorativos o no comercializables (Escenario / Tarima sin precio ni aforo)
-                    if ($cleanZoneName === 'ESCENARIO' || $cleanZoneName === 'TARIMA' || ($zone['capacity_type'] ?? '') === 'Escenario' || ($zone['type'] ?? '') === 'stage') {
-                        if (empty($zone['price']) || empty($zone['capacity'])) {
-                            continue;
-                        }
+                    // Omitir elementos decorativos o no comercializables (Escenario / Tarima / Áreas estructurales)
+                    if ($cleanZoneName === 'ESCENARIO' || $cleanZoneName === 'TARIMA' || str_contains($cleanZoneName, 'ESCENARIO') || str_contains($cleanZoneName, 'TARIMA') || ($zone['capacity_type'] ?? '') === 'Escenario' || ($zone['type'] ?? '') === 'stage' || !empty($zone['is_stage']) || !empty($zone['is_area'])) {
+                        continue;
                     }
 
                     $splitSettings = is_array($eventModel->quota_split_settings) ? $eventModel->quota_split_settings : (json_decode($eventModel->quota_split_settings ?? '[]', true) ?: []);

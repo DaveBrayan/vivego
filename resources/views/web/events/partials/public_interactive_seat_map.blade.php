@@ -91,11 +91,8 @@
     }
 
     .svg-public-zone.stage-zone {
-        cursor: default;
-    }
-
-    .svg-public-zone.stage-zone.clickable {
-        cursor: pointer;
+        cursor: default !important;
+        pointer-events: none !important;
     }
 
     .svg-zone-center-text {
@@ -348,10 +345,10 @@
 
                 if (isStage) {
                     polygon.setAttribute('fill', color || '#334155');
-                    polygon.setAttribute('fill-opacity', isSelected ? '0.95' : '0.82');
-                    polygon.setAttribute('stroke', isSelected ? '#FF5500' : (color || '#1E293B'));
-                    polygon.setAttribute('stroke-width', isSelected ? '3.0' : '1.8');
-                    polygon.setAttribute('class', `svg-public-zone stage-zone ${isClickable ? 'clickable' : ''} ${isSelected ? 'selected' : ''}`);
+                    polygon.setAttribute('fill-opacity', '0.88');
+                    polygon.setAttribute('stroke', color || '#1E293B');
+                    polygon.setAttribute('stroke-width', '1.5');
+                    polygon.setAttribute('class', 'svg-public-zone stage-zone');
                 } else if (hasSeats) {
                     // Zona con butacas: fondo de sector contenedor suave (gris/tinte)
                     polygon.setAttribute('fill', color);
@@ -368,26 +365,28 @@
                     polygon.setAttribute('class', `svg-public-zone no-seats ${isSelected ? 'selected' : ''}`);
                 }
 
-                // Eventos de Mouse sobre la Superficie
-                polygon.addEventListener('mouseenter', (e) => this.onZoneMouseEnter(e, z, isStage));
-                polygon.addEventListener('mousemove', (e) => this.onZoneMouseMove(e));
-                polygon.addEventListener('mouseleave', () => this.onZoneMouseLeave());
+                // Eventos de Mouse sobre la Superficie (SOLO para zonas comerciales, no para el escenario)
+                if (!isStage) {
+                    polygon.addEventListener('mouseenter', (e) => this.onZoneMouseEnter(e, z, false));
+                    polygon.addEventListener('mousemove', (e) => this.onZoneMouseMove(e));
+                    polygon.addEventListener('mouseleave', () => this.onZoneMouseLeave());
 
-                if (hasSeats) {
-                    polygon.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        const hintEl = document.getElementById('tooltipZoneActionHint');
-                        if (hintEl) {
-                            hintEl.textContent = '👇 Haz clic en una butaca para elegirla';
-                            hintEl.style.background = 'rgba(255,85,0,0.25)';
-                            hintEl.style.color = '#FF5500';
-                        }
-                    });
-                } else if (isClickable) {
-                    polygon.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        this.selectGeneralZone(z.name);
-                    });
+                    if (hasSeats) {
+                        polygon.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const hintEl = document.getElementById('tooltipZoneActionHint');
+                            if (hintEl) {
+                                hintEl.textContent = '👇 Haz clic en una butaca para elegirla';
+                                hintEl.style.background = 'rgba(255,85,0,0.25)';
+                                hintEl.style.color = '#FF5500';
+                            }
+                        });
+                    } else if (isClickable) {
+                        polygon.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            this.selectGeneralZone(z.name);
+                        });
+                    }
                 }
 
                 zonesGroup.appendChild(polygon);

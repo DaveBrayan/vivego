@@ -18,6 +18,28 @@ use Illuminate\Support\Str;
 class BoxOfficeController extends Controller
 {
     /**
+     * Determina si una zona corresponde a un escenario o tarima no comercializable.
+     */
+    protected function isStageZone($zone): bool
+    {
+        if (!is_array($zone)) {
+            return false;
+        }
+
+        $name = strtoupper(trim((string) ($zone['name'] ?? '')));
+        $capType = (string) ($zone['capacity_type'] ?? '');
+        $type = (string) ($zone['type'] ?? '');
+
+        return in_array($name, ['ESCENARIO', 'TARIMA'])
+            || str_contains($name, 'ESCENARIO')
+            || str_contains($name, 'TARIMA')
+            || strcasecmp($capType, 'Escenario') === 0
+            || strcasecmp($type, 'stage') === 0
+            || !empty($zone['is_stage'])
+            || !empty($zone['is_area']);
+    }
+
+    /**
      * Muestra la lista de eventos disponibles para Taquilla y Ventas.
      */
     public function index(): View
@@ -48,7 +70,8 @@ class BoxOfficeController extends Controller
         $globalTotalCapacity = 0;
 
         foreach ($dbEvents as $ev) {
-            $zones = $ev->zones ?? [];
+            $rawZones = $ev->zones ?? [];
+            $zones = array_values(array_filter($rawZones, fn($z) => !$this->isStageZone($z)));
             $totalCapacity = (int) array_sum(array_column($zones, 'capacity'));
             $minPrice = count($zones) > 0 ? min(array_column($zones, 'price')) : 50;
 
@@ -327,6 +350,9 @@ class BoxOfficeController extends Controller
         $currentCapacity = 0;
 
         foreach ($zones as $idx => $z) {
+            if ($this->isStageZone($z)) {
+                continue;
+            }
             if (($z['name'] ?? '') === $validated['zone_name']) {
                 $targetZoneIndex = $idx;
                 $unitPrice = (float) ($z['price'] ?? 0);
@@ -1053,6 +1079,10 @@ class BoxOfficeController extends Controller
 
         $zonesWithStats = [];
         foreach ($zones as $z) {
+            if ($this->isStageZone($z)) {
+                continue;
+            }
+
             $zName = $z['name'] ?? 'General';
             $cleanZone = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $zName)));
             $zTotalCap = (int) ($z['capacity'] ?? 0);

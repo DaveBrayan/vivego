@@ -552,6 +552,14 @@
         let totalPendingNew = 0;
 
         zones.forEach(z => {
+            const isStage = /^(ESCENARIO|TARIMA)$/i.test(String(z.name || '').trim())
+                || /ESCENARIO|TARIMA/i.test(String(z.name || ''))
+                || (z.capacity_type && /escenario/i.test(z.capacity_type))
+                || z.type === 'stage'
+                || z.is_stage
+                || z.is_area;
+            if (isStage) return;
+
             const zName = z.name || 'General';
             const zKey = cleanZoneBase(zName);
             const zPrice = parseFloat(z.price || 0);
@@ -630,6 +638,14 @@
             const hasCustomCourtesyZones = Object.keys(courtesyConfigMap).length > 0;
 
             zones.forEach(z => {
+                const isStage = /^(ESCENARIO|TARIMA)$/i.test(String(z.name || '').trim())
+                    || /ESCENARIO|TARIMA/i.test(String(z.name || ''))
+                    || (z.capacity_type && /escenario/i.test(z.capacity_type))
+                    || z.type === 'stage'
+                    || z.is_stage
+                    || z.is_area;
+                if (isStage) return;
+
                 const zName = z.name || 'General';
                 const zKey = cleanZoneBase(zName);
                 const czConfig = courtesyConfigMap[zKey];

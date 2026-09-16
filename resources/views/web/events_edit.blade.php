@@ -711,6 +711,19 @@
                                     <tbody id="zonesTableBody">
                                         @foreach($eventData['zones'] as $zone)
                                             @php
+                                                $zNameUpper = strtoupper(trim((string)($zone['name'] ?? '')));
+                                                $zCapTypeUpper = strtoupper(trim((string)($zone['capacity_type'] ?? '')));
+                                                $isStageRow = in_array($zNameUpper, ['ESCENARIO', 'TARIMA'])
+                                                    || str_contains($zNameUpper, 'ESCENARIO')
+                                                    || str_contains($zNameUpper, 'TARIMA')
+                                                    || str_contains($zCapTypeUpper, 'ESCENARIO')
+                                                    || ($zone['type'] ?? '') === 'stage'
+                                                    || !empty($zone['is_stage'])
+                                                    || !empty($zone['is_area']);
+                                                if ($isStageRow) {
+                                                    continue;
+                                                }
+
                                                 $hasPresale = !empty($zone['has_presale']) || (!empty($zone['presale_discount']) && (float)$zone['presale_discount'] > 0);
                                                 $pDiscount = $zone['presale_discount'] ?? 20;
                                                 $regPrice = (float)($zone['price'] ?? 50);
@@ -2856,17 +2869,32 @@
             });
 
             let zoneList = [];
+            const isStageZoneHelper = (name, capType, obj) => {
+                const zName = String(name || '').trim().toUpperCase();
+                const zCapType = String(capType || '').trim().toUpperCase();
+                return zName === 'ESCENARIO' || zName === 'TARIMA' || zName.includes('ESCENARIO') || zName.includes('TARIMA')
+                    || zCapType.includes('ESCENARIO')
+                    || (obj && (obj.type === 'stage' || obj.is_stage || obj.is_area));
+            };
+
             const zoneRows = document.querySelectorAll('#zonesTableBody .zone-row');
             if (zoneRows.length > 0) {
                 zoneRows.forEach((row, idx) => {
+                    const name = row.querySelector('.zone-name-input')?.value?.trim() || `Zona ${idx + 1}`;
+                    const capType = row.querySelector('.zone-capacity-type')?.value?.trim() || '';
+                    if (isStageZoneHelper(name, capType)) return;
+
                     zoneList.push({
-                        name: row.querySelector('.zone-name-input')?.value?.trim() || `Zona ${idx + 1}`,
+                        name: name,
                         capacity: parseInt(row.querySelector('.zone-capacity-input')?.value) || 0,
                         price: parseFloat(row.querySelector('.zone-price-input')?.value) || 0
                     });
                 });
             } else if (typeof SeatMapEditor !== 'undefined' && Array.isArray(SeatMapEditor.zones) && SeatMapEditor.zones.length > 0) {
                 SeatMapEditor.zones.forEach((z, idx) => {
+                    if (typeof isStageZone === 'function' && isStageZone(z)) return;
+                    if (isStageZoneHelper(z.name, z.capacity_type, z)) return;
+
                     zoneList.push({
                         name: (z.name || '').trim() || `Zona ${idx + 1}`,
                         capacity: parseInt(z.capacity) || 0,
@@ -3230,7 +3258,9 @@
                 });
             } else {
                 if (window.currentStep2ZoneMode === 'interactive' && typeof SeatMapEditor !== 'undefined' && Array.isArray(SeatMapEditor.zones) && SeatMapEditor.zones.length > 0) {
-                    regularTotal = SeatMapEditor.zones.reduce((sum, z) => sum + (parseInt(z.capacity) || 0), 0);
+                    regularTotal = SeatMapEditor.zones
+                        .filter(z => typeof SeatMapEditor.isStageZone === 'function' ? !SeatMapEditor.isStageZone(z) : true)
+                        .reduce((sum, z) => sum + (parseInt(z.capacity) || 0), 0);
                 } else {
                     document.querySelectorAll('#zonesTableBody .zone-row').forEach(row => {
                         regularTotal += parseInt(row.querySelector('.zone-capacity-input')?.value) || 0;
