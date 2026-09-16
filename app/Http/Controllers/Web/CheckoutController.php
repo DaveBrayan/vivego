@@ -174,6 +174,11 @@ class CheckoutController extends Controller
                 'checkout_event_id' => $event->id,
                 'checkout_event_slug' => $event->slug,
             ]);
+
+            if ($event->isPast()) {
+                return redirect()->route('web.event_detail', $event->slug ?: $event->id)
+                    ->with('error', 'Este evento ya finalizó. No es posible realizar compras de entradas.');
+            }
         }
 
         if ($event && ($event->status === 'Borrador' || $event->status === 'draft') && !auth()->check()) {
@@ -378,6 +383,15 @@ class CheckoutController extends Controller
             'customer_city' => 'nullable|string|max:100',
         ]);
 
+        $eventId = $validated['event_id'] ?? null;
+        $event = $eventId ? Event::find($eventId) : null;
+        if ($event && $event->isPast()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este evento ya finalizó. No es posible generar compras de entradas.',
+            ], 422);
+        }
+
         $amountCents = (int) round($validated['amount'] * 100);
         $orderId = 'VG-' . strtoupper(Str::random(4)) . '-' . time();
 
@@ -543,6 +557,13 @@ class CheckoutController extends Controller
         // Buscar evento si existe
         $eventId = $request->input('event_id');
         $event = $eventId ? Event::find($eventId) : Event::first();
+
+        if ($event && $event->isPast()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este evento ya finalizó. No es posible registrar nuevas compras.',
+            ], 422);
+        }
 
         $ticketsData = $request->input('tickets') ?: [
             ['name' => 'Entrada General', 'quantity' => 1, 'price' => $orderTotal]
@@ -720,6 +741,15 @@ class CheckoutController extends Controller
             'customer_city' => 'nullable|string|max:100',
         ]);
 
+        $eventId = $validated['event_id'] ?? null;
+        $event = $eventId ? Event::find($eventId) : null;
+        if ($event && $event->isPast()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este evento ya finalizó. No es posible generar transacciones de pago.',
+            ], 422);
+        }
+
         $amountCents = (int) round($validated['amount'] * 100);
         $orderNumber = 'VG-' . strtoupper(Str::random(4)) . '-' . time();
 
@@ -890,6 +920,13 @@ class CheckoutController extends Controller
         // Buscar evento
         $eventId = $request->input('event_id');
         $event = $eventId ? Event::find($eventId) : Event::first();
+
+        if ($event && $event->isPast()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este evento ya finalizó. No es posible registrar nuevas compras.',
+            ], 422);
+        }
 
         $ticketsData = $request->input('tickets') ?: [
             ['name' => 'Entrada General', 'quantity' => 1, 'price' => $orderTotal]
@@ -1121,6 +1158,13 @@ class CheckoutController extends Controller
 
         $eventId = (int) $validated['event_id'];
         $event = Event::findOrFail($eventId);
+
+        if ($event->isPast()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este evento ya finalizó. No es posible emitir entradas de cortesía.',
+            ], 422);
+        }
 
         $courtesySettings = is_array($event->courtesy_settings) 
             ? $event->courtesy_settings 

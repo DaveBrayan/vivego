@@ -181,8 +181,8 @@
                                             <small style="color: #94A3B8; font-size: 0.75rem;">{{ $evt['sales_count'] ?? 0 }} transacciones</small>
                                         </td>
                                         <td>
-                                            <span class="dash-badge-custom {{ $evt['status_class'] }}">
-                                                @if($evt['status'] === 'Publicado') ✓ @elseif($evt['status'] === 'Agotado') 🚫 @else ⏳ @endif {{ $evt['status'] }}
+                                            <span class="dash-badge-custom {{ $evt['status_class'] }}" @if(!empty($evt['is_past'])) style="background: rgba(148, 163, 184, 0.15); color: #94A3B8; border: 1px solid rgba(148, 163, 184, 0.35);" @endif>
+                                                @if(!empty($evt['is_past'])) ⌛ Finalizado @elseif($evt['status'] === 'Publicado') ✓ Publicado @elseif($evt['status'] === 'Agotado') 🚫 Agotado @else ⏳ {{ $evt['status'] }} @endif
                                             </span>
                                         </td>
                                         <td style="text-align: right;">

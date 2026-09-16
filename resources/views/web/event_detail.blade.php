@@ -174,10 +174,10 @@
                                 @endif
                             </div>
 
-                            <div class="ticket-quantity-counter" style="display: flex; align-items: center; gap: 0.65rem; background: #EDF2F7; padding: 0.35rem 0.65rem; border-radius: 10px; border: 1px solid #CBD5E1; {{ !$isAvail ? 'opacity: 0.35; pointer-events: none;' : '' }}">
-                                <button type="button" class="counter-btn minus btn-ticket-minus" {{ !$isAvail ? 'disabled' : '' }} style="width: 32px; height: 32px; border-radius: 6px; border: none; background: #E2E8F0; color: #0F172A; font-size: 1.15rem; font-weight: 800; cursor: pointer;">-</button>
+                            <div class="ticket-quantity-counter" style="display: flex; align-items: center; gap: 0.65rem; background: #EDF2F7; padding: 0.35rem 0.65rem; border-radius: 10px; border: 1px solid #CBD5E1; {{ (!$isAvail || !empty($event['is_past'])) ? 'opacity: 0.35; pointer-events: none;' : '' }}">
+                                <button type="button" class="counter-btn minus btn-ticket-minus" {{ (!$isAvail || !empty($event['is_past'])) ? 'disabled' : '' }} style="width: 32px; height: 32px; border-radius: 6px; border: none; background: #E2E8F0; color: #0F172A; font-size: 1.15rem; font-weight: 800; cursor: pointer;">-</button>
                                 <span class="counter-value ticket-count-val" style="font-size: 1.1rem; font-weight: 800; color: #0F172A; min-width: 24px; text-align: center;">0</span>
-                                <button type="button" class="counter-btn plus btn-ticket-plus" {{ !$isAvail ? 'disabled' : '' }} style="width: 32px; height: 32px; border-radius: 6px; border: none; background: var(--color-primary-orange); color: #FFFFFF; font-size: 1.15rem; font-weight: 800; cursor: pointer;">+</button>
+                                <button type="button" class="counter-btn plus btn-ticket-plus" {{ (!$isAvail || !empty($event['is_past'])) ? 'disabled' : '' }} style="width: 32px; height: 32px; border-radius: 6px; border: none; background: var(--color-primary-orange); color: #FFFFFF; font-size: 1.15rem; font-weight: 800; cursor: pointer;">+</button>
                             </div>
                         </div>
                     @endforeach
@@ -185,16 +185,18 @@
 
                 <!-- Cupón de Descuento y Total en Blanco -->
                 <div style="background: #F1F5F9; border: 1px solid #E2E8F0; border-radius: 14px; padding: 1.1rem; margin-bottom: 1.25rem;">
-                    <div style="margin-bottom: 0.75rem;">
-                        <a href="javascript:void(0)" class="promo-code-link-orange" id="btnTogglePromoCode" style="font-size: 0.85rem; font-weight: 800; color: var(--color-primary-orange); text-decoration: none;">¿Tienes un código de descuento?</a>
-                        <div class="promo-code-input-box" id="promoCodeInputBox" style="display: none; margin-top: 0.5rem;">
-                            <div style="display: flex; gap: 0.5rem;">
-                                <input type="text" id="inputPromoCode" placeholder="Ingresa tu código..." style="flex: 1; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1.5px solid #CBD5E1; background: #FFFFFF; color: #0F172A; font-size: 0.85rem; font-weight: 700;">
-                                <button type="button" id="btnApplyPromoCode" class="btn btn-primary btn-sm" style="padding: 0.55rem 0.95rem; border-radius: 8px; font-size: 0.85rem; font-weight: 800;">Aplicar</button>
+                    @if(empty($event['is_past']))
+                        <div style="margin-bottom: 0.75rem;">
+                            <a href="javascript:void(0)" class="promo-code-link-orange" id="btnTogglePromoCode" style="font-size: 0.85rem; font-weight: 800; color: var(--color-primary-orange); text-decoration: none;">¿Tienes un código de descuento?</a>
+                            <div class="promo-code-input-box" id="promoCodeInputBox" style="display: none; margin-top: 0.5rem;">
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <input type="text" id="inputPromoCode" placeholder="Ingresa tu código..." style="flex: 1; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1.5px solid #CBD5E1; background: #FFFFFF; color: #0F172A; font-size: 0.85rem; font-weight: 700;">
+                                    <button type="button" id="btnApplyPromoCode" class="btn btn-primary btn-sm" style="padding: 0.55rem 0.95rem; border-radius: 8px; font-size: 0.85rem; font-weight: 800;">Aplicar</button>
+                                </div>
+                                <div id="promoCodeMsg" style="font-size: 0.775rem; margin-top: 0.4rem; font-weight: 700; display: none;"></div>
                             </div>
-                            <div id="promoCodeMsg" style="font-size: 0.775rem; margin-top: 0.4rem; font-weight: 700; display: none;"></div>
                         </div>
-                    </div>
+                    @endif
 
                     <div class="total-summary-row" style="display: flex; justify-content: space-between; align-items: center;">
                         <span class="total-label" style="font-size: 1rem; color: #475569; font-weight: 700;">Total a Pagar:</span>
@@ -203,7 +205,14 @@
                 </div>
 
                 <!-- Botón de Compra -->
-                @if(!empty($event['all_sold_out']))
+                @if(!empty($event['is_past']))
+                    <div style="background: rgba(239, 68, 68, 0.1); border: 1.5px solid rgba(239, 68, 68, 0.35); border-radius: 12px; padding: 0.75rem 1rem; color: #EF4444; font-weight: 800; font-size: 0.85rem; text-align: center; margin-bottom: 0.85rem;">
+                        ⌛ Este evento ya finalizó. La venta de entradas se encuentra cerrada.
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-checkout-sticky" style="width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 800; border-radius: 12px; background: #475569; color: #FFFFFF; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: none;" onclick="showEventEndedAlert()">
+                        <span>⌛ EVENTO FINALIZADO</span>
+                    </button>
+                @elseif(!empty($event['all_sold_out']))
                     <button class="btn btn-secondary btn-checkout-sticky" style="width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 800; border-radius: 12px; background: #64748B; color: #FFFFFF; cursor: not-allowed; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: none;" disabled>
                         <span>🚫 ENTRADAS AGOTADAS</span>
                     </button>
@@ -451,10 +460,10 @@
                                                 <span class="ticket-price">S/ {{ number_format($ticket['price'], 2) }}</span>
                                             @endif
                                         </div>
-                                        <div class="ticket-quantity-counter" style="{{ !$isAvail ? 'opacity: 0.35; pointer-events: none;' : '' }}">
-                                            <button type="button" class="counter-btn minus btn-ticket-minus" {{ !$isAvail ? 'disabled' : '' }}>-</button>
+                                        <div class="ticket-quantity-counter" style="{{ (!$isAvail || !empty($event['is_past'])) ? 'opacity: 0.35; pointer-events: none;' : '' }}">
+                                            <button type="button" class="counter-btn minus btn-ticket-minus" {{ (!$isAvail || !empty($event['is_past'])) ? 'disabled' : '' }}>-</button>
                                             <span class="counter-value ticket-count-val">0</span>
-                                            <button type="button" class="counter-btn plus btn-ticket-plus" {{ !$isAvail ? 'disabled' : '' }}>+</button>
+                                            <button type="button" class="counter-btn plus btn-ticket-plus" {{ (!$isAvail || !empty($event['is_past'])) ? 'disabled' : '' }}>+</button>
                                         </div>
                                     </div>
                                 @endforeach
@@ -463,24 +472,33 @@
 
                         <!-- Botón CTA de Compra Sticky con Código de Descuento en la zona del Total -->
                         <div class="sidebar-checkout-cta">
-                            <!-- Enlace y Campo para Código de Descuento arriba del Total -->
-                            <div style="margin-bottom: 0.85rem; padding-bottom: 0.65rem; border-bottom: 1px dashed #CBD5E1;">
-                                <a href="javascript:void(0)" class="promo-code-link-orange" id="btnTogglePromoCode" style="font-size: 0.85rem; font-weight: 700; display: inline-block;">¿Tienes un código?</a>
-                                <div class="promo-code-input-box" id="promoCodeInputBox" style="display: none; margin-top: 0.5rem;">
-                                    <div style="display: flex; gap: 0.5rem;">
-                                        <input type="text" id="inputPromoCode" placeholder="Ingresa tu código..." style="flex: 1; padding: 0.5rem 0.75rem; border-radius: 12px; border: 1.5px solid #CBD5E1; font-size: 0.825rem; font-weight: 700;">
-                                        <button type="button" id="btnApplyPromoCode" class="btn btn-primary btn-sm" style="padding: 0.5rem 0.85rem; border-radius: 12px; font-size: 0.8rem;">Aplicar</button>
+                            @if(empty($event['is_past']))
+                                <!-- Enlace y Campo para Código de Descuento arriba del Total -->
+                                <div style="margin-bottom: 0.85rem; padding-bottom: 0.65rem; border-bottom: 1px dashed #CBD5E1;">
+                                    <a href="javascript:void(0)" class="promo-code-link-orange" id="btnTogglePromoCode" style="font-size: 0.85rem; font-weight: 700; display: inline-block;">¿Tienes un código?</a>
+                                    <div class="promo-code-input-box" id="promoCodeInputBox" style="display: none; margin-top: 0.5rem;">
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <input type="text" id="inputPromoCode" placeholder="Ingresa tu código..." style="flex: 1; padding: 0.5rem 0.75rem; border-radius: 12px; border: 1.5px solid #CBD5E1; font-size: 0.825rem; font-weight: 700;">
+                                            <button type="button" id="btnApplyPromoCode" class="btn btn-primary btn-sm" style="padding: 0.5rem 0.85rem; border-radius: 12px; font-size: 0.8rem;">Aplicar</button>
+                                        </div>
+                                        <div id="promoCodeMsg" style="font-size: 0.775rem; margin-top: 0.35rem; font-weight: 700; display: none;"></div>
                                     </div>
-                                    <div id="promoCodeMsg" style="font-size: 0.775rem; margin-top: 0.35rem; font-weight: 700; display: none;"></div>
                                 </div>
-                            </div>
+                            @endif
 
                             <div class="total-summary-row">
                                 <span class="total-label">Total a Pagar</span>
                                 <span class="total-price-value" id="totalPriceDisplay">S/ 0.00</span>
                             </div>
 
-                            @if(!empty($event['all_sold_out']))
+                            @if(!empty($event['is_past']))
+                                <div style="background: rgba(239, 68, 68, 0.1); border: 1.5px solid rgba(239, 68, 68, 0.35); border-radius: 12px; padding: 0.75rem 1rem; color: #EF4444; font-weight: 800; font-size: 0.85rem; text-align: center; margin-bottom: 0.85rem;">
+                                    ⌛ Este evento ya finalizó. La venta de entradas se encuentra cerrada.
+                                </div>
+                                <button type="button" class="btn btn-secondary btn-checkout-sticky" style="background: #475569; color: #FFFFFF; cursor: pointer; width: 100%; justify-content: center;" onclick="showEventEndedAlert()">
+                                    <span>⌛ EVENTO FINALIZADO</span>
+                                </button>
+                            @elseif(!empty($event['all_sold_out']))
                                 <button class="btn btn-secondary btn-checkout-sticky" style="background: #64748B; color: #FFFFFF; cursor: not-allowed; opacity: 0.75; width: 100%; justify-content: center;" disabled>
                                     <span>🚫 Entradas Agotadas</span>
                                 </button>
@@ -739,6 +757,23 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         // Variables globales del carrito
+        window.isEventPast = {{ !empty($event['is_past']) ? 'true' : 'false' }};
+        window.showEventEndedAlert = function() {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Evento Finalizado',
+                    text: 'Este evento ya terminó. La venta de entradas online y adquisición de boletos se encuentra cerrada.',
+                    icon: 'warning',
+                    background: '#14141E',
+                    color: '#FFFFFF',
+                    confirmButtonColor: '#FF5500',
+                    confirmButtonText: 'Entendido'
+                });
+            } else {
+                alert('Este evento ya terminó. La venta de entradas se encuentra cerrada.');
+            }
+        };
+
         let currentGrandTotal = 0;
         let selectedTicketsArray = [];
         let currentSelectedDate = '';
@@ -930,6 +965,11 @@
                     btn.addEventListener('click', function (e) {
                         e.preventDefault();
                         if (this.disabled) return;
+
+                        if (window.isEventPast) {
+                            window.showEventEndedAlert();
+                            return;
+                        }
 
                         recalculateTotal();
 

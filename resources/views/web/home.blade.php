@@ -10,14 +10,27 @@
         <div class="hero-carousel-curved" id="heroCarousel">
             @foreach($heroEvents as $index => $hero)
                 <div class="carousel-slide {{ $index === 0 ? 'active' : '' }}" data-slide="{{ $index }}">
-                    <img src="{{ $hero['image'] }}" alt="{{ $hero['title'] }}">
+                    <a href="{{ route('web.event.detail', ['slug' => $hero['slug']]) }}" class="carousel-slide-image-link" style="display: block; width: 100%; height: 100%; text-decoration: none;">
+                        <img src="{{ $hero['image'] }}" alt="{{ $hero['title'] }}">
+                    </a>
                     <div class="carousel-overlay">
                         <div class="carousel-caption">
-                            <div class="hero-live-pill">
-                                <span class="live-pulse-dot"></span>
-                                <span>{{ $hero['badge'] }} · ENTRADAS OFICIALES EN VIVO</span>
-                            </div>
-                            <h2>{{ $hero['title'] }}</h2>
+                            @if(!empty($hero['is_past']))
+                                <div class="hero-live-pill" style="background: rgba(51, 65, 85, 0.9); border-color: rgba(148, 163, 184, 0.4); color: #F8FAFC;">
+                                    <span>🏁</span>
+                                    <span style="font-weight: 900; letter-spacing: 0.5px;">EVENTO TERMINADO</span>
+                                </div>
+                            @else
+                                <div class="hero-live-pill">
+                                    <span class="live-pulse-dot"></span>
+                                    <span>{{ $hero['badge'] }} · ENTRADAS OFICIALES EN VIVO</span>
+                                </div>
+                            @endif
+                            <h2>
+                                <a href="{{ route('web.event.detail', ['slug' => $hero['slug']]) }}" style="color: inherit; text-decoration: none;">
+                                    {{ $hero['title'] }}
+                                </a>
+                            </h2>
                             <div class="carousel-meta-row">
                                 <div class="carousel-meta-item">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF5500" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -40,13 +53,24 @@
                                 </div>
                             </div>
                             <div class="hero-slide-actions">
-                                <a href="{{ route('web.event.detail', ['slug' => $hero['slug']]) }}" class="btn btn-primary btn-hero-glow">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <rect x="2" y="6" width="20" height="12" rx="2"></rect>
-                                        <circle cx="12" cy="12" r="2"></circle>
-                                    </svg>
-                                    Comprar Entradas Ahora
-                                </a>
+                                @if(!empty($hero['is_past']))
+                                    <a href="{{ route('web.event.detail', ['slug' => $hero['slug']]) }}" class="btn btn-secondary btn-hero-glow" style="background: rgba(51, 65, 85, 0.85); border: 1.5px solid rgba(148, 163, 184, 0.5); color: #FFFFFF; font-weight: 800;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                        </svg>
+                                        Ver Detalles del Evento
+                                    </a>
+                                @else
+                                    <a href="{{ route('web.event.detail', ['slug' => $hero['slug']]) }}" class="btn btn-primary btn-hero-glow">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+                                            <circle cx="12" cy="12" r="2"></circle>
+                                        </svg>
+                                        Comprar Entradas Ahora
+                                    </a>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -77,10 +101,22 @@
         <div class="hero-side-cards">
             @foreach($sideEvents as $side)
                 <div class="hero-side-card">
-                    <img src="{{ $side['image'] }}" alt="{{ $side['title'] }}">
-                    <div class="side-card-overlay">
-                        <span class="badge {{ $side['badge_color'] ?? 'badge-red' }} side-card-badge">🔥 {{ $side['badge'] }}</span>
-                        <h3 class="side-card-title">{{ $side['title'] }}</h3>
+                    <a href="{{ route('web.event.detail', ['slug' => $side['slug']]) }}" style="display: block; position: absolute; inset: 0; z-index: 1;">
+                        <img src="{{ $side['image'] }}" alt="{{ $side['title'] }}" style="width: 100%; height: 100%; object-fit: cover;">
+                    </a>
+                    <div class="side-card-overlay" style="z-index: 2; pointer-events: auto;">
+                        @if(!empty($side['is_past']))
+                            <span class="badge side-card-badge" style="background: rgba(51, 65, 85, 0.9); border: 1px solid rgba(148, 163, 184, 0.4); color: #FFFFFF; font-weight: 900;">
+                                🏁 EVENTO TERMINADO
+                            </span>
+                        @else
+                            <span class="badge {{ $side['badge_color'] ?? 'badge-red' }} side-card-badge">🔥 {{ $side['badge'] }}</span>
+                        @endif
+                        <h3 class="side-card-title">
+                            <a href="{{ route('web.event.detail', ['slug' => $side['slug']]) }}" style="color: inherit; text-decoration: none;">
+                                {{ $side['title'] }}
+                            </a>
+                        </h3>
                         <div class="side-card-meta">
                             <span>📍 {{ $side['venue'] }}</span>
                             <span class="side-card-price">S/ {{ $side['price'] }}</span>
@@ -91,8 +127,8 @@
                                 <div class="progress-fill" style="width: {{ $side['sold_percent'] ?? '88%' }};"></div>
                             </div>
                         </div>
-                        <a href="{{ route('web.event.detail', ['slug' => $side['slug']]) }}" class="btn btn-primary btn-sm" style="width: 100%;">
-                            Comprar Entradas
+                        <a href="{{ route('web.event.detail', ['slug' => $side['slug']]) }}" class="btn {{ !empty($side['is_past']) ? 'btn-secondary' : 'btn-primary' }} btn-sm" style="width: 100%; {{ !empty($side['is_past']) ? 'background: rgba(51,65,85,0.85); border: 1px solid rgba(148,163,184,0.4); color: #FFFFFF;' : '' }}">
+                            {{ !empty($side['is_past']) ? 'Ver Detalles' : 'Comprar Entradas' }}
                         </a>
                     </div>
                 </div>
@@ -124,9 +160,14 @@
         <div class="events-grid-4col" id="eventsContainer">
             @forelse($events as $event)
                 <article class="event-card-v6" data-category="{{ $event['category'] }}">
-                    <div class="event-card-v6-media">
+                    <!-- Imagen Clickeable con Badge y Fecha -->
+                    <a href="{{ route('web.event.detail', ['slug' => $event['slug']]) }}" class="event-card-v6-media" style="display: block; text-decoration: none;">
                         <!-- Holographic Badge Top Right -->
-                        @if(!empty($event['has_campaign']))
+                        @if(!empty($event['is_past']))
+                            <div class="badge-v6-holographic" style="background: linear-gradient(135deg, #475569, #334155); box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 1.5px solid rgba(148,163,184,0.5); color: #F8FAFC;">
+                                <span style="font-weight: 900; letter-spacing: 0.5px;">🏁 EVENTO TERMINADO</span>
+                            </div>
+                        @elseif(!empty($event['has_campaign']))
                             <div class="badge-v6-holographic" style="background: {{ $event['campaign_color'] ?? '#FF5500' }}; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 1.5px solid rgba(255,255,255,0.4);">
                                 <span style="font-weight: 900; color: #FFFFFF; text-transform: uppercase;">{{ $event['badge'] }}</span>
                             </div>
@@ -146,14 +187,19 @@
                         </div>
 
                         <img src="{{ $event['image'] }}" alt="{{ $event['title'] }}">
-                    </div>
+                    </a>
                     
                     <div class="event-card-v6-body">
                         <div class="event-v6-category-tag">
                             {{ $event['category'] ?? 'EVENTO' }}
                         </div>
 
-                        <h3 class="event-card-v6-title">{{ $event['title'] }}</h3>
+                        <!-- Nombre Clickeable -->
+                        <h3 class="event-card-v6-title">
+                            <a href="{{ route('web.event.detail', ['slug' => $event['slug']]) }}" style="color: inherit; text-decoration: none; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                {{ $event['title'] }}
+                            </a>
+                        </h3>
 
                         <div class="event-v6-venue">
                             <div class="event-v6-venue-icon">
@@ -177,13 +223,23 @@
                                     <span class="event-v6-price-value">S/ {{ $event['price'] }}</span>
                                 @endif
                             </div>
-                            <a href="{{ route('web.event.detail', ['slug' => $event['slug']]) }}" class="btn-buy-v6">
-                                <span>Comprar</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                                    <polyline points="12 5 19 12 12 19"></polyline>
-                                </svg>
-                            </a>
+                            @if(!empty($event['is_past']))
+                                <a href="{{ route('web.event.detail', ['slug' => $event['slug']]) }}" class="btn-buy-v6" style="background: linear-gradient(135deg, #475569, #334155); border: 1px solid rgba(148,163,184,0.4); color: #FFFFFF;" title="Ver detalles del evento terminado">
+                                    <span>Ver Detalles</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        <polyline points="12 5 19 12 12 19"></polyline>
+                                    </svg>
+                                </a>
+                            @else
+                                <a href="{{ route('web.event.detail', ['slug' => $event['slug']]) }}" class="btn-buy-v6">
+                                    <span>Comprar</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        <polyline points="12 5 19 12 12 19"></polyline>
+                                    </svg>
+                                </a>
+                            @endif
                         </div>
                     </div>
                 </article>

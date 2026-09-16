@@ -365,6 +365,7 @@ class EventDetailController extends Controller
                 ],
                 'details' => $details,
                 'all_sold_out' => $allSoldOut,
+                'is_past' => $eventModel->isPast(),
                 'active_campaign' => $activeCampaign ? [
                     'id' => $activeCampaign->id,
                     'name' => $activeCampaign->name,

@@ -515,6 +515,68 @@
             0% { transform: scale(0.7); opacity: 0; }
             100% { transform: scale(1); opacity: 1; }
         }
+
+        /* Paginación estilo DataTable */
+        .dt-page-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #CBD5E1;
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 0.4rem 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 34px;
+            user-select: none;
+        }
+
+        .dt-page-btn:hover:not(:disabled) {
+            background: rgba(255, 85, 0, 0.15);
+            border-color: rgba(255, 85, 0, 0.4);
+            color: #FF5500;
+        }
+
+        .dt-page-btn.active {
+            background: linear-gradient(135deg, #FF5500, #FF7700) !important;
+            border-color: #FF5500 !important;
+            color: #FFFFFF !important;
+            font-weight: 900;
+            box-shadow: 0 2px 8px rgba(255, 85, 0, 0.4);
+        }
+
+        .dt-page-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .dt-page-dots {
+            color: #64748B;
+            padding: 0 0.35rem;
+            font-weight: 700;
+            user-select: none;
+        }
+
+        .theme-light .dt-page-btn {
+            background: #F1F5F9;
+            border-color: #CBD5E1;
+            color: #334155;
+        }
+
+        .theme-light .dt-page-btn.active {
+            color: #FFFFFF !important;
+        }
+
+        .theme-light #salesPerPageSelect,
+        .theme-light #salesTableSearch {
+            background: #FFFFFF !important;
+            color: #0F172A !important;
+            border-color: #CBD5E1 !important;
+        }
     </style>
 @endpush
 
@@ -566,7 +628,11 @@
                                 @else
                                     <span class="dash-badge-custom badge-cyan" style="font-size: 0.75rem; padding: 0.25rem 0.65rem; color: #00F0FF; border: 1px solid rgba(0,240,255,0.4); background: rgba(0,240,255,0.1);">🌐 Venta Virtual (Online)</span>
                                 @endif
-                                <span class="dash-badge-custom badge-green" style="font-size: 0.75rem; padding: 0.25rem 0.65rem;">✓ Caja Abierta</span>
+                                @if($event->isPast())
+                                    <span class="dash-badge-custom badge-red" style="font-size: 0.75rem; padding: 0.25rem 0.65rem; background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.4);">⌛ Evento Finalizado (Caja Cerrada)</span>
+                                @else
+                                    <span class="dash-badge-custom badge-green" style="font-size: 0.75rem; padding: 0.25rem 0.65rem;">✓ Caja Abierta</span>
+                                @endif
                             </div>
                             <h1 style="font-size: 1.85rem; font-weight: 900; color: #FFFFFF; margin: 0 0 0.45rem 0; line-height: 1.25; letter-spacing: -0.5px; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">
                                 {{ $event->title }}
@@ -576,6 +642,15 @@
                                 <span style="background: rgba(255,255,255,0.04); padding: 0.25rem 0.6rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); display: inline-flex; align-items: center; gap: 0.35rem;">⏰ {{ $event->event_time ?? '18:00' }}</span>
                                 <span style="background: rgba(255,255,255,0.04); padding: 0.25rem 0.6rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); display: inline-flex; align-items: center; gap: 0.35rem;">📍 {{ $event->venue_name ?? 'Complejo San Luis' }} ({{ $event->address ?? 'Ayacucho' }})</span>
                             </div>
+                            @if($event->isPast())
+                                <div style="margin-top: 0.65rem; background: rgba(239, 68, 68, 0.12); border: 1.5px solid rgba(239, 68, 68, 0.35); border-radius: 12px; padding: 0.65rem 0.95rem; color: #FCA5A5; font-size: 0.825rem; display: flex; align-items: center; gap: 0.6rem;">
+                                    <span style="font-size: 1.3rem;">⌛</span>
+                                    <div>
+                                        <strong style="color: #EF4444; font-size: 0.875rem;">EVENTO FINALIZADO — TAQUILLA CERRADA:</strong>
+                                        <span> Este evento ya concluyó. Las ventas POS, ventas físicas, cortesías y generación de planchas se encuentran deshabilitadas.</span>
+                                    </div>
+                                </div>
+                            @endif
                         </div>
                     </div>
 
@@ -745,13 +820,38 @@
 
                 <!-- TABLA DE VENTAS REGISTRADAS EN TIEMPO REAL -->
                 <div class="settings-card-box">
-                    <div class="settings-card-header" style="flex-wrap: wrap; gap: 1rem;">
+                    <div class="settings-card-header" style="flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: center;">
                         <div style="display: flex; align-items: center; gap: 1rem;">
                             <div class="card-header-icon" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #10B981;">🧾</div>
                             <div>
                                 <h3 class="card-header-title">Registro de Ventas en Vivo</h3>
                                 <p class="card-header-subtitle">Historial de transacciones de taquilla con cálculo de cambio y opción de reimpresión de recibo térmico.</p>
                             </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                            <!-- Selector DataTable de Filas a Mostrar -->
+                            <div style="display: flex; align-items: center; gap: 0.45rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); padding: 0.35rem 0.75rem; border-radius: 12px;">
+                                <label for="salesPerPageSelect" style="color: #94A3B8; font-size: 0.8rem; font-weight: 700; margin: 0; white-space: nowrap;">Mostrar:</label>
+                                <select id="salesPerPageSelect" style="background: #1E1E2D; color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.18); padding: 0.3rem 0.6rem; border-radius: 8px; font-size: 0.825rem; font-weight: 800; cursor: pointer; outline: none;">
+                                    <option value="10" selected>10</option>
+                                    <option value="20">20</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                    <option value="-1">Todos</option>
+                                </select>
+                            </div>
+
+                            <!-- Buscador en tiempo real de ventas -->
+                            <div style="position: relative; min-width: 220px;">
+                                <input type="text" id="salesTableSearch" placeholder="Buscar venta, cliente, zona..." style="width: 100%; background: #1E1E2D; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px; padding: 0.55rem 0.85rem 0.55rem 2.2rem; color: #FFFFFF; font-size: 0.825rem; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--color-primary-orange)'" onblur="this.style.borderColor='rgba(255, 255, 255, 0.12)'">
+                                <span style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); font-size: 0.85rem; color: #64748B; pointer-events: none;">🔍</span>
+                            </div>
+
+                            <!-- Botón Exportar Reporte Excel -->
+                            <button type="button" onclick="exportSalesReportExcel()" class="btn btn-primary" id="btnExportSalesReport" title="Descargar reporte completo de ventas en formato Excel (.xlsx)" style="background: linear-gradient(135deg, #10B981, #059669); border: 1px solid rgba(16,185,129,0.6); color: #FFFFFF; padding: 0.55rem 1.15rem; font-size: 0.825rem; font-weight: 800; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(16,185,129,0.35); cursor: pointer; transition: all 0.2s ease;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                                <span>📊 Exportar Reporte Excel</span>
+                            </button>
                         </div>
                     </div>
 
@@ -783,15 +883,31 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <div>
-                                                <strong style="color: #FFFFFF; font-size: 0.925rem; display: block;">{{ $sale->buyer_name }}</strong>
-                                                <small style="color: #94A3B8; font-size: 0.775rem;">DNI: {{ $sale->buyer_dni }}</small>
+                                            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255, 85, 0, 0.15); color: var(--color-primary-orange); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.85rem; border: 1px solid rgba(255,85,0,0.3);">
+                                                    {{ strtoupper(substr($sale->customer_name ?: 'C', 0, 1)) }}
+                                                </div>
+                                                <div>
+                                                    <strong style="color: #FFFFFF; font-size: 0.9rem; display: block;">
+                                                        {{ $sale->customer_name ?: 'Cliente Taquilla' }}
+                                                    </strong>
+                                                    <small style="color: #94A3B8; font-size: 0.75rem;">
+                                                        {{ $sale->customer_email ?: 'Sin correo' }} · {{ $sale->customer_phone ?: 'Sin teléfono' }}
+                                                    </small>
+                                                </div>
                                             </div>
                                         </td>
                                         <td>
-                                            <span class="dash-badge-custom badge-blue" style="font-size: 0.75rem;">
-                                                {{ $sale->zone_name }}
+                                            <span class="dash-badge-custom badge-orange" style="font-size: 0.775rem;">
+                                                🎟️ {{ $sale->zone_name }}
                                             </span>
+                                            @if($sale->selected_seats && count($sale->selected_seats) > 0)
+                                                <div style="display: flex; gap: 0.25rem; flex-wrap: wrap; margin-top: 0.25rem;">
+                                                    @foreach($sale->selected_seats as $seat)
+                                                        <span class="pos-seat-chip">🪑 {{ $seat }}</span>
+                                                    @endforeach
+                                                </div>
+                                            @endif
                                         </td>
                                         <td style="text-align: center;">
                                             <span style="font-weight: 900; font-size: 1rem; color: #FFFFFF; background: rgba(255,255,255,0.08); padding: 0.2rem 0.6rem; border-radius: 8px;">
@@ -806,22 +922,19 @@
                                         <td>
                                             @if($sale->payment_method === 'Efectivo')
                                                 <span class="dash-badge-custom badge-green" style="font-size: 0.75rem;">💵 Efectivo</span>
-                                            @elseif($sale->payment_method === 'Cortesía' || $sale->payment_method === 'cortesia')
-                                                @php
-                                                    $isWebCourtesy = false;
-                                                    $sellerNameLower = strtolower($sale->seller_name ?? '');
-                                                    $tDataLower = is_array($sale->tickets_data) ? $sale->tickets_data : json_decode($sale->tickets_data ?? '[]', true);
-                                                    $subMLower = strtolower($tDataLower['sub_method'] ?? '');
-                                                    if (str_contains($sellerNameLower, 'web') || str_contains($subMLower, 'web')) {
-                                                        $isWebCourtesy = true;
-                                                    }
-                                                @endphp
-                                                @if($isWebCourtesy)
+                                            @elseif($sale->payment_method === 'Tarjeta')
+                                                <span class="dash-badge-custom badge-blue" style="font-size: 0.75rem;">💳 Tarjeta</span>
+                                            @elseif($sale->payment_method === 'Cortesia' || $sale->payment_method === 'cortesia')
+                                                @if(($sale->source ?? '') === 'courtesy_physical')
+                                                    <span class="dash-badge-custom badge-purple" style="font-size: 0.75rem; background: rgba(168, 85, 247, 0.15); color: #C084FC; border: 1px solid rgba(168, 85, 247, 0.35); font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                                        <span>🎟️</span> <span>Cortesía Fís.</span>
+                                                    </span>
+                                                @elseif(($sale->source ?? '') === 'courtesy_digital')
                                                     <span class="dash-badge-custom badge-cyan" style="font-size: 0.75rem; background: rgba(0, 240, 255, 0.15); color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.35); font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;">
                                                         <span>🌐</span> <span>Cortesía Web</span>
                                                     </span>
                                                 @else
-                                                    <span class="dash-badge-custom badge-green" style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.35); font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                                    <span class="dash-badge-custom badge-green" style="font-size: 0.75rem; background: rgba(168, 85, 247, 0.15); color: #10B981; border: 1px solid rgba(168, 85, 247, 0.35); font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;">
                                                         <span>🎁</span> <span>Cortesía Adm</span>
                                                     </span>
                                                 @endif
@@ -853,25 +966,43 @@
                                                     <span>Recibo</span>
                                                 </button>
                                                 @if(($sale->source ?? '') !== 'pos_physical')
-                                                <button type="button" class="btn btn-secondary btn-sm" onclick="downloadPosSalePdf({{ $sale->id }})" title="Descargar Entrada PDF" style="background: linear-gradient(135deg, #06B6D4, #0284C7); border: 1px solid rgba(6,182,212,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3); cursor: pointer;">
-                                                    <span>🎟️</span>
-                                                    <span>Entrada PDF</span>
-                                                </button>
-                                                <button type="button" class="btn btn-info btn-sm" onclick="emailPosSalePdf({{ $sale->id }})" title="Enviar Entrada al Correo" style="background: linear-gradient(135deg, #6366F1, #4F46E5); border: 1px solid rgba(99,102,241,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); cursor: pointer;">
-                                                    <span>✉️</span>
-                                                    <span>Enviar Correo</span>
-                                                </button>
+                                                    @if($event->isPast())
+                                                        <button type="button" class="btn btn-secondary btn-sm" onclick="showPastEventActionAlert('descargar boletos PDF')" title="Evento finalizado - Descarga PDF desactivada" style="background: rgba(148, 163, 184, 0.15); border: 1px solid rgba(148, 163, 184, 0.25); color: #94A3B8; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; cursor: not-allowed; opacity: 0.6;">
+                                                            <span>🎟️</span>
+                                                            <span>Entrada PDF</span>
+                                                        </button>
+                                                        <button type="button" class="btn btn-info btn-sm" onclick="showPastEventActionAlert('enviar boletos por correo')" title="Evento finalizado - Envío de correo desactivado" style="background: rgba(148, 163, 184, 0.15); border: 1px solid rgba(148, 163, 184, 0.25); color: #94A3B8; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; cursor: not-allowed; opacity: 0.6;">
+                                                            <span>✉️</span>
+                                                            <span>Enviar Correo</span>
+                                                        </button>
+                                                    @else
+                                                        <button type="button" class="btn btn-secondary btn-sm" onclick="downloadPosSalePdf({{ $sale->id }})" title="Descargar Entrada PDF" style="background: linear-gradient(135deg, #06B6D4, #0284C7); border: 1px solid rgba(6,182,212,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3); cursor: pointer;">
+                                                            <span>🎟️</span>
+                                                            <span>Entrada PDF</span>
+                                                        </button>
+                                                        <button type="button" class="btn btn-info btn-sm" onclick="emailPosSalePdf({{ $sale->id }})" title="Enviar Entrada al Correo" style="background: linear-gradient(135deg, #6366F1, #4F46E5); border: 1px solid rgba(99,102,241,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); cursor: pointer;">
+                                                            <span>✉️</span>
+                                                            <span>Enviar Correo</span>
+                                                        </button>
+                                                    @endif
                                                 @endif
-                                                <button type="button" class="btn btn-danger btn-sm" onclick="deletePosSale({{ $sale->id }})" title="Borrar Entrada" style="background: linear-gradient(135deg, #EF4444, #DC2626); border: 1px solid rgba(239,68,68,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); cursor: pointer;">
-                                                    <span>🗑️</span>
-                                                    <span>Borrar Entrada</span>
-                                                </button>
+                                                @if($event->isPast())
+                                                    <button type="button" class="btn btn-danger btn-sm" onclick="showPastEventActionAlert('anular o borrar entradas')" title="Evento finalizado - Anulación desactivada" style="background: rgba(148, 163, 184, 0.15); border: 1px solid rgba(148, 163, 184, 0.25); color: #94A3B8; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; cursor: not-allowed; opacity: 0.6;">
+                                                        <span>🗑️</span>
+                                                        <span>Borrar Entrada</span>
+                                                    </button>
+                                                @else
+                                                    <button type="button" class="btn btn-danger btn-sm" onclick="deletePosSale({{ $sale->id }})" title="Borrar Entrada" style="background: linear-gradient(135deg, #EF4444, #DC2626); border: 1px solid rgba(239,68,68,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); cursor: pointer;">
+                                                        <span>🗑️</span>
+                                                        <span>Borrar Entrada</span>
+                                                    </button>
+                                                @endif
                                             </div>
                                         </td>
                                     </tr>
                                 @empty
                                     <tr id="emptySalesRow">
-                                        <td colspan="9" style="text-align: center; padding: 2.5rem; color: #94A3B8;">
+                                        <td colspan="7" style="text-align: center; padding: 2.5rem; color: #94A3B8;">
                                             <div style="font-size: 2rem; margin-bottom: 0.5rem;">🛒</div>
                                             <strong>Aún no se han registrado ventas para este evento.</strong><br>
                                             <span>Haz clic en <strong>"+ REGISTRAR VENTA"</strong> para emitir tu primer boleto y recibo térmico.</span>
@@ -880,6 +1011,16 @@
                                 @endforelse
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- PIE DE TABLA / PAGINADOR ESTILO DATATABLE -->
+                    <div id="salesPaginationWrapper" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; padding: 0.85rem 1.25rem; background: rgba(255, 255, 255, 0.02); border-top: 1px solid rgba(255, 255, 255, 0.08); border-radius: 0 0 16px 16px;">
+                        <div id="salesPaginationInfo" style="color: #94A3B8; font-size: 0.825rem; font-weight: 600;">
+                            Mostrando <strong>0</strong> a <strong>0</strong> de <strong>0</strong> ventas registradas
+                        </div>
+                        <div id="salesPaginationControls" style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
+                            <!-- Generado dinámicamente vía JS -->
+                        </div>
                     </div>
                 </div>
 
@@ -1369,19 +1510,39 @@
 @endsection
 
 @push('scripts')
-    <!-- SweetAlert2, html2canvas, jsPDF, html2pdf y QRCode Generator Oficial -->
+    <!-- SweetAlert2, html2canvas, jsPDF, html2pdf, QRCode Generator Oficial y SheetJS para Excel -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <script>
         const eventId = {{ $event->id }};
         const csrfToken = "{{ csrf_token() }}";
+        window.isEventPast = {{ $event->isPast() ? 'true' : 'false' }};
+
+        // Alerta reutilizable para acciones no permitidas en eventos finalizados
+        function showPastEventActionAlert(actionName = 'realizar esta acción') {
+            Swal.fire({
+                title: '⚠️ Evento Finalizado',
+                text: `Este evento ya terminó. No es posible ${actionName} para eventos pasados.`,
+                icon: 'warning',
+                background: '#14141E',
+                color: '#FFFFFF',
+                confirmButtonColor: '#F59E0B',
+                confirmButtonText: 'Entendido'
+            });
+        }
 
         function openPlanchaModalCurrentEvent() {
+            if (window.isEventPast) {
+                showPastEventActionAlert('generar planchas ni imprimir lotes de boletos físicos');
+                return;
+            }
+
             const evtData = {
                 id: {{ $event->id }},
                 title: {!! json_encode($event->title) !!},
@@ -1409,6 +1570,11 @@
 
         // Función para anular / borrar una venta de entrada y restaurar aforo
         async function deletePosSale(saleId) {
+            if (window.isEventPast) {
+                showPastEventActionAlert('anular o borrar entradas');
+                return;
+            }
+
             if (!saleId) return;
 
             const result = await Swal.fire({
@@ -1452,7 +1618,10 @@
                         row.style.transition = 'all 0.3s ease';
                         row.style.opacity = '0';
                         row.style.transform = 'scale(0.95)';
-                        setTimeout(() => row.remove(), 300);
+                        setTimeout(() => {
+                            row.remove();
+                            if (window.salesPagination) window.salesPagination.render();
+                        }, 300);
                     }
 
                     Swal.fire({
@@ -2663,6 +2832,31 @@
         }
 
         function openPosSaleModal(mode = 'digital') {
+            if (window.isEventPast) {
+                if (mode === 'fisica') {
+                    Swal.fire({
+                        title: 'Evento Finalizado',
+                        text: 'Este evento ya terminó. No es posible registrar ventas de entradas físicas.',
+                        icon: 'warning',
+                        background: '#14141E',
+                        color: '#FFFFFF',
+                        confirmButtonColor: '#F59E0B',
+                        confirmButtonText: 'Entendido'
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Evento Finalizado',
+                        text: 'Este evento ya terminó. No es posible registrar nuevas ventas en el Punto de Venta POS.',
+                        icon: 'warning',
+                        background: '#14141E',
+                        color: '#FFFFFF',
+                        confirmButtonColor: '#FF5500',
+                        confirmButtonText: 'Entendido'
+                    });
+                }
+                return;
+            }
+
             window.currentPosSaleMode = mode || 'digital';
             const modal = document.getElementById('posSaleModal');
             if (modal) {
@@ -2840,6 +3034,18 @@
             @if(!$isCourtesyActive)
                 return;
             @endif
+            if (window.isEventPast) {
+                Swal.fire({
+                    title: 'Evento Finalizado',
+                    text: 'Este evento ya terminó. No es posible emitir entradas o pases de cortesía.',
+                    icon: 'warning',
+                    background: '#14141E',
+                    color: '#FFFFFF',
+                    confirmButtonColor: '#10B981',
+                    confirmButtonText: 'Entendido'
+                });
+                return;
+            }
             const modal = document.getElementById('posCourtesyModal');
             if (modal) {
                 modal.classList.add('active');
@@ -4228,6 +4434,11 @@
 
         // Descargar PDF individual / multipágina para la venta en Taquilla (POS)
         async function downloadPosSalePdf(saleOrId) {
+            if (window.isEventPast) {
+                showPastEventActionAlert('descargar la entrada en PDF');
+                return;
+            }
+
             const sale = getSaleObject(saleOrId);
             if (!sale) {
                 console.error('[CanvaStudio POS PDF] Venta no encontrada:', saleOrId);
@@ -4278,6 +4489,11 @@
 
         // Enviar Entrada PDF oficial por correo desde Taquilla (POS)
         async function emailPosSalePdf(saleOrId) {
+            if (window.isEventPast) {
+                showPastEventActionAlert('enviar la entrada por correo');
+                return;
+            }
+
             const sale = getSaleObject(saleOrId);
             if (!sale) {
                 console.error('[CanvaStudio POS Email] Venta no encontrada:', saleOrId);
@@ -4393,6 +4609,189 @@
                     background: '#14141E',
                     color: '#FFFFFF'
                 });
+            }
+        }
+
+        // ==========================================
+        // EXPORTAR REPORTE COMPLETO DE VENTAS A EXCEL
+        // ==========================================
+        function exportSalesReportExcel() {
+            if (typeof XLSX === 'undefined') {
+                window.location.href = "{{ route('web.box_office.export_sales_report', $event->id) }}";
+                return;
+            }
+
+            const salesList = Object.values(window.posSalesMap || {});
+            if (!salesList || salesList.length === 0) {
+                Swal.fire({
+                    title: 'Sin Ventas Registradas',
+                    text: 'Aún no se han registrado ventas para este evento para exportar en el reporte.',
+                    icon: 'info',
+                    background: '#14141E',
+                    color: '#FFFFFF',
+                    confirmButtonColor: '#10B981',
+                    confirmButtonText: 'Entendido'
+                });
+                return;
+            }
+
+            try {
+                const eventTitle = {!! json_encode($event->title) !!};
+                const eventDate = {!! json_encode(!empty($event->event_date) ? (is_string($event->event_date) ? substr($event->event_date, 0, 10) : $event->event_date->format('d/m/Y')) : 'N/A') !!};
+                const eventVenue = {!! json_encode($event->venue_name ?? $event->address ?? 'Recinto Oficial') !!};
+
+                const tableData = salesList.map(sale => {
+                    let email = sale.buyer_email || '';
+                    let tData = [];
+                    try {
+                        tData = typeof sale.tickets_data === 'string' ? JSON.parse(sale.tickets_data) : (sale.tickets_data || []);
+                    } catch(e) { tData = []; }
+
+                    if (!email && tData) {
+                        if (Array.isArray(tData)) {
+                            for (const td of tData) {
+                                if (td && (td.customer_email || td.buyer_email || td.email)) {
+                                    email = td.customer_email || td.buyer_email || td.email;
+                                    break;
+                                }
+                            }
+                        } else if (typeof tData === 'object') {
+                            email = tData.customer_email || tData.buyer_email || tData.email || '';
+                        }
+                    }
+
+                    // Extraer asientos
+                    let seats = [];
+                    if (Array.isArray(tData)) {
+                        tData.forEach(td => {
+                            if (td && td.seat) {
+                                const sVal = typeof td.seat === 'object' ? (td.seat.name || td.seat.label || JSON.stringify(td.seat)) : td.seat;
+                                seats.push(sVal);
+                            }
+                        });
+                    }
+                    const seatsStr = seats.length > 0 ? seats.join(', ') : 'General / Sin numerar';
+
+                    // Extraer códigos de ticket
+                    let ticketCodes = [];
+                    if (sale.event_tickets && Array.isArray(sale.event_tickets) && sale.event_tickets.length > 0) {
+                        ticketCodes = sale.event_tickets.map(t => t.ticket_code);
+                    } else if (Array.isArray(tData)) {
+                        ticketCodes = tData.map(td => td.code).filter(Boolean);
+                    }
+                    const ticketCodesStr = ticketCodes.length > 0 ? ticketCodes.join(', ') : 'N/A';
+
+                    // Modalidad / Canal
+                    let modalidad = 'POS Digital';
+                    if (sale.sale_type === 'pos_physical' || sale.source === 'pos_physical') {
+                        modalidad = 'Venta Física (Talonario)';
+                    } else if (sale.payment_method === 'Cortesía' || sale.payment_method === 'cortesia') {
+                        modalidad = (sale.seller_name && sale.seller_name.toLowerCase().includes('web')) ? 'Cortesía Web' : 'Cortesía Administrador';
+                    } else if ((sale.seller_name && sale.seller_name.toLowerCase().includes('web')) || (sale.payment_method && sale.payment_method.toLowerCase().includes('online'))) {
+                        modalidad = 'Web Online';
+                    }
+
+                    // Formato de fecha
+                    let fechaStr = 'Hoy';
+                    if (sale.created_at) {
+                        try {
+                            const d = new Date(sale.created_at);
+                            if (!isNaN(d)) fechaStr = d.toLocaleString('es-PE');
+                            else fechaStr = sale.created_at;
+                        } catch(e) {
+                            fechaStr = sale.created_at;
+                        }
+                    }
+
+                    const unitPrice = parseFloat(sale.unit_price) || 0;
+                    const qty = parseInt(sale.quantity) || 1;
+                    const subtotal = parseFloat(sale.original_subtotal) || (unitPrice * qty);
+                    const discount = parseFloat(sale.discount_amount) || 0;
+                    const total = parseFloat(sale.total_amount) || 0;
+                    const amountPaid = parseFloat(sale.amount_paid) || total;
+                    const change = parseFloat(sale.change_amount) || 0;
+
+                    return {
+                        "ID Venta": sale.id,
+                        "N° Recibo": sale.receipt_number || ('REC-' + sale.id),
+                        "Fecha y Hora": fechaStr,
+                        "Comprador": sale.buyer_name || 'Público General',
+                        "DNI / Documento": sale.buyer_dni || 'N/A',
+                        "Teléfono": sale.buyer_phone || 'N/A',
+                        "Correo Electrónico": email || 'N/A',
+                        "Zona / Sector": sale.zone_name || 'General',
+                        "Butacas / Asientos": seatsStr,
+                        "Cantidad": qty,
+                        "Precio Unitario (S/)": unitPrice.toFixed(2),
+                        "Subtotal Base (S/)": subtotal.toFixed(2),
+                        "Descuento (S/)": discount.toFixed(2),
+                        "Campaña / Cupón": sale.coupon_code || sale.campaign_name || sale.discount_description || 'Ninguno',
+                        "Total Cobrado (S/)": total.toFixed(2),
+                        "Método de Pago": sale.payment_method || 'Efectivo',
+                        "Modalidad / Canal": modalidad,
+                        "Monto Recibido (S/)": amountPaid.toFixed(2),
+                        "Vuelto / Cambio (S/)": change.toFixed(2),
+                        "Vendedor / Taquilla": sale.seller_name || 'Caja Taquilla',
+                        "Estado": sale.status || 'Completada',
+                        "Códigos de Boletos / QR": ticketCodesStr
+                    };
+                });
+
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(tableData);
+
+                // Configuración de anchos de columnas
+                const colWidths = [
+                    { wch: 10 }, // ID Venta
+                    { wch: 18 }, // N° Recibo
+                    { wch: 20 }, // Fecha y Hora
+                    { wch: 28 }, // Comprador
+                    { wch: 16 }, // DNI
+                    { wch: 15 }, // Teléfono
+                    { wch: 26 }, // Correo
+                    { wch: 22 }, // Zona
+                    { wch: 22 }, // Butacas
+                    { wch: 10 }, // Cantidad
+                    { wch: 18 }, // Precio Unit
+                    { wch: 18 }, // Subtotal
+                    { wch: 15 }, // Descuento
+                    { wch: 20 }, // Cupón
+                    { wch: 18 }, // Total
+                    { wch: 18 }, // Método Pago
+                    { wch: 22 }, // Modalidad
+                    { wch: 18 }, // Monto Recibido
+                    { wch: 16 }, // Cambio
+                    { wch: 20 }, // Vendedor
+                    { wch: 15 }, // Estado
+                    { wch: 30 }  // Códigos
+                ];
+                ws['!cols'] = colWidths;
+
+                XLSX.utils.book_append_sheet(wb, ws, "Ventas Taquilla");
+
+                const cleanTitle = (eventTitle || 'Evento').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
+                const fileName = `Reporte_Ventas_${cleanTitle}_${new Date().toISOString().slice(0,10)}.xlsx`;
+                XLSX.writeFile(wb, fileName);
+
+                if (typeof Swal.hideLoading === 'function') {
+                    Swal.hideLoading();
+                }
+
+                Swal.fire({
+                    icon: 'success',
+                    title: '📊 Reporte Excel Descargado',
+                    text: `Se descargó "${fileName}" con ${tableData.length} registros y todos los detalles.`,
+                    confirmButtonColor: '#10B981',
+                    confirmButtonText: 'Entendido',
+                    showConfirmButton: true,
+                    timer: 2500,
+                    timerProgressBar: true,
+                    background: '#14141E',
+                    color: '#FFFFFF'
+                });
+            } catch(err) {
+                console.error('Error generando Excel con SheetJS:', err);
+                window.location.href = "{{ route('web.box_office.export_sales_report', $event->id) }}";
             }
         }
 
@@ -4616,6 +5015,10 @@
                             </td>
                         `;
                         tableBody.prepend(newRow);
+                        if (window.salesPagination) {
+                            window.salesPagination.currentPage = 1;
+                            window.salesPagination.render();
+                        }
                     }
 
                     // 3. Actualizar KPIs y disponibilidad en vivo
@@ -5011,6 +5414,10 @@
                             </td>
                         `;
                         tableBody.prepend(newRow);
+                        if (window.salesPagination) {
+                            window.salesPagination.currentPage = 1;
+                            window.salesPagination.render();
+                        }
                     }
 
                     // 3. Actualizar KPIs en vivo
@@ -5230,7 +5637,241 @@
             }
         });
 
+        // ==========================================
+        // MOTOR DE PAGINACIÓN Y FILTRADO TIPO DATATABLE PARA VENTAS
+        // ==========================================
+        window.salesPagination = {
+            currentPage: 1,
+            pageSize: 10,
+            searchQuery: '',
+
+            init: function () {
+                const perPageSelect = document.getElementById('salesPerPageSelect');
+                if (perPageSelect) {
+                    perPageSelect.addEventListener('change', (e) => {
+                        const val = parseInt(e.target.value, 10);
+                        this.pageSize = isNaN(val) ? 10 : val;
+                        this.currentPage = 1;
+                        this.render();
+                    });
+                }
+
+                const searchInput = document.getElementById('salesTableSearch');
+                if (searchInput) {
+                    searchInput.addEventListener('input', (e) => {
+                        this.searchQuery = e.target.value.toLowerCase().trim();
+                        this.currentPage = 1;
+                        this.render();
+                    });
+                }
+
+                this.render();
+            },
+
+            getMatchingRows: function () {
+                const rows = Array.from(document.querySelectorAll('#salesTableBody tr.sale-row-item'));
+                if (!this.searchQuery) return rows;
+
+                return rows.filter(row => {
+                    const text = row.innerText.toLowerCase();
+                    return text.includes(this.searchQuery);
+                });
+            },
+
+            render: function () {
+                const allRows = Array.from(document.querySelectorAll('#salesTableBody tr.sale-row-item'));
+                const emptyRow = document.getElementById('emptySalesRow');
+                const matchingRows = this.getMatchingRows();
+                const totalMatching = matchingRows.length;
+                const totalAll = allRows.length;
+
+                // Si la tabla no tiene ninguna venta registrada
+                if (totalAll === 0) {
+                    if (emptyRow) emptyRow.style.display = '';
+                    this.updateControls(0, 0, 0, 0, 1);
+                    return;
+                }
+
+                if (emptyRow) emptyRow.style.display = 'none';
+
+                // Ocultar todas las filas primero
+                allRows.forEach(row => { row.style.display = 'none'; });
+
+                // Manejo de búsqueda sin resultados
+                let noResultsRow = document.getElementById('noSalesResultsRow');
+                if (totalMatching === 0) {
+                    if (!noResultsRow) {
+                        noResultsRow = document.createElement('tr');
+                        noResultsRow.id = 'noSalesResultsRow';
+                        noResultsRow.innerHTML = `
+                            <td colspan="7" style="text-align: center; padding: 2.5rem; color: #94A3B8;">
+                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔍</div>
+                                <strong>No se encontraron ventas que coincidan con "${this.searchQuery}".</strong>
+                            </td>
+                        `;
+                        const tbody = document.getElementById('salesTableBody');
+                        if (tbody) tbody.appendChild(noResultsRow);
+                    }
+                    noResultsRow.style.display = '';
+                    this.updateControls(0, 0, 0, totalAll, 1);
+                    return;
+                } else if (noResultsRow) {
+                    noResultsRow.style.display = 'none';
+                }
+
+                // Calcular paginación
+                const isAll = (this.pageSize === -1);
+                const effectivePageSize = isAll ? totalMatching : this.pageSize;
+                const totalPages = Math.ceil(totalMatching / (effectivePageSize || 10)) || 1;
+
+                if (this.currentPage > totalPages) this.currentPage = totalPages;
+                if (this.currentPage < 1) this.currentPage = 1;
+
+                const startIndex = (this.currentPage - 1) * effectivePageSize;
+                const endIndex = isAll ? totalMatching : Math.min(startIndex + effectivePageSize, totalMatching);
+
+                // Mostrar únicamente las filas de la página actual
+                for (let i = startIndex; i < endIndex; i++) {
+                    if (matchingRows[i]) {
+                        matchingRows[i].style.display = '';
+                    }
+                }
+
+                this.updateControls(startIndex + 1, endIndex, totalMatching, totalAll, totalPages);
+            },
+
+            goToPage: function (page) {
+                this.currentPage = page;
+                this.render();
+            },
+
+            updateControls: function (start, end, totalMatching, totalAll, totalPages) {
+                const infoEl = document.getElementById('salesPaginationInfo');
+                const controlsEl = document.getElementById('salesPaginationControls');
+                const wrapperEl = document.getElementById('salesPaginationWrapper');
+
+                if (wrapperEl) {
+                    wrapperEl.style.display = totalAll === 0 ? 'none' : 'flex';
+                }
+
+                if (infoEl) {
+                    if (totalAll === 0) {
+                        infoEl.innerHTML = `Mostrando <strong>0</strong> ventas registradas`;
+                    } else if (totalMatching === 0) {
+                        infoEl.innerHTML = `Mostrando <strong>0</strong> de <strong>${totalAll}</strong> ventas registradas (0 coincidencias)`;
+                    } else if (this.searchQuery) {
+                        infoEl.innerHTML = `Mostrando <strong>${start}</strong> a <strong>${end}</strong> de <strong>${totalMatching}</strong> ventas filtradas <em>(de ${totalAll} totales)</em>`;
+                    } else {
+                        infoEl.innerHTML = `Mostrando <strong>${start}</strong> a <strong>${end}</strong> de <strong>${totalAll}</strong> ventas registradas`;
+                    }
+                }
+
+                if (!controlsEl) return;
+                controlsEl.innerHTML = '';
+
+                // Si no hay elementos o se seleccionó mostrar "Todos", o solo hay 1 página, no mostramos botones
+                if (totalMatching <= 0 || (this.pageSize === -1 && totalMatching > 0) || totalPages <= 1) {
+                    return;
+                }
+
+                // Botón Primera Página
+                const firstBtn = document.createElement('button');
+                firstBtn.type = 'button';
+                firstBtn.className = 'dt-page-btn';
+                firstBtn.innerHTML = '«';
+                firstBtn.title = 'Primera página';
+                firstBtn.disabled = this.currentPage <= 1;
+                firstBtn.onclick = () => this.goToPage(1);
+                controlsEl.appendChild(firstBtn);
+
+                // Botón Anterior
+                const prevBtn = document.createElement('button');
+                prevBtn.type = 'button';
+                prevBtn.className = 'dt-page-btn';
+                prevBtn.innerHTML = '‹ Ant';
+                prevBtn.title = 'Página anterior';
+                prevBtn.disabled = this.currentPage <= 1;
+                prevBtn.onclick = () => this.goToPage(this.currentPage - 1);
+                controlsEl.appendChild(prevBtn);
+
+                // Páginas numéricas (máx 5 botones visibles)
+                const maxButtons = 5;
+                let startPage = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
+                let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+                if (endPage - startPage + 1 < maxButtons) {
+                    startPage = Math.max(1, endPage - maxButtons + 1);
+                }
+
+                if (startPage > 1) {
+                    const p1Btn = document.createElement('button');
+                    p1Btn.type = 'button';
+                    p1Btn.className = 'dt-page-btn';
+                    p1Btn.textContent = '1';
+                    p1Btn.onclick = () => this.goToPage(1);
+                    controlsEl.appendChild(p1Btn);
+
+                    if (startPage > 2) {
+                        const dots = document.createElement('span');
+                        dots.className = 'dt-page-dots';
+                        dots.textContent = '...';
+                        controlsEl.appendChild(dots);
+                    }
+                }
+
+                for (let p = startPage; p <= endPage; p++) {
+                    const pageBtn = document.createElement('button');
+                    pageBtn.type = 'button';
+                    pageBtn.className = 'dt-page-btn' + (p === this.currentPage ? ' active' : '');
+                    pageBtn.textContent = p;
+                    pageBtn.onclick = () => this.goToPage(p);
+                    controlsEl.appendChild(pageBtn);
+                }
+
+                if (endPage < totalPages) {
+                    if (endPage < totalPages - 1) {
+                        const dots = document.createElement('span');
+                        dots.className = 'dt-page-dots';
+                        dots.textContent = '...';
+                        controlsEl.appendChild(dots);
+                    }
+
+                    const lastPBtn = document.createElement('button');
+                    lastPBtn.type = 'button';
+                    lastPBtn.className = 'dt-page-btn';
+                    lastPBtn.textContent = totalPages;
+                    lastPBtn.onclick = () => this.goToPage(totalPages);
+                    controlsEl.appendChild(lastPBtn);
+                }
+
+                // Botón Siguiente
+                const nextBtn = document.createElement('button');
+                nextBtn.type = 'button';
+                nextBtn.className = 'dt-page-btn';
+                nextBtn.innerHTML = 'Sig ›';
+                nextBtn.title = 'Página siguiente';
+                nextBtn.disabled = this.currentPage >= totalPages;
+                nextBtn.onclick = () => this.goToPage(this.currentPage + 1);
+                controlsEl.appendChild(nextBtn);
+
+                // Botón Última Página
+                const lastBtn = document.createElement('button');
+                lastBtn.type = 'button';
+                lastBtn.className = 'dt-page-btn';
+                lastBtn.innerHTML = '»';
+                lastBtn.title = 'Última página';
+                lastBtn.disabled = this.currentPage >= totalPages;
+                lastBtn.onclick = () => this.goToPage(totalPages);
+                controlsEl.appendChild(lastBtn);
+            }
+        };
+
         document.addEventListener('DOMContentLoaded', function () {
+            // Inicializar paginación estilo DataTable para el registro de ventas
+            if (window.salesPagination) {
+                window.salesPagination.init();
+            }
+
             // Cerrar modales al hacer clic en el backdrop overlay
             const posModalOverlay = document.getElementById('posSaleModal');
             if (posModalOverlay) {
@@ -5243,19 +5884,6 @@
             if (posCourtesyOverlay) {
                 posCourtesyOverlay.addEventListener('click', function (e) {
                     if (e.target === this) closePosCourtesyModal();
-                });
-            }
-
-            // Buscador en la tabla de ventas
-            const searchInput = document.getElementById('salesTableSearch');
-            if (searchInput) {
-                searchInput.addEventListener('input', function () {
-                    const q = this.value.toLowerCase().trim();
-                    const rows = document.querySelectorAll('.sale-row-item');
-                    rows.forEach(row => {
-                        const text = row.innerText.toLowerCase();
-                        row.style.display = text.includes(q) ? '' : 'none';
-                    });
                 });
             }
 

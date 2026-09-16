@@ -79,8 +79,15 @@ class HomeController extends Controller
                 }
             }
 
-            $badge = $hasCampaign ? $campaignBadge : $badgeOptions[$index % count($badgeOptions)];
-            $badgeColor = $hasCampaign ? 'badge-red' : (($index % 3 === 0) ? 'badge-red' : (($index % 3 === 1) ? 'badge-orange' : 'badge-dark'));
+            $isPast = $ev->isPast();
+
+            if ($isPast) {
+                $badge = 'EVENTO TERMINADO';
+                $badgeColor = 'badge-dark';
+            } else {
+                $badge = $hasCampaign ? $campaignBadge : $badgeOptions[$index % count($badgeOptions)];
+                $badgeColor = $hasCampaign ? 'badge-red' : (($index % 3 === 0) ? 'badge-red' : (($index % 3 === 1) ? 'badge-orange' : 'badge-dark'));
+            }
 
             $image = $ev->banner_image ?: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=1200&q=80';
             $venue = $ev->venue_name ?: ($ev->address ?: 'Recinto Oficial');
@@ -89,12 +96,13 @@ class HomeController extends Controller
                 'id' => $ev->id,
                 'title' => $ev->title,
                 'slug' => $ev->slug ?: (Str::slug($ev->title) . '-' . $ev->id),
+                'is_past' => $isPast,
                 'badge' => $badge,
                 'badge_color' => $badgeColor,
-                'has_campaign' => $hasCampaign,
-                'campaign_name' => $hasCampaign ? $activeCampaign->name : null,
-                'campaign_badge' => $campaignBadge,
-                'campaign_color' => $campaignColor,
+                'has_campaign' => $hasCampaign && !$isPast,
+                'campaign_name' => ($hasCampaign && !$isPast) ? $activeCampaign->name : null,
+                'campaign_badge' => ($hasCampaign && !$isPast) ? $campaignBadge : null,
+                'campaign_color' => ($hasCampaign && !$isPast) ? $campaignColor : null,
                 'original_price' => number_format((float)$minPrice, 2, '.', ''),
                 'price' => number_format((float)$effectiveMinPrice, 2, '.', ''),
                 'date' => "{$dayName}, {$dayNum} {$monthName} • {$timeFormatted}",

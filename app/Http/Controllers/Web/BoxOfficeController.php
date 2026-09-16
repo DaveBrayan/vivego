@@ -102,6 +102,10 @@ class BoxOfficeController extends Controller
                 }
             }
 
+            $isPast = $ev->isPast();
+            $statusText = $isPast ? 'Finalizado' : ($ev->status ?? 'Publicado');
+            $statusClass = $isPast ? 'badge-gray' : ($ev->status === 'Agotado' ? 'badge-red' : 'badge-green');
+
             $events[] = [
                 'id' => $ev->id,
                 'title' => $ev->title,
@@ -121,8 +125,9 @@ class BoxOfficeController extends Controller
                 'min_price' => 'S/ ' . number_format($minPrice, 2),
                 'revenue_formatted' => 'S/ ' . number_format($salesRevenue, 2),
                 'revenue_raw' => $salesRevenue,
-                'status' => $ev->status ?? 'Publicado',
-                'status_class' => $ev->status === 'Agotado' ? 'badge-red' : 'badge-green',
+                'status' => $statusText,
+                'status_class' => $statusClass,
+                'is_past' => $isPast,
                 'sales_type' => $ev->sales_type ?? 'fisica',
                 'zones' => $zones,
                 'sales_count' => $ev->sales ? $ev->sales->count() : TicketSale::where('event_id', $ev->id)->count(),
@@ -342,6 +347,13 @@ class BoxOfficeController extends Controller
         }
 
         $event = Event::findOrFail($id);
+        if ($event->isPast()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este evento ya finalizó. No es posible registrar nuevas ventas ni emitir entradas.',
+            ], 422);
+        }
+
         $zones = is_array($event->zones) ? $event->zones : [];
 
         // Buscar la zona seleccionada
@@ -865,6 +877,157 @@ class BoxOfficeController extends Controller
     }
 
     /**
+     * Exporta el reporte completo y detallado de todas las ventas de un evento a Excel / CSV con UTF-8 BOM.
+     */
+    public function exportSalesReport($id)
+    {
+        $adminId = session('admin_id');
+        $loggedAdmin = $adminId ? \App\Models\Administrator::find($adminId) : null;
+        if ($loggedAdmin && !$loggedAdmin->canAccessEvent($id)) {
+            return redirect()->route('web.box_office')->with('error', 'No tienes permisos para acceder a este evento.');
+        }
+
+        $event = Event::with(['sales.eventTickets'])->findOrFail($id);
+        $sales = $event->sales()->with('eventTickets')->orderBy('id', 'asc')->get();
+
+        $filename = 'Reporte_Ventas_' . Str::slug($event->title) . '_' . date('Ymd_His') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ];
+
+        $callback = function () use ($event, $sales) {
+            $handle = fopen('php://output', 'w');
+            // Escribir BOM UTF-8 para que Microsoft Excel reconozca tildes y caracteres especiales
+            fputs($handle, "\xEF\xBB\xBF");
+
+            // Metadatos de cabecera
+            fputcsv($handle, ['REPORTE OFICIAL DE VENTAS - VIVEGO', ''], ';');
+            fputcsv($handle, ['Evento:', $event->title], ';');
+            fputcsv($handle, ['Fecha del Evento:', $event->event_date ? (is_string($event->event_date) ? substr($event->event_date, 0, 10) : $event->event_date->format('Y-m-d')) : 'N/A', 'Hora:', $event->event_time ?? 'N/A'], ';');
+            fputcsv($handle, ['Lugar / Recinto:', $event->venue_name ?? $event->address ?? 'N/A'], ';');
+            fputcsv($handle, ['Fecha de Emisión Reporte:', date('d/m/Y H:i:s')], ';');
+            fputcsv($handle, ['Total Ventas Registradas:', $sales->count(), 'Total Entradas Vendidas:', $sales->sum('quantity'), 'Recaudación Total (S/):', number_format($sales->sum('total_amount'), 2, '.', '')], ';');
+            fputcsv($handle, [], ';');
+
+            // Encabezados de columnas
+            $columns = [
+                'ID Venta',
+                'N° Recibo',
+                'Fecha y Hora',
+                'Comprador',
+                'DNI / Documento',
+                'Teléfono',
+                'Correo Electrónico',
+                'Zona / Sector',
+                'Butacas / Asientos',
+                'Cantidad',
+                'Precio Unitario (S/)',
+                'Subtotal (S/)',
+                'Descuento (S/)',
+                'Campaña / Cupón',
+                'Total Cobrado (S/)',
+                'Método de Pago',
+                'Modalidad / Canal',
+                'Monto Recibido (S/)',
+                'Cambio / Vuelto (S/)',
+                'Vendedor / Taquillero',
+                'Estado de Venta',
+                'Códigos de Boletos / QR',
+                'Detalle Check-in / Ingreso'
+            ];
+            fputcsv($handle, $columns, ';');
+
+            foreach ($sales as $sale) {
+                $tData = is_array($sale->tickets_data) ? $sale->tickets_data : (json_decode($sale->tickets_data ?? '[]', true) ?: []);
+
+                $email = $sale->buyer_email 
+                    ?? ($tData['customer_email'] ?? ($tData['buyer_email'] ?? ($tData['email'] ?? '')));
+
+                $seats = [];
+                if (!empty($tData)) {
+                    foreach ($tData as $td) {
+                        if (is_array($td) && !empty($td['seat'])) {
+                            $seats[] = is_array($td['seat']) ? ($td['seat']['name'] ?? $td['seat']['label'] ?? json_encode($td['seat'])) : $td['seat'];
+                        }
+                    }
+                }
+                $seatsStr = !empty($seats) ? implode(', ', $seats) : 'General / Sin numerar';
+
+                $modalidad = 'POS Digital';
+                if ($sale->sale_type === 'pos_physical' || ($sale->source ?? '') === 'pos_physical') {
+                    $modalidad = 'Venta Física (Talonario)';
+                } elseif ($sale->payment_method === 'Cortesía' || $sale->payment_method === 'cortesia') {
+                    $modalidad = str_contains(strtolower($sale->seller_name ?? ''), 'web') ? 'Cortesía Web' : 'Cortesía Administrador';
+                } elseif (str_contains(strtolower($sale->seller_name ?? ''), 'web') || str_contains(strtolower($sale->payment_method ?? ''), 'online')) {
+                    $modalidad = 'Web Online';
+                }
+
+                $ticketCodes = [];
+                $checkinDetails = [];
+                if ($sale->eventTickets && $sale->eventTickets->count() > 0) {
+                    foreach ($sale->eventTickets as $ticket) {
+                        $ticketCodes[] = $ticket->ticket_code;
+                        if ($ticket->is_used) {
+                            $checkinDetails[] = $ticket->ticket_code . ': INGRESADO (' . ($ticket->checked_in_at ? $ticket->checked_in_at->format('d/m H:i') : 'Sí') . ')';
+                        } else {
+                            $checkinDetails[] = $ticket->ticket_code . ': Pendiente';
+                        }
+                    }
+                } else {
+                    if (!empty($tData)) {
+                        foreach ($tData as $td) {
+                            if (is_array($td) && !empty($td['code'])) {
+                                $ticketCodes[] = $td['code'];
+                            }
+                        }
+                    }
+                }
+
+                $ticketCodesStr = !empty($ticketCodes) ? implode(', ', $ticketCodes) : 'N/A';
+                $checkinStr = !empty($checkinDetails) ? implode(' | ', $checkinDetails) : 'Pendiente';
+                $couponInfo = $sale->coupon_code ?? ($sale->campaign_name ?? ($sale->discount_description ?? ''));
+
+                $row = [
+                    $sale->id,
+                    $sale->receipt_number ?? ('REC-' . $sale->id),
+                    $sale->created_at ? $sale->created_at->format('d/m/Y H:i:s') : 'N/A',
+                    $sale->buyer_name ?? 'Público General',
+                    $sale->buyer_dni ?? 'N/A',
+                    $sale->buyer_phone ?? 'N/A',
+                    $email ?: 'N/A',
+                    $sale->zone_name ?? 'General',
+                    $seatsStr,
+                    $sale->quantity ?? 1,
+                    number_format($sale->unit_price ?? 0, 2, '.', ''),
+                    number_format($sale->original_subtotal ?? ($sale->unit_price * $sale->quantity), 2, '.', ''),
+                    number_format($sale->discount_amount ?? 0, 2, '.', ''),
+                    $couponInfo ?: 'Ninguno',
+                    number_format($sale->total_amount ?? 0, 2, '.', ''),
+                    $sale->payment_method ?? 'Efectivo',
+                    $modalidad,
+                    number_format($sale->amount_paid ?? $sale->total_amount ?? 0, 2, '.', ''),
+                    number_format($sale->change_amount ?? 0, 2, '.', ''),
+                    $sale->seller_name ?? 'Caja Taquilla',
+                    $sale->status ?? 'Completada',
+                    $ticketCodesStr,
+                    $checkinStr
+                ];
+
+                fputcsv($handle, $row, ';');
+            }
+
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
      * Elimina / Anula una venta de taquilla, revierte el stock del evento y elimina boletos asociados.
      */
     public function destroySale($id): JsonResponse
@@ -894,6 +1057,13 @@ class BoxOfficeController extends Controller
         }
 
         $event = Event::find($sale->event_id);
+        if ($event && $event->isPast()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este evento ya ha finalizado. No es posible anular ni borrar ventas de eventos pasados.'
+            ], 422);
+        }
+
         if ($event && is_array($event->zones)) {
             $zones = $event->zones;
             $tDataList = is_array($sale->tickets_data) ? $sale->tickets_data : (json_decode($sale->tickets_data ?? '[]', true) ?: []);
@@ -952,6 +1122,14 @@ class BoxOfficeController extends Controller
      */
     public function emailTicketPdf(Request $request, TicketSale $sale): JsonResponse
     {
+        $sale->loadMissing(['event']);
+        if ($sale->event && $sale->event->isPast()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este evento ya ha finalizado. No es posible enviar entradas por correo de eventos pasados.'
+            ], 422);
+        }
+
         $recipient = $request->input('email');
 
         if (empty($recipient) && !empty($sale->tickets_data)) {

@@ -117,6 +117,7 @@ Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group
     // Taquilla & Ventas POS (Punto de Venta Presencial / Físico)
     Route::get('/admin/taquilla', [BoxOfficeController::class, 'index'])->name('web.box_office');
     Route::get('/admin/taquilla/{event}', [BoxOfficeController::class, 'manage'])->name('web.box_office.manage');
+    Route::get('/admin/taquilla/{event}/reporte-excel', [BoxOfficeController::class, 'exportSalesReport'])->name('web.box_office.export_sales_report');
     Route::post('/admin/taquilla/{event}/venta', [BoxOfficeController::class, 'storeSale'])->name('web.box_office.store_sale');
     Route::delete('/admin/taquilla/venta/{sale}', [BoxOfficeController::class, 'destroySale'])->name('web.box_office.destroy_sale');
     Route::post('/admin/taquilla/venta/{sale}/enviar-correo', [BoxOfficeController::class, 'emailTicketPdf'])->name('web.box_office.email_ticket');

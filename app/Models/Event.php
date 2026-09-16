@@ -45,6 +45,38 @@ class Event extends Model
         'quota_split_settings' => 'array',
     ];
 
+    /**
+     * Determina si el evento ya concluyó o su fecha/hora ya pasaron.
+     */
+    public function isPast(): bool
+    {
+        if (in_array(strtolower(trim((string) $this->status)), ['finalizado', 'concluido', 'terminado', 'cancelado'])) {
+            return true;
+        }
+
+        if (empty($this->event_date)) {
+            return false;
+        }
+
+        try {
+            $dateStr = $this->event_date instanceof \DateTimeInterface
+                ? $this->event_date->format('Y-m-d')
+                : substr((string) $this->event_date, 0, 10);
+
+            $timeStr = !empty($this->event_time) ? trim(preg_replace('/[^0-9:]/', '', (string) $this->event_time)) : '23:59:59';
+            if (empty($timeStr) || strlen($timeStr) < 4) {
+                $timeStr = '23:59:59';
+            } elseif (strlen($timeStr) === 5) {
+                $timeStr .= ':00';
+            }
+
+            $eventDateTime = \Carbon\Carbon::parse("{$dateStr} {$timeStr}");
+            return \Carbon\Carbon::now()->greaterThan($eventDateTime);
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
     public function getBannerImageAttribute($value): ?string
     {
         if (empty($value)) {
