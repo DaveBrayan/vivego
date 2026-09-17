@@ -21,7 +21,7 @@ class EmailLogService
         ?string $forcedRecipient = null,
         string $mailType = 'ticket_purchase'
     ): array {
-        $sale->loadMissing(['event', 'eventTickets']);
+        $sale->loadMissing(['event.template', 'eventTickets']);
 
         $recipientEmail = trim($forcedRecipient ?: ($sale->buyer_email ?: ''));
         if (empty($recipientEmail)) {

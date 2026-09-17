@@ -83,7 +83,7 @@ class TicketPurchaseMail extends Mailable
             }
 
             // Fallback con DomPDF
-            $this->sale->loadMissing(['eventTickets', 'event']);
+            $this->sale->loadMissing(['eventTickets', 'event.template']);
 
             $options = new Options();
             $options->set('isHtml5ParserEnabled', true);

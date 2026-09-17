@@ -688,7 +688,41 @@
         const isCourtesy = (sale.payment_method === 'Cortesía' || sale.payment_method === 'cortesia' || String(sale.payment_method).toLowerCase() === 'cortesia' || parseFloat(sale.total_amount) === 0);
 
         let ticketsList = [];
-        if (ticketsDataParsed && ticketsDataParsed.items && Array.isArray(ticketsDataParsed.items) && ticketsDataParsed.items.length > 0) {
+
+        // 1. Si la venta ya tiene event_tickets cargados con su zone_name y datos de nominación
+        let rawEventTickets = sale.event_tickets || sale.eventTickets || [];
+        if (Array.isArray(rawEventTickets) && rawEventTickets.length > 0) {
+            const seenCodes = new Set();
+            const uniqueTickets = [];
+            const maxQty = parseInt(sale.quantity || 1, 10);
+            
+            for (const et of rawEventTickets) {
+                const codeKey = (et.ticket_code || et.ticket_number || '').toString().trim();
+                if (codeKey && seenCodes.has(codeKey)) {
+                    continue;
+                }
+                if (codeKey) seenCodes.add(codeKey);
+                uniqueTickets.push(et);
+                if (maxQty > 0 && uniqueTickets.length >= maxQty) {
+                    break;
+                }
+            }
+
+            uniqueTickets.forEach((et, i) => {
+                ticketsList.push({
+                    ticket_code: et.ticket_code || `TK-${sale.receipt_number || 'REC'}-${i + 1}`,
+                    ticket_number: et.ticket_number || (i + 1),
+                    zone: et.zone_name || sale.zone_name,
+                    price: et.unit_price || sale.unit_price,
+                    buyer_name: et.buyer_name || sale.buyer_name,
+                    buyer_dni: et.buyer_dni || sale.buyer_dni,
+                    is_courtesy: isCourtesy,
+                    validation_hash: et.validation_hash || null,
+                    qr_payload: et.qr_payload || null
+                });
+            });
+        } else if (ticketsDataParsed && ticketsDataParsed.items && Array.isArray(ticketsDataParsed.items) && ticketsDataParsed.items.length > 0) {
+            const nomList = (ticketsDataParsed && Array.isArray(ticketsDataParsed.nominated_attendees)) ? ticketsDataParsed.nominated_attendees : [];
             ticketsDataParsed.items.forEach((it, idx) => {
                 const qty = parseInt(it.quantity || 1, 10);
                 const zoneName = cleanZoneNameJs(it.zone_name || it.name || sale.zone_name);
@@ -702,12 +736,18 @@
                 for (let q = 0; q < qty; q++) {
                     const st = seats[q] || null;
                     const effectiveZone = formatZoneWithSeatJs(zoneName, st);
+                    const nomAtt = nomList[ticketsList.length] || null;
+                    const itemBuyerName = it.buyer_name || (nomAtt ? nomAtt.name : sale.buyer_name);
+                    const itemBuyerDni = it.buyer_dni || (nomAtt ? nomAtt.dni : sale.buyer_dni);
+
                     ticketsList.push({
                         ticket_code: it.ticket_code || `TK-${sale.receipt_number || 'REC'}-${ticketsList.length + 1}`,
                         ticket_number: ticketsList.length + 1,
                         zone: effectiveZone,
                         seat: formatShortSeatCodeJs(st),
                         price: price,
+                        buyer_name: itemBuyerName,
+                        buyer_dni: itemBuyerDni,
                         is_courtesy: isCourtesy || it.is_courtesy,
                         validation_hash: it.validation_hash || null,
                         qr_payload: it.qr_payload || null
@@ -715,14 +755,21 @@
                 }
             });
         } else if (Array.isArray(ticketsDataParsed) && ticketsDataParsed.length > 0) {
+            const nomList = (ticketsDataParsed && Array.isArray(ticketsDataParsed.nominated_attendees)) ? ticketsDataParsed.nominated_attendees : [];
             ticketsDataParsed.forEach((tItem, i) => {
                 const st = tItem.seat || tItem.seat_number || (tItem.seats && tItem.seats[0]) || null;
+                const nomAtt = nomList[i] || null;
+                const itemBuyerName = tItem.buyer_name || (nomAtt ? nomAtt.name : sale.buyer_name);
+                const itemBuyerDni = tItem.buyer_dni || (nomAtt ? nomAtt.dni : sale.buyer_dni);
+
                 ticketsList.push({
                     ticket_code: tItem.ticket_code || `TK-${sale.receipt_number || 'REC'}-${i + 1}`,
                     ticket_number: tItem.ticket_number || (i + 1),
                     zone: formatZoneWithSeatJs(tItem.zone || tItem.zone_name || sale.zone_name, st),
                     seat: formatShortSeatCodeJs(st),
                     price: tItem.price || sale.unit_price,
+                    buyer_name: itemBuyerName,
+                    buyer_dni: itemBuyerDni,
                     is_courtesy: isCourtesy || tItem.is_courtesy,
                     validation_hash: tItem.validation_hash || null,
                     qr_payload: tItem.qr_payload || null
@@ -737,6 +784,8 @@
                     ticket_number: q + 1,
                     zone: zoneName,
                     price: sale.unit_price,
+                    buyer_name: sale.buyer_name,
+                    buyer_dni: sale.buyer_dni,
                     is_courtesy: isCourtesy,
                     validation_hash: null,
                     qr_payload: null
@@ -760,17 +809,20 @@
             if (typeof numSeq === 'string') {
                 numSeq = parseInt(numSeq.replace(/[^0-9]/g, ''), 10) || (i + 1);
             }
-            const ticketNumStr = 'N° ' + String(numSeq).padStart(5, '0');
+            const ticketNumStr = (tItem.ticket_code && tItem.ticket_code.startsWith('N°')) ? tItem.ticket_code : ('N° ' + String(numSeq).padStart(5, '0'));
 
             let hashVal = tItem.validation_hash || sale.validation_hash;
             if (!hashVal) {
                 hashVal = 'VG' + String(Math.abs(((sale.receipt_number || 'REC') + '_' + (i + 1)).split('').reduce((a, b) => { a = ((a << 5) - a) + b.charCodeAt(0); return a & a; }, 0))).padStart(8, '0').substring(0, 8).toUpperCase();
             }
 
-            const qrPayload = tItem.qr_payload || sale.qr_payload || `VIVEGO|${sale.receipt_number || 'REC'}|EVT-${sale.event_id || (event.id || 1)}|DNI-${sale.buyer_dni || '00000000'}|TICK-${numSeq}|${hashVal}`;
+            const isCourtesyTicket = isCourtesy || tItem.is_courtesy;
+            const ticketBuyerName = tItem.buyer_name || sale.buyer_name || (isCourtesyTicket ? 'INVITADO DE CORTESÍA' : 'CLIENTE VARIOS');
+            const ticketBuyerDni = tItem.buyer_dni || sale.buyer_dni || '00000000';
+
+            const qrPayload = tItem.qr_payload || sale.qr_payload || `VIVEGO|${sale.receipt_number || 'REC'}|EVT-${sale.event_id || (event.id || 1)}|DNI-${ticketBuyerDni}|TICK-${numSeq}|${hashVal}`;
             const qrDataUrl = generateQrBase64(qrPayload);
 
-            const isCourtesyTicket = isCourtesy || tItem.is_courtesy;
             const unitPriceVal = isCourtesyTicket ? '0.00' : parseFloat(tItem.price || sale.unit_price || sale.total_amount || 0).toFixed(2);
             const priceDisplay = isCourtesyTicket ? 'CORTESÍA' : ('S/ ' + unitPriceVal);
 
@@ -782,8 +834,8 @@
                 time: eventTime,
                 zone: cleanZoneNameJs(tItem.zone || sale.zone_name),
                 price: priceDisplay,
-                buyer_name: sale.buyer_name || (isCourtesyTicket ? 'INVITADO DE CORTESÍA' : 'CLIENTE VARIOS'),
-                buyer_dni: sale.buyer_dni || '00000000',
+                buyer_name: ticketBuyerName,
+                buyer_dni: ticketBuyerDni,
                 ticket_number: ticketNumStr,
                 hash: hashVal,
                 qr_data_url: qrDataUrl

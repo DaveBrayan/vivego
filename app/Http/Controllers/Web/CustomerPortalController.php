@@ -195,7 +195,7 @@ class CustomerPortalController extends Controller
             return redirect()->route('web.login')->with('info', 'Inicia sesión para ver tus boletos.');
         }
 
-        $sales = TicketSale::with(['event.template'])
+        $sales = TicketSale::with(['event.template', 'eventTickets'])
             ->where(function ($query) use ($customerEmail, $customerDni) {
                 if ($customerEmail) {
                     $query->orWhereJsonContains('tickets_data->customer_email', $customerEmail)
@@ -237,7 +237,7 @@ class CustomerPortalController extends Controller
             return redirect()->route('web.login')->with('info', 'Inicia sesión para ver tus recibos.');
         }
 
-        $sales = TicketSale::with(['event.template'])
+        $sales = TicketSale::with(['event.template', 'eventTickets'])
             ->where(function ($query) use ($customerEmail, $customerDni) {
                 if ($customerEmail) {
                     $query->orWhereJsonContains('tickets_data->customer_email', $customerEmail)
@@ -473,6 +473,7 @@ class CustomerPortalController extends Controller
         }
 
         try {
+            $sale->loadMissing(['eventTickets', 'event.template']);
             $options = new \Dompdf\Options();
             $options->set('isHtml5ParserEnabled', true);
             $options->set('isRemoteEnabled', true);
@@ -520,6 +521,7 @@ class CustomerPortalController extends Controller
             return response()->json(['success' => false, 'message' => 'No hay un correo electrónico válido registrado para este boleto.'], 422);
         }
 
+        $sale->loadMissing(['eventTickets', 'event.template']);
         $pdfBase64 = $request->input('ticket_pdf_base64');
         $result = \App\Services\EmailLogService::sendTicketPurchaseMail($sale, null, false, $pdfBase64);
 

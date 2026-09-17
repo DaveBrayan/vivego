@@ -215,7 +215,12 @@
             $numSeq = $realTicket?->ticket_number ?? ($ticketItem['ticket_number'] ?? ($sale->id ? ($sale->id + $i) : ($i + 1)));
             $ticketNumStr = $realTicket?->ticket_code ?? ($ticketItem['ticket_code'] ?? ('N° ' . str_pad($numSeq, 5, '0', STR_PAD_LEFT)));
             $hashVal = $realTicket?->validation_hash ?? ($ticketItem['validation_hash'] ?? ('VG' . strtoupper(substr(md5($sale->receipt_number . $i . $sale->id), 0, 8))));
-            $qrPayload = $realTicket?->qr_payload ?? ($ticketItem['qr_payload'] ?? "VIVEGO|{$sale->receipt_number}|EVT-{$sale->event_id}|DNI-{$sale->buyer_dni}|TICK-" . ($i + 1));
+
+            $nominatedFallback = (isset($tData['nominated_attendees']) && is_array($tData['nominated_attendees'])) ? ($tData['nominated_attendees'][$i] ?? null) : null;
+            $ticketBuyerName = $realTicket?->buyer_name ?? ($ticketItem['buyer_name'] ?? ($nominatedFallback['name'] ?? $sale->buyer_name));
+            $ticketBuyerDni = $realTicket?->buyer_dni ?? ($ticketItem['buyer_dni'] ?? ($nominatedFallback['dni'] ?? $sale->buyer_dni));
+
+            $qrPayload = $realTicket?->qr_payload ?? ($ticketItem['qr_payload'] ?? "VIVEGO|{$sale->receipt_number}|EVT-{$sale->event_id}|DNI-{$ticketBuyerDni}|TICK-" . ($i + 1));
             
             // Generación de código QR local ultra-rápida (in-memory SVG)
             $qrBase64 = '';
@@ -268,12 +273,12 @@
 
                 <!-- COMPRADOR -->
                 <div class="el" style="top: 142px; left: 112px; color: #FFFFFF; font-size: 12px; font-weight: bold; z-index: 25;">
-                    Comprador: {{ strtoupper($sale->buyer_name) }}
+                    Comprador: {{ mb_strtoupper($ticketBuyerName ?: $sale->buyer_name, 'UTF-8') }}
                 </div>
 
                 <!-- DNI -->
                 <div class="el" style="top: 164px; left: 110px; color: #FFFFFF; font-size: 12px; font-weight: bold; z-index: 25;">
-                    DNI: {{ $sale->buyer_dni }}
+                    DNI: {{ $ticketBuyerDni ?: $sale->buyer_dni }}
                 </div>
 
                 <!-- LOCAL -->

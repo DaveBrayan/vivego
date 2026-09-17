@@ -220,6 +220,64 @@
             font-size: 0.875rem !important;
             font-weight: 600 !important;
         }
+
+        /* TABS Y CARDS DE ENTRADAS NOMINADAS */
+        .pos-nomination-tab {
+            background: transparent;
+            color: #94A3B8;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            user-select: none;
+        }
+        .pos-nomination-tab:hover {
+            color: #FFFFFF;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .pos-nomination-tab.active {
+            background: linear-gradient(135deg, #FF5500, #FF7733) !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 3px 10px rgba(255, 85, 0, 0.35);
+            border-color: rgba(255, 85, 0, 0.5) !important;
+        }
+
+        .courtesy-nomination-tab {
+            background: transparent;
+            color: #94A3B8;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            user-select: none;
+        }
+        .courtesy-nomination-tab:hover {
+            color: #FFFFFF;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .courtesy-nomination-tab.active {
+            background: linear-gradient(135deg, #10B981, #059669) !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 3px 10px rgba(16, 185, 129, 0.35);
+            border-color: rgba(16, 185, 129, 0.5) !important;
+        }
+
+        .nominated-card-row {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 0.6rem 0.75rem;
+            transition: all 0.2s ease;
+        }
+        .nominated-card-row:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.45);
+        }
+        .nominated-card-row.pos-row {
+            border-left: 3px solid #FF5500;
+        }
+        .nominated-card-row.courtesy-row {
+            border-left: 3px solid #10B981;
+        }
+
         .zone-card-item.active .zone-radio-indicator::after {
             content: '';
             width: 6px;
@@ -1185,7 +1243,7 @@
                         </div>
                     </div>
 
-                    <!-- COLUMNA 2: DATOS DEL CLIENTE / COMPRADOR + AUTOCOMPLETADO DNI -->
+                    <!-- COLUMNA 2: DATOS DEL CLIENTE / COMPRADOR + AUTOCOMPLETADO DNI + ENTRADAS NOMINADAS -->
                     <div>
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.55rem;">
                             <div style="font-size: 0.78rem; font-weight: 800; color: var(--color-primary-orange); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 0.35rem;">
@@ -1205,7 +1263,22 @@
                             </div>
                         </div>
 
-                        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); padding: 0.85rem; border-radius: 14px;">
+                        <!-- SELECTOR DE MODALIDAD: ENTRADA GENERAL VS NOMINADA -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin-bottom: 0.65rem; background: rgba(0,0,0,0.3); padding: 0.25rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
+                            <button type="button" class="pos-nomination-tab active" id="tabPosGeneral" onclick="setPosNominationMode('general')" style="display: flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.4rem 0.6rem; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer; border: none; outline: none; transition: all 0.2s ease;">
+                                <span>🎫</span> <span>Entrada General</span>
+                            </button>
+                            <button type="button" class="pos-nomination-tab" id="tabPosNominated" onclick="setPosNominationMode('nominated')" style="display: flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.4rem 0.6rem; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer; border: none; outline: none; transition: all 0.2s ease; background: transparent; color: #94A3B8;">
+                                <span>👥</span> <span>Entradas Nominadas</span>
+                            </button>
+                        </div>
+
+                        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); padding: 0.85rem; border-radius: 14px; margin-bottom: 0.65rem;">
+                            <div style="font-size: 0.72rem; font-weight: 800; color: #94A3B8; text-transform: uppercase; margin-bottom: 0.45rem; display: flex; justify-content: space-between; align-items: center;">
+                                <span>Comprador Principal</span>
+                                <small style="color: var(--color-primary-orange); font-size: 0.65rem;">Recibo y Pago</small>
+                            </div>
+
                             <!-- DNI CON BOTÓN "TRAER DATOS" CUANDO SE DETECTA CLIENTE -->
                             <div class="form-group-custom" style="margin-bottom: 0.65rem;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
@@ -1229,7 +1302,7 @@
 
                             <div class="form-group-custom" style="margin-bottom: 0.65rem;">
                                 <label for="pos_buyer_name" class="form-label-custom" style="margin-bottom: 0.25rem; font-size: 0.775rem;">Nombre Completo <span class="required-star" id="star_buyer_name">*</span></label>
-                                <input type="text" id="pos_buyer_name" class="form-input-custom" placeholder="Ej: Juan Pérez Morales" required style="font-weight: 600; font-size: 0.825rem; height: 36px;">
+                                <input type="text" id="pos_buyer_name" class="form-input-custom" placeholder="Ej: Juan Pérez Morales" required style="font-weight: 600; font-size: 0.825rem; height: 36px;" oninput="onPosBuyerNameChange(this.value)">
                             </div>
 
                             <div class="form-group-custom" style="margin-bottom: 0.65rem;">
@@ -1240,6 +1313,19 @@
                             <div class="form-group-custom" style="margin-bottom: 0;">
                                 <label for="pos_buyer_phone" class="form-label-custom" style="margin-bottom: 0.25rem; font-size: 0.775rem;">Teléfono / WhatsApp (Opcional)</label>
                                 <input type="text" id="pos_buyer_phone" class="form-input-custom" placeholder="Ej: +51 987654321" style="font-size: 0.8rem; height: 36px;">
+                            </div>
+                        </div>
+
+                        <!-- CONTENEDOR DINÁMICO DE NOMINACIÓN POR ENTRADA -->
+                        <div id="posNominatedContainer" style="display: none; background: rgba(255, 85, 0, 0.04); border: 1.5px solid rgba(255, 85, 0, 0.3); padding: 0.75rem; border-radius: 14px; max-height: 250px; overflow-y: auto;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem;">
+                                <span style="font-size: 0.73rem; font-weight: 800; color: var(--color-primary-orange); display: flex; align-items: center; gap: 0.3rem;">
+                                    <span>👥</span> <span id="posNominatedCountLabel">Nominar Boletos (1)</span>
+                                </span>
+                                <span style="font-size: 0.65rem; color: #94A3B8; font-weight: 700;">DNI y Nombre por Entrada</span>
+                            </div>
+                            <div id="posNominatedList" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <!-- Renderizado dinámicamente con JS -->
                             </div>
                         </div>
                     </div>
@@ -1418,7 +1504,7 @@
                         </div>
                     </div>
 
-                    <!-- COLUMNA 2: DATOS DEL BENEFICIARIO / INVITADO -->
+                    <!-- COLUMNA 2: DATOS DEL BENEFICIARIO / INVITADO + ENTRADAS NOMINADAS -->
                     <div>
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.55rem;">
                             <div style="font-size: 0.78rem; font-weight: 800; color: #10B981; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 0.35rem;">
@@ -1438,7 +1524,22 @@
                             </div>
                         </div>
 
-                        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); padding: 0.85rem; border-radius: 14px;">
+                        <!-- SELECTOR DE MODALIDAD CORTESÍA: ENTRADA GENERAL VS NOMINADA -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin-bottom: 0.65rem; background: rgba(0,0,0,0.3); padding: 0.25rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
+                            <button type="button" class="courtesy-nomination-tab active" id="tabCourtesyGeneral" onclick="setCourtesyNominationMode('general')" style="display: flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.4rem 0.6rem; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer; border: none; outline: none; transition: all 0.2s ease;">
+                                <span>🎁</span> <span>Entrada General</span>
+                            </button>
+                            <button type="button" class="courtesy-nomination-tab" id="tabCourtesyNominated" onclick="setCourtesyNominationMode('nominated')" style="display: flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.4rem 0.6rem; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer; border: none; outline: none; transition: all 0.2s ease; background: transparent; color: #94A3B8;">
+                                <span>👥</span> <span>Entradas Nominadas</span>
+                            </button>
+                        </div>
+
+                        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); padding: 0.85rem; border-radius: 14px; margin-bottom: 0.65rem;">
+                            <div style="font-size: 0.72rem; font-weight: 800; color: #94A3B8; text-transform: uppercase; margin-bottom: 0.45rem; display: flex; justify-content: space-between; align-items: center;">
+                                <span>Invitado Principal</span>
+                                <small style="color: #10B981; font-size: 0.65rem;">Titular Cortesía</small>
+                            </div>
+
                             <!-- DNI CON BOTÓN "TRAER DATOS" -->
                             <div class="form-group-custom" style="margin-bottom: 0.65rem;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
@@ -1462,7 +1563,7 @@
 
                             <div class="form-group-custom" style="margin-bottom: 0.65rem;">
                                 <label for="pos_courtesy_name" class="form-label-custom" style="margin-bottom: 0.25rem; font-size: 0.775rem;">Nombre Completo del Invitado <span class="required-star" id="star_courtesy_name">*</span></label>
-                                <input type="text" id="pos_courtesy_name" class="form-input-custom" placeholder="Ej: Juan Pérez Morales" required style="font-weight: 600; font-size: 0.825rem; height: 36px;">
+                                <input type="text" id="pos_courtesy_name" class="form-input-custom" placeholder="Ej: Juan Pérez Morales" required style="font-weight: 600; font-size: 0.825rem; height: 36px;" oninput="onCourtesyBuyerNameChange(this.value)">
                             </div>
 
                             <div class="form-group-custom" style="margin-bottom: 0.65rem;">
@@ -1473,6 +1574,19 @@
                             <div class="form-group-custom" style="margin-bottom: 0;">
                                 <label for="pos_courtesy_phone" class="form-label-custom" style="margin-bottom: 0.25rem; font-size: 0.775rem;">Teléfono / WhatsApp (Opcional)</label>
                                 <input type="text" id="pos_courtesy_phone" class="form-input-custom" placeholder="Ej: +51 987654321" style="font-size: 0.8rem; height: 36px;">
+                            </div>
+                        </div>
+
+                        <!-- CONTENEDOR DINÁMICO DE NOMINACIÓN POR ENTRADA DE CORTESÍA -->
+                        <div id="courtesyNominatedContainer" style="display: none; background: rgba(16, 185, 129, 0.04); border: 1.5px solid rgba(16, 185, 129, 0.3); padding: 0.75rem; border-radius: 14px; max-height: 250px; overflow-y: auto;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem;">
+                                <span style="font-size: 0.73rem; font-weight: 800; color: #10B981; display: flex; align-items: center; gap: 0.3rem;">
+                                    <span>👥</span> <span id="courtesyNominatedCountLabel">Nominar Pases (1)</span>
+                                </span>
+                                <span style="font-size: 0.65rem; color: #94A3B8; font-weight: 700;">DNI y Nombre por Pase</span>
+                            </div>
+                            <div id="courtesyNominatedList" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <!-- Renderizado dinámicamente con JS -->
                             </div>
                         </div>
                     </div>
@@ -2331,6 +2445,316 @@
             setupPosClientAutoDetect();
         }
 
+        function escapePosHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // ==========================================
+        // GESTIÓN DE ENTRADAS NOMINADAS (POS & CORTESÍA)
+        // ==========================================
+        window.posNominationMode = 'general'; // 'general' o 'nominated'
+        window.posNominatedAttendees = []; // [{ name: '', dni: '', manuallyEdited: false }, ...]
+
+        window.courtesyNominationMode = 'general'; // 'general' o 'nominated'
+        window.courtesyNominatedAttendees = []; // [{ name: '', dni: '', manuallyEdited: false }, ...]
+
+        function setPosNominationMode(mode) {
+            window.posNominationMode = mode || 'general';
+            const tabGen = document.getElementById('tabPosGeneral');
+            const tabNom = document.getElementById('tabPosNominated');
+            const container = document.getElementById('posNominatedContainer');
+
+            if (mode === 'nominated') {
+                if (tabGen) { tabGen.classList.remove('active'); tabGen.style.background = 'transparent'; tabGen.style.color = '#94A3B8'; }
+                if (tabNom) { tabNom.classList.add('active'); tabNom.style.background = ''; tabNom.style.color = '#FFFFFF'; }
+                if (container) container.style.display = 'block';
+                renderPosNominatedAttendees();
+            } else {
+                if (tabGen) { tabGen.classList.add('active'); tabGen.style.background = ''; tabGen.style.color = '#FFFFFF'; }
+                if (tabNom) { tabNom.classList.remove('active'); tabNom.style.background = 'transparent'; tabNom.style.color = '#94A3B8'; }
+                if (container) container.style.display = 'none';
+            }
+        }
+
+        function getPosCurrentQuantity() {
+            const targetZone = getActivePosZone();
+            const hasSeats = targetZone && Array.isArray(targetZone.seats) && targetZone.seats.length > 0;
+            if (hasSeats && posSelectedSeats.length > 0) {
+                return posSelectedSeats.length;
+            }
+            return parseInt(document.getElementById('pos_quantity')?.value, 10) || 1;
+        }
+
+        function onPosBuyerNameChange(val) {
+            if (window.posNominatedAttendees.length > 0 && !window.posNominatedAttendees[0]?.manuallyEdited) {
+                window.posNominatedAttendees[0] = window.posNominatedAttendees[0] || {};
+                window.posNominatedAttendees[0].name = val;
+                const inp = document.getElementById('pos_nom_name_0');
+                if (inp && !inp.dataset.dirty) inp.value = val;
+            }
+        }
+
+        function renderPosNominatedAttendees() {
+            const container = document.getElementById('posNominatedList');
+            const labelCount = document.getElementById('posNominatedCountLabel');
+            if (!container) return;
+
+            const qty = getPosCurrentQuantity();
+            if (labelCount) labelCount.textContent = `Nominar Boletos (${qty})`;
+
+            const mainBuyerName = document.getElementById('pos_buyer_name')?.value.trim() || '';
+            const mainBuyerDni = document.getElementById('pos_buyer_dni')?.value.trim() || '';
+
+            // Asegurar que el array tenga la longitud requerida
+            while (window.posNominatedAttendees.length < qty) {
+                const idx = window.posNominatedAttendees.length;
+                if (idx === 0) {
+                    window.posNominatedAttendees.push({ name: mainBuyerName, dni: mainBuyerDni, manuallyEdited: false });
+                } else {
+                    window.posNominatedAttendees.push({ name: '', dni: '', manuallyEdited: false });
+                }
+            }
+
+            let html = '';
+            for (let i = 0; i < qty; i++) {
+                const att = window.posNominatedAttendees[i] || { name: '', dni: '' };
+                const isFirst = (i === 0);
+                const seatLabel = (posSelectedSeats && posSelectedSeats[i]) ? ` · Butaca: <strong>${posSelectedSeats[i]}</strong>` : '';
+
+                html += `
+                    <div class="nominated-card-row pos-row" id="pos_nom_row_${i}">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                            <span style="font-size: 0.72rem; font-weight: 800; color: #FFFFFF; display: flex; align-items: center; gap: 0.35rem;">
+                                <span style="background: rgba(255, 85, 0, 0.2); color: #FF5500; padding: 0.1rem 0.4rem; border-radius: 6px; font-size: 0.68rem; font-weight: 900;">Boleto #${i + 1}</span>
+                                <span style="color: #94A3B8; font-size: 0.68rem;">${isFirst ? '(Titular / Comprador)' : '(Asistente)'}${seatLabel}</span>
+                            </span>
+                            ${!isFirst ? `
+                            <button type="button" onclick="copyBuyerDataToPosNominated(${i})" style="background: none; border: none; color: var(--color-primary-orange); font-size: 0.65rem; font-weight: 800; cursor: pointer; padding: 0; display: inline-flex; align-items: center; gap: 0.2rem;">
+                                <span>📋</span> <span>Copiar Titular</span>
+                            </button>
+                            ` : ''}
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1.6fr; gap: 0.45rem;">
+                            <div>
+                                <input type="text" 
+                                       id="pos_nom_dni_${i}" 
+                                       class="form-input-custom" 
+                                       placeholder="DNI / Doc" 
+                                       value="${escapePosHtml(att.dni || '')}" 
+                                       maxlength="20"
+                                       style="height: 32px; font-size: 0.775rem; font-weight: 700; padding: 0 0.55rem;"
+                                       oninput="onPosNominatedInput(${i}, 'dni', this.value)">
+                            </div>
+                            <div>
+                                <input type="text" 
+                                       id="pos_nom_name_${i}" 
+                                       class="form-input-custom" 
+                                       placeholder="Nombre Completo" 
+                                       value="${escapePosHtml(att.name || '')}" 
+                                       data-dirty="${att.manuallyEdited ? '1' : '0'}"
+                                       style="height: 32px; font-size: 0.775rem; font-weight: 600; padding: 0 0.55rem;"
+                                       oninput="onPosNominatedInput(${i}, 'name', this.value)">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function onPosNominatedInput(index, field, value) {
+            if (!window.posNominatedAttendees[index]) {
+                window.posNominatedAttendees[index] = { name: '', dni: '', manuallyEdited: false };
+            }
+            window.posNominatedAttendees[index][field] = value.trim();
+            window.posNominatedAttendees[index].manuallyEdited = true;
+
+            if (field === 'name') {
+                const inp = document.getElementById(`pos_nom_name_${index}`);
+                if (inp) inp.dataset.dirty = '1';
+            }
+
+            // Auto-detectar nombre si se escribe DNI en una entrada nominada
+            if (field === 'dni' && value.trim().length >= 8 && window.posExistingClients && Array.isArray(window.posExistingClients)) {
+                const found = window.posExistingClients.find(c => c.dni && c.dni.toLowerCase().trim() === value.trim().toLowerCase());
+                if (found && found.name) {
+                    window.posNominatedAttendees[index].name = found.name;
+                    const nameInp = document.getElementById(`pos_nom_name_${index}`);
+                    if (nameInp && (!nameInp.value || !window.posNominatedAttendees[index].manuallyEdited)) {
+                        nameInp.value = found.name;
+                    }
+                }
+            }
+        }
+
+        function copyBuyerDataToPosNominated(index) {
+            const mainBuyerName = document.getElementById('pos_buyer_name')?.value.trim() || '';
+            const mainBuyerDni = document.getElementById('pos_buyer_dni')?.value.trim() || '';
+
+            if (!window.posNominatedAttendees[index]) {
+                window.posNominatedAttendees[index] = { name: '', dni: '', manuallyEdited: true };
+            }
+            window.posNominatedAttendees[index].name = mainBuyerName;
+            window.posNominatedAttendees[index].dni = mainBuyerDni;
+            window.posNominatedAttendees[index].manuallyEdited = true;
+
+            const dniInp = document.getElementById(`pos_nom_dni_${index}`);
+            const nameInp = document.getElementById(`pos_nom_name_${index}`);
+            if (dniInp) dniInp.value = mainBuyerDni;
+            if (nameInp) {
+                nameInp.value = mainBuyerName;
+                nameInp.dataset.dirty = '1';
+            }
+        }
+
+        // ==========================================
+        // GESTIÓN DE ENTRADAS NOMINADAS EN CORTESÍA
+        // ==========================================
+        function setCourtesyNominationMode(mode) {
+            window.courtesyNominationMode = mode || 'general';
+            const tabGen = document.getElementById('tabCourtesyGeneral');
+            const tabNom = document.getElementById('tabCourtesyNominated');
+            const container = document.getElementById('courtesyNominatedContainer');
+
+            if (mode === 'nominated') {
+                if (tabGen) { tabGen.classList.remove('active'); tabGen.style.background = 'transparent'; tabGen.style.color = '#94A3B8'; }
+                if (tabNom) { tabNom.classList.add('active'); tabNom.style.background = ''; tabNom.style.color = '#FFFFFF'; }
+                if (container) container.style.display = 'block';
+                renderCourtesyNominatedAttendees();
+            } else {
+                if (tabGen) { tabGen.classList.add('active'); tabGen.style.background = ''; tabGen.style.color = '#FFFFFF'; }
+                if (tabNom) { tabNom.classList.remove('active'); tabNom.style.background = 'transparent'; tabNom.style.color = '#94A3B8'; }
+                if (container) container.style.display = 'none';
+            }
+        }
+
+        function onCourtesyBuyerNameChange(val) {
+            if (window.courtesyNominatedAttendees.length > 0 && !window.courtesyNominatedAttendees[0]?.manuallyEdited) {
+                window.courtesyNominatedAttendees[0] = window.courtesyNominatedAttendees[0] || {};
+                window.courtesyNominatedAttendees[0].name = val;
+                const inp = document.getElementById('courtesy_nom_name_0');
+                if (inp && !inp.dataset.dirty) inp.value = val;
+            }
+        }
+
+        function renderCourtesyNominatedAttendees() {
+            const container = document.getElementById('courtesyNominatedList');
+            const labelCount = document.getElementById('courtesyNominatedCountLabel');
+            if (!container) return;
+
+            const qty = parseInt(document.getElementById('pos_courtesy_quantity')?.value, 10) || 1;
+            if (labelCount) labelCount.textContent = `Nominar Pases (${qty})`;
+
+            const mainName = document.getElementById('pos_courtesy_name')?.value.trim() || '';
+            const mainDni = document.getElementById('pos_courtesy_dni')?.value.trim() || '';
+
+            while (window.courtesyNominatedAttendees.length < qty) {
+                const idx = window.courtesyNominatedAttendees.length;
+                if (idx === 0) {
+                    window.courtesyNominatedAttendees.push({ name: mainName, dni: mainDni, manuallyEdited: false });
+                } else {
+                    window.courtesyNominatedAttendees.push({ name: '', dni: '', manuallyEdited: false });
+                }
+            }
+
+            let html = '';
+            for (let i = 0; i < qty; i++) {
+                const att = window.courtesyNominatedAttendees[i] || { name: '', dni: '' };
+                const isFirst = (i === 0);
+
+                html += `
+                    <div class="nominated-card-row courtesy-row" id="courtesy_nom_row_${i}">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                            <span style="font-size: 0.72rem; font-weight: 800; color: #FFFFFF; display: flex; align-items: center; gap: 0.35rem;">
+                                <span style="background: rgba(16, 185, 129, 0.2); color: #10B981; padding: 0.1rem 0.4rem; border-radius: 6px; font-size: 0.68rem; font-weight: 900;">Pase #${i + 1}</span>
+                                <span style="color: #94A3B8; font-size: 0.68rem;">${isFirst ? '(Invitado Principal)' : '(Beneficiario)'}</span>
+                            </span>
+                            ${!isFirst ? `
+                            <button type="button" onclick="copyCourtesyBuyerToNominated(${i})" style="background: none; border: none; color: #10B981; font-size: 0.65rem; font-weight: 800; cursor: pointer; padding: 0; display: inline-flex; align-items: center; gap: 0.2rem;">
+                                <span>📋</span> <span>Copiar Principal</span>
+                            </button>
+                            ` : ''}
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1.6fr; gap: 0.45rem;">
+                            <div>
+                                <input type="text" 
+                                       id="courtesy_nom_dni_${i}" 
+                                       class="form-input-custom" 
+                                       placeholder="DNI / Doc" 
+                                       value="${escapePosHtml(att.dni || '')}" 
+                                       maxlength="20"
+                                       style="height: 32px; font-size: 0.775rem; font-weight: 700; padding: 0 0.55rem; border-color: rgba(16,185,129,0.3);"
+                                       oninput="onCourtesyNominatedInput(${i}, 'dni', this.value)">
+                            </div>
+                            <div>
+                                <input type="text" 
+                                       id="courtesy_nom_name_${i}" 
+                                       class="form-input-custom" 
+                                       placeholder="Nombre Completo" 
+                                       value="${escapePosHtml(att.name || '')}" 
+                                       data-dirty="${att.manuallyEdited ? '1' : '0'}"
+                                       style="height: 32px; font-size: 0.775rem; font-weight: 600; padding: 0 0.55rem; border-color: rgba(16,185,129,0.3);"
+                                       oninput="onCourtesyNominatedInput(${i}, 'name', this.value)">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function onCourtesyNominatedInput(index, field, value) {
+            if (!window.courtesyNominatedAttendees[index]) {
+                window.courtesyNominatedAttendees[index] = { name: '', dni: '', manuallyEdited: false };
+            }
+            window.courtesyNominatedAttendees[index][field] = value.trim();
+            window.courtesyNominatedAttendees[index].manuallyEdited = true;
+
+            if (field === 'name') {
+                const inp = document.getElementById(`courtesy_nom_name_${index}`);
+                if (inp) inp.dataset.dirty = '1';
+            }
+
+            if (field === 'dni' && value.trim().length >= 8 && window.posExistingClients && Array.isArray(window.posExistingClients)) {
+                const found = window.posExistingClients.find(c => c.dni && c.dni.toLowerCase().trim() === value.trim().toLowerCase());
+                if (found && found.name) {
+                    window.courtesyNominatedAttendees[index].name = found.name;
+                    const nameInp = document.getElementById(`courtesy_nom_name_${index}`);
+                    if (nameInp && (!nameInp.value || !window.courtesyNominatedAttendees[index].manuallyEdited)) {
+                        nameInp.value = found.name;
+                    }
+                }
+            }
+        }
+
+        function copyCourtesyBuyerToNominated(index) {
+            const mainName = document.getElementById('pos_courtesy_name')?.value.trim() || '';
+            const mainDni = document.getElementById('pos_courtesy_dni')?.value.trim() || '';
+
+            if (!window.courtesyNominatedAttendees[index]) {
+                window.courtesyNominatedAttendees[index] = { name: '', dni: '', manuallyEdited: true };
+            }
+            window.courtesyNominatedAttendees[index].name = mainName;
+            window.courtesyNominatedAttendees[index].dni = mainDni;
+            window.courtesyNominatedAttendees[index].manuallyEdited = true;
+
+            const dniInp = document.getElementById(`courtesy_nom_dni_${index}`);
+            const nameInp = document.getElementById(`courtesy_nom_name_${index}`);
+            if (dniInp) dniInp.value = mainDni;
+            if (nameInp) {
+                nameInp.value = mainName;
+                nameInp.dataset.dirty = '1';
+            }
+        }
+
         let currentTotalToPay = 0;
         let selectedZoneName = "{{ $zonesWithStats[0]['name'] ?? '' }}";
         let selectedZonePrice = {{ $zonesWithStats[0]['price'] ?? 0 }};
@@ -2919,6 +3343,10 @@
                 if (badgeFound) badgeFound.style.display = 'none';
                 posMatchedClientByDni = null;
 
+                // Resetear modo de nominación a general
+                setPosNominationMode('general');
+                window.posNominatedAttendees = [];
+
                 // Renderizar y filtrar zonas según el modo de venta (Física o Digital)
                 renderPosModalZoneCards(window.currentPosSaleMode);
 
@@ -2937,6 +3365,8 @@
             if (modal) {
                 modal.classList.remove('active');
             }
+            setPosNominationMode('general');
+            window.posNominatedAttendees = [];
             closeSaleClientDropdown();
         }
 
@@ -3076,6 +3506,10 @@
                 if (badgeFound) badgeFound.style.display = 'none';
                 posMatchedCourtesyClientByDni = null;
 
+                // Resetear modo de nominación a general
+                setCourtesyNominationMode('general');
+                window.courtesyNominatedAttendees = [];
+
                 // Renderizar dinámicamente las zonas con cupo digital de cortesía
                 renderPosCourtesyZoneCards();
 
@@ -3090,6 +3524,8 @@
             if (modal) {
                 modal.classList.remove('active');
             }
+            setCourtesyNominationMode('general');
+            window.courtesyNominatedAttendees = [];
             closeCourtesyClientDropdown();
         }
 
@@ -3154,6 +3590,10 @@
 
             if (descEl) {
                 descEl.textContent = `${quantity} entrada(s) de Cortesía (Free - S/ 0.00)`;
+            }
+
+            if (window.courtesyNominationMode === 'nominated') {
+                renderCourtesyNominatedAttendees();
             }
         }
 
@@ -3302,6 +3742,10 @@
             }
             if (unitPriceDesc) {
                 unitPriceDesc.textContent = `${quantity} entrada(s) x S/ ${selectedZonePrice.toFixed(2)}`;
+            }
+
+            if (window.posNominationMode === 'nominated') {
+                renderPosNominatedAttendees();
             }
 
             // Actualizar cálculo de vuelto si el método es efectivo
@@ -4298,6 +4742,8 @@
                         ticket_number: et.ticket_number || (i + 1),
                         zone: et.zone_name || sale.zone_name,
                         price: et.unit_price || sale.unit_price,
+                        buyer_name: et.buyer_name || sale.buyer_name,
+                        buyer_dni: et.buyer_dni || sale.buyer_dni,
                         is_courtesy: isCourtesy,
                         validation_hash: et.validation_hash || null,
                         qr_payload: et.qr_payload || null
@@ -4323,6 +4769,8 @@
                             zone: effectiveZone,
                             seat: formatShortSeatCodeJs(st),
                             price: price,
+                            buyer_name: it.buyer_name || sale.buyer_name,
+                            buyer_dni: it.buyer_dni || sale.buyer_dni,
                             is_courtesy: isCourtesy || it.is_courtesy,
                             validation_hash: it.validation_hash || null,
                             qr_payload: it.qr_payload || null
@@ -4339,6 +4787,8 @@
                         zone: formatZoneWithSeatJs(rawZoneName, st),
                         seat: formatShortSeatCodeJs(st),
                         price: tItem.price || sale.unit_price,
+                        buyer_name: tItem.buyer_name || sale.buyer_name,
+                        buyer_dni: tItem.buyer_dni || sale.buyer_dni,
                         is_courtesy: isCourtesy || tItem.is_courtesy,
                         validation_hash: tItem.validation_hash || null,
                         qr_payload: tItem.qr_payload || null
@@ -4352,6 +4802,8 @@
                         ticket_number: q + 1,
                         zone: sale.zone_name,
                         price: sale.unit_price,
+                        buyer_name: sale.buyer_name,
+                        buyer_dni: sale.buyer_dni,
                         is_courtesy: isCourtesy,
                         validation_hash: null,
                         qr_payload: null
@@ -4382,7 +4834,10 @@
                     hashVal = 'VG' + String(Math.abs(((sale.receipt_number || 'REC') + '_' + (i + 1)).split('').reduce((a, b) => { a = ((a << 5) - a) + b.charCodeAt(0); return a & a; }, 0))).padStart(8, '0').substring(0, 8).toUpperCase();
                 }
 
-                const qrPayload = tItem.qr_payload || sale.qr_payload || `VIVEGO|${sale.receipt_number || 'REC'}|EVT-${sale.event_id || eventId}|DNI-${sale.buyer_dni || '00000000'}|TICK-${numSeq}|${hashVal}`;
+                const ticketBuyerName = tItem.buyer_name || sale.buyer_name || (isCourtesyTicket ? 'INVITADO DE CORTESÍA' : 'CLIENTE VARIOS');
+                const ticketBuyerDni = tItem.buyer_dni || sale.buyer_dni || '00000000';
+
+                const qrPayload = tItem.qr_payload || sale.qr_payload || `VIVEGO|${sale.receipt_number || 'REC'}|EVT-${sale.event_id || eventId}|DNI-${ticketBuyerDni}|TICK-${numSeq}|${hashVal}`;
                 const qrDataUrl = generateQrBase64(qrPayload);
 
                 const isCourtesyTicket = isCourtesy || tItem.is_courtesy;
@@ -4397,8 +4852,8 @@
                     time: eventTime,
                     zone: cleanZoneNameJs(tItem.zone || sale.zone_name),
                     price: priceDisplay,
-                    buyer_name: sale.buyer_name || (isCourtesyTicket ? 'INVITADO DE CORTESÍA' : 'CLIENTE VARIOS'),
-                    buyer_dni: sale.buyer_dni || '00000000',
+                    buyer_name: ticketBuyerName,
+                    buyer_dni: ticketBuyerDni,
                     ticket_number: ticketNumStr,
                     hash: hashVal,
                     qr_data_url: qrDataUrl
@@ -4909,6 +5364,20 @@
                 btnSubmit.textContent = '⏳ Procesando venta y emitiendo boletos...';
             }
 
+            let isNominated = (window.posNominationMode === 'nominated');
+            let nominatedAttendees = [];
+
+            if (isNominated) {
+                for (let i = 0; i < finalQuantity; i++) {
+                    const dniVal = document.getElementById(`pos_nom_dni_${i}`)?.value.trim() || '';
+                    const nameVal = document.getElementById(`pos_nom_name_${i}`)?.value.trim() || '';
+                    nominatedAttendees.push({
+                        name: nameVal || (i === 0 ? buyerName : ''),
+                        dni: dniVal || (i === 0 ? buyerDni : '')
+                    });
+                }
+            }
+
             const payload = {
                 sale_mode: window.currentPosSaleMode || 'digital',
                 zone_name: zoneName,
@@ -4920,6 +5389,8 @@
                 buyer_email: buyerEmail || null,
                 payment_method: paymentMethod,
                 amount_paid: amountPaid,
+                is_nominated: isNominated,
+                nominated_attendees: isNominated ? nominatedAttendees : null
             };
 
             fetch("{{ route('web.box_office.store_sale', $event->id) }}", {
@@ -5355,6 +5826,20 @@
                 btnSubmit.textContent = '⏳ Emitiendo cortesías y generando QR...';
             }
 
+            let isNominatedCourtesy = (window.courtesyNominationMode === 'nominated');
+            let nominatedCourtesyAttendees = [];
+
+            if (isNominatedCourtesy) {
+                for (let i = 0; i < quantity; i++) {
+                    const dniVal = document.getElementById(`courtesy_nom_dni_${i}`)?.value.trim() || '';
+                    const nameVal = document.getElementById(`courtesy_nom_name_${i}`)?.value.trim() || '';
+                    nominatedCourtesyAttendees.push({
+                        name: nameVal || (i === 0 ? buyerName : ''),
+                        dni: dniVal || (i === 0 ? buyerDni : '')
+                    });
+                }
+            }
+
             const payload = {
                 zone_name: zoneName,
                 quantity: quantity,
@@ -5363,7 +5848,9 @@
                 buyer_email: buyerEmail || null,
                 buyer_phone: buyerPhone !== '-' ? `${buyerPhone} (${courtesyNote})` : courtesyNote,
                 payment_method: 'Cortesía',
-                amount_paid: 0.00
+                amount_paid: 0.00,
+                is_nominated: isNominatedCourtesy,
+                nominated_attendees: isNominatedCourtesy ? nominatedCourtesyAttendees : null
             };
 
             fetch("{{ route('web.box_office.store_sale', $event->id) }}", {

@@ -330,12 +330,18 @@ class BoxOfficeController extends Controller
             'amount_paid' => 'required|numeric|min:0',
             'selected_seats' => 'nullable|array',
             'selected_seats.*' => 'string|max:50',
+            'is_nominated' => 'nullable|boolean',
+            'nominated_attendees' => 'nullable|array',
+            'nominated_attendees.*.name' => 'nullable|string|max:255',
+            'nominated_attendees.*.dni' => 'nullable|string|max:20',
         ]);
 
         $buyerName = !empty(trim($validated['buyer_name'] ?? '')) ? trim($validated['buyer_name']) : 'CLIENTE VARIOS';
         $buyerDni = !empty(trim($validated['buyer_dni'] ?? '')) ? trim($validated['buyer_dni']) : '00000000';
         $buyerPhone = !empty(trim($validated['buyer_phone'] ?? '')) ? trim($validated['buyer_phone']) : '-';
         $buyerEmail = !empty(trim($validated['buyer_email'] ?? '')) ? trim($validated['buyer_email']) : null;
+        $isNominated = !empty($validated['is_nominated']) || $request->boolean('is_nominated');
+        $nominatedAttendees = is_array($request->input('nominated_attendees')) ? array_values($request->input('nominated_attendees')) : [];
 
         $adminId = session('admin_id');
         $loggedAdmin = $adminId ? \App\Models\Administrator::find($adminId) : null;
@@ -687,6 +693,18 @@ class BoxOfficeController extends Controller
                 }
             }
 
+            $ticketBuyerName = $buyerName;
+            $ticketBuyerDni = $buyerDni;
+            if ($isNominated && !empty($nominatedAttendees[$i - 1])) {
+                $nom = $nominatedAttendees[$i - 1];
+                if (!empty(trim($nom['name'] ?? ''))) {
+                    $ticketBuyerName = trim($nom['name']);
+                }
+                if (!empty(trim($nom['dni'] ?? ''))) {
+                    $ticketBuyerDni = trim($nom['dni']);
+                }
+            }
+
             $ticketsData[] = [
                 'ticket_code' => $ticketCode,
                 'ticket_number' => $currentSeq,
@@ -697,11 +715,12 @@ class BoxOfficeController extends Controller
                 'seat' => $seatCode,
                 'seat_label' => $seatCode,
                 'price' => $effectiveTicketPrice,
-                'buyer_name' => $buyerName,
-                'buyer_dni' => $buyerDni,
+                'buyer_name' => $ticketBuyerName,
+                'buyer_dni' => $ticketBuyerDni,
                 'buyer_phone' => $buyerPhone,
                 'buyer_email' => $buyerEmail,
                 'is_courtesy' => $isCourtesy,
+                'is_nominated' => $isNominated,
                 'event_ticket_id' => $physicalTicket ? $physicalTicket->id : ($courtesyTicket ?? null ? $courtesyTicket->id : ($digitalTicket ?? null ? $digitalTicket->id : null)),
             ];
         }
