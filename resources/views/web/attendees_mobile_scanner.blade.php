@@ -354,13 +354,7 @@
             display: flex;
             flex-direction: column;
             gap: 0.35rem;
-            transition: all 0.2s ease;
-            animation: fadeInSlide 0.25s ease;
-        }
-
-        @keyframes fadeInSlide {
-            from { opacity: 0; transform: translateY(-6px); }
-            to { opacity: 1; transform: translateY(0); }
+            transition: border-color 0.2s ease, background 0.2s ease;
         }
 
         .history-card-granted {
@@ -1096,16 +1090,18 @@
                         const checkedEl = document.getElementById('mKpiChecked');
                         const rateEl = document.getElementById('mKpiRate');
 
-                        if (issuedEl) issuedEl.textContent = data.metrics.tickets_issued;
-                        if (checkedEl) checkedEl.textContent = data.metrics.checked_in_count;
-                        if (rateEl) rateEl.textContent = `${data.metrics.attendance_rate}%`;
+                        if (issuedEl && issuedEl.textContent != data.metrics.tickets_issued) issuedEl.textContent = data.metrics.tickets_issued;
+                        if (checkedEl && checkedEl.textContent != data.metrics.checked_in_count) checkedEl.textContent = data.metrics.checked_in_count;
+                        if (rateEl && rateEl.textContent != `${data.metrics.attendance_rate}%`) rateEl.textContent = `${data.metrics.attendance_rate}%`;
                     }
 
                     if (data.new_checkins && data.new_checkins.length > 0) {
+                        let hasNew = false;
                         data.new_checkins.forEach(chk => {
                             const key = 'srv_' + chk.id;
                             const exists = scanHistory.some(s => s.id === chk.id || s.key === key);
                             if (!exists) {
+                                hasNew = true;
                                 scanHistory.unshift({
                                     key: key,
                                     id: chk.id,
@@ -1123,10 +1119,13 @@
                                 });
                             }
                         });
-                        saveLocalScanHistory();
-                        const contHistory = document.getElementById('tabContentHistory');
-                        if (contHistory && contHistory.style.display !== 'none') {
-                            renderScanHistoryList();
+
+                        if (hasNew) {
+                            saveLocalScanHistory();
+                            const contHistory = document.getElementById('tabContentHistory');
+                            if (contHistory && contHistory.style.display !== 'none') {
+                                renderScanHistoryList();
+                            }
                         }
                     }
                 }
@@ -1386,8 +1385,8 @@
             // Cargar Historial Local y de Servidor
             loadLocalScanHistory();
 
-            // Iniciar sincronización continua cada 2.5 segundos
-            setInterval(syncMobileRealtimeFeed, 2500);
+            // Iniciar sincronización continua cada 3.5 segundos
+            setInterval(syncMobileRealtimeFeed, 3500);
 
             // Iniciar cámara
             startMobileCamera();
