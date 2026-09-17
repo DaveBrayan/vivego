@@ -1608,6 +1608,28 @@
         let currentDevLogStatusFilter = 'all';
         let deviceLogsPollingInterval = null;
 
+        function isDeviceMatch(logDevName, filterDevName) {
+            if (!filterDevName || filterDevName === 'all') return true;
+            const a = (logDevName || '').trim().toLowerCase();
+            const b = (filterDevName || '').trim().toLowerCase();
+            if (!a && !b) return true;
+            if (a === b) return true;
+
+            if (a.length > 2 && b.length > 2) {
+                if (a.includes(b) || b.includes(a)) return true;
+            }
+
+            const numA = a.match(/\d+/)?.[0];
+            const numB = b.match(/\d+/)?.[0];
+            if (numA && numB && numA === numB) {
+                const isGenA = a.includes('movil') || a.includes('móvil') || a.includes('puerta') || a.includes('terminal');
+                const isGenB = b.includes('movil') || b.includes('móvil') || b.includes('puerta') || b.includes('terminal');
+                if (isGenA && isGenB) return true;
+            }
+
+            return false;
+        }
+
         function openDeviceLogsModal() {
             const modal = document.getElementById('deviceLogsModal');
             if (modal) {
@@ -1750,9 +1772,9 @@
                             });
                         }
 
-                        // 4. Calcular conteo exacto por dispositivo según rawDeviceLogs
-                        deviceMap.forEach((val, key) => {
-                            val.total = rawDeviceLogs.filter(log => (log.device_name || '').trim().toLowerCase() === key).length;
+                        // 4. Calcular conteo exacto por dispositivo según rawDeviceLogs usando isDeviceMatch
+                        deviceMap.forEach((val) => {
+                            val.total = rawDeviceLogs.filter(log => isDeviceMatch(log.device_name, val.name)).length;
                         });
 
                         let selectHtml = `<option value="all">📱 Todos los Terminales (${rawDeviceLogs.length})</option>`;
@@ -1762,8 +1784,8 @@
                         devSelect.innerHTML = selectHtml;
 
                         // Restaurar selección previa si aún existe
-                        if (currentVal && (currentVal === 'all' || Array.from(deviceMap.values()).some(v => v.name.toLowerCase() === currentVal.toLowerCase()))) {
-                            const matched = Array.from(deviceMap.values()).find(v => v.name.toLowerCase() === currentVal.toLowerCase());
+                        if (currentVal && (currentVal === 'all' || Array.from(deviceMap.values()).some(v => isDeviceMatch(v.name, currentVal)))) {
+                            const matched = Array.from(deviceMap.values()).find(v => isDeviceMatch(v.name, currentVal));
                             devSelect.value = matched ? matched.name : 'all';
                         }
                     }
@@ -1790,11 +1812,9 @@
             const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
             let filtered = rawDeviceLogs.filter(item => {
-                // Filtro por Dispositivo (comparación flexible)
+                // Filtro por Dispositivo (comparación flexible con isDeviceMatch)
                 if (selectedDev !== 'all') {
-                    const itemDev = (item.device_name || '').trim().toLowerCase();
-                    const filterDev = selectedDev.trim().toLowerCase();
-                    if (itemDev !== filterDev) {
+                    if (!isDeviceMatch(item.device_name, selectedDev)) {
                         return false;
                     }
                 }

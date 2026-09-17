@@ -120,13 +120,40 @@ class AttendeeController extends Controller
      */
     public function verifyQr(Request $request, Event $event): JsonResponse
     {
-        $validated = $request->validate([
-            'qr_payload' => 'required|string',
-            'device_name' => 'nullable|string',
-        ]);
+        $rawInput = trim((string) $request->input('qr_payload', ''));
+        $deviceName = trim((string) $request->input('device_name', ''));
+        if (empty($deviceName)) {
+            $deviceName = 'Control Puerta Principal';
+        }
 
-        $rawInput = trim($validated['qr_payload']);
-        $deviceName = $validated['device_name'] ?? 'Control Puerta Principal';
+        if (empty($rawInput)) {
+            $this->recordScanLog($event->id, [
+                'id' => 'LOG_' . uniqid(),
+                'timestamp' => now()->toDateTimeString(),
+                'time_formatted' => now()->format('h:i:s A'),
+                'date_formatted' => now()->format('d/m/Y'),
+                'device_name' => $deviceName,
+                'status' => 'invalid',
+                'status_label' => 'Código Vacío',
+                'badge_class' => 'badge-red',
+                'ticket_code' => 'CÓDIGO VACÍO',
+                'validation_hash' => '-',
+                'buyer_name' => 'No detectado',
+                'buyer_dni' => '-',
+                'zone_name' => '-',
+                'unit_price' => '-',
+                'ticket_type' => '-',
+                'message' => 'Intento de lectura con código QR vacío o ilegible',
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'status' => 'invalid',
+                'title' => '❌ ¡CÓDIGO NO DETECTADO!',
+                'message' => 'No se pudo leer ningún código QR válido.',
+                'raw_input' => '',
+            ], 404);
+        }
 
         // Asegurar que si hay ventas previas en ticket_sales pero no en event_tickets, se sincronicen
         $this->syncLegacySalesTickets($event);
@@ -188,7 +215,7 @@ class AttendeeController extends Controller
                 'status' => 'invalid',
                 'status_label' => 'Código Inválido',
                 'badge_class' => 'badge-red',
-                'ticket_code' => substr($rawInput, 0, 32),
+                'ticket_code' => substr($rawInput, 0, 40),
                 'validation_hash' => '-',
                 'buyer_name' => 'No encontrado',
                 'buyer_dni' => '-',

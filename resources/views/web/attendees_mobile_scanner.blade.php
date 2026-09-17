@@ -541,23 +541,35 @@
         </div>
 
         <!-- ========================================================================= -->
-        <!-- PESTAÑA 2: HISTORIAL DE ESCANEOS (DE ESTE DISPOSITIVO) -->
+        <!-- PESTAÑA 2: HISTORIAL DE ESCANEOS (DE ESTE DISPOSITIVO Y GENERAL) -->
         <!-- ========================================================================= -->
         <div id="tabContentHistory" style="display: none; flex-direction: column; gap: 0.75rem;">
             <!-- SUB-ENCABEZADO DE DISPOSITIVO ACTIVO -->
             <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.2rem 0.2rem 0.5rem 0.2rem; border-bottom: 1px dashed rgba(255,255,255,0.12);">
-                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <div style="display: flex; align-items: center; gap: 0.4rem; min-width: 0;">
                     <span style="font-size: 0.95rem;">📱</span>
-                    <span id="historyDeviceTitleText" style="font-size: 0.85rem; font-weight: 800; color: #00F0FF;">Terminal Activo: Móvil</span>
+                    <span id="historyDeviceTitleText" style="font-size: 0.85rem; font-weight: 800; color: #00F0FF; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Terminal: Móvil</span>
                 </div>
-                <small style="color: #94A3B8; font-size: 0.72rem; background: rgba(255,255,255,0.05); padding: 0.15rem 0.5rem; border-radius: 6px;">Historial de este dispositivo</small>
+                <button type="button" onclick="syncServerScanLogs(true)" style="background: rgba(0, 240, 255, 0.1); border: 1px solid rgba(0, 240, 255, 0.3); color: #00F0FF; font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.55rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem;">
+                    <span id="mHistRefreshIcon">🔄</span> <span>Sincronizar</span>
+                </button>
+            </div>
+
+            <!-- SELECTOR DE ALCANCE: ESTE TERMINAL vs TODOS LOS TERMINALES -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; background: rgba(255,255,255,0.06); border-radius: 10px; padding: 3px; gap: 4px;">
+                <button type="button" id="scopeBtnLocal" onclick="setHistoryScope('local')" style="background: rgba(0, 240, 255, 0.2); border: 1px solid #00F0FF; color: #FFFFFF; font-weight: 800; font-size: 0.78rem; padding: 0.45rem; border-radius: 8px; cursor: pointer; transition: all 0.2s ease;">
+                    📱 Este Terminal (<span id="scopeLocalCount">0</span>)
+                </button>
+                <button type="button" id="scopeBtnAll" onclick="setHistoryScope('all')" style="background: transparent; border: 1px solid transparent; color: #94A3B8; font-weight: 800; font-size: 0.78rem; padding: 0.45rem; border-radius: 8px; cursor: pointer; transition: all 0.2s ease;">
+                    🌐 Todos (<span id="scopeAllCount">0</span>)
+                </button>
             </div>
 
             <!-- BUSCADOR RÁPIDO EN HISTORIAL -->
             <div style="display: flex; gap: 0.45rem;">
                 <div style="flex: 1; position: relative; display: flex; align-items: center;">
                     <span style="position: absolute; left: 12px; font-size: 0.9rem; color: #94A3B8;">🔍</span>
-                    <input type="text" id="historySearchInput" placeholder="Buscar por código, titular, DNI..." oninput="filterScanHistory()" style="width: 100%; background: #14141E; border: 1.5px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 0.65rem 0.75rem 0.65rem 2.2rem; color: #FFFFFF; font-size: 0.85rem; font-weight: 700; outline: none;">
+                    <input type="text" id="historySearchInput" placeholder="Buscar código, titular, terminal, DNI..." oninput="filterScanHistory()" style="width: 100%; background: #14141E; border: 1.5px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 0.65rem 0.75rem 0.65rem 2.2rem; color: #FFFFFF; font-size: 0.85rem; font-weight: 700; outline: none;">
                 </div>
                 <button type="button" onclick="clearLocalScanHistory()" title="Limpiar historial de este dispositivo" style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); color: #EF4444; border-radius: 12px; padding: 0 0.85rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
                     <span>🗑️</span>
@@ -590,6 +602,7 @@
     <script>
         const eventId = {{ $event->id }};
         const verifyUrl = "{{ route('web.scanner.verify_qr', $event->id) }}";
+        const deviceLogsUrl = "{{ route('web.scanner.device_logs', $event->id) }}";
         const csrfToken = "{{ csrf_token() }}";
 
         let html5QrScannerMobile = null;
@@ -601,17 +614,53 @@
 
         // Historial exclusivo de escaneos realizados en este dispositivo (Válidos, Duplicados, Errores e Inválidos)
         let scanHistory = [];
+        let serverScanLogs = [];
+        let historyScope = 'local'; // 'local' o 'all'
         let currentHistoryFilter = 'all';
+
+        function isDeviceMatch(logDevName, filterDevName) {
+            if (!filterDevName || filterDevName === 'all') return true;
+            const a = (logDevName || '').trim().toLowerCase();
+            const b = (filterDevName || '').trim().toLowerCase();
+            if (!a && !b) return true;
+            if (a === b) return true;
+
+            if (a.length > 2 && b.length > 2) {
+                if (a.includes(b) || b.includes(a)) return true;
+            }
+
+            const numA = a.match(/\d+/)?.[0];
+            const numB = b.match(/\d+/)?.[0];
+            if (numA && numB && numA === numB) {
+                const isGenA = a.includes('movil') || a.includes('móvil') || a.includes('puerta') || a.includes('terminal');
+                const isGenB = b.includes('movil') || b.includes('móvil') || b.includes('puerta') || b.includes('terminal');
+                if (isGenA && isGenB) return true;
+            }
+
+            return false;
+        }
 
         function getActiveDeviceName() {
             const devInput = document.getElementById('mobileDeviceName');
-            return (devInput && devInput.value.trim()) ? devInput.value.trim() : 'Móvil';
+            if (devInput && devInput.value && devInput.value.trim() && devInput.value.trim() !== 'Móvil') {
+                return devInput.value.trim();
+            }
+            const urlParams = new URLSearchParams(window.location.search);
+            const paramDev = urlParams.get('dev') || urlParams.get('device') || urlParams.get('name');
+            if (paramDev && paramDev.trim()) {
+                return decodeURIComponent(paramDev.trim());
+            }
+            const sess = sessionStorage.getItem(`vivego_dev_name_evt_${eventId}`);
+            if (sess && sess.trim()) return sess.trim();
+            const local = localStorage.getItem(`vivego_dev_name_evt_${eventId}`) || localStorage.getItem('vivego_scanner_device_name');
+            if (local && local.trim()) return local.trim();
+            return (devInput && devInput.value.trim()) ? devInput.value.trim() : 'Móvil 1';
         }
 
         function updateHistoryDeviceLabel(name) {
             const lbl = document.getElementById('historyDeviceTitleText');
             if (lbl) {
-                lbl.textContent = `Terminal Activo: ${name || 'Móvil'}`;
+                lbl.textContent = `Terminal: ${name || 'Móvil'}`;
             }
         }
 
@@ -622,12 +671,14 @@
             let devName = '';
             if (paramDev && paramDev.trim()) {
                 devName = decodeURIComponent(paramDev.trim());
+                sessionStorage.setItem(`vivego_dev_name_evt_${eventId}`, devName);
                 localStorage.setItem(`vivego_dev_name_evt_${eventId}`, devName);
                 localStorage.setItem('vivego_scanner_device_name', devName);
             } else {
-                devName = localStorage.getItem(`vivego_dev_name_evt_${eventId}`) 
+                devName = sessionStorage.getItem(`vivego_dev_name_evt_${eventId}`)
+                          || localStorage.getItem(`vivego_dev_name_evt_${eventId}`) 
                           || localStorage.getItem('vivego_scanner_device_name') 
-                          || 'Puerta 1';
+                          || 'Móvil 1';
             }
 
             const devInput = document.getElementById('mobileDeviceName');
@@ -657,6 +708,7 @@
                 if (btnHistory) btnHistory.classList.add('active');
                 if (contScanner) contScanner.style.display = 'none';
                 if (contHistory) contHistory.style.display = 'flex';
+                syncServerScanLogs(false);
                 renderScanHistoryList();
             } else {
                 if (btnHistory) btnHistory.classList.remove('active');
@@ -672,10 +724,14 @@
         const claimUrl = "{{ route('web.scanner.claim_device', $event->id) }}";
 
         function getSessionUuid() {
-            let uuid = localStorage.getItem('vivego_terminal_session_uuid');
+            let uuid = sessionStorage.getItem('vivego_terminal_session_uuid');
             if (!uuid) {
-                uuid = 'sess_' + Date.now() + '_' + Math.random().toString(36).substring(2, 12);
-                localStorage.setItem('vivego_terminal_session_uuid', uuid);
+                uuid = localStorage.getItem('vivego_terminal_session_uuid');
+                if (!uuid) {
+                    uuid = 'sess_' + Date.now() + '_' + Math.random().toString(36).substring(2, 12);
+                    localStorage.setItem('vivego_terminal_session_uuid', uuid);
+                }
+                sessionStorage.setItem('vivego_terminal_session_uuid', uuid);
             }
             return uuid;
         }
@@ -684,12 +740,15 @@
             const urlParams = new URLSearchParams(window.location.search);
             let tok = urlParams.get('token') || urlParams.get('hash');
             if (tok && tok.trim()) {
+                sessionStorage.setItem(`vivego_dev_token_evt_${eventId}`, tok.trim());
                 localStorage.setItem(`vivego_dev_token_evt_${eventId}`, tok.trim());
                 return tok.trim();
             }
-            tok = localStorage.getItem(`vivego_dev_token_evt_${eventId}`);
+            tok = sessionStorage.getItem(`vivego_dev_token_evt_${eventId}`)
+                  || localStorage.getItem(`vivego_dev_token_evt_${eventId}`);
             if (!tok) {
                 tok = 'DEVTOK_' + (getActiveDeviceName().toUpperCase().replace(/[^A-Z0-9]/g, '_'));
+                sessionStorage.setItem(`vivego_dev_token_evt_${eventId}`, tok);
                 localStorage.setItem(`vivego_dev_token_evt_${eventId}`, tok);
             }
             return tok;
@@ -770,12 +829,68 @@
         function saveLocalScanHistory() {
             try {
                 const key = getDeviceStorageKey();
-                const capped = scanHistory.slice(0, 150);
+                const capped = scanHistory.slice(0, 200);
                 localStorage.setItem(key, JSON.stringify(capped));
             } catch (e) {
                 console.warn('No se pudo guardar historial:', e);
             }
             updateHistoryBadges();
+        }
+
+        function syncServerScanLogs(isManual = false) {
+            const icon = document.getElementById('mHistRefreshIcon');
+            if (isManual && icon) {
+                icon.style.display = 'inline-block';
+                icon.style.transform = 'rotate(360deg)';
+                icon.style.transition = 'transform 0.5s ease';
+                setTimeout(() => { icon.style.transform = 'none'; }, 500);
+            }
+
+            fetch(deviceLogsUrl, {
+                headers: { 'Accept': 'application/json' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && Array.isArray(data.logs)) {
+                    serverScanLogs = data.logs;
+                    updateHistoryBadges();
+                    renderScanHistoryList();
+                }
+            })
+            .catch(err => console.log('Sync server scan logs err:', err));
+        }
+
+        function setHistoryScope(scope) {
+            historyScope = scope;
+            const btnLocal = document.getElementById('scopeBtnLocal');
+            const btnAll = document.getElementById('scopeBtnAll');
+
+            if (scope === 'all') {
+                if (btnLocal) {
+                    btnLocal.style.background = 'transparent';
+                    btnLocal.style.borderColor = 'transparent';
+                    btnLocal.style.color = '#94A3B8';
+                }
+                if (btnAll) {
+                    btnAll.style.background = 'rgba(0, 240, 255, 0.2)';
+                    btnAll.style.borderColor = '#00F0FF';
+                    btnAll.style.color = '#FFFFFF';
+                }
+                syncServerScanLogs(false);
+            } else {
+                if (btnAll) {
+                    btnAll.style.background = 'transparent';
+                    btnAll.style.borderColor = 'transparent';
+                    btnAll.style.color = '#94A3B8';
+                }
+                if (btnLocal) {
+                    btnLocal.style.background = 'rgba(0, 240, 255, 0.2)';
+                    btnLocal.style.borderColor = '#00F0FF';
+                    btnLocal.style.color = '#FFFFFF';
+                }
+            }
+
+            renderScanHistoryList();
         }
 
         function recordScanHistoryItem(item) {
@@ -787,21 +902,28 @@
                 key: 'scan_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
                 id: item.id || null,
                 status: item.status || 'invalid',
+                status_label: item.status_label || (item.status === 'granted' ? 'Acceso Permitido' : (item.status === 'already_used' ? 'Ya Usado' : 'Inválido')),
                 ticket_code: item.ticket_code || 'Desconocido',
                 validation_hash: item.validation_hash || '-',
                 zone_name: item.zone_name || '-',
                 buyer_name: item.buyer_name || '',
                 buyer_dni: item.buyer_dni || '',
                 checked_in_at: item.checked_in_at || timeStr,
+                time_formatted: item.checked_in_at || timeStr,
                 checked_in_date: dateStr,
+                date_formatted: dateStr,
                 scanned_by: item.scanned_by || getActiveDeviceName(),
+                device_name: item.scanned_by || getActiveDeviceName(),
                 message: item.message || '',
                 timestamp: Date.now()
             };
 
-            // Prepend al historial
+            // Prepend al historial local
             scanHistory.unshift(fullItem);
             saveLocalScanHistory();
+
+            // Prepend al historial de servidor en memoria
+            serverScanLogs.unshift(fullItem);
 
             // Actualizar banner rápido de último escaneo
             updateLastScanBanner(fullItem);
@@ -838,15 +960,48 @@
 
             if (icon) icon.textContent = iconEmoji;
             if (text) text.textContent = titleText;
-            if (sub) sub.textContent = `${item.checked_in_at} • ${item.buyer_name || item.message || 'Escaneado'}`;
+            if (sub) sub.textContent = `${item.checked_in_at || item.time_formatted} • ${item.buyer_name || item.message || 'Escaneado'}`;
             banner.style.display = 'flex';
         }
 
+        function getActiveHistoryDataset() {
+            const activeDev = getActiveDeviceName();
+            if (historyScope === 'all') {
+                // Combinar server logs con scanHistory evitando duplicados por key o id
+                const combined = [...scanHistory];
+                serverScanLogs.forEach(sLog => {
+                    const exists = combined.some(c => 
+                        (c.id && sLog.id && c.id === sLog.id) ||
+                        (c.ticket_code === sLog.ticket_code && (c.checked_in_at === sLog.time_formatted || c.time_formatted === sLog.time_formatted))
+                    );
+                    if (!exists) {
+                        combined.push(sLog);
+                    }
+                });
+                return combined;
+            } else {
+                // Filtrar solo para este terminal
+                if (scanHistory.length > 0) return scanHistory;
+                return serverScanLogs.filter(s => isDeviceMatch(s.device_name || s.scanned_by, activeDev));
+            }
+        }
+
         function updateHistoryBadges() {
-            const total = scanHistory.length;
-            const granted = scanHistory.filter(s => s.status === 'granted').length;
-            const used = scanHistory.filter(s => s.status === 'already_used' || s.status === 'upgraded_void').length;
-            const invalid = scanHistory.filter(s => s.status === 'invalid' || s.status === 'wrong_event').length;
+            const activeDev = getActiveDeviceName();
+            const localCount = scanHistory.length || serverScanLogs.filter(s => isDeviceMatch(s.device_name || s.scanned_by, activeDev)).length;
+            const allCount = Math.max(serverScanLogs.length, scanHistory.length);
+
+            const scopeLocal = document.getElementById('scopeLocalCount');
+            if (scopeLocal) scopeLocal.textContent = localCount;
+
+            const scopeAll = document.getElementById('scopeAllCount');
+            if (scopeAll) scopeAll.textContent = allCount;
+
+            const dataset = getActiveHistoryDataset();
+            const total = dataset.length;
+            const granted = dataset.filter(s => s.status === 'granted').length;
+            const used = dataset.filter(s => s.status === 'already_used' || s.status === 'upgraded_void').length;
+            const invalid = dataset.filter(s => s.status === 'invalid' || s.status === 'wrong_event').length;
 
             const badgeTab = document.getElementById('historyTabCountBadge');
             if (badgeTab) badgeTab.textContent = total;
@@ -885,8 +1040,9 @@
             if (!container) return;
 
             const query = (document.getElementById('historySearchInput')?.value || '').trim().toLowerCase();
+            const dataset = getActiveHistoryDataset();
 
-            let filtered = scanHistory.filter(item => {
+            let filtered = dataset.filter(item => {
                 // Filtro por estado
                 if (currentHistoryFilter === 'granted' && item.status !== 'granted') return false;
                 if (currentHistoryFilter === 'already_used' && item.status !== 'already_used' && item.status !== 'upgraded_void') return false;
@@ -894,7 +1050,7 @@
 
                 // Filtro por texto de búsqueda
                 if (query) {
-                    const str = `${item.ticket_code} ${item.validation_hash} ${item.zone_name} ${item.buyer_name} ${item.buyer_dni} ${item.message} ${item.scanned_by}`.toLowerCase();
+                    const str = `${item.ticket_code} ${item.validation_hash} ${item.zone_name} ${item.buyer_name} ${item.buyer_dni} ${item.message} ${item.scanned_by || item.device_name}`.toLowerCase();
                     return str.includes(query);
                 }
 
@@ -933,6 +1089,9 @@
                     cardClass = 'history-card-invalid';
                 }
 
+                const displayTime = item.checked_in_at || item.time_formatted || '-';
+                const displayDevice = item.scanned_by || item.device_name || 'Terminal';
+
                 return `
                     <div class="history-item-card ${cardClass}">
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
@@ -942,7 +1101,7 @@
                             </div>
                             <div style="display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0;">
                                 ${badgeHtml}
-                                <span style="color: #00F0FF; font-weight: 800; font-size: 0.75rem;">${escapeHtml(item.checked_in_at)}</span>
+                                <span style="color: #00F0FF; font-weight: 800; font-size: 0.75rem;">${escapeHtml(displayTime)}</span>
                             </div>
                         </div>
 
@@ -955,7 +1114,7 @@
 
                         <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.72rem; color: #94A3B8; padding-top: 0.2rem; border-top: 1px dashed rgba(255,255,255,0.07);">
                             <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">💬 ${escapeHtml(item.message || 'Registro procesado')}</span>
-                            <small style="color: #64748B; font-weight: 700; flex-shrink: 0;">📱 ${escapeHtml(item.scanned_by)}</small>
+                            <small style="color: #64748B; font-weight: 700; flex-shrink: 0;">📱 ${escapeHtml(displayDevice)}</small>
                         </div>
                     </div>
                 `;
@@ -977,7 +1136,7 @@
             }).then((res) => {
                 if (res.isConfirmed) {
                     scanHistory = [];
-                    localStorage.removeItem(STORAGE_HISTORY_KEY);
+                    localStorage.removeItem(getDeviceStorageKey());
                     updateHistoryBadges();
                     renderScanHistoryList();
                     const banner = document.getElementById('lastScanSummaryBanner');
@@ -1287,7 +1446,7 @@
             if (isProcessingMobileScan) return;
             isProcessingMobileScan = true;
 
-            const dev = document.getElementById('mobileDeviceName')?.value || 'Móvil';
+            const dev = getActiveDeviceName();
 
             fetch(verifyUrl, {
                 method: 'POST',
