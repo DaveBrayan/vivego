@@ -287,13 +287,18 @@
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
-                            <button type="button" id="btnManualRefresh" onclick="manualRefreshFeed()" style="background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; font-weight: 900; font-size: 0.85rem; padding: 0.6rem 1.3rem; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.5rem; border: none; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); cursor: pointer; transition: all 0.2s ease;">
-                                <span id="refreshIcon" style="font-size: 1.05rem;">🔄</span>
-                                <span>Actualizar Asistencias</span>
+                            <button type="button" class="btn btn-sm" onclick="openDeviceLogsModal()" style="background: linear-gradient(135deg, #8B5CF6, #6366F1); color: #FFFFFF; font-weight: 900; font-size: 0.85rem; padding: 0.6rem 1.3rem; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.5rem; border: none; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4); cursor: pointer; transition: all 0.2s ease;">
+                                <span>📋</span>
+                                <span>Historial de Dispositivos</span>
+                                <span id="devLogsBtnBadge" style="background: rgba(255,255,255,0.25); color: #FFFFFF; font-size: 0.7rem; font-weight: 900; padding: 0.1rem 0.45rem; border-radius: 20px;">LIVE</span>
                             </button>
                             <button type="button" class="btn btn-sm" onclick="openScannerDevicesModal()" style="background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; font-weight: 900; font-size: 0.85rem; padding: 0.6rem 1.3rem; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.5rem; border: none; box-shadow: 0 4px 15px rgba(0, 240, 255, 0.35); cursor: pointer; transition: all 0.2s ease;">
                                 <span>📱</span>
-                                <span>+ Agregar Scanner</span>
+                                <span>+ Vincular Scanner</span>
+                            </button>
+                            <button type="button" id="btnManualRefresh" onclick="manualRefreshFeed()" style="background: rgba(255,255,255,0.08); color: #FFFFFF; font-weight: 800; font-size: 0.85rem; padding: 0.6rem 1.15rem; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.45rem; border: 1px solid rgba(255,255,255,0.15); cursor: pointer; transition: all 0.2s ease;">
+                                <span id="refreshIcon" style="font-size: 1rem;">🔄</span>
+                                <span>Actualizar</span>
                             </button>
                         </div>
                     </div>
@@ -528,6 +533,123 @@
                     🔒 Los enlaces cuentan con token de seguridad para operar sin inicio de sesión en puertas de acceso.
                 </span>
                 <button type="button" onclick="closeScannerDevicesModal()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #FFFFFF; font-weight: 800; font-size: 0.85rem; padding: 0.6rem 1.4rem; border-radius: 10px; cursor: pointer;">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE HISTORIAL DE ESCANEOS POR DISPOSITIVOS (CONSOLIDADO EN VIVO) -->
+    <div id="deviceLogsModal" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(5, 5, 10, 0.88); backdrop-filter: blur(14px); align-items: center; justify-content: center; padding: 1.25rem;">
+        <div style="background: #0E0E17; border: 1.5px solid rgba(139, 92, 246, 0.4); border-radius: 26px; width: 100%; max-width: 1120px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 70px rgba(0,0,0,0.8), 0 0 40px rgba(139, 92, 246, 0.15);">
+            
+            <!-- Modal Header -->
+            <div style="padding: 1.25rem 1.75rem; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); flex-wrap: wrap; gap: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="width: 46px; height: 46px; border-radius: 14px; background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.35); display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+                        📋
+                    </div>
+                    <div>
+                        <h3 style="font-size: 1.2rem; font-weight: 900; color: #FFFFFF; margin: 0; display: flex; align-items: center; gap: 0.6rem;">
+                            <span>Historial de Escaneos por Dispositivos</span>
+                            <span style="font-size: 0.7rem; padding: 0.15rem 0.6rem; border-radius: 20px; background: rgba(16,185,129,0.15); color: #10B981; border: 1px solid rgba(16,185,129,0.3); font-weight: 800;">
+                                ● EN VIVO
+                            </span>
+                        </h3>
+                        <p style="font-size: 0.8rem; color: #94A3B8; margin: 0.2rem 0 0 0;">
+                            Auditoría de todos los escaneos realizados por terminales móviles y web (Válidos, Duplicados, Anulados e Inválidos).
+                        </p>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <button type="button" onclick="loadDeviceLogsData(true)" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #FFFFFF; font-size: 0.82rem; font-weight: 800; padding: 0.55rem 0.95rem; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;" title="Refrescar datos">
+                        <span id="devLogsRefreshIcon">🔄</span> <span>Refrescar</span>
+                    </button>
+                    <button type="button" onclick="clearDeviceLogsData()" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); color: #EF4444; font-size: 0.82rem; font-weight: 800; padding: 0.55rem 0.95rem; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;" title="Limpiar historial">
+                        <span>🗑️</span> <span>Limpiar</span>
+                    </button>
+                    <button type="button" onclick="closeDeviceLogsModal()" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #94A3B8; font-size: 1.1rem; width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease;">
+                        ✕
+                    </button>
+                </div>
+            </div>
+
+            <!-- Metric KPI Cards inside modal -->
+            <div style="padding: 1rem 1.75rem; background: rgba(0,0,0,0.25); border-bottom: 1px solid rgba(255,255,255,0.06); display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.85rem;">
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 0.75rem 1rem;">
+                    <span style="font-size: 0.72rem; font-weight: 800; color: #94A3B8; text-transform: uppercase;">Total Intentos</span>
+                    <div style="font-size: 1.35rem; font-weight: 900; color: #FFFFFF;" id="devLogStatTotal">0</div>
+                </div>
+                <div style="background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 14px; padding: 0.75rem 1rem;">
+                    <span style="font-size: 0.72rem; font-weight: 800; color: #10B981; text-transform: uppercase;">✅ Válidos (Permitidos)</span>
+                    <div style="font-size: 1.35rem; font-weight: 900; color: #10B981;" id="devLogStatGranted">0</div>
+                </div>
+                <div style="background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 14px; padding: 0.75rem 1rem;">
+                    <span style="font-size: 0.72rem; font-weight: 800; color: #F59E0B; text-transform: uppercase;">🚫 Duplicados (Ya Usados)</span>
+                    <div style="font-size: 1.35rem; font-weight: 900; color: #F59E0B;" id="devLogStatAlreadyUsed">0</div>
+                </div>
+                <div style="background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 14px; padding: 0.75rem 1rem;">
+                    <span style="font-size: 0.72rem; font-weight: 800; color: #EF4444; text-transform: uppercase;">❌ Erróneos / Inválidos</span>
+                    <div style="font-size: 1.35rem; font-weight: 900; color: #EF4444;" id="devLogStatErrors">0</div>
+                </div>
+            </div>
+
+            <!-- Filter & Search toolbar -->
+            <div style="padding: 0.85rem 1.75rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.01);">
+                <!-- Status Filter Buttons -->
+                <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                    <button type="button" class="dev-log-filter-btn" id="filterBtn_all" onclick="setDevLogStatusFilter('all')" style="background: rgba(139, 92, 246, 0.2); border: 1px solid #8B5CF6; color: #FFFFFF; font-weight: 800; font-size: 0.78rem; padding: 0.45rem 0.85rem; border-radius: 8px; cursor: pointer; transition: all 0.2s ease;">
+                        Todos (<span id="devLogFilterAllCount">0</span>)
+                    </button>
+                    <button type="button" class="dev-log-filter-btn" id="filterBtn_granted" onclick="setDevLogStatusFilter('granted')" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: #94A3B8; font-weight: 800; font-size: 0.78rem; padding: 0.45rem 0.85rem; border-radius: 8px; cursor: pointer; transition: all 0.2s ease;">
+                        ✅ Válidos (<span id="devLogFilterGrantedCount">0</span>)
+                    </button>
+                    <button type="button" class="dev-log-filter-btn" id="filterBtn_already_used" onclick="setDevLogStatusFilter('already_used')" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: #94A3B8; font-weight: 800; font-size: 0.78rem; padding: 0.45rem 0.85rem; border-radius: 8px; cursor: pointer; transition: all 0.2s ease;">
+                        🚫 Duplicados (<span id="devLogFilterUsedCount">0</span>)
+                    </button>
+                    <button type="button" class="dev-log-filter-btn" id="filterBtn_errors" onclick="setDevLogStatusFilter('errors')" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: #94A3B8; font-weight: 800; font-size: 0.78rem; padding: 0.45rem 0.85rem; border-radius: 8px; cursor: pointer; transition: all 0.2s ease;">
+                        ❌ Erróneos (<span id="devLogFilterErrorCount">0</span>)
+                    </button>
+                </div>
+
+                <!-- Dispositivo dropdown & search box -->
+                <div style="display: flex; gap: 0.6rem; align-items: center; flex: 1; min-width: 280px; justify-content: flex-end; flex-wrap: wrap;">
+                    <select id="devLogDeviceSelect" onchange="filterAndRenderDevLogs()" style="background: #14141E; border: 1px solid rgba(0, 240, 255, 0.35); border-radius: 8px; color: #00F0FF; font-weight: 800; font-size: 0.78rem; padding: 0.45rem 0.75rem; outline: none; cursor: pointer; min-width: 170px;">
+                        <option value="all">📱 Todos los Terminales</option>
+                    </select>
+
+                    <div style="position: relative; min-width: 180px; max-width: 240px; flex: 1;">
+                        <input type="text" id="devLogSearchInput" oninput="filterAndRenderDevLogs()" placeholder="Buscar código, nombre, DNI..." style="width: 100%; background: #14141E; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 0.45rem 0.75rem; color: #FFFFFF; font-size: 0.78rem; outline: none;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div style="padding: 1rem 1.75rem; overflow-y: auto; flex: 1; min-height: 280px;">
+                <table class="dash-table" style="width: 100%; font-size: 0.82rem;">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">Hora / Fecha</th>
+                            <th style="width: 170px;">Dispositivo / Terminal</th>
+                            <th>Boleto / Hash</th>
+                            <th>Asistente / DNI</th>
+                            <th>Zona</th>
+                            <th>Resultado</th>
+                            <th>Detalle / Mensaje</th>
+                        </tr>
+                    </thead>
+                    <tbody id="devLogsTableBody">
+                        <!-- Dynamic rendering -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Modal Footer -->
+            <div style="padding: 0.85rem 1.75rem; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.01);">
+                <span style="font-size: 0.74rem; color: #94A3B8;">
+                    🔄 Sincronización en vivo cada 3 segundos mientras este modal esté abierto.
+                </span>
+                <button type="button" onclick="closeDeviceLogsModal()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #FFFFFF; font-weight: 800; font-size: 0.85rem; padding: 0.55rem 1.3rem; border-radius: 10px; cursor: pointer;">
                     Cerrar
                 </button>
             </div>
@@ -1415,44 +1537,316 @@
             }
         }
 
-        // Iniciar sincronización automática en vivo de inmediato
-        setTimeout(scheduleAutoSync, 1000);
+            // Iniciar sincronización automática en vivo de inmediato
+            setTimeout(scheduleAutoSync, 1000);
 
-        document.addEventListener('DOMContentLoaded', function () {
-            loadScannerDevices();
-
-            // Buscador en tabla de ingresos
-            const tableFilter = document.getElementById('tableFilterInput');
-            if (tableFilter) {
-                tableFilter.addEventListener('input', function() {
-                    const q = this.value.toLowerCase().trim();
-                    const rows = document.querySelectorAll('#checkinsTableBody .checkin-row-item');
-                    rows.forEach(r => {
-                        const text = r.textContent.toLowerCase();
-                        r.style.display = text.includes(q) ? '' : 'none';
-                    });
-                });
-            }
-
-            // Theme Toggle
-            const themeBtn = document.getElementById('btnThemeToggle');
-            const themeIcon = document.getElementById('themeToggleIcon');
-            const dashRoot = document.querySelector('.dashboard-root-wrapper');
-
-            const savedTheme = localStorage.getItem('vivego_dashboard_theme');
-            if (savedTheme === 'light' && dashRoot) {
-                dashRoot.classList.add('theme-light');
-                if (themeIcon) themeIcon.textContent = '🌙';
-            }
-
-            if (themeBtn && dashRoot) {
-                themeBtn.addEventListener('click', function () {
-                    dashRoot.classList.toggle('theme-light');
-                    const isLight = dashRoot.classList.contains('theme-light');
-                    if (themeIcon) themeIcon.textContent = isLight ? '🌙' : '☀️';
-                    localStorage.setItem('vivego_dashboard_theme', isLight ? 'light' : 'dark');
-                });
-            }
+            // Cargar datos iniciales del historial de dispositivos en background
+            setTimeout(() => {
+                fetch(deviceLogsUrl, { headers: { 'Accept': 'application/json' } })
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.success && d.stats) {
+                            const btnBadge = document.getElementById('devLogsBtnBadge');
+                            if (btnBadge) btnBadge.textContent = `${d.stats.total || 0}`;
+                        }
+                    }).catch(e => {});
+            }, 1200);
         });
+
+        /* ========================================================
+           SISTEMA DE HISTORIAL CONSOLIDADO DE ESCANEOS POR DISPOSITIVO
+           ======================================================== */
+        const deviceLogsUrl = "{{ route('web.attendees.device_logs', $event->id) }}";
+        const clearDeviceLogsUrl = "{{ route('web.attendees.clear_device_logs', $event->id) }}";
+        let rawDeviceLogs = [];
+        let currentDevLogStatusFilter = 'all';
+        let deviceLogsPollingInterval = null;
+
+        function openDeviceLogsModal() {
+            const modal = document.getElementById('deviceLogsModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                loadDeviceLogsData(true);
+                if (deviceLogsPollingInterval) clearInterval(deviceLogsPollingInterval);
+                deviceLogsPollingInterval = setInterval(() => {
+                    if (modal.style.display !== 'none' && !document.hidden) {
+                        loadDeviceLogsData(false);
+                    }
+                }, 3000);
+            }
+        }
+
+        function closeDeviceLogsModal() {
+            const modal = document.getElementById('deviceLogsModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            if (deviceLogsPollingInterval) {
+                clearInterval(deviceLogsPollingInterval);
+                deviceLogsPollingInterval = null;
+            }
+        }
+
+        function setDevLogStatusFilter(filter) {
+            currentDevLogStatusFilter = filter;
+
+            const filterBtns = document.querySelectorAll('.dev-log-filter-btn');
+            filterBtns.forEach(btn => {
+                btn.style.background = 'rgba(255,255,255,0.04)';
+                btn.style.borderColor = 'rgba(255,255,255,0.1)';
+                btn.style.color = '#94A3B8';
+            });
+
+            const activeBtn = document.getElementById(`filterBtn_${filter}`);
+            if (activeBtn) {
+                activeBtn.style.background = 'rgba(139, 92, 246, 0.25)';
+                activeBtn.style.borderColor = '#8B5CF6';
+                activeBtn.style.color = '#FFFFFF';
+            }
+
+            filterAndRenderDevLogs();
+        }
+
+        function loadDeviceLogsData(isManual = false) {
+            const icon = document.getElementById('devLogsRefreshIcon');
+            if (isManual && icon) {
+                icon.style.display = 'inline-block';
+                icon.style.animation = 'spinRefresh 0.8s linear infinite';
+            }
+
+            fetch(deviceLogsUrl, {
+                headers: { 'Accept': 'application/json' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    rawDeviceLogs = data.logs || [];
+                    const stats = data.stats || {};
+                    const devices = data.devices || [];
+
+                    // Actualizar contadores KPI
+                    const elTotal = document.getElementById('devLogStatTotal');
+                    const elGranted = document.getElementById('devLogStatGranted');
+                    const elUsed = document.getElementById('devLogStatAlreadyUsed');
+                    const elErrors = document.getElementById('devLogStatErrors');
+
+                    if (elTotal) elTotal.textContent = stats.total || 0;
+                    if (elGranted) elGranted.textContent = stats.granted_count || 0;
+                    if (elUsed) elUsed.textContent = stats.already_used_count || 0;
+                    if (elErrors) elErrors.textContent = stats.error_count || 0;
+
+                    // Actualizar badges de filtros
+                    const fAll = document.getElementById('devLogFilterAllCount');
+                    const fGranted = document.getElementById('devLogFilterGrantedCount');
+                    const fUsed = document.getElementById('devLogFilterUsedCount');
+                    const fErrors = document.getElementById('devLogFilterErrorCount');
+
+                    if (fAll) fAll.textContent = stats.total || 0;
+                    if (fGranted) fGranted.textContent = stats.granted_count || 0;
+                    if (fUsed) fUsed.textContent = stats.already_used_count || 0;
+                    if (fErrors) fErrors.textContent = stats.error_count || 0;
+
+                    // Badge del botón principal en la tabla
+                    const btnBadge = document.getElementById('devLogsBtnBadge');
+                    if (btnBadge) {
+                        btnBadge.textContent = `${stats.total || 0}`;
+                    }
+
+                    // Actualizar Selector de Terminales
+                    const devSelect = document.getElementById('devLogDeviceSelect');
+                    if (devSelect) {
+                        const currentVal = devSelect.value;
+                        let selectHtml = '<option value="all">📱 Todos los Terminales</option>';
+                        devices.forEach(d => {
+                            selectHtml += `<option value="${d.name}">📱 ${d.name} (${d.total})</option>`;
+                        });
+                        devSelect.innerHTML = selectHtml;
+                        if (currentVal && Array.from(devSelect.options).some(o => o.value === currentVal)) {
+                            devSelect.value = currentVal;
+                        }
+                    }
+
+                    filterAndRenderDevLogs();
+                }
+            })
+            .catch(err => console.error("Error loading device logs:", err))
+            .finally(() => {
+                if (isManual && icon) {
+                    setTimeout(() => { icon.style.animation = 'none'; }, 400);
+                }
+            });
+        }
+
+        function filterAndRenderDevLogs() {
+            const tableBody = document.getElementById('devLogsTableBody');
+            if (!tableBody) return;
+
+            const devSelect = document.getElementById('devLogDeviceSelect');
+            const selectedDev = devSelect ? devSelect.value : 'all';
+
+            const searchInput = document.getElementById('devLogSearchInput');
+            const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+            let filtered = rawDeviceLogs.filter(item => {
+                // Filtro por Dispositivo
+                if (selectedDev !== 'all' && (item.device_name || '') !== selectedDev) {
+                    return false;
+                }
+
+                // Filtro por Estado
+                if (currentDevLogStatusFilter === 'granted' && item.status !== 'granted') {
+                    return false;
+                }
+                if (currentDevLogStatusFilter === 'already_used' && item.status !== 'already_used') {
+                    return false;
+                }
+                if (currentDevLogStatusFilter === 'errors' && ['granted', 'already_used'].includes(item.status)) {
+                    return false;
+                }
+
+                // Filtro por Buscador
+                if (query) {
+                    const text = [
+                        item.ticket_code,
+                        item.validation_hash,
+                        item.buyer_name,
+                        item.buyer_dni,
+                        item.zone_name,
+                        item.device_name,
+                        item.status_label,
+                        item.message
+                    ].filter(Boolean).join(' ').toLowerCase();
+
+                    if (!text.includes(query)) return false;
+                }
+
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 2.5rem; color: #64748B;">
+                            <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">📋</div>
+                            <strong style="color: #94A3B8; font-size: 0.95rem; display: block;">No se encontraron registros de escaneo</strong>
+                            <p style="margin: 0.25rem 0 0 0; font-size: 0.8rem;">Los escaneos que realicen los celulares aparecerán aquí automáticamente en tiempo real.</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            let html = '';
+            filtered.forEach(log => {
+                let badgeStyle = '';
+                let statusIcon = '✅';
+                let statusLabel = log.status_label || 'Válido';
+
+                if (log.status === 'granted') {
+                    badgeStyle = 'background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.35);';
+                    statusIcon = '✅';
+                } else if (log.status === 'already_used') {
+                    badgeStyle = 'background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.35);';
+                    statusIcon = '🚫';
+                } else if (log.status === 'upgraded_void') {
+                    badgeStyle = 'background: rgba(139, 92, 246, 0.15); color: #8B5CF6; border: 1px solid rgba(139, 92, 246, 0.35);';
+                    statusIcon = '🟣';
+                } else if (log.status === 'wrong_event') {
+                    badgeStyle = 'background: rgba(59, 130, 246, 0.15); color: #3B82F6; border: 1px solid rgba(59, 130, 246, 0.35);';
+                    statusIcon = '⚠️';
+                } else {
+                    badgeStyle = 'background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.35);';
+                    statusIcon = '❌';
+                }
+
+                html += `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.15s ease;">
+                        <td>
+                            <strong style="color: #FFFFFF; font-size: 0.82rem; display: block;">${log.time_formatted || '-'}</strong>
+                            <small style="color: #64748B; font-size: 0.72rem;">${log.date_formatted || ''}</small>
+                        </td>
+                        <td>
+                            <span style="display: inline-flex; align-items: center; gap: 0.35rem; background: rgba(0, 240, 255, 0.08); border: 1px solid rgba(0, 240, 255, 0.3); color: #00F0FF; padding: 0.2rem 0.55rem; border-radius: 8px; font-weight: 800; font-size: 0.75rem;">
+                                <span>📱</span>
+                                <span style="max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${log.device_name || 'Móvil'}</span>
+                            </span>
+                        </td>
+                        <td>
+                            <strong style="font-family: monospace; font-size: 0.85rem; color: #FFFFFF; display: block;">${log.ticket_code || '-'}</strong>
+                            <small style="font-family: monospace; color: #FF7733; font-size: 0.72rem; font-weight: 700;">🔑 ${log.validation_hash || '-'}</small>
+                        </td>
+                        <td>
+                            <strong style="color: #F1F5F9; font-size: 0.84rem; display: block;">${log.buyer_name || '-'}</strong>
+                            <small style="color: #94A3B8; font-size: 0.72rem;">DNI: ${log.buyer_dni || '-'}</small>
+                        </td>
+                        <td>
+                            <span style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #FFFFFF; padding: 0.15rem 0.5rem; border-radius: 6px; font-weight: 800; font-size: 0.72rem;">
+                                ${log.zone_name || '-'}
+                            </span>
+                        </td>
+                        <td>
+                            <span style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0.6rem; border-radius: 8px; font-weight: 800; font-size: 0.74rem; ${badgeStyle}">
+                                <span>${statusIcon}</span>
+                                <span>${statusLabel}</span>
+                            </span>
+                        </td>
+                        <td>
+                            <small style="color: #94A3B8; font-size: 0.74rem; line-height: 1.3; display: block;">
+                                ${log.message || '-'}
+                            </small>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableBody.innerHTML = html;
+        }
+
+        function clearDeviceLogsData() {
+            Swal.fire({
+                title: '¿Vaciar Historial de Dispositivos?',
+                text: 'Esta acción limpiará el registro consolidado de escaneos de este evento. Las entradas válidas ya guardadas en la base de datos no se borrarán.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#EF4444',
+                cancelButtonColor: '#334155',
+                confirmButtonText: 'Sí, vaciar historial',
+                cancelButtonText: 'Cancelar',
+                background: '#14141E',
+                color: '#FFFFFF'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(clearDeviceLogsUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            rawDeviceLogs = [];
+                            filterAndRenderDevLogs();
+                            loadDeviceLogsData(true);
+                            Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: 'success',
+                                title: '✓ Historial vaciado con éxito',
+                                showConfirmButton: false,
+                                timer: 2000,
+                                background: '#14141E',
+                                color: '#FFFFFF'
+                            });
+                        }
+                    })
+                    .catch(err => {
+                        Swal.fire('Error', 'No se pudo vaciar el historial', 'error');
+                    });
+                }
+            });
+        }
     </script>
 @endpush

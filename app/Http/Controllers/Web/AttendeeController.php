@@ -144,7 +144,25 @@ class AttendeeController extends Controller
                     $otherDate = $otherEvent->event_date instanceof \DateTimeInterface 
                         ? $otherEvent->event_date->format('d/m/Y') 
                         : (is_string($otherEvent->event_date) ? substr($otherEvent->event_date, 0, 10) : '');
-                }
+                $otherHash = $otherTicket->validation_hash ?: ('VG' . strtoupper(substr(md5($otherTicket->id), 0, 8)));
+                $this->recordScanLog($event->id, [
+                    'id' => 'LOG_' . uniqid(),
+                    'timestamp' => now()->toDateTimeString(),
+                    'time_formatted' => now()->format('h:i:s A'),
+                    'date_formatted' => now()->format('d/m/Y'),
+                    'device_name' => $deviceName,
+                    'status' => 'wrong_event',
+                    'status_label' => 'Otro Evento',
+                    'badge_class' => 'badge-blue',
+                    'ticket_code' => $otherTicket->ticket_code,
+                    'validation_hash' => $otherHash,
+                    'buyer_name' => $otherTicket->buyer_name ?: 'Desconocido',
+                    'buyer_dni' => $otherTicket->buyer_dni ?: '-',
+                    'zone_name' => $otherTicket->zone_name ?: '-',
+                    'unit_price' => '-',
+                    'ticket_type' => $otherTicket->ticket_type ?? 'digital',
+                    'message' => "Boleto pertenece al evento: \"{$otherEvent?->title}\"",
+                ]);
 
                 return response()->json([
                     'success' => false,
@@ -159,6 +177,25 @@ class AttendeeController extends Controller
                     ],
                 ], 422);
             }
+
+            $this->recordScanLog($event->id, [
+                'id' => 'LOG_' . uniqid(),
+                'timestamp' => now()->toDateTimeString(),
+                'time_formatted' => now()->format('h:i:s A'),
+                'date_formatted' => now()->format('d/m/Y'),
+                'device_name' => $deviceName,
+                'status' => 'invalid',
+                'status_label' => 'Código Inválido',
+                'badge_class' => 'badge-red',
+                'ticket_code' => substr($rawInput, 0, 32),
+                'validation_hash' => '-',
+                'buyer_name' => 'No encontrado',
+                'buyer_dni' => '-',
+                'zone_name' => '-',
+                'unit_price' => '-',
+                'ticket_type' => '-',
+                'message' => 'Código no emitido en el sistema',
+            ]);
 
             return response()->json([
                 'success' => false,
@@ -176,6 +213,25 @@ class AttendeeController extends Controller
         if ($isTicketUpgraded) {
             $upgradedToSale = $ticket->ticketSale?->upgradedTo;
             $newZone = $upgradedToSale ? $upgradedToSale->zone_name : 'una zona superior';
+
+            $this->recordScanLog($event->id, [
+                'id' => 'LOG_' . uniqid(),
+                'timestamp' => now()->toDateTimeString(),
+                'time_formatted' => now()->format('h:i:s A'),
+                'date_formatted' => now()->format('d/m/Y'),
+                'device_name' => $deviceName,
+                'status' => 'upgraded_void',
+                'status_label' => 'Anulado por Upgrade',
+                'badge_class' => 'badge-purple',
+                'ticket_code' => $ticket->ticket_code,
+                'validation_hash' => $ticket->validation_hash ?: ('VG' . strtoupper(substr(md5($ticket->id), 0, 8))),
+                'buyer_name' => $ticket->buyer_name ?: 'Asistente',
+                'buyer_dni' => $ticket->buyer_dni ?: '-',
+                'zone_name' => $ticket->zone_name ?: '-',
+                'unit_price' => 'S/ ' . number_format($ticket->unit_price, 2),
+                'ticket_type' => $ticket->ticket_type,
+                'message' => "Boleto anulado por mejora (upgrade) a {$newZone}",
+            ]);
 
             return response()->json([
                 'success' => false,
@@ -199,6 +255,25 @@ class AttendeeController extends Controller
             $usedTime = $ticket->checked_in_at ? $ticket->checked_in_at->format('d/m/Y h:i:s A') : 'Hora desconocida';
             $usedDoor = $ticket->scanned_by ?: 'Puerta Principal';
             $usedHash = $ticket->validation_hash ?: ('VG' . strtoupper(substr(md5($ticket->id), 0, 8)));
+
+            $this->recordScanLog($event->id, [
+                'id' => 'LOG_' . uniqid(),
+                'timestamp' => now()->toDateTimeString(),
+                'time_formatted' => now()->format('h:i:s A'),
+                'date_formatted' => now()->format('d/m/Y'),
+                'device_name' => $deviceName,
+                'status' => 'already_used',
+                'status_label' => 'Ya Usado (Duplicado)',
+                'badge_class' => 'badge-orange',
+                'ticket_code' => $ticket->ticket_code,
+                'validation_hash' => $usedHash,
+                'buyer_name' => $ticket->buyer_name ?: 'Asistente',
+                'buyer_dni' => $ticket->buyer_dni ?: '-',
+                'zone_name' => $ticket->zone_name ?: '-',
+                'unit_price' => 'S/ ' . number_format($ticket->unit_price, 2),
+                'ticket_type' => $ticket->ticket_type,
+                'message' => "Ya validado previamente el {$usedTime} en {$usedDoor}",
+            ]);
 
             return response()->json([
                 'success' => false,
@@ -226,6 +301,25 @@ class AttendeeController extends Controller
         $ticket->save();
 
         $hashVal = $ticket->validation_hash ?: ('VG' . strtoupper(substr(md5($ticket->id), 0, 8)));
+
+        $this->recordScanLog($event->id, [
+            'id' => 'LOG_' . uniqid(),
+            'timestamp' => $ticket->checked_in_at->toDateTimeString(),
+            'time_formatted' => $ticket->checked_in_at->format('h:i:s A'),
+            'date_formatted' => $ticket->checked_in_at->format('d/m/Y'),
+            'device_name' => $deviceName,
+            'status' => 'granted',
+            'status_label' => 'Acceso Permitido',
+            'badge_class' => 'badge-green',
+            'ticket_code' => $ticket->ticket_code,
+            'validation_hash' => $hashVal,
+            'buyer_name' => $ticket->buyer_name ?: 'Asistente',
+            'buyer_dni' => $ticket->buyer_dni ?: '-',
+            'zone_name' => $ticket->zone_name ?: '-',
+            'unit_price' => 'S/ ' . number_format($ticket->unit_price, 2),
+            'ticket_type' => $ticket->ticket_type,
+            'message' => 'Ingreso validado correctamente',
+        ]);
 
         // Recalcular métricas en vivo (excluyendo upgrades)
         $metrics = $this->getAttendanceMetrics($event->id);
@@ -878,6 +972,158 @@ class AttendeeController extends Controller
         return response()->json([
             'success' => true,
             'statuses' => $statuses,
+        ]);
+    }
+
+    /**
+     * Registra un evento de escaneo (válido, duplicado, inválido, otro evento) en el historial del evento.
+     */
+    protected function recordScanLog(int $eventId, array $entry): void
+    {
+        $cacheKey = "vivego_scan_history_logs_evt_{$eventId}";
+        $logs = Cache::get($cacheKey);
+
+        if (!is_array($logs)) {
+            $logs = [];
+            // Precargar los últimos tickets escaneados en DB si aún no había historial en caché
+            $pastTickets = EventTicket::where('event_id', $eventId)
+                ->where('is_used', true)
+                ->where('status', '!=', 'upgraded')
+                ->where('status', '!=', 'cancelled')
+                ->orderBy('checked_in_at', 'desc')
+                ->take(50)
+                ->get();
+
+            foreach ($pastTickets as $chk) {
+                $logs[] = [
+                    'id' => 'LOG_DB_' . $chk->id,
+                    'timestamp' => $chk->checked_in_at ? $chk->checked_in_at->format('Y-m-d H:i:s') : now()->format('Y-m-d H:i:s'),
+                    'time_formatted' => $chk->checked_in_at ? $chk->checked_in_at->format('h:i:s A') : now()->format('h:i:s A'),
+                    'date_formatted' => $chk->checked_in_at ? $chk->checked_in_at->format('d/m/Y') : now()->format('d/m/Y'),
+                    'device_name' => $chk->scanned_by ?: 'Puerta Principal',
+                    'status' => 'granted',
+                    'status_label' => 'Acceso Permitido',
+                    'badge_class' => 'badge-green',
+                    'ticket_code' => $chk->ticket_code,
+                    'validation_hash' => $chk->validation_hash ?: ('VG' . strtoupper(substr(md5($chk->id), 0, 8))),
+                    'buyer_name' => $chk->buyer_name ?: 'Asistente',
+                    'buyer_dni' => $chk->buyer_dni ?: '-',
+                    'zone_name' => $chk->zone_name ?: 'General',
+                    'unit_price' => 'S/ ' . number_format($chk->unit_price, 2),
+                    'ticket_type' => $chk->ticket_type,
+                    'message' => 'Ingreso validado correctamente',
+                ];
+            }
+        }
+
+        // Prepend new log
+        array_unshift($logs, $entry);
+
+        // Limitar a los 400 registros más recientes
+        $logs = array_slice($logs, 0, 400);
+
+        Cache::put($cacheKey, $logs, now()->addDays(7));
+    }
+
+    /**
+     * Obtiene el historial consolidado de escaneos realizados por todos los dispositivos.
+     */
+    public function getDeviceScanLogs(Request $request, Event $event): JsonResponse
+    {
+        $cacheKey = "vivego_scan_history_logs_evt_{$event->id}";
+        $logs = Cache::get($cacheKey);
+
+        if (!is_array($logs)) {
+            $logs = [];
+            $pastTickets = EventTicket::where('event_id', $event->id)
+                ->where('is_used', true)
+                ->where('status', '!=', 'upgraded')
+                ->where('status', '!=', 'cancelled')
+                ->orderBy('checked_in_at', 'desc')
+                ->take(50)
+                ->get();
+
+            foreach ($pastTickets as $chk) {
+                $logs[] = [
+                    'id' => 'LOG_DB_' . $chk->id,
+                    'timestamp' => $chk->checked_in_at ? $chk->checked_in_at->format('Y-m-d H:i:s') : now()->format('Y-m-d H:i:s'),
+                    'time_formatted' => $chk->checked_in_at ? $chk->checked_in_at->format('h:i:s A') : now()->format('h:i:s A'),
+                    'date_formatted' => $chk->checked_in_at ? $chk->checked_in_at->format('d/m/Y') : now()->format('d/m/Y'),
+                    'device_name' => $chk->scanned_by ?: 'Puerta Principal',
+                    'status' => 'granted',
+                    'status_label' => 'Acceso Permitido',
+                    'badge_class' => 'badge-green',
+                    'ticket_code' => $chk->ticket_code,
+                    'validation_hash' => $chk->validation_hash ?: ('VG' . strtoupper(substr(md5($chk->id), 0, 8))),
+                    'buyer_name' => $chk->buyer_name ?: 'Asistente',
+                    'buyer_dni' => $chk->buyer_dni ?: '-',
+                    'zone_name' => $chk->zone_name ?: 'General',
+                    'unit_price' => 'S/ ' . number_format($chk->unit_price, 2),
+                    'ticket_type' => $chk->ticket_type,
+                    'message' => 'Ingreso validado correctamente',
+                ];
+            }
+            Cache::put($cacheKey, $logs, now()->addDays(7));
+        }
+
+        // Estadísticas y listado de terminales
+        $total = count($logs);
+        $grantedCount = 0;
+        $alreadyUsedCount = 0;
+        $errorCount = 0;
+        $devicesMap = [];
+
+        foreach ($logs as $item) {
+            $st = $item['status'] ?? 'unknown';
+            if ($st === 'granted') {
+                $grantedCount++;
+            } elseif ($st === 'already_used') {
+                $alreadyUsedCount++;
+            } else {
+                $errorCount++;
+            }
+
+            $dev = $item['device_name'] ?? 'Móvil';
+            if (!isset($devicesMap[$dev])) {
+                $devicesMap[$dev] = [
+                    'name' => $dev,
+                    'total' => 0,
+                    'granted' => 0,
+                    'already_used' => 0,
+                    'errors' => 0,
+                ];
+            }
+            $devicesMap[$dev]['total']++;
+            if ($st === 'granted') $devicesMap[$dev]['granted']++;
+            elseif ($st === 'already_used') $devicesMap[$dev]['already_used']++;
+            else $devicesMap[$dev]['errors']++;
+        }
+
+        return response()->json([
+            'success' => true,
+            'logs' => $logs,
+            'stats' => [
+                'total' => $total,
+                'granted_count' => $grantedCount,
+                'already_used_count' => $alreadyUsedCount,
+                'error_count' => $errorCount,
+                'devices_count' => count($devicesMap),
+            ],
+            'devices' => array_values($devicesMap),
+        ]);
+    }
+
+    /**
+     * Limpia o reinicia el historial de escaneos de dispositivos para este evento.
+     */
+    public function clearDeviceScanLogs(Request $request, Event $event): JsonResponse
+    {
+        $cacheKey = "vivego_scan_history_logs_evt_{$event->id}";
+        Cache::forget($cacheKey);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Historial de escaneos de dispositivos vaciado exitosamente.',
         ]);
     }
 }
