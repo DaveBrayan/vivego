@@ -385,8 +385,6 @@
 </head>
 <body>
 
-    <!-- HEADER MÓVIL FIJO -->
-    <header class="mobile-header">
     <!-- OVERLAY DE BLOQUEO DE DISPOSITIVO YA VINCULADO -->
     <div id="deviceLockOverlay" style="display: none; position: fixed; inset: 0; z-index: 999999; background: #0A0A10; padding: 2rem 1.5rem; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
         <div style="width: 76px; height: 76px; border-radius: 22px; background: rgba(239, 68, 68, 0.15); border: 2px solid #EF4444; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin-bottom: 1.25rem; box-shadow: 0 0 30px rgba(239, 68, 68, 0.35);">
@@ -413,22 +411,21 @@
 
     <!-- HEADER MÓVIL FIJO -->
     <header class="mobile-header">
-        <div class="brand-pill" style="align-items: flex-start; gap: 0.65rem;">
-            <span class="brand-dot" style="margin-top: 5px;"></span>
-            <div>
-                <strong style="font-size: 0.95rem; display: block; line-height: 1.1;">Vive Go Scanner</strong>
-                <small style="color: #94A3B8; font-size: 0.7rem; display: block; margin-top: 0.1rem;">Control de Acceso en Vivo</small>
-                
-                <!-- Nombre del dispositivo ubicado debajo de "Control de Acceso en Vivo" -->
-                <div style="margin-top: 0.35rem; display: inline-flex; align-items: center; background: rgba(0, 240, 255, 0.08); border: 1.5px solid rgba(0, 240, 255, 0.45); border-radius: 8px; padding: 0.15rem 0.5rem; gap: 0.35rem;" title="Nombre de este dispositivo / puerta (editable)">
-                    <span style="font-size: 0.75rem;">📱</span>
-                    <input type="text" id="mobileDeviceName" placeholder="Nombre dispositivo..." style="background: transparent; border: none; color: #00F0FF; font-size: 0.78rem; font-weight: 800; width: 140px; outline: none;">
+        <div class="brand-pill" style="width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+                <span class="brand-dot" style="flex-shrink: 0;"></span>
+                <div>
+                    <strong style="font-size: 0.95rem; display: block; line-height: 1.1; color: #FFFFFF; font-weight: 900;">Vive Go Scanner</strong>
+                    <small style="color: #94A3B8; font-size: 0.7rem; display: block; margin-top: 0.15rem;">Control de Acceso en Vivo</small>
                 </div>
             </div>
-        </div>
 
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <a href="{{ route('web.attendees') }}" style="color: #94A3B8; text-decoration: none; font-size: 1.25rem; padding: 0.4rem 0.55rem; background: rgba(255,255,255,0.06); border-radius: 10px; line-height: 1; border: 1px solid rgba(255,255,255,0.1);" title="Salir de Scanner">✕</a>
+            <!-- Badge fijo no editable con el nombre del dispositivo asignado -->
+            <div style="display: inline-flex; align-items: center; background: rgba(0, 240, 255, 0.09); border: 1px solid rgba(0, 240, 255, 0.4); border-radius: 8px; padding: 0.28rem 0.65rem; gap: 0.35rem; max-width: 50%;" title="Terminal / Dispositivo Asignado">
+                <span style="font-size: 0.8rem; line-height: 1; flex-shrink: 0;">📱</span>
+                <strong id="mobileDeviceNameLabel" style="color: #00F0FF; font-size: 0.78rem; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Móvil</strong>
+                <input type="hidden" id="mobileDeviceName" value="Móvil">
+            </div>
         </div>
     </header>
 
@@ -636,16 +633,11 @@
             const devInput = document.getElementById('mobileDeviceName');
             if (devInput) {
                 devInput.value = devName;
-                
-                const onNameChange = function() {
-                    const val = devInput.value.trim() || 'Móvil';
-                    localStorage.setItem(`vivego_dev_name_evt_${eventId}`, val);
-                    localStorage.setItem('vivego_scanner_device_name', val);
-                    updateHistoryDeviceLabel(val);
-                };
+            }
 
-                devInput.addEventListener('input', onNameChange);
-                devInput.addEventListener('change', onNameChange);
+            const devLabel = document.getElementById('mobileDeviceNameLabel');
+            if (devLabel) {
+                devLabel.textContent = devName;
             }
 
             updateHistoryDeviceLabel(devName);
