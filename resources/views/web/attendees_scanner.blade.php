@@ -464,14 +464,24 @@
                 <!-- COLUMNA 2: VISUALIZADOR DE QR & ENLACE HASHED -->
                 <div style="background: rgba(0, 240, 255, 0.03); border: 1.5px solid rgba(0, 240, 255, 0.25); border-radius: 20px; padding: 1.35rem; display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: space-between;">
                     
-                    <div style="width: 100%; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.85rem;">
-                        <div style="text-align: left;">
-                            <span style="font-size: 0.7rem; font-weight: 800; color: #00F0FF; text-transform: uppercase; letter-spacing: 0.5px; display: block;">Terminal Seleccionado</span>
-                            <strong id="activeDeviceTitle" style="font-size: 1.05rem; color: #FFFFFF; font-weight: 900;">Móvil 1 - Puerta Principal</strong>
+                    <div style="width: 100%; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.85rem; gap: 0.6rem;">
+                        <div style="text-align: left; flex: 1;">
+                            <span style="font-size: 0.7rem; font-weight: 800; color: #00F0FF; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0.25rem;">
+                                Nombre del Terminal (Modificable en Vivo)
+                            </span>
+                            <div style="display: flex; align-items: center; gap: 0.4rem; background: #14141E; border: 1.5px solid rgba(0, 240, 255, 0.4); border-radius: 10px; padding: 0.35rem 0.65rem;">
+                                <span style="font-size: 0.85rem;">📱</span>
+                                <input type="text" id="activeDeviceNameInput" oninput="handleActiveDeviceRename(this.value)" placeholder="Nombre del terminal..." style="background: transparent; border: none; color: #FFFFFF; font-size: 0.92rem; font-weight: 800; width: 100%; outline: none;">
+                            </div>
                         </div>
-                        <span id="activeDeviceHashBadge" style="background: rgba(0,240,255,0.12); border: 1px solid rgba(0,240,255,0.3); color: #00F0FF; font-family: monospace; font-size: 0.75rem; font-weight: 800; padding: 0.25rem 0.6rem; border-radius: 8px;">
-                            HASH: -
-                        </span>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem;">
+                            <span id="activeDeviceHashBadge" style="background: rgba(0,240,255,0.12); border: 1px solid rgba(0,240,255,0.3); color: #00F0FF; font-family: monospace; font-size: 0.75rem; font-weight: 800; padding: 0.25rem 0.6rem; border-radius: 8px;">
+                                HASH: -
+                            </span>
+                            <span id="activeDeviceClaimBadge" style="font-size: 0.68rem; font-weight: 800; color: #94A3B8; padding: 0.15rem 0.5rem; border-radius: 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);">
+                                ⚪ Sin conectar
+                            </span>
+                        </div>
                     </div>
 
                     <!-- Tarjeta Blanca con QR de Alta Definición -->
@@ -486,13 +496,17 @@
 
                     <!-- Botones de Acción para Compartir -->
                     <div style="width: 100%; display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
-                        <button type="button" onclick="copyActiveDeviceUrl(this)" style="flex: 1; min-width: 130px; background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; border: none; font-weight: 900; font-size: 0.82rem; padding: 0.65rem 0.9rem; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(0,240,255,0.35);">
+                        <button type="button" onclick="copyActiveDeviceUrl(this)" style="flex: 1; min-width: 120px; background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; border: none; font-weight: 900; font-size: 0.82rem; padding: 0.65rem 0.9rem; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(0,240,255,0.35);">
                             <span>📋</span>
                             <span class="btn-copy-txt">Copiar Enlace</span>
                         </button>
-                        <button type="button" onclick="shareActiveDeviceWa()" style="flex: 1; min-width: 130px; background: rgba(37, 211, 102, 0.15); color: #25D366; border: 1px solid rgba(37, 211, 102, 0.35); font-weight: 800; font-size: 0.82rem; padding: 0.65rem 0.9rem; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                        <button type="button" onclick="shareActiveDeviceWa()" style="flex: 1; min-width: 120px; background: rgba(37, 211, 102, 0.15); color: #25D366; border: 1px solid rgba(37, 211, 102, 0.35); font-weight: 800; font-size: 0.82rem; padding: 0.65rem 0.9rem; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
                             <span>💬</span>
                             <span>WhatsApp</span>
+                        </button>
+                        <button type="button" onclick="releaseActiveDevice()" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.35); font-weight: 800; font-size: 0.82rem; padding: 0.65rem 0.9rem; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;" title="Liberar vinculación para abrir en otro celular">
+                            <span>🔓</span>
+                            <span>Liberar</span>
                         </button>
                         <a id="activeDeviceDirectLink" href="#" target="_blank" style="background: rgba(255,255,255,0.06); color: #FFFFFF; border: 1px solid rgba(255,255,255,0.18); font-weight: 800; font-size: 0.82rem; padding: 0.65rem 0.9rem; border-radius: 10px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
                             <span>🚀</span>
@@ -502,7 +516,7 @@
 
                     <div style="margin-top: 0.85rem; padding: 0.6rem 0.85rem; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px dashed rgba(255,255,255,0.12); width: 100%;">
                         <p style="margin: 0; font-size: 0.72rem; color: #94A3B8; line-height: 1.35;">
-                            📸 <strong>Instrucciones:</strong> Apunta la cámara del celular a este código QR para abrir el scanner. El dispositivo se conectará identificado automáticamente como <strong style="color: #FFFFFF;" id="activeDeviceInstructionName">-</strong>.
+                            📸 <strong>Instrucciones:</strong> Apunta la cámara del celular a este código QR. Cada terminal es <strong>exclusivo 1-a-1</strong>; para conectar otro celular genera un nuevo dispositivo o pulsa <em>Liberar</em>.
                         </p>
                     </div>
                 </div>
@@ -619,6 +633,7 @@
             scannerDevices.forEach((dev) => {
                 const isActive = dev.id === activeDeviceId;
                 const card = document.createElement('div');
+                card.id = `deviceCard_${dev.id}`;
                 card.style.cssText = `
                     background: ${isActive ? 'rgba(0, 240, 255, 0.12)' : 'rgba(255, 255, 255, 0.03)'};
                     border: 1.5px solid ${isActive ? '#00F0FF' : 'rgba(255, 255, 255, 0.09)'};
@@ -636,12 +651,15 @@
                     <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0;">
                         <span style="font-size: 1.25rem;">📱</span>
                         <div style="min-width: 0;">
-                            <strong style="font-size: 0.88rem; color: #FFFFFF; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            <strong class="device-card-name" style="font-size: 0.88rem; color: #FFFFFF; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                 ${dev.name}
                             </strong>
-                            <span style="font-family: monospace; font-size: 0.72rem; color: ${isActive ? '#00F0FF' : '#94A3B8'}; font-weight: 700;">
-                                ${dev.hash || 'VGDEV'}
-                            </span>
+                            <div style="display: flex; align-items: center; gap: 0.4rem; margin-top: 0.15rem;">
+                                <span style="font-family: monospace; font-size: 0.72rem; color: ${isActive ? '#00F0FF' : '#94A3B8'}; font-weight: 700;">
+                                    ${dev.hash || 'VGDEV'}
+                                </span>
+                                <span class="device-status-pill" style="font-size: 0.68rem; font-weight: 700; color: #94A3B8;">⚪ Disponible</span>
+                            </div>
                         </div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.4rem;">
@@ -706,19 +724,137 @@
             const url = getDeviceScannerUrl(dev);
             const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=8&data=${encodeURIComponent(url)}`;
 
-            const titleEl = document.getElementById('activeDeviceTitle');
+            const nameInput = document.getElementById('activeDeviceNameInput');
             const hashBadge = document.getElementById('activeDeviceHashBadge');
             const qrImg = document.getElementById('activeDeviceQrImg');
             const urlInput = document.getElementById('activeDeviceUrlInput');
             const directLink = document.getElementById('activeDeviceDirectLink');
-            const instName = document.getElementById('activeDeviceInstructionName');
 
-            if (titleEl) titleEl.textContent = dev.name;
+            if (nameInput) nameInput.value = dev.name;
             if (hashBadge) hashBadge.textContent = `HASH: ${dev.hash || 'VGDEV'}`;
             if (qrImg) qrImg.src = qrApiUrl;
             if (urlInput) urlInput.value = url;
             if (directLink) directLink.href = url;
-            if (instName) instName.textContent = dev.name;
+
+            checkDevicesClaimStatus();
+        }
+
+        function handleActiveDeviceRename(newName) {
+            const dev = scannerDevices.find(d => d.id === activeDeviceId);
+            if (!dev) return;
+
+            dev.name = newName.trim() || 'Móvil';
+            saveScannerDevices();
+
+            const url = getDeviceScannerUrl(dev);
+            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=8&data=${encodeURIComponent(url)}`;
+
+            const qrImg = document.getElementById('activeDeviceQrImg');
+            const urlInput = document.getElementById('activeDeviceUrlInput');
+            const directLink = document.getElementById('activeDeviceDirectLink');
+
+            if (qrImg) qrImg.src = qrApiUrl;
+            if (urlInput) urlInput.value = url;
+            if (directLink) directLink.href = url;
+
+            // Actualizar el nombre en la tarjeta de la lista izquierda
+            const cardName = document.querySelector(`#deviceCard_${dev.id} .device-card-name`);
+            if (cardName) cardName.textContent = dev.name;
+        }
+
+        function releaseActiveDevice() {
+            const dev = scannerDevices.find(d => d.id === activeDeviceId);
+            if (!dev) return;
+
+            const token = dev.token || dev.hash;
+            const releaseUrl = "{{ route('web.attendees.release_device', $event->id) }}";
+
+            fetch(releaseUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({
+                    device_token: token
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: `✓ Vinculación de "${dev.name}" liberada`,
+                    text: 'Ya puedes escanear este QR desde otro celular',
+                    showConfirmButton: false,
+                    timer: 2500,
+                    background: '#14141E',
+                    color: '#FFFFFF'
+                });
+                checkDevicesClaimStatus();
+            })
+            .catch(err => console.error(err));
+        }
+
+        function checkDevicesClaimStatus() {
+            const statusUrl = "{{ route('web.attendees.devices_status', $event->id) }}";
+            const tokens = scannerDevices.map(d => d.token || d.hash);
+
+            fetch(statusUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({
+                    tokens: tokens
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.statuses) {
+                    const activeDev = scannerDevices.find(d => d.id === activeDeviceId);
+                    const activeToken = activeDev ? (activeDev.token || activeDev.hash) : null;
+                    const claimBadge = document.getElementById('activeDeviceClaimBadge');
+
+                    if (activeToken && data.statuses[activeToken]) {
+                        const st = data.statuses[activeToken];
+                        if (claimBadge) {
+                            if (st.claimed) {
+                                claimBadge.innerHTML = '🟢 Conectado (1 celular)';
+                                claimBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+                                claimBadge.style.color = '#10B981';
+                                claimBadge.style.borderColor = 'rgba(16, 185, 129, 0.35)';
+                            } else {
+                                claimBadge.innerHTML = '⚪ Disponible';
+                                claimBadge.style.background = 'rgba(255, 255, 255, 0.06)';
+                                claimBadge.style.color = '#94A3B8';
+                                claimBadge.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                            }
+                        }
+                    }
+
+                    // Actualizar indicadores en la lista
+                    scannerDevices.forEach(d => {
+                        const tok = d.token || d.hash;
+                        const st = data.statuses[tok];
+                        const pill = document.querySelector(`#deviceCard_${d.id} .device-status-pill`);
+                        if (pill) {
+                            if (st && st.claimed) {
+                                pill.textContent = '🟢 Activo';
+                                pill.style.color = '#10B981';
+                            } else {
+                                pill.textContent = '⚪ Disponible';
+                                pill.style.color = '#94A3B8';
+                            }
+                        }
+                    });
+                }
+            })
+            .catch(err => {});
         }
 
         function deleteScannerDevice(id) {

@@ -11,6 +11,7 @@ use App\Models\TicketSale;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class AttendeeController extends Controller
@@ -779,5 +780,104 @@ class AttendeeController extends Controller
                 );
             }
         }
+    }
+
+    /**
+     * Vincula y bloquea exclusivamente un dispositivo/sesión para un código QR/token.
+     */
+    public function claimDeviceSession(Request $request, Event $event): JsonResponse
+    {
+        $validated = $request->validate([
+            'device_token' => 'required|string',
+            'session_uuid' => 'required|string',
+            'device_name' => 'nullable|string',
+        ]);
+
+        $token = trim($validated['device_token']);
+        $uuid = trim($validated['session_uuid']);
+        $name = trim($validated['device_name'] ?? 'Móvil Scanner');
+
+        $cacheKey = "vg_device_claim_{$event->id}_{$token}";
+        $claim = Cache::get($cacheKey);
+
+        if ($claim && is_array($claim)) {
+            // Si la sesión guardada es de OTRO celular o navegador
+            if ($claim['session_uuid'] !== $uuid) {
+                $lastSeen = isset($claim['last_seen']) ? Carbon::parse($claim['last_seen']) : null;
+                // Si estuvo activo recientemente (menos de 12 horas)
+                if ($lastSeen && $lastSeen->diffInHours(now()) < 12) {
+                    return response()->json([
+                        'success' => false,
+                        'status' => 'already_claimed',
+                        'message' => "Este código QR de terminal ya está siendo utilizado por otro dispositivo ({$claim['device_name']}).",
+                        'claimed_by' => $claim['device_name'],
+                        'claimed_at' => $claim['claimed_at'] ?? null,
+                    ], 409);
+                }
+            }
+        }
+
+        // Registrar o actualizar reclamo exclusivo
+        $claimData = [
+            'session_uuid' => $uuid,
+            'device_name' => $name,
+            'claimed_at' => ($claim && $claim['session_uuid'] === $uuid && isset($claim['claimed_at'])) ? $claim['claimed_at'] : now()->format('d/m/Y h:i A'),
+            'last_seen' => now()->toDateTimeString(),
+        ];
+        Cache::put($cacheKey, $claimData, now()->addHours(24));
+
+        return response()->json([
+            'success' => true,
+            'status' => 'claimed',
+            'message' => 'Dispositivo vinculado exclusivamente con éxito.',
+            'claim' => $claimData,
+        ]);
+    }
+
+    /**
+     * Libera la vinculación de un dispositivo/token para permitir escanearlo en otro celular.
+     */
+    public function releaseDeviceSession(Request $request, Event $event): JsonResponse
+    {
+        $token = trim($request->input('device_token') ?? '');
+        if ($token) {
+            $cacheKey = "vg_device_claim_{$event->id}_{$token}";
+            Cache::forget($cacheKey);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Vinculación de dispositivo liberada correctamente.',
+        ]);
+    }
+
+    /**
+     * Consulta el estado de vinculación de una lista de tokens de dispositivos.
+     */
+    public function getDevicesStatus(Request $request, Event $event): JsonResponse
+    {
+        $tokens = $request->input('tokens', []);
+        $statuses = [];
+
+        if (is_array($tokens)) {
+            foreach ($tokens as $tok) {
+                $tok = trim((string) $tok);
+                if (!$tok) continue;
+                $cacheKey = "vg_device_claim_{$event->id}_{$tok}";
+                $claim = Cache::get($cacheKey);
+                $statuses[$tok] = $claim ? [
+                    'claimed' => true,
+                    'device_name' => $claim['device_name'] ?? 'Móvil',
+                    'claimed_at' => $claim['claimed_at'] ?? '',
+                ] : [
+                    'claimed' => false,
+                ];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'statuses' => $statuses,
+        ]);
     }
 }

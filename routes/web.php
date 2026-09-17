@@ -57,6 +57,9 @@ Route::get('/libro-de-reclamaciones/constancia/{code}', [ClaimBookController::cl
 // Terminal Móvil de Control de Acceso & Scanner QR
 Route::get('/scanner/{event}', [AttendeeController::class, 'mobileScanner'])->name('web.scanner.direct');
 Route::post('/scanner/{event}/validar-qr', [AttendeeController::class, 'verifyQr'])->name('web.scanner.verify_qr');
+Route::post('/scanner/{event}/claim-device', [AttendeeController::class, 'claimDeviceSession'])->name('web.scanner.claim_device');
+Route::post('/scanner/{event}/release-device', [AttendeeController::class, 'releaseDeviceSession'])->name('web.scanner.release_device');
+Route::post('/scanner/{event}/devices-status', [AttendeeController::class, 'getDevicesStatus'])->name('web.scanner.devices_status');
 Route::post('/scanner/{event}/anular-escaneo/{ticket}', [AttendeeController::class, 'resetCheckin'])->name('web.scanner.reset_checkin');
 Route::delete('/scanner/{event}/anular-escaneo/{ticket}', [AttendeeController::class, 'resetCheckin'])->name('web.scanner.destroy_checkin');
 Route::get('/scanner/{event}/checkins-feed', [AttendeeController::class, 'checkinsFeed'])->name('web.scanner.checkins_feed');
@@ -129,6 +132,9 @@ Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group
     Route::get('/admin/asistentes/{event}/checkins-feed', [AttendeeController::class, 'checkinsFeed'])->name('web.attendees.checkins_feed');
     Route::get('/admin/asistentes/{event}/feed', [AttendeeController::class, 'checkinsFeed'])->name('web.attendees.feed');
     Route::post('/admin/asistentes/{event}/validar-qr', [AttendeeController::class, 'verifyQr'])->name('web.attendees.verify_qr');
+    Route::post('/admin/asistentes/{event}/claim-device', [AttendeeController::class, 'claimDeviceSession'])->name('web.attendees.claim_device');
+    Route::post('/admin/asistentes/{event}/release-device', [AttendeeController::class, 'releaseDeviceSession'])->name('web.attendees.release_device');
+    Route::post('/admin/asistentes/{event}/devices-status', [AttendeeController::class, 'getDevicesStatus'])->name('web.attendees.devices_status');
     Route::post('/admin/asistentes/{event}/anular-escaneo/{ticket}', [AttendeeController::class, 'resetCheckin'])->name('web.attendees.reset_checkin');
     Route::delete('/admin/asistentes/{event}/anular-escaneo/{ticket}', [AttendeeController::class, 'resetCheckin'])->name('web.attendees.destroy_checkin');
 

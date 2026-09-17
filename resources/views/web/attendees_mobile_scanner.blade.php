@@ -387,20 +387,48 @@
 
     <!-- HEADER MÓVIL FIJO -->
     <header class="mobile-header">
-        <div class="brand-pill">
-            <span class="brand-dot"></span>
+    <!-- OVERLAY DE BLOQUEO DE DISPOSITIVO YA VINCULADO -->
+    <div id="deviceLockOverlay" style="display: none; position: fixed; inset: 0; z-index: 999999; background: #0A0A10; padding: 2rem 1.5rem; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+        <div style="width: 76px; height: 76px; border-radius: 22px; background: rgba(239, 68, 68, 0.15); border: 2px solid #EF4444; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin-bottom: 1.25rem; box-shadow: 0 0 30px rgba(239, 68, 68, 0.35);">
+            🔒
+        </div>
+        <h2 style="font-size: 1.35rem; font-weight: 900; color: #FFFFFF; margin-bottom: 0.5rem; text-transform: uppercase;">
+            Dispositivo Ya en Uso
+        </h2>
+        <p style="color: #EF4444; font-weight: 800; font-size: 0.95rem; margin-bottom: 0.5rem;" id="lockClaimedByName">
+            Este código QR ya fue activado en otro celular.
+        </p>
+        <p style="color: #94A3B8; font-size: 0.82rem; line-height: 1.5; max-width: 380px; margin: 0 auto 1.5rem auto;">
+            Por seguridad, cada celular de control debe tener su propio código QR individual. Por favor genera un nuevo dispositivo desde el panel web de ViveGo o libera el código anterior.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem; width: 100%; max-width: 320px;">
+            <button type="button" onclick="checkDeviceClaim(true)" style="background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; font-weight: 900; padding: 0.85rem; border: none; border-radius: 12px; font-size: 0.9rem; cursor: pointer; box-shadow: 0 4px 15px rgba(0,240,255,0.3);">
+                🔄 Reintentar Conexión
+            </button>
+            <a href="{{ route('web.attendees') }}" style="background: rgba(255,255,255,0.08); color: #FFFFFF; text-decoration: none; padding: 0.85rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700;">
+                Ir a Asistentes
+            </a>
+        </div>
+    </div>
+
+    <!-- HEADER MÓVIL FIJO -->
+    <header class="mobile-header">
+        <div class="brand-pill" style="align-items: flex-start; gap: 0.65rem;">
+            <span class="brand-dot" style="margin-top: 5px;"></span>
             <div>
                 <strong style="font-size: 0.95rem; display: block; line-height: 1.1;">Vive Go Scanner</strong>
-                <small style="color: #94A3B8; font-size: 0.7rem;">Control de Acceso en Vivo</small>
+                <small style="color: #94A3B8; font-size: 0.7rem; display: block; margin-top: 0.1rem;">Control de Acceso en Vivo</small>
+                
+                <!-- Nombre del dispositivo ubicado debajo de "Control de Acceso en Vivo" -->
+                <div style="margin-top: 0.35rem; display: inline-flex; align-items: center; background: rgba(0, 240, 255, 0.08); border: 1.5px solid rgba(0, 240, 255, 0.45); border-radius: 8px; padding: 0.15rem 0.5rem; gap: 0.35rem;" title="Nombre de este dispositivo / puerta (editable)">
+                    <span style="font-size: 0.75rem;">📱</span>
+                    <input type="text" id="mobileDeviceName" placeholder="Nombre dispositivo..." style="background: transparent; border: none; color: #00F0FF; font-size: 0.78rem; font-weight: 800; width: 140px; outline: none;">
+                </div>
             </div>
         </div>
 
         <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <div style="display: flex; align-items: center; background: rgba(255,255,255,0.08); border: 1.5px solid rgba(0, 240, 255, 0.45); border-radius: 10px; padding: 0.2rem 0.55rem; gap: 0.35rem;" title="Nombre de este dispositivo / puerta (editable)">
-                <span style="font-size: 0.85rem;">📱</span>
-                <input type="text" id="mobileDeviceName" placeholder="Puerta / Móvil" style="background: transparent; border: none; color: #FFFFFF; font-size: 0.82rem; font-weight: 800; width: 110px; outline: none;">
-            </div>
-            <a href="{{ route('web.attendees') }}" style="color: #94A3B8; text-decoration: none; font-size: 1.2rem; padding: 0.3rem;" title="Salir de Scanner">✕</a>
+            <a href="{{ route('web.attendees') }}" style="color: #94A3B8; text-decoration: none; font-size: 1.25rem; padding: 0.4rem 0.55rem; background: rgba(255,255,255,0.06); border-radius: 10px; line-height: 1; border: 1px solid rgba(255,255,255,0.1);" title="Salir de Scanner">✕</a>
         </div>
     </header>
 
@@ -647,14 +675,97 @@
         }
 
         // =========================================================================
-        // SISTEMA DE HISTORIAL DE ESCANEOS (LOCAL A ESTE DISPOSITIVO)
+        // SISTEMA DE DISPOSITIVO 1-A-1 & HISTORIAL EXCLUSIVO DE ESTE TERMINAL
         // =========================================================================
-        const STORAGE_HISTORY_KEY = `vivego_scan_history_evt_${eventId}`;
+        const claimUrl = "{{ route('web.scanner.claim_device', $event->id) }}";
+
+        function getSessionUuid() {
+            let uuid = localStorage.getItem('vivego_terminal_session_uuid');
+            if (!uuid) {
+                uuid = 'sess_' + Date.now() + '_' + Math.random().toString(36).substring(2, 12);
+                localStorage.setItem('vivego_terminal_session_uuid', uuid);
+            }
+            return uuid;
+        }
+
+        function getDeviceToken() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let tok = urlParams.get('token') || urlParams.get('hash');
+            if (tok && tok.trim()) {
+                localStorage.setItem(`vivego_dev_token_evt_${eventId}`, tok.trim());
+                return tok.trim();
+            }
+            tok = localStorage.getItem(`vivego_dev_token_evt_${eventId}`);
+            if (!tok) {
+                tok = 'DEVTOK_' + (getActiveDeviceName().toUpperCase().replace(/[^A-Z0-9]/g, '_'));
+                localStorage.setItem(`vivego_dev_token_evt_${eventId}`, tok);
+            }
+            return tok;
+        }
+
+        function getDeviceStorageKey() {
+            const dev = getActiveDeviceName();
+            const token = getDeviceToken();
+            const clean = (dev + '_' + token).toLowerCase().replace(/[^a-z0-9]/g, '_');
+            return `vivego_scan_history_evt_${eventId}_${clean}`;
+        }
+
+        function checkDeviceClaim(isRetry = false) {
+            const token = getDeviceToken();
+            const sessionUuid = getSessionUuid();
+            const devName = getActiveDeviceName();
+
+            fetch(claimUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({
+                    device_token: token,
+                    session_uuid: sessionUuid,
+                    device_name: devName
+                })
+            })
+            .then(res => res.json().then(data => ({ status: res.status, data: data })))
+            .then(({ status, data }) => {
+                const overlay = document.getElementById('deviceLockOverlay');
+                const lockMsg = document.getElementById('lockClaimedByName');
+
+                if (status === 409 || data.status === 'already_claimed') {
+                    // Bloquear terminal si ya fue activado por otro celular
+                    if (overlay) overlay.style.display = 'flex';
+                    if (lockMsg) lockMsg.textContent = `Este código QR ya fue activado por otro celular (${data.claimed_by || 'Terminal'}).`;
+                    stopMobileCamera();
+                } else {
+                    // Reclamo exitoso
+                    if (overlay) overlay.style.display = 'none';
+                    if (isRetry) {
+                        startMobileCamera();
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'success',
+                            title: '✓ Dispositivo conectado exclusivamente',
+                            showConfirmButton: false,
+                            timer: 2000,
+                            background: '#14141E',
+                            color: '#FFFFFF'
+                        });
+                    }
+                }
+            })
+            .catch(err => {
+                console.warn('Check device claim error:', err);
+            });
+        }
 
         function loadLocalScanHistory() {
             let stored = [];
             try {
-                const raw = localStorage.getItem(STORAGE_HISTORY_KEY);
+                const key = getDeviceStorageKey();
+                const raw = localStorage.getItem(key);
                 if (raw) stored = JSON.parse(raw);
             } catch (e) {
                 stored = [];
@@ -666,11 +777,11 @@
 
         function saveLocalScanHistory() {
             try {
-                // Guardar máximo los últimos 150 registros para optimizar almacenamiento
+                const key = getDeviceStorageKey();
                 const capped = scanHistory.slice(0, 150);
-                localStorage.setItem(STORAGE_HISTORY_KEY, JSON.stringify(capped));
+                localStorage.setItem(key, JSON.stringify(capped));
             } catch (e) {
-                console.warn('No se pudo guardar historial en localStorage:', e);
+                console.warn('No se pudo guardar historial:', e);
             }
             updateHistoryBadges();
         }
@@ -691,7 +802,7 @@
                 buyer_dni: item.buyer_dni || '',
                 checked_in_at: item.checked_in_at || timeStr,
                 checked_in_date: dateStr,
-                scanned_by: item.scanned_by || (document.getElementById('mobileDeviceName')?.value || 'Móvil'),
+                scanned_by: item.scanned_by || getActiveDeviceName(),
                 message: item.message || '',
                 timestamp: Date.now()
             };
@@ -1335,6 +1446,9 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Inicializar nombre del dispositivo (URL o LocalStorage)
             initDeviceName();
+
+            // Verificar vinculación exclusiva 1-a-1 de este dispositivo
+            checkDeviceClaim();
 
             // Cargar Historial Local exclusivo de este dispositivo
             loadLocalScanHistory();
