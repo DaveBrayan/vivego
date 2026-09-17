@@ -883,17 +883,36 @@
                                             </div>
                                         </td>
                                         <td>
+                                            @php
+                                                $tData = is_array($sale->tickets_data) ? $sale->tickets_data : json_decode($sale->tickets_data ?? '[]', true);
+                                                $buyerName = $sale->buyer_name ?: ($tData['buyer_name'] ?? ($tData['customer_name'] ?? ($sale->customer_name ?? 'Público General')));
+                                                $buyerDni = $sale->buyer_dni ?: ($tData['buyer_dni'] ?? ($tData['dni'] ?? null));
+                                                $buyerEmail = $sale->buyer_email ?? ($tData['buyer_email'] ?? ($tData['customer_email'] ?? ($tData['email'] ?? ($sale->customer_email ?? null))));
+                                                $buyerPhone = $sale->buyer_phone ?? ($tData['buyer_phone'] ?? ($tData['customer_phone'] ?? ($tData['phone'] ?? ($sale->customer_phone ?? null))));
+                                                $firstLetter = strtoupper(mb_substr(trim($buyerName ?: 'P'), 0, 1, 'UTF-8'));
+                                            @endphp
                                             <div style="display: flex; align-items: center; gap: 0.6rem;">
-                                                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255, 85, 0, 0.15); color: var(--color-primary-orange); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.85rem; border: 1px solid rgba(255,85,0,0.3);">
-                                                    {{ strtoupper(substr($sale->customer_name ?: 'C', 0, 1)) }}
+                                                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255, 85, 0, 0.15); color: var(--color-primary-orange); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.85rem; border: 1px solid rgba(255,85,0,0.3); flex-shrink: 0;">
+                                                    {{ $firstLetter }}
                                                 </div>
-                                                <div>
-                                                    <strong style="color: #FFFFFF; font-size: 0.9rem; display: block;">
-                                                        {{ $sale->customer_name ?: 'Cliente Taquilla' }}
+                                                <div style="min-width: 0;">
+                                                    <strong style="color: #FFFFFF; font-size: 0.9rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $buyerName }}">
+                                                        {{ $buyerName }}
                                                     </strong>
-                                                    <small style="color: #94A3B8; font-size: 0.75rem;">
-                                                        {{ $sale->customer_email ?: 'Sin correo' }} · {{ $sale->customer_phone ?: 'Sin teléfono' }}
-                                                    </small>
+                                                    <div style="font-size: 0.75rem; color: #94A3B8; display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                                                        @if(!empty($buyerDni))
+                                                            <span style="background: rgba(255, 255, 255, 0.06); padding: 0.1rem 0.35rem; border-radius: 4px; font-family: monospace;">DNI: {{ $buyerDni }}</span>
+                                                        @endif
+                                                        @if(!empty($buyerEmail))
+                                                            <span title="{{ $buyerEmail }}">✉️ {{ $buyerEmail }}</span>
+                                                        @endif
+                                                        @if(!empty($buyerPhone))
+                                                            <span>📱 {{ $buyerPhone }}</span>
+                                                        @endif
+                                                        @if(empty($buyerDni) && empty($buyerEmail) && empty($buyerPhone))
+                                                            <span style="color: #64748B;">Taquilla Directa</span>
+                                                        @endif
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
@@ -4973,6 +4992,17 @@
                             </button>
                         `;
 
+                        const bName = data.sale.buyer_name || 'Público General';
+                        const bDni = data.sale.buyer_dni || '';
+                        const bEmail = data.sale.buyer_email || '';
+                        const bPhone = data.sale.buyer_phone || '';
+                        const firstL = (bName.trim()[0] || 'P').toUpperCase();
+                        let subInfo = '';
+                        if (bDni) subInfo += `<span style="background: rgba(255, 255, 255, 0.06); padding: 0.1rem 0.35rem; border-radius: 4px; font-family: monospace;">DNI: ${bDni}</span> `;
+                        if (bEmail) subInfo += `<span>✉️ ${bEmail}</span> `;
+                        if (bPhone) subInfo += `<span>📱 ${bPhone}</span>`;
+                        if (!subInfo) subInfo = '<span style="color: #64748B;">Taquilla Directa</span>';
+
                         newRow.innerHTML = `
                             <td>
                                 <div>
@@ -4985,9 +5015,18 @@
                                 </div>
                             </td>
                             <td>
-                                <div>
-                                    <strong style="color: #FFFFFF; font-size: 0.925rem; display: block;">${data.sale.buyer_name}</strong>
-                                    <small style="color: #94A3B8; font-size: 0.775rem;">DNI: ${data.sale.buyer_dni}</small>
+                                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                    <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255, 85, 0, 0.15); color: var(--color-primary-orange); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.85rem; border: 1px solid rgba(255,85,0,0.3); flex-shrink: 0;">
+                                        ${firstL}
+                                    </div>
+                                    <div style="min-width: 0;">
+                                        <strong style="color: #FFFFFF; font-size: 0.9rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${bName}">
+                                            ${bName}
+                                        </strong>
+                                        <div style="font-size: 0.75rem; color: #94A3B8; display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                                            ${subInfo}
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
                             <td>
@@ -5357,6 +5396,17 @@
                             ? `<span class="dash-badge-custom badge-cyan" style="font-size: 0.75rem; background: rgba(0, 240, 255, 0.15); color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.35); font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;"><span>🌐</span> <span>Cortesía Web</span></span>`
                             : `<span class="dash-badge-custom badge-green" style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.35); font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;"><span>🎁</span> <span>Cortesía Adm</span></span>`;
 
+                        const bName = data.sale.buyer_name || 'Público General';
+                        const bDni = data.sale.buyer_dni || '';
+                        const bEmail = data.sale.buyer_email || '';
+                        const bPhone = data.sale.buyer_phone || '';
+                        const firstL = (bName.trim()[0] || 'P').toUpperCase();
+                        let subInfo = '';
+                        if (bDni) subInfo += `<span style="background: rgba(255, 255, 255, 0.06); padding: 0.1rem 0.35rem; border-radius: 4px; font-family: monospace;">DNI: ${bDni}</span> `;
+                        if (bEmail) subInfo += `<span>✉️ ${bEmail}</span> `;
+                        if (bPhone) subInfo += `<span>📱 ${bPhone}</span>`;
+                        if (!subInfo) subInfo = '<span style="color: #64748B;">Taquilla Directa</span>';
+
                         newRow.innerHTML = `
                             <td>
                                 <div>
@@ -5369,9 +5419,18 @@
                                 </div>
                             </td>
                             <td>
-                                <div>
-                                    <strong style="color: #FFFFFF; font-size: 0.925rem; display: block;">${data.sale.buyer_name}</strong>
-                                    <small style="color: #94A3B8; font-size: 0.775rem;">DNI: ${data.sale.buyer_dni}</small>
+                                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                    <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255, 85, 0, 0.15); color: var(--color-primary-orange); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.85rem; border: 1px solid rgba(255,85,0,0.3); flex-shrink: 0;">
+                                        ${firstL}
+                                    </div>
+                                    <div style="min-width: 0;">
+                                        <strong style="color: #FFFFFF; font-size: 0.9rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${bName}">
+                                            ${bName}
+                                        </strong>
+                                        <div style="font-size: 0.75rem; color: #94A3B8; display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                                            ${subInfo}
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
                             <td>
