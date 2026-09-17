@@ -4273,20 +4273,26 @@
             let ticketsList = [];
 
             // 1. Si la venta ya tiene event_tickets cargados con su zone_name (ej: "Butacas Numeradas (A1)")
-            if (sale.event_tickets && Array.isArray(sale.event_tickets) && sale.event_tickets.length > 0) {
-                sale.event_tickets.forEach((et, i) => {
-                    ticketsList.push({
-                        ticket_code: et.ticket_code || `TK-${sale.receipt_number}-${i + 1}`,
-                        ticket_number: et.ticket_number || (i + 1),
-                        zone: et.zone_name || sale.zone_name,
-                        price: et.unit_price || sale.unit_price,
-                        is_courtesy: isCourtesy,
-                        validation_hash: et.validation_hash || null,
-                        qr_payload: et.qr_payload || null
-                    });
-                });
-            } else if (sale.eventTickets && Array.isArray(sale.eventTickets) && sale.eventTickets.length > 0) {
-                sale.eventTickets.forEach((et, i) => {
+            let rawEventTickets = sale.event_tickets || sale.eventTickets || [];
+            if (Array.isArray(rawEventTickets) && rawEventTickets.length > 0) {
+                // Deduplicar si hay registros duplicados por número/código de boleto o tipo
+                const seenCodes = new Set();
+                const uniqueTickets = [];
+                const maxQty = parseInt(sale.quantity || 1, 10);
+                
+                for (const et of rawEventTickets) {
+                    const codeKey = (et.ticket_code || et.ticket_number || '').toString().trim();
+                    if (codeKey && seenCodes.has(codeKey)) {
+                        continue; // Evitar duplicar el mismo correlativo de entrada
+                    }
+                    if (codeKey) seenCodes.add(codeKey);
+                    uniqueTickets.push(et);
+                    if (maxQty > 0 && uniqueTickets.length >= maxQty) {
+                        break; // No exceder la cantidad oficial comprada en la venta
+                    }
+                }
+
+                uniqueTickets.forEach((et, i) => {
                     ticketsList.push({
                         ticket_code: et.ticket_code || `TK-${sale.receipt_number}-${i + 1}`,
                         ticket_number: et.ticket_number || (i + 1),

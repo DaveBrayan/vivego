@@ -216,36 +216,41 @@
                         @endforeach
                     </div>
 
-                    <!-- Sección Cupón Promocional Exclusiva para Móvil (Arriba de Total a Pagar) -->
-                    <div class="mobile-coupon-section-box" style="margin-top: 1.15rem; background: #F8FAFC; border: 1.5px dashed #CBD5E1; border-radius: 12px; padding: 0.85rem;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.45rem;">
+                    <!-- Sección Cupón Promocional Exclusiva para Móvil (Plegado por defecto) -->
+                    <div class="mobile-coupon-section-box" style="margin-top: 1.15rem; background: #F8FAFC; border: 1.5px dashed #CBD5E1; border-radius: 14px; padding: 0.75rem 0.85rem; transition: all 0.2s ease;">
+                        <div onclick="toggleCouponCollapse('mobile')" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none;">
                             <span style="font-size: 0.825rem; font-weight: 800; color: #1E293B; display: flex; align-items: center; gap: 0.35rem;">
                                 <span>🎟️</span> ¿Tienes un cupón de descuento?
                             </span>
+                            <span id="mobileCouponToggleIcon" style="font-size: 0.75rem; color: #0284C7; font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem; transition: transform 0.2s ease;">
+                                <span>Ingresar</span> <span id="mobileCouponArrowIcon" style="display: inline-block; transition: transform 0.2s ease; font-size: 0.7rem;">▼</span>
+                            </span>
                         </div>
                         
-                        <div id="mobileCouponInputContainer" style="display: flex; gap: 0.45rem;">
-                            <input type="text" id="mobileCheckoutCouponInput" placeholder="Ingresa código..." oninput="this.value = this.value.toUpperCase().replace(/\s+/g, '')" style="flex: 1; min-width: 0; padding: 0.5rem 0.75rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.85rem; font-family: monospace; font-weight: 800; text-transform: uppercase; color: #0F172A; outline: none; background: #FFFFFF;">
-                            <button type="button" id="btnApplyMobileCoupon" onclick="applyCouponCode('mobile')" style="background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; font-weight: 900; font-size: 0.85rem; border: none; padding: 0 0.95rem; border-radius: 10px; cursor: pointer; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,240,255,0.25);">
-                                Aplicar
-                            </button>
-                        </div>
-
-                        <!-- Badge de Cupón Aplicado en Móvil -->
-                        <div id="mobileCouponAppliedBadge" style="display: none; align-items: center; justify-content: space-between; background: rgba(16, 185, 129, 0.12); border: 1.5px solid #10B981; border-radius: 10px; padding: 0.55rem 0.75rem; margin-top: 0.45rem;">
-                            <div style="display: flex; align-items: center; gap: 0.45rem; min-width: 0;">
-                                <span style="font-size: 1.1rem;">🎟️</span>
-                                <div style="min-width: 0;">
-                                    <strong id="mobileAppliedCouponCodeText" style="font-size: 0.85rem; color: #065F46; font-family: monospace; display: block;">CUPÓN</strong>
-                                    <span id="mobileAppliedCouponDiscountText" style="font-size: 0.75rem; color: #047857; display: block; font-weight: 700;">-S/ 0.00</span>
-                                </div>
+                        <div id="mobileCouponCollapseBody" style="display: none; margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px dashed #CBD5E1;">
+                            <div id="mobileCouponInputContainer" style="display: flex; gap: 0.45rem;">
+                                <input type="text" id="mobileCheckoutCouponInput" placeholder="INGRESA CÓDIGO..." oninput="this.value = this.value.toUpperCase().replace(/\s+/g, '')" style="flex: 1; min-width: 0; padding: 0.5rem 0.75rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.85rem; font-family: monospace; font-weight: 800; text-transform: uppercase; color: #0F172A; outline: none; background: #FFFFFF;">
+                                <button type="button" id="btnApplyMobileCoupon" onclick="applyCouponCode('mobile')" style="background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; font-weight: 900; font-size: 0.85rem; border: none; padding: 0 0.95rem; border-radius: 10px; cursor: pointer; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,240,255,0.25);">
+                                    Aplicar
+                                </button>
                             </div>
-                            <button type="button" onclick="removeAppliedCoupon()" title="Remover cupón" style="background: none; border: none; color: #EF4444; font-weight: 800; font-size: 0.8rem; cursor: pointer; padding: 0.2rem 0.35rem; flex-shrink: 0;">
-                                ✕ Quitar
-                            </button>
+
+                            <!-- Badge de Cupón Aplicado en Móvil -->
+                            <div id="mobileCouponAppliedBadge" style="display: none; align-items: center; justify-content: space-between; background: rgba(16, 185, 129, 0.12); border: 1.5px solid #10B981; border-radius: 10px; padding: 0.55rem 0.75rem; margin-top: 0.45rem;">
+                                <div style="display: flex; align-items: center; gap: 0.45rem; min-width: 0;">
+                                    <span style="font-size: 1.1rem;">🎟️</span>
+                                    <div style="min-width: 0;">
+                                        <strong id="mobileAppliedCouponCodeText" style="font-size: 0.85rem; color: #065F46; font-family: monospace; display: block;">CUPÓN</strong>
+                                        <span id="mobileAppliedCouponDiscountText" style="font-size: 0.75rem; color: #047857; display: block; font-weight: 700;">-S/ 0.00</span>
+                                    </div>
+                                </div>
+                                <button type="button" onclick="removeAppliedCoupon()" title="Remover cupón" style="background: none; border: none; color: #EF4444; font-weight: 800; font-size: 0.8rem; cursor: pointer; padding: 0.2rem 0.35rem; flex-shrink: 0;">
+                                    ✕ Quitar
+                                </button>
+                            </div>
+                            
+                            <div id="mobileCouponMessageFeedback" style="display: none; font-size: 0.775rem; font-weight: 700; margin-top: 0.4rem;"></div>
                         </div>
-                        
-                        <div id="mobileCouponMessageFeedback" style="display: none; font-size: 0.775rem; font-weight: 700; margin-top: 0.4rem;"></div>
                     </div>
 
                     <!-- Desglose de Descuentos en Móvil si aplica Campaña o Cupón -->
@@ -612,36 +617,41 @@
                             </div>
                         </div>
 
-                        <!-- Sección Cupón Promocional Interactiva -->
-                        <div class="coupon-section-box" style="margin-bottom: 1.25rem; background: #F8FAFC; border: 1.5px dashed #CBD5E1; border-radius: 14px; padding: 0.95rem;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <!-- Sección Cupón Promocional Interactiva (Plegado por defecto) -->
+                        <div class="coupon-section-box" style="margin-bottom: 1.25rem; background: #F8FAFC; border: 1.5px dashed #CBD5E1; border-radius: 14px; padding: 0.85rem 0.95rem; transition: all 0.2s ease;">
+                            <div onclick="toggleCouponCollapse('desktop')" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none;">
                                 <span style="font-size: 0.825rem; font-weight: 800; color: #1E293B; display: flex; align-items: center; gap: 0.35rem;">
                                     <span>🎟️</span> ¿Tienes un cupón de descuento?
                                 </span>
+                                <span id="couponToggleIcon" style="font-size: 0.75rem; color: #0284C7; font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem; transition: transform 0.2s ease;">
+                                    <span>Ingresar</span> <span id="couponArrowIcon" style="display: inline-block; transition: transform 0.2s ease; font-size: 0.7rem;">▼</span>
+                                </span>
                             </div>
                             
-                            <div id="couponInputContainer" style="display: flex; gap: 0.5rem;">
-                                <input type="text" id="checkoutCouponInput" placeholder="Ingresa código..." oninput="this.value = this.value.toUpperCase().replace(/\s+/g, '')" style="flex: 1; padding: 0.55rem 0.8rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.85rem; font-family: monospace; font-weight: 800; text-transform: uppercase; color: #0F172A; outline: none; background: #FFFFFF;">
-                                <button type="button" id="btnApplyCheckoutCoupon" onclick="applyCouponCode()" style="background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; font-weight: 900; font-size: 0.85rem; border: none; padding: 0 0.95rem; border-radius: 10px; cursor: pointer; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,240,255,0.3);">
-                                    Aplicar
-                                </button>
-                            </div>
-
-                            <!-- Badge de Cupón Aplicado -->
-                            <div id="couponAppliedBadge" style="display: none; align-items: center; justify-content: space-between; background: rgba(16, 185, 129, 0.12); border: 1.5px solid #10B981; border-radius: 10px; padding: 0.55rem 0.8rem; margin-top: 0.5rem;">
-                                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <span style="font-size: 1.1rem;">🎟️</span>
-                                    <div>
-                                        <strong id="appliedCouponCodeText" style="font-size: 0.85rem; color: #065F46; font-family: monospace;">CUPÓN</strong>
-                                        <span id="appliedCouponDiscountText" style="font-size: 0.75rem; color: #047857; display: block; font-weight: 700;">-S/ 0.00</span>
-                                    </div>
+                            <div id="couponCollapseBody" style="display: none; margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px dashed #CBD5E1;">
+                                <div id="couponInputContainer" style="display: flex; gap: 0.5rem;">
+                                    <input type="text" id="checkoutCouponInput" placeholder="INGRESA CÓDIGO..." oninput="this.value = this.value.toUpperCase().replace(/\s+/g, '')" style="flex: 1; padding: 0.55rem 0.8rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.85rem; font-family: monospace; font-weight: 800; text-transform: uppercase; color: #0F172A; outline: none; background: #FFFFFF;">
+                                    <button type="button" id="btnApplyCheckoutCoupon" onclick="applyCouponCode('desktop')" style="background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; font-weight: 900; font-size: 0.85rem; border: none; padding: 0 0.95rem; border-radius: 10px; cursor: pointer; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,240,255,0.3);">
+                                        Aplicar
+                                    </button>
                                 </div>
-                                <button type="button" onclick="removeAppliedCoupon()" title="Remover cupón" style="background: none; border: none; color: #EF4444; font-weight: 800; font-size: 0.8rem; cursor: pointer; padding: 0.2rem 0.4rem;">
-                                    ✕ Quitar
-                                </button>
+
+                                <!-- Badge de Cupón Aplicado -->
+                                <div id="couponAppliedBadge" style="display: none; align-items: center; justify-content: space-between; background: rgba(16, 185, 129, 0.12); border: 1.5px solid #10B981; border-radius: 10px; padding: 0.55rem 0.8rem; margin-top: 0.5rem;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <span style="font-size: 1.1rem;">🎟️</span>
+                                        <div>
+                                            <strong id="appliedCouponCodeText" style="font-size: 0.85rem; color: #065F46; font-family: monospace;">CUPÓN</strong>
+                                            <span id="appliedCouponDiscountText" style="font-size: 0.75rem; color: #047857; display: block; font-weight: 700;">-S/ 0.00</span>
+                                        </div>
+                                    </div>
+                                    <button type="button" onclick="removeAppliedCoupon()" title="Remover cupón" style="background: none; border: none; color: #EF4444; font-weight: 800; font-size: 0.8rem; cursor: pointer; padding: 0.2rem 0.4rem;">
+                                        ✕ Quitar
+                                    </button>
+                                </div>
+                                
+                                <div id="couponMessageFeedback" style="display: none; font-size: 0.775rem; font-weight: 700; margin-top: 0.4rem;"></div>
                             </div>
-                            
-                            <div id="couponMessageFeedback" style="display: none; font-size: 0.775rem; font-weight: 700; margin-top: 0.4rem;"></div>
                         </div>
 
                         <!-- Desglose Financiero -->
@@ -1605,6 +1615,28 @@
         }
 
         // =========================================================================
+        // PLEGADO / DESPLEGADO DINÁMICO DE CUPÓN (DESKTOP Y MÓVIL)
+        // =========================================================================
+        function toggleCouponCollapse(source = 'desktop') {
+            const isMob = (source === 'mobile');
+            const body = document.getElementById(isMob ? 'mobileCouponCollapseBody' : 'couponCollapseBody');
+            const arrow = document.getElementById(isMob ? 'mobileCouponArrowIcon' : 'couponArrowIcon');
+            const input = document.getElementById(isMob ? 'mobileCheckoutCouponInput' : 'checkoutCouponInput');
+            
+            if (!body) return;
+            
+            const isHidden = (body.style.display === 'none' || !body.style.display);
+            if (isHidden) {
+                body.style.display = 'block';
+                if (arrow) arrow.style.transform = 'rotate(180deg)';
+                if (input) setTimeout(() => input.focus(), 60);
+            } else {
+                body.style.display = 'none';
+                if (arrow) arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        // =========================================================================
         // APLICAR & REMOVER CUPÓN DE DESCUENTO (Sincronizado Desktop + Móvil)
         // =========================================================================
         function applyCouponCode(source = 'desktop') {
@@ -1662,6 +1694,17 @@
                 if (d.valid) {
                     appliedCoupon = d;
                     
+                    // Asegurar que el cuerpo esté visible para mostrar el badge
+                    const deskBody = document.getElementById('couponCollapseBody');
+                    if (deskBody) deskBody.style.display = 'block';
+                    const deskArrow = document.getElementById('couponArrowIcon');
+                    if (deskArrow) deskArrow.style.transform = 'rotate(180deg)';
+
+                    const mobBody = document.getElementById('mobileCouponCollapseBody');
+                    if (mobBody) mobBody.style.display = 'block';
+                    const mobArrow = document.getElementById('mobileCouponArrowIcon');
+                    if (mobArrow) mobArrow.style.transform = 'rotate(180deg)';
+
                     // Sincronizar Desktop
                     const deskContainer = document.getElementById('couponInputContainer');
                     if (deskContainer) deskContainer.style.display = 'none';

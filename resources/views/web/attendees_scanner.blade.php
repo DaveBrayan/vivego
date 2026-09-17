@@ -1285,6 +1285,19 @@
         document.addEventListener('DOMContentLoaded', function () {
             loadScannerDevices();
 
+            // Buscador en tabla de ingresos
+            const tableFilter = document.getElementById('tableFilterInput');
+            if (tableFilter) {
+                tableFilter.addEventListener('input', function() {
+                    const q = this.value.toLowerCase().trim();
+                    const rows = document.querySelectorAll('#checkinsTableBody .checkin-row-item');
+                    rows.forEach(r => {
+                        const text = r.textContent.toLowerCase();
+                        r.style.display = text.includes(q) ? '' : 'none';
+                    });
+                });
+            }
+
             // Theme Toggle
             const themeBtn = document.getElementById('btnThemeToggle');
             const themeIcon = document.getElementById('themeToggleIcon');
