@@ -144,6 +144,7 @@ class AttendeeController extends Controller
                     $otherDate = $otherEvent->event_date instanceof \DateTimeInterface 
                         ? $otherEvent->event_date->format('d/m/Y') 
                         : (is_string($otherEvent->event_date) ? substr($otherEvent->event_date, 0, 10) : '');
+                }
                 $otherHash = $otherTicket->validation_hash ?: ('VG' . strtoupper(substr(md5($otherTicket->id), 0, 8)));
                 $this->recordScanLog($event->id, [
                     'id' => 'LOG_' . uniqid(),
