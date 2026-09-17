@@ -396,7 +396,10 @@
         </div>
 
         <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <input type="text" id="mobileDeviceName" value="Móvil 1" title="Nombre de este dispositivo / puerta" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #FFFFFF; font-size: 0.75rem; padding: 0.3rem 0.6rem; width: 84px; font-weight: 700; text-align: center;">
+            <div style="display: flex; align-items: center; background: rgba(255,255,255,0.08); border: 1.5px solid rgba(0, 240, 255, 0.45); border-radius: 10px; padding: 0.2rem 0.55rem; gap: 0.35rem;" title="Nombre de este dispositivo / puerta (editable)">
+                <span style="font-size: 0.85rem;">📱</span>
+                <input type="text" id="mobileDeviceName" placeholder="Puerta / Móvil" style="background: transparent; border: none; color: #FFFFFF; font-size: 0.82rem; font-weight: 800; width: 110px; outline: none;">
+            </div>
             <a href="{{ route('web.attendees') }}" style="color: #94A3B8; text-decoration: none; font-size: 1.2rem; padding: 0.3rem;" title="Salir de Scanner">✕</a>
         </div>
     </header>
@@ -513,16 +516,25 @@
         </div>
 
         <!-- ========================================================================= -->
-        <!-- PESTAÑA 2: HISTORIAL DE ESCANEOS (VÁLIDOS, DUPLICADOS Y ERRORES) -->
+        <!-- PESTAÑA 2: HISTORIAL DE ESCANEOS (DE ESTE DISPOSITIVO) -->
         <!-- ========================================================================= -->
         <div id="tabContentHistory" style="display: none; flex-direction: column; gap: 0.75rem;">
+            <!-- SUB-ENCABEZADO DE DISPOSITIVO ACTIVO -->
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.2rem 0.2rem 0.5rem 0.2rem; border-bottom: 1px dashed rgba(255,255,255,0.12);">
+                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                    <span style="font-size: 0.95rem;">📱</span>
+                    <span id="historyDeviceTitleText" style="font-size: 0.85rem; font-weight: 800; color: #00F0FF;">Terminal Activo: Móvil</span>
+                </div>
+                <small style="color: #94A3B8; font-size: 0.72rem; background: rgba(255,255,255,0.05); padding: 0.15rem 0.5rem; border-radius: 6px;">Historial de este dispositivo</small>
+            </div>
+
             <!-- BUSCADOR RÁPIDO EN HISTORIAL -->
             <div style="display: flex; gap: 0.45rem;">
                 <div style="flex: 1; position: relative; display: flex; align-items: center;">
                     <span style="position: absolute; left: 12px; font-size: 0.9rem; color: #94A3B8;">🔍</span>
                     <input type="text" id="historySearchInput" placeholder="Buscar por código, titular, DNI..." oninput="filterScanHistory()" style="width: 100%; background: #14141E; border: 1.5px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 0.65rem 0.75rem 0.65rem 2.2rem; color: #FFFFFF; font-size: 0.85rem; font-weight: 700; outline: none;">
                 </div>
-                <button type="button" onclick="clearLocalScanHistory()" title="Limpiar historial local" style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); color: #EF4444; border-radius: 12px; padding: 0 0.85rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
+                <button type="button" onclick="clearLocalScanHistory()" title="Limpiar historial de este dispositivo" style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); color: #EF4444; border-radius: 12px; padding: 0 0.85rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
                     <span>🗑️</span>
                 </button>
             </div>
@@ -562,40 +574,53 @@
         let audioCtx = null;
         let toastHideTimer = null;
 
-        // Historial completo de escaneos (Válidos, Duplicados, Errores e Inválidos)
+        // Historial exclusivo de escaneos realizados en este dispositivo (Válidos, Duplicados, Errores e Inválidos)
         let scanHistory = [];
         let currentHistoryFilter = 'all';
 
-        @php
-            $mappedCheckins = $recentCheckins->map(function($c) {
-                return [
-                    'id' => $c->id,
-                    'status' => 'granted',
-                    'ticket_code' => $c->ticket_code,
-                    'validation_hash' => $c->validation_hash ?: ('VG' . strtoupper(substr(md5($c->id), 0, 8))),
-                    'zone_name' => $c->zone_name,
-                    'buyer_name' => $c->buyer_name,
-                    'buyer_dni' => $c->buyer_dni,
-                    'checked_in_at' => $c->checked_in_at ? $c->checked_in_at->format('h:i:s A') : '-',
-                    'checked_in_date' => $c->checked_in_at ? $c->checked_in_at->format('d/m/Y') : '',
-                    'scanned_by' => $c->scanned_by ?: 'Puerta Principal',
-                    'message' => 'Acceso permitido y validado en puerta.',
-                    'timestamp' => $c->checked_in_at ? $c->checked_in_at->timestamp * 1000 : null,
-                ];
-            });
-        @endphp
+        function getActiveDeviceName() {
+            const devInput = document.getElementById('mobileDeviceName');
+            return (devInput && devInput.value.trim()) ? devInput.value.trim() : 'Móvil';
+        }
 
-        // Cargar registros iniciales validados enviados desde el backend
-        const serverRecentCheckins = {!! json_encode($mappedCheckins) !!};
+        function updateHistoryDeviceLabel(name) {
+            const lbl = document.getElementById('historyDeviceTitleText');
+            if (lbl) {
+                lbl.textContent = `Terminal Activo: ${name || 'Móvil'}`;
+            }
+        }
 
-        // Leer parámetro dev / device desde URL (vinculación de scanner)
-        const urlParams = new URLSearchParams(window.location.search);
-        const paramDev = urlParams.get('dev') || urlParams.get('device');
-        if (paramDev) {
-            document.addEventListener('DOMContentLoaded', () => {
-                const devInput = document.getElementById('mobileDeviceName');
-                if (devInput) devInput.value = paramDev;
-            });
+        function initDeviceName() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const paramDev = urlParams.get('dev') || urlParams.get('device') || urlParams.get('name');
+            
+            let devName = '';
+            if (paramDev && paramDev.trim()) {
+                devName = decodeURIComponent(paramDev.trim());
+                localStorage.setItem(`vivego_dev_name_evt_${eventId}`, devName);
+                localStorage.setItem('vivego_scanner_device_name', devName);
+            } else {
+                devName = localStorage.getItem(`vivego_dev_name_evt_${eventId}`) 
+                          || localStorage.getItem('vivego_scanner_device_name') 
+                          || 'Puerta 1';
+            }
+
+            const devInput = document.getElementById('mobileDeviceName');
+            if (devInput) {
+                devInput.value = devName;
+                
+                const onNameChange = function() {
+                    const val = devInput.value.trim() || 'Móvil';
+                    localStorage.setItem(`vivego_dev_name_evt_${eventId}`, val);
+                    localStorage.setItem('vivego_scanner_device_name', val);
+                    updateHistoryDeviceLabel(val);
+                };
+
+                devInput.addEventListener('input', onNameChange);
+                devInput.addEventListener('change', onNameChange);
+            }
+
+            updateHistoryDeviceLabel(devName);
         }
 
         // =========================================================================
@@ -622,7 +647,7 @@
         }
 
         // =========================================================================
-        // SISTEMA DE HISTORIAL DE ESCANEOS (LOCALSTORAGE + SERVER)
+        // SISTEMA DE HISTORIAL DE ESCANEOS (LOCAL A ESTE DISPOSITIVO)
         // =========================================================================
         const STORAGE_HISTORY_KEY = `vivego_scan_history_evt_${eventId}`;
 
@@ -635,27 +660,7 @@
                 stored = [];
             }
 
-            // Combinar servidor + local sin duplicar IDs de checkin
-            const map = new Map();
-
-            // Primero los guardados en local (que tienen errores, duplicados y timestamps)
-            if (Array.isArray(stored)) {
-                stored.forEach(item => {
-                    if (item && item.key) map.set(item.key, item);
-                });
-            }
-
-            // Añadir registros del servidor si no existen en el mapa
-            if (Array.isArray(serverRecentCheckins)) {
-                serverRecentCheckins.forEach(chk => {
-                    const key = 'srv_' + chk.id;
-                    if (!map.has(key)) {
-                        map.set(key, { ...chk, key: key });
-                    }
-                });
-            }
-
-            scanHistory = Array.from(map.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            scanHistory = Array.isArray(stored) ? stored : [];
             updateHistoryBadges();
         }
 
@@ -919,7 +924,7 @@
             toast.style.opacity = '1';
             toast.className = 'result-top-toast';
 
-            const currentDevName = document.getElementById('mobileDeviceName')?.value || 'Móvil';
+            const currentDevName = getActiveDeviceName();
 
             if (data.status === 'granted') {
                 toast.classList.add('result-granted');
@@ -1084,50 +1089,14 @@
             })
             .then(res => res.json())
             .then(data => {
-                if (data.success) {
-                    if (data.metrics) {
-                        const issuedEl = document.getElementById('mKpiIssued');
-                        const checkedEl = document.getElementById('mKpiChecked');
-                        const rateEl = document.getElementById('mKpiRate');
+                if (data.success && data.metrics) {
+                    const issuedEl = document.getElementById('mKpiIssued');
+                    const checkedEl = document.getElementById('mKpiChecked');
+                    const rateEl = document.getElementById('mKpiRate');
 
-                        if (issuedEl && issuedEl.textContent != data.metrics.tickets_issued) issuedEl.textContent = data.metrics.tickets_issued;
-                        if (checkedEl && checkedEl.textContent != data.metrics.checked_in_count) checkedEl.textContent = data.metrics.checked_in_count;
-                        if (rateEl && rateEl.textContent != `${data.metrics.attendance_rate}%`) rateEl.textContent = `${data.metrics.attendance_rate}%`;
-                    }
-
-                    if (data.new_checkins && data.new_checkins.length > 0) {
-                        let hasNew = false;
-                        data.new_checkins.forEach(chk => {
-                            const key = 'srv_' + chk.id;
-                            const exists = scanHistory.some(s => s.id === chk.id || s.key === key);
-                            if (!exists) {
-                                hasNew = true;
-                                scanHistory.unshift({
-                                    key: key,
-                                    id: chk.id,
-                                    status: 'granted',
-                                    ticket_code: chk.ticket_code,
-                                    validation_hash: chk.validation_hash || ('VG' + String(chk.id).padStart(8, '0')),
-                                    zone_name: chk.zone_name,
-                                    buyer_name: chk.buyer_name,
-                                    buyer_dni: chk.buyer_dni,
-                                    checked_in_at: chk.checked_in_at || '-',
-                                    checked_in_date: new Date().toLocaleDateString(),
-                                    scanned_by: chk.scanned_by || 'Puerta',
-                                    message: 'Ingresó correctamente.',
-                                    timestamp: Date.now()
-                                });
-                            }
-                        });
-
-                        if (hasNew) {
-                            saveLocalScanHistory();
-                            const contHistory = document.getElementById('tabContentHistory');
-                            if (contHistory && contHistory.style.display !== 'none') {
-                                renderScanHistoryList();
-                            }
-                        }
-                    }
+                    if (issuedEl && issuedEl.textContent != data.metrics.tickets_issued) issuedEl.textContent = data.metrics.tickets_issued;
+                    if (checkedEl && checkedEl.textContent != data.metrics.checked_in_count) checkedEl.textContent = data.metrics.checked_in_count;
+                    if (rateEl && rateEl.textContent != `${data.metrics.attendance_rate}%`) rateEl.textContent = `${data.metrics.attendance_rate}%`;
                 }
             })
             .catch(err => console.log(err));
@@ -1364,28 +1333,13 @@
 
         // Auto-activación e inicialización en vivo
         document.addEventListener('DOMContentLoaded', function() {
-            let savedDevName = localStorage.getItem('vivego_scanner_device_name');
-            if (!savedDevName) {
-                const randomDevNum = Math.floor(Math.random() * 5) + 1;
-                savedDevName = 'Móvil ' + randomDevNum;
-                localStorage.setItem('vivego_scanner_device_name', savedDevName);
-            }
+            // Inicializar nombre del dispositivo (URL o LocalStorage)
+            initDeviceName();
 
-            const devInput = document.getElementById('mobileDeviceName');
-            if (devInput) {
-                devInput.value = savedDevName;
-                devInput.addEventListener('change', function() {
-                    const val = this.value.trim();
-                    if (val) {
-                        localStorage.setItem('vivego_scanner_device_name', val);
-                    }
-                });
-            }
-
-            // Cargar Historial Local y de Servidor
+            // Cargar Historial Local exclusivo de este dispositivo
             loadLocalScanHistory();
 
-            // Iniciar sincronización continua cada 3.5 segundos
+            // Iniciar sincronización continua de métricas globales del evento cada 3.5 segundos
             setInterval(syncMobileRealtimeFeed, 3500);
 
             // Iniciar cámara
