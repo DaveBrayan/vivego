@@ -823,6 +823,9 @@
             activeDeviceId = newDev.id;
             renderScannerDevicesList();
             selectScannerDevice(newDev.id);
+            if (typeof loadDeviceLogsData === 'function') {
+                loadDeviceLogsData(false);
+            }
 
             Swal.fire({
                 toast: true,
@@ -882,6 +885,10 @@
             // Actualizar el nombre en la tarjeta de la lista izquierda
             const cardName = document.querySelector(`#deviceCard_${dev.id} .device-card-name`);
             if (cardName) cardName.textContent = dev.name;
+
+            if (typeof loadDeviceLogsData === 'function') {
+                loadDeviceLogsData(false);
+            }
         }
 
         function releaseActiveDevice() {
@@ -1003,6 +1010,9 @@
 
             renderScannerDevicesList();
             selectScannerDevice(activeDeviceId);
+            if (typeof loadDeviceLogsData === 'function') {
+                loadDeviceLogsData(false);
+            }
         }
 
         function copyActiveDeviceUrl(btn) {
@@ -1688,17 +1698,73 @@
                         btnBadge.textContent = `${stats.total || 0}`;
                     }
 
-                    // Actualizar Selector de Terminales
+                    // Actualizar Selector de Terminales (Combinando todos los dispositivos generados + logs)
+                    loadScannerDevices(); // Sincroniza scannerDevices desde localStorage
                     const devSelect = document.getElementById('devLogDeviceSelect');
                     if (devSelect) {
                         const currentVal = devSelect.value;
-                        let selectHtml = '<option value="all">📱 Todos los Terminales</option>';
-                        devices.forEach(d => {
-                            selectHtml += `<option value="${d.name}">📱 ${d.name} (${d.total})</option>`;
+                        const deviceMap = new Map();
+
+                        // 1. Añadir todos los dispositivos configurados por el usuario
+                        if (Array.isArray(scannerDevices)) {
+                            scannerDevices.forEach(d => {
+                                const trimmedName = (d.name || '').trim();
+                                if (trimmedName) {
+                                    deviceMap.set(trimmedName.toLowerCase(), {
+                                        name: trimmedName,
+                                        total: 0
+                                    });
+                                }
+                            });
+                        }
+
+                        // 2. Añadir dispositivos registrados en logs del servidor
+                        if (Array.isArray(devices)) {
+                            devices.forEach(d => {
+                                const trimmedName = (d.name || '').trim();
+                                if (trimmedName) {
+                                    const key = trimmedName.toLowerCase();
+                                    if (!deviceMap.has(key)) {
+                                        deviceMap.set(key, {
+                                            name: trimmedName,
+                                            total: d.total || 0
+                                        });
+                                    }
+                                }
+                            });
+                        }
+
+                        // 3. Añadir cualquier otro terminal que aparezca en rawDeviceLogs
+                        if (Array.isArray(rawDeviceLogs)) {
+                            rawDeviceLogs.forEach(log => {
+                                const devName = (log.device_name || '').trim();
+                                if (devName) {
+                                    const key = devName.toLowerCase();
+                                    if (!deviceMap.has(key)) {
+                                        deviceMap.set(key, {
+                                            name: devName,
+                                            total: 0
+                                        });
+                                    }
+                                }
+                            });
+                        }
+
+                        // 4. Calcular conteo exacto por dispositivo según rawDeviceLogs
+                        deviceMap.forEach((val, key) => {
+                            val.total = rawDeviceLogs.filter(log => (log.device_name || '').trim().toLowerCase() === key).length;
+                        });
+
+                        let selectHtml = `<option value="all">📱 Todos los Terminales (${rawDeviceLogs.length})</option>`;
+                        deviceMap.forEach((val) => {
+                            selectHtml += `<option value="${val.name}">📱 ${val.name} (${val.total})</option>`;
                         });
                         devSelect.innerHTML = selectHtml;
-                        if (currentVal && Array.from(devSelect.options).some(o => o.value === currentVal)) {
-                            devSelect.value = currentVal;
+
+                        // Restaurar selección previa si aún existe
+                        if (currentVal && (currentVal === 'all' || Array.from(deviceMap.values()).some(v => v.name.toLowerCase() === currentVal.toLowerCase()))) {
+                            const matched = Array.from(deviceMap.values()).find(v => v.name.toLowerCase() === currentVal.toLowerCase());
+                            devSelect.value = matched ? matched.name : 'all';
                         }
                     }
 
@@ -1724,9 +1790,13 @@
             const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
             let filtered = rawDeviceLogs.filter(item => {
-                // Filtro por Dispositivo
-                if (selectedDev !== 'all' && (item.device_name || '') !== selectedDev) {
-                    return false;
+                // Filtro por Dispositivo (comparación flexible)
+                if (selectedDev !== 'all') {
+                    const itemDev = (item.device_name || '').trim().toLowerCase();
+                    const filterDev = selectedDev.trim().toLowerCase();
+                    if (itemDev !== filterDev) {
+                        return false;
+                    }
                 }
 
                 // Filtro por Estado
