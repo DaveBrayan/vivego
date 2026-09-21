@@ -316,26 +316,26 @@
                                         ${z.presale_enabled ? 'Preventa Activa' : 'Preventa Inactiva'}
                                     </span>
                                 </div>
-                                <div class="zone-presale-inputs-grid" style="display: grid; grid-template-columns: 1fr 1.2fr 1.5fr 1.5fr 1.2fr; gap: 0.75rem; ${z.presale_enabled ? '' : 'opacity: 0.4; pointer-events: none;'}">
-                                    <div>
+                                <div class="zone-presale-inputs-grid" style="display: grid; grid-template-columns: 1.3fr 1.35fr 1.4fr 1.4fr 1.2fr; gap: 0.85rem; ${z.presale_enabled ? '' : 'opacity: 0.4; pointer-events: none;'}">
+                                    <div style="min-width: 0;">
                                         <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">% DESCUENTO</label>
-                                        <input type="number" class="form-input-custom zone-presale-discount" value="${z.presale_discount || 20}" min="0" max="99" style="font-size: 0.825rem; padding: 0.45rem;" oninput="if(typeof updateZonePresaleCalc==='function') updateZonePresaleCalc(this)">
+                                        <input type="number" class="form-input-custom zone-presale-discount" value="${z.presale_discount || 20}" min="0" max="99" style="font-size: 0.85rem; padding: 0.45rem 0.4rem; text-align: center; width: 100%; box-sizing: border-box;" oninput="if(typeof updateZonePresaleCalc==='function') updateZonePresaleCalc(this, 'discount')">
                                     </div>
-                                    <div>
+                                    <div style="min-width: 0;">
                                         <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">PRECIO PREVENTA (S/)</label>
-                                        <input type="number" step="0.50" class="form-input-custom zone-presale-price" value="${discPrice.toFixed(2)}" min="0" style="font-size: 0.825rem; padding: 0.45rem; color: #38BDF8; font-weight: 800;" readonly>
+                                        <input type="number" step="0.50" class="form-input-custom zone-presale-price" value="${discPrice.toFixed(2)}" min="0" style="font-size: 0.85rem; padding: 0.45rem 0.4rem; text-align: center; color: #38BDF8; font-weight: 800; width: 100%; box-sizing: border-box;" oninput="if(typeof updateZonePresaleCalc==='function') updateZonePresaleCalc(this, 'price')">
                                     </div>
-                                    <div>
+                                    <div style="min-width: 0;">
                                         <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">FECHA INICIO</label>
-                                        <input type="date" class="form-input-custom zone-presale-start" value="${z.presale_start_date || todayStr}" style="font-size: 0.825rem; padding: 0.45rem;">
+                                        <input type="date" class="form-input-custom zone-presale-start" value="${z.presale_start_date || todayStr}" style="font-size: 0.825rem; padding: 0.45rem 0.5rem; width: 100%; box-sizing: border-box;">
                                     </div>
-                                    <div>
+                                    <div style="min-width: 0;">
                                         <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">FECHA FIN (LÍMITE)</label>
-                                        <input type="date" class="form-input-custom zone-presale-end" value="${z.presale_end_date || futureStr}" style="font-size: 0.825rem; padding: 0.45rem;">
+                                        <input type="date" class="form-input-custom zone-presale-end" value="${z.presale_end_date || futureStr}" style="font-size: 0.825rem; padding: 0.45rem 0.5rem; width: 100%; box-sizing: border-box;">
                                     </div>
-                                    <div>
+                                    <div style="min-width: 0;">
                                         <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">STOCK PREVENTA</label>
-                                        <input type="number" class="form-input-custom zone-presale-stock" value="${z.presale_stock || ''}" min="0" style="font-size: 0.825rem; padding: 0.45rem;" placeholder="Hasta agotar">
+                                        <input type="number" class="form-input-custom zone-presale-stock" value="${z.presale_stock || ''}" min="0" style="font-size: 0.825rem; padding: 0.45rem 0.5rem; width: 100%; box-sizing: border-box;" placeholder="Hasta agotar">
                                     </div>
                                 </div>
                             </div>
@@ -370,6 +370,7 @@
                 const presaleRow = row.nextElementSibling;
                 const isPresale = presaleRow?.querySelector('.zone-presale-enabled')?.checked || false;
                 const presaleDisc = parseFloat(presaleRow?.querySelector('.zone-presale-discount')?.value) || 20;
+                const presalePriceVal = parseFloat(presaleRow?.querySelector('.zone-presale-price')?.value);
                 const presaleStart = presaleRow?.querySelector('.zone-presale-start')?.value || null;
                 const presaleEnd = presaleRow?.querySelector('.zone-presale-end')?.value || null;
                 const presaleStock = parseInt(presaleRow?.querySelector('.zone-presale-stock')?.value) || null;
@@ -393,6 +394,7 @@
                     color: existing ? existing.color : defaultColors[idx % defaultColors.length],
                     presale_enabled: isPresale,
                     presale_discount: presaleDisc,
+                    presale_price: !isNaN(presalePriceVal) ? presalePriceVal : (price * (1 - (presaleDisc / 100))),
                     presale_start_date: presaleStart,
                     presale_end_date: presaleEnd,
                     presale_stock: presaleStock,
@@ -436,7 +438,7 @@
                     points: Array.isArray(z.points) ? z.points : [],
                     has_presale: isStage ? false : !!z.presale_enabled,
                     presale_discount: isStage ? 0 : (parseFloat(z.presale_discount) || 0),
-                    presale_price: isStage ? 0 : (z.price ? parseFloat((z.price * (1 - (parseFloat(z.presale_discount) || 0) / 100)).toFixed(2)) : 0),
+                    presale_price: isStage ? 0 : (z.presale_price !== undefined && z.presale_price !== null && !isNaN(parseFloat(z.presale_price)) ? parseFloat(z.presale_price) : (z.price ? parseFloat((z.price * (1 - (parseFloat(z.presale_discount) || 0) / 100)).toFixed(2)) : 0)),
                     presale_start_date: isStage ? null : (z.presale_start_date || null),
                     presale_end_date: isStage ? null : (z.presale_end_date || null),
                     presale_stock: isStage ? null : (parseInt(z.presale_stock) || null),
@@ -1407,7 +1409,7 @@
             this.syncToStandardTable();
         },
 
-        updateSelectedZoneProps: function() {
+        updateSelectedZoneProps: function(source) {
             const z = this.getSelectedZone();
             if (!z) return;
 
@@ -1429,6 +1431,7 @@
                 z.capacity_type = 'Escenario';
                 z.presale_enabled = false;
                 z.presale_discount = 0;
+                z.presale_price = 0;
                 z.seats = [];
             } else {
                 const capTypeEl = document.getElementById('inspectorZoneCapacityType');
@@ -1441,19 +1444,39 @@
                 const presaleCheck = document.getElementById('inspectorZonePresaleEnabled');
                 const isPresale = presaleCheck ? presaleCheck.checked : false;
                 z.presale_enabled = isPresale;
+
                 const discEl = document.getElementById('inspectorZonePresaleDiscount');
-                z.presale_discount = discEl ? (parseFloat(discEl.value) || 0) : 20;
+                const presaleDisp = document.getElementById('inspectorZonePresalePriceDisplay');
+
+                if (source === 'price' && presaleDisp) {
+                    let pPrice = parseFloat(presaleDisp.value);
+                    if (isNaN(pPrice) || pPrice < 0) pPrice = 0;
+                    z.presale_price = parseFloat(pPrice.toFixed(2));
+                    if (z.price > 0) {
+                        let disc = ((z.price - pPrice) / z.price) * 100;
+                        disc = Math.max(0, Math.min(100, disc));
+                        z.presale_discount = parseFloat(disc.toFixed(2));
+                        if (discEl) discEl.value = z.presale_discount;
+                    } else {
+                        z.presale_discount = 0;
+                        if (discEl) discEl.value = 0;
+                    }
+                } else {
+                    let disc = discEl ? (parseFloat(discEl.value) || 0) : 20;
+                    if (disc < 0) disc = 0;
+                    if (disc > 100) disc = 100;
+                    z.presale_discount = disc;
+
+                    const pPrice = Math.max(0, z.price * (1 - (z.presale_discount / 100)));
+                    z.presale_price = parseFloat(pPrice.toFixed(2));
+                    if (presaleDisp) presaleDisp.value = pPrice.toFixed(2);
+                }
 
                 const pStartEl = document.getElementById('inspectorZonePresaleStartDate');
                 z.presale_start_date = pStartEl && pStartEl.value ? pStartEl.value : null;
 
                 const pEndEl = document.getElementById('inspectorZonePresaleEndDate');
                 z.presale_end_date = pEndEl && pEndEl.value ? pEndEl.value : null;
-
-                const pPrice = Math.max(0, z.price * (1 - (z.presale_discount / 100)));
-                z.presale_price = pPrice;
-                const presaleDisp = document.getElementById('inspectorZonePresalePriceDisplay');
-                if (presaleDisp) presaleDisp.value = `S/ ${pPrice.toFixed(2)}`;
 
                 const presaleGrid = document.getElementById('inspectorPresaleGrid');
                 if (presaleGrid) {
@@ -2284,11 +2307,16 @@
                 const presaleCheck = document.getElementById('inspectorZonePresaleEnabled');
                 if (presaleCheck) presaleCheck.checked = isPresale;
                 const discEl = document.getElementById('inspectorZonePresaleDiscount');
-                if (discEl) discEl.value = z.presale_discount || 20;
+                if (discEl) discEl.value = (z.presale_discount !== undefined && z.presale_discount !== null) ? z.presale_discount : 20;
 
-                const pPrice = Math.max(0, (parseFloat(z.price) || 0) * (1 - ((z.presale_discount || 20) / 100)));
+                let pPrice;
+                if (z.presale_price !== undefined && z.presale_price !== null && !isNaN(parseFloat(z.presale_price))) {
+                    pPrice = parseFloat(z.presale_price);
+                } else {
+                    pPrice = Math.max(0, (parseFloat(z.price) || 0) * (1 - ((parseFloat(z.presale_discount) || 20) / 100)));
+                }
                 const presaleDisp = document.getElementById('inspectorZonePresalePriceDisplay');
-                if (presaleDisp) presaleDisp.value = `S/ ${pPrice.toFixed(2)}`;
+                if (presaleDisp) presaleDisp.value = pPrice.toFixed(2);
 
                 const presaleGrid = document.getElementById('inspectorPresaleGrid');
                 if (presaleGrid) {

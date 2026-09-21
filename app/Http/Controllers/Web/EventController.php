@@ -125,14 +125,17 @@ class EventController extends Controller
                 'elements' => $templateModel ? ($templateModel->elements ?? []) : [],
             ];
 
-            $evStatus = $ev->status ?? 'Publicado';
-            $evStatusClass = 'badge-green';
-            if ($evStatus === 'Borrador' || $evStatus === 'draft') {
-                $evStatusClass = 'badge-gray';
-            } elseif ($evStatus === 'Oculto' || $evStatus === 'No Marketplace' || $evStatus === 'unlisted') {
-                $evStatusClass = 'badge-purple';
-            } elseif ($evStatus === 'Agotado') {
-                $evStatusClass = 'badge-red';
+            $isPast = $ev->isPast();
+            $evStatus = $isPast ? 'Finalizado' : ($ev->status ?? 'Publicado');
+            $evStatusClass = $isPast ? 'badge-gray' : 'badge-green';
+            if (!$isPast) {
+                if ($evStatus === 'Borrador' || $evStatus === 'draft') {
+                    $evStatusClass = 'badge-gray';
+                } elseif ($evStatus === 'Oculto' || $evStatus === 'No Marketplace' || $evStatus === 'unlisted') {
+                    $evStatusClass = 'badge-purple';
+                } elseif ($evStatus === 'Agotado') {
+                    $evStatusClass = 'badge-red';
+                }
             }
 
             $events[] = [
@@ -161,6 +164,7 @@ class EventController extends Controller
                 'revenue_formatted' => 'S/ 0.00',
                 'status' => $evStatus,
                 'status_class' => $evStatusClass,
+                'is_past' => $isPast,
                 'sales_type' => $ev->sales_type ?? 'fisica',
                 'template' => $templateData,
                 'zones' => $zones,
@@ -406,10 +410,9 @@ class EventController extends Controller
         // Buscar evento en BD o usar mock si es un ID numérico predeterminado
         $eventModel = Event::with('template')->find($id);
 
-        if (!$eventModel) {
-            $dbEvent = Event::with('template')->where('id', $id)->first();
-            if ($dbEvent) {
-                $eventModel = $dbEvent;
+        if ($eventModel) {
+            if ($eventModel->isPast()) {
+                return redirect()->route('web.events')->with('error', 'El evento ya se encuentra finalizado y no puede ser editado.');
             }
         }
 
@@ -560,6 +563,12 @@ class EventController extends Controller
         ]);
 
         $event = Event::find($id);
+        if ($event && $event->isPast()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este evento ya ha finalizado y sus datos no pueden ser modificados.',
+            ], 422);
+        }
 
         if (!$event) {
             $bannerImage = $this->saveBase64Image($validated['banner_image'] ?? null, 'events', 'event_banner');
@@ -737,6 +746,16 @@ class EventController extends Controller
             return redirect()->back()->with('error', 'No tienes acceso a este evento.');
         }
 
+        if ($event->isPast()) {
+            if (request()->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No es posible eliminar un evento finalizado.',
+                ], 422);
+            }
+            return redirect()->back()->with('error', 'No es posible eliminar un evento finalizado.');
+        }
+
         // Eliminar en cascada todos los boletos, QR generados y ventas del evento
         $event->tickets()->delete();
         $event->sales()->delete();
@@ -750,6 +769,29 @@ class EventController extends Controller
         }
 
         return redirect()->back()->with('success', '¡Evento y sus boletos eliminados de la Base de Datos!');
+    }
+
+    /**
+     * Finaliza manualmente un evento.
+     */
+    public function finalizeEvent(Request $request, Event $event): JsonResponse
+    {
+        $adminId = session('admin_id');
+        $loggedAdmin = $adminId ? \App\Models\Administrator::find($adminId) : null;
+        if ($loggedAdmin && !$loggedAdmin->canAccessEvent($event->id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permisos para gestionar este evento.',
+            ], 403);
+        }
+
+        $event->status = 'Finalizado';
+        $event->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => "El evento \"{$event->title}\" ha sido finalizado con éxito.",
+        ]);
     }
 
     /**

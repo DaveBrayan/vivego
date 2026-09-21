@@ -181,15 +181,37 @@
                                             <small style="color: #94A3B8; font-size: 0.75rem;">{{ $evt['sales_count'] ?? 0 }} transacciones</small>
                                         </td>
                                         <td>
-                                            <span class="dash-badge-custom {{ $evt['status_class'] }}" @if(!empty($evt['is_past'])) style="background: rgba(148, 163, 184, 0.15); color: #94A3B8; border: 1px solid rgba(148, 163, 184, 0.35);" @endif>
-                                                @if(!empty($evt['is_past'])) ⌛ Finalizado @elseif($evt['status'] === 'Publicado') ✓ Publicado @elseif($evt['status'] === 'Agotado') 🚫 Agotado @else ⏳ {{ $evt['status'] }} @endif
-                                            </span>
+                                            @if(!empty($evt['is_past']) || $evt['status'] === 'Finalizado')
+                                                <div style="display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start;">
+                                                    <span class="dash-badge-custom badge-gray" style="background: rgba(148, 163, 184, 0.15); color: #94A3B8; border: 1px solid rgba(148, 163, 184, 0.35); font-weight: 800;">
+                                                        ⌛ Finalizado
+                                                    </span>
+                                                    <small style="color: #64748B; font-size: 0.7rem;">Caja y ventas cerradas</small>
+                                                </div>
+                                            @else
+                                                <div style="display: flex; flex-direction: column; gap: 0.45rem; align-items: flex-start;">
+                                                    <span class="dash-badge-custom {{ $evt['status_class'] }}">
+                                                        @if($evt['status'] === 'Publicado') ✓ Publicado @elseif($evt['status'] === 'Agotado') 🚫 Agotado @else ⏳ {{ $evt['status'] }} @endif
+                                                    </span>
+                                                    <button type="button" class="btn btn-sm btn-finalize-boxoffice" data-id="{{ $evt['id'] }}" data-title="{{ $evt['title'] }}" style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); color: #F87171; font-size: 0.725rem; font-weight: 800; padding: 0.25rem 0.65rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.12)'">
+                                                        <span>⏹️</span>
+                                                        <span>Finalizar Evento</span>
+                                                    </button>
+                                                </div>
+                                            @endif
                                         </td>
                                         <td style="text-align: right;">
-                                            <a href="{{ route('web.box_office.manage', $evt['id']) }}" class="btn btn-primary btn-sm" style="font-weight: 800; text-decoration: none; padding: 0.6rem 1.15rem; display: inline-flex; align-items: center; gap: 0.5rem; border-radius: 12px; box-shadow: 0 4px 14px rgba(255, 85, 0, 0.35);">
-                                                <span>💼</span>
-                                                <span>Gestionar Taquilla</span>
-                                            </a>
+                                            @if(!empty($evt['is_past']) || $evt['status'] === 'Finalizado')
+                                                <a href="{{ route('web.box_office.manage', $evt['id']) }}" class="btn btn-sm" style="font-weight: 800; text-decoration: none; padding: 0.6rem 1.15rem; display: inline-flex; align-items: center; gap: 0.5rem; border-radius: 12px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(59, 130, 246, 0.25)); border: 1.5px solid rgba(99, 102, 241, 0.6); color: #C7D2FE; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.25); transition: all 0.2s ease;">
+                                                    <span>📊</span>
+                                                    <span>Ver Historial y Reportes</span>
+                                                </a>
+                                            @else
+                                                <a href="{{ route('web.box_office.manage', $evt['id']) }}" class="btn btn-primary btn-sm" style="font-weight: 800; text-decoration: none; padding: 0.6rem 1.15rem; display: inline-flex; align-items: center; gap: 0.5rem; border-radius: 12px; box-shadow: 0 4px 14px rgba(255, 85, 0, 0.35);">
+                                                    <span>💼</span>
+                                                    <span>Gestionar Taquilla</span>
+                                                </a>
+                                            @endif
                                         </td>
                                     </tr>
                                 @endforeach
@@ -203,6 +225,7 @@
 @endsection
 
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         function filterBoxOffice(type, btn) {
             document.querySelectorAll('.filter-pill-btn').forEach(b => b.classList.remove('active'));
@@ -220,6 +243,91 @@
         }
 
         document.addEventListener('DOMContentLoaded', function () {
+            // Finalizar evento desde la tabla de Taquilla con confirmación SweetAlert2
+            document.querySelectorAll('.btn-finalize-boxoffice').forEach(btn => {
+                btn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const id = this.getAttribute('data-id');
+                    const title = this.getAttribute('data-title');
+
+                    Swal.fire({
+                        title: '¿Finalizar Evento?',
+                        html: `<div style="text-align: left; font-size: 0.9rem; line-height: 1.5; color: #CBD5E1;">
+                                <p style="margin-bottom: 0.75rem;">¿Estás seguro de finalizar el evento <strong>"${title}"</strong>?</p>
+                                <ul style="margin: 0; padding-left: 1.25rem; color: #FCA5A5; font-size: 0.85rem;">
+                                    <li>Se <strong>cerrará la caja de taquilla POS</strong> y la venta física.</li>
+                                    <li>Se <strong>desactivará la compra y emisión de entradas</strong> (físicas, virtuales y cortesías).</li>
+                                    <li>En <strong>Mis Eventos</strong> quedará bloqueada la edición y eliminación.</li>
+                                </ul>
+                               </div>`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#EF4444',
+                        cancelButtonColor: '#475569',
+                        confirmButtonText: '⏹️ Sí, Finalizar Evento',
+                        cancelButtonText: 'Cancelar',
+                        background: '#14141E',
+                        color: '#FFFFFF'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            Swal.fire({
+                                title: 'Cerrando Taquilla y Evento...',
+                                html: 'Actualizando estado y bloqueando canales de venta...',
+                                allowOutsideClick: false,
+                                didOpen: () => { Swal.showLoading(); },
+                                background: '#14141E',
+                                color: '#FFFFFF'
+                            });
+
+                            fetch(`/admin/taquilla/${id}/finalizar`, {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json'
+                                }
+                            })
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.success) {
+                                    Swal.fire({
+                                        title: '¡Evento Finalizado!',
+                                        text: data.message || 'El evento ha sido finalizado con éxito.',
+                                        icon: 'success',
+                                        confirmButtonColor: '#FF5500',
+                                        confirmButtonText: 'Aceptar',
+                                        background: '#14141E',
+                                        color: '#FFFFFF'
+                                    }).then(() => {
+                                        window.location.reload();
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        title: 'Error',
+                                        text: data.message || 'No se pudo finalizar el evento.',
+                                        icon: 'error',
+                                        confirmButtonColor: '#FF5500',
+                                        background: '#14141E',
+                                        color: '#FFFFFF'
+                                    });
+                                }
+                            })
+                            .catch(err => {
+                                console.error('Error al finalizar evento:', err);
+                                Swal.fire({
+                                    title: 'Error de Red',
+                                    text: 'Ocurrió un error al comunicarse con el servidor.',
+                                    icon: 'error',
+                                    confirmButtonColor: '#FF5500',
+                                    background: '#14141E',
+                                    color: '#FFFFFF'
+                                });
+                            });
+                        }
+                    });
+                });
+            });
+
             // Buscador en tiempo real de la tabla
             const searchInput = document.getElementById('tableFilterInput');
             if (searchInput) {

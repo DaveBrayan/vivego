@@ -686,10 +686,14 @@
                                 @else
                                     <span class="dash-badge-custom badge-cyan" style="font-size: 0.75rem; padding: 0.25rem 0.65rem; color: #00F0FF; border: 1px solid rgba(0,240,255,0.4); background: rgba(0,240,255,0.1);">🌐 Venta Virtual (Online)</span>
                                 @endif
-                                @if($event->isPast())
+                                @if($event->isPast() || $event->status === 'Finalizado')
                                     <span class="dash-badge-custom badge-red" style="font-size: 0.75rem; padding: 0.25rem 0.65rem; background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.4);">⌛ Evento Finalizado (Caja Cerrada)</span>
                                 @else
                                     <span class="dash-badge-custom badge-green" style="font-size: 0.75rem; padding: 0.25rem 0.65rem;">✓ Caja Abierta</span>
+                                    <button type="button" class="btn btn-sm" onclick="finalizeCurrentEventPos()" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #F87171; font-size: 0.75rem; font-weight: 800; padding: 0.2rem 0.65rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;" title="Cerrar caja y finalizar este evento">
+                                        <span>⏹️</span>
+                                        <span>Finalizar Evento</span>
+                                    </button>
                                 @endif
                             </div>
                             <h1 style="font-size: 1.85rem; font-weight: 900; color: #FFFFFF; margin: 0 0 0.45rem 0; line-height: 1.25; letter-spacing: -0.5px; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">
@@ -700,12 +704,12 @@
                                 <span style="background: rgba(255,255,255,0.04); padding: 0.25rem 0.6rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); display: inline-flex; align-items: center; gap: 0.35rem;">⏰ {{ $event->event_time ?? '18:00' }}</span>
                                 <span style="background: rgba(255,255,255,0.04); padding: 0.25rem 0.6rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); display: inline-flex; align-items: center; gap: 0.35rem;">📍 {{ $event->venue_name ?? 'Complejo San Luis' }} ({{ $event->address ?? 'Ayacucho' }})</span>
                             </div>
-                            @if($event->isPast())
+                            @if($event->isPast() || $event->status === 'Finalizado')
                                 <div style="margin-top: 0.65rem; background: rgba(239, 68, 68, 0.12); border: 1.5px solid rgba(239, 68, 68, 0.35); border-radius: 12px; padding: 0.65rem 0.95rem; color: #FCA5A5; font-size: 0.825rem; display: flex; align-items: center; gap: 0.6rem;">
                                     <span style="font-size: 1.3rem;">⌛</span>
                                     <div>
                                         <strong style="color: #EF4444; font-size: 0.875rem;">EVENTO FINALIZADO — TAQUILLA CERRADA:</strong>
-                                        <span> Este evento ya concluyó. Las ventas POS, ventas físicas, cortesías y generación de planchas se encuentran deshabilitadas.</span>
+                                        <span> Este evento ha concluido. Las ventas POS, ventas físicas, cortesías y generación de planchas se encuentran deshabilitadas.</span>
                                     </div>
                                 </div>
                             @endif
@@ -715,34 +719,70 @@
                     <!-- BOTONES PRINCIPALES DE TAQUILLA: COLOCADOS ABAJO -->
                     <!-- Orden solicitado: 1. Venta POS (F1) -> 2. Venta Física (F2) -> 3. Cortesía (F3) -> 4. Generar Plancha -->
                     <div style="display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1.15rem; width: 100%;">
-                        <button type="button" class="btn" onclick="openPosSaleModal('digital')" style="background: linear-gradient(135deg, #FF5500, #EA580C); color: #FFFFFF; font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 20px rgba(255, 85, 0, 0.45); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer; border: none; transition: transform 0.2s ease, box-shadow 0.2s ease;">
-                            <span style="font-size: 1.25rem;">🛒</span>
-                            <span>+ VENTA POS (F1)</span>
-                        </button>
-
-                        <button type="button" class="btn" onclick="openPosSaleModal('fisica')" style="background: linear-gradient(135deg, #F59E0B, #D97706); color: #FFFFFF; font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer; border: none; transition: transform 0.2s ease, box-shadow 0.2s ease;">
-                            <span style="font-size: 1.25rem;">🎟️</span>
-                            <span>+ VENTA FÍSICA (F2)</span>
-                        </button>
-
                         @php
                             $cSettings = is_array($event->courtesy_settings) 
                                 ? $event->courtesy_settings 
                                 : (json_decode($event->courtesy_settings ?? '[]', true) ?? []);
                             $isCourtesyActive = !empty($cSettings['enabled']);
+                            $isEventEnded = ($event->isPast() || $event->status === 'Finalizado');
                         @endphp
-                        @if($isCourtesyActive)
-                            <button type="button" class="btn" onclick="openPosCourtesyModal()" style="background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer; border: none; transition: transform 0.2s ease, box-shadow 0.2s ease;">
-                                <span style="font-size: 1.25rem;">🎁</span>
-                                <span>+ CORTESÍA (F3)</span>
-                            </button>
-                        @endif
 
-                        @if(in_array(($event->sales_type ?? 'fisica'), ['fisica', 'ambos']))
-                            <button type="button" class="btn" onclick="openPlanchaModalCurrentEvent()" style="background: linear-gradient(135deg, #2563EB, #1D4ED8); color: #FFFFFF; font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer; border: none; transition: transform 0.2s ease, box-shadow 0.2s ease;">
-                                <span style="font-size: 1.25rem;">🖨️</span>
-                                <span>+ GENERAR PLANCHA</span>
+                        @if($isEventEnded)
+                            <!-- Botón 1: Venta POS (Desactivado) -->
+                            <button type="button" class="btn" disabled style="background: rgba(255, 85, 0, 0.08); color: #94A3B8; font-size: 0.95rem; font-weight: 800; padding: 0.85rem 1.4rem; border-radius: 14px; border: 1px solid rgba(255, 85, 0, 0.25); cursor: not-allowed; display: inline-flex; align-items: center; gap: 0.55rem; opacity: 0.55;" title="Caja cerrada - Evento finalizado">
+                                <span style="font-size: 1.2rem;">🔒</span>
+                                <span>+ VENTA POS (F1)</span>
                             </button>
+
+                            <!-- Botón 2: Venta Física (Desactivado) -->
+                            <button type="button" class="btn" disabled style="background: rgba(245, 158, 11, 0.08); color: #94A3B8; font-size: 0.95rem; font-weight: 800; padding: 0.85rem 1.4rem; border-radius: 14px; border: 1px solid rgba(245, 158, 11, 0.25); cursor: not-allowed; display: inline-flex; align-items: center; gap: 0.55rem; opacity: 0.55;" title="Caja cerrada - Evento finalizado">
+                                <span style="font-size: 1.2rem;">🔒</span>
+                                <span>+ VENTA FÍSICA (F2)</span>
+                            </button>
+
+                            <!-- Botón 3: Cortesía (Desactivado) -->
+                            @if($isCourtesyActive)
+                                <button type="button" class="btn" disabled style="background: rgba(16, 185, 129, 0.08); color: #94A3B8; font-size: 0.95rem; font-weight: 800; padding: 0.85rem 1.4rem; border-radius: 14px; border: 1px solid rgba(16, 185, 129, 0.25); cursor: not-allowed; display: inline-flex; align-items: center; gap: 0.55rem; opacity: 0.55;" title="Caja cerrada - Evento finalizado">
+                                    <span style="font-size: 1.2rem;">🔒</span>
+                                    <span>+ CORTESÍA (F3)</span>
+                                </button>
+                            @endif
+
+                            <!-- Botón 4: Generar Plancha (Desactivado) -->
+                            @if(in_array(($event->sales_type ?? 'fisica'), ['fisica', 'ambos']))
+                                <button type="button" class="btn" disabled style="background: rgba(37, 99, 235, 0.08); color: #94A3B8; font-size: 0.95rem; font-weight: 800; padding: 0.85rem 1.4rem; border-radius: 14px; border: 1px solid rgba(37, 99, 235, 0.25); cursor: not-allowed; display: inline-flex; align-items: center; gap: 0.55rem; opacity: 0.55;" title="Caja cerrada - Evento finalizado">
+                                    <span style="font-size: 1.2rem;">🔒</span>
+                                    <span>+ GENERAR PLANCHA</span>
+                                </button>
+                            @endif
+                        @else
+                            <!-- Botón 1: Venta POS (Activo) -->
+                            <button type="button" class="btn" onclick="openPosSaleModal('digital')" style="background: linear-gradient(135deg, #FF5500, #EA580C); color: #FFFFFF; font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 20px rgba(255, 85, 0, 0.45); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer; border: none; transition: transform 0.2s ease, box-shadow 0.2s ease;">
+                                <span style="font-size: 1.25rem;">🛒</span>
+                                <span>+ VENTA POS (F1)</span>
+                            </button>
+
+                            <!-- Botón 2: Venta Física (Activo) -->
+                            <button type="button" class="btn" onclick="openPosSaleModal('fisica')" style="background: linear-gradient(135deg, #F59E0B, #D97706); color: #FFFFFF; font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer; border: none; transition: transform 0.2s ease, box-shadow 0.2s ease;">
+                                <span style="font-size: 1.25rem;">🎟️</span>
+                                <span>+ VENTA FÍSICA (F2)</span>
+                            </button>
+
+                            <!-- Botón 3: Cortesía (Activo) -->
+                            @if($isCourtesyActive)
+                                <button type="button" class="btn" onclick="openPosCourtesyModal()" style="background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer; border: none; transition: transform 0.2s ease, box-shadow 0.2s ease;">
+                                    <span style="font-size: 1.25rem;">🎁</span>
+                                    <span>+ CORTESÍA (F3)</span>
+                                </button>
+                            @endif
+
+                            <!-- Botón 4: Generar Plancha (Activo) -->
+                            @if(in_array(($event->sales_type ?? 'fisica'), ['fisica', 'ambos']))
+                                <button type="button" class="btn" onclick="openPlanchaModalCurrentEvent()" style="background: linear-gradient(135deg, #2563EB, #1D4ED8); color: #FFFFFF; font-size: 1rem; font-weight: 800; padding: 0.85rem 1.6rem; border-radius: 14px; box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4); display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer; border: none; transition: transform 0.2s ease, box-shadow 0.2s ease;">
+                                    <span style="font-size: 1.25rem;">🖨️</span>
+                                    <span>+ GENERAR PLANCHA</span>
+                                </button>
+                            @endif
                         @endif
                     </div>
                 </div>
@@ -900,8 +940,8 @@
                             </div>
 
                             <!-- Buscador en tiempo real de ventas -->
-                            <div style="position: relative; min-width: 220px;">
-                                <input type="text" id="salesTableSearch" placeholder="Buscar venta, cliente, zona..." style="width: 100%; background: #1E1E2D; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px; padding: 0.55rem 0.85rem 0.55rem 2.2rem; color: #FFFFFF; font-size: 0.825rem; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--color-primary-orange)'" onblur="this.style.borderColor='rgba(255, 255, 255, 0.12)'">
+                            <div style="position: relative; min-width: 240px;">
+                                <input type="text" id="salesTableSearch" placeholder="Buscar venta, cliente, zona..." oninput="if(window.salesPagination){ window.salesPagination.filterTable(this.value); }" style="width: 100%; background: #1E1E2D; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px; padding: 0.55rem 0.85rem 0.55rem 2.2rem; color: #FFFFFF; font-size: 0.825rem; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--color-primary-orange)'" onblur="this.style.borderColor='rgba(255, 255, 255, 0.12)'">
                                 <span style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); font-size: 0.85rem; color: #64748B; pointer-events: none;">🔍</span>
                             </div>
 
@@ -6210,13 +6250,20 @@
 
                 const searchInput = document.getElementById('salesTableSearch');
                 if (searchInput) {
-                    searchInput.addEventListener('input', (e) => {
-                        this.searchQuery = e.target.value.toLowerCase().trim();
-                        this.currentPage = 1;
-                        this.render();
-                    });
+                    const handleSearch = (e) => {
+                        this.filterTable(e.target.value);
+                    };
+                    searchInput.addEventListener('input', handleSearch);
+                    searchInput.addEventListener('keyup', handleSearch);
+                    searchInput.addEventListener('change', handleSearch);
                 }
 
+                this.render();
+            },
+
+            filterTable: function (query) {
+                this.searchQuery = (query !== undefined ? query : (document.getElementById('salesTableSearch')?.value || '')).toLowerCase().trim();
+                this.currentPage = 1;
                 this.render();
             },
 
@@ -6224,9 +6271,19 @@
                 const rows = Array.from(document.querySelectorAll('#salesTableBody tr.sale-row-item'));
                 if (!this.searchQuery) return rows;
 
+                const normalize = (str) => {
+                    return (str || '')
+                        .toLowerCase()
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .trim();
+                };
+
+                const cleanQuery = normalize(this.searchQuery);
+
                 return rows.filter(row => {
-                    const text = row.innerText.toLowerCase();
-                    return text.includes(this.searchQuery);
+                    const text = normalize(row.textContent || row.innerText || '');
+                    return text.includes(cleanQuery);
                 });
             },
 
@@ -6417,6 +6474,84 @@
                 controlsEl.appendChild(lastBtn);
             }
         };
+
+        function finalizeCurrentEventPos() {
+            Swal.fire({
+                title: '¿Finalizar Evento?',
+                html: `<div style="text-align: left; font-size: 0.9rem; line-height: 1.5; color: #CBD5E1;">
+                        <p style="margin-bottom: 0.75rem;">¿Estás seguro de finalizar el evento <strong>"{{ $event->title }}"</strong>?</p>
+                        <ul style="margin: 0; padding-left: 1.25rem; color: #FCA5A5; font-size: 0.85rem;">
+                            <li>Se <strong>cerrará inmediatamente esta caja de taquilla POS</strong> y la venta física.</li>
+                            <li>Se <strong>desactivará la compra y emisión de entradas</strong> (físicas, virtuales y cortesías).</li>
+                            <li>En <strong>Mis Eventos</strong> quedará bloqueada la edición y eliminación.</li>
+                        </ul>
+                       </div>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#EF4444',
+                cancelButtonColor: '#475569',
+                confirmButtonText: '⏹️ Sí, Finalizar Evento',
+                cancelButtonText: 'Cancelar',
+                background: '#14141E',
+                color: '#FFFFFF'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Cerrando Taquilla y Evento...',
+                        html: 'Actualizando estado y bloqueando canales de venta...',
+                        allowOutsideClick: false,
+                        didOpen: () => { Swal.showLoading(); },
+                        background: '#14141E',
+                        color: '#FFFFFF'
+                    });
+
+                    fetch("{{ route('web.box_office.finalize_event', $event->id) }}", {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                title: '¡Evento Finalizado!',
+                                text: data.message || 'El evento ha sido finalizado con éxito.',
+                                icon: 'success',
+                                confirmButtonColor: '#FF5500',
+                                confirmButtonText: 'Aceptar',
+                                background: '#14141E',
+                                color: '#FFFFFF'
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Error',
+                                text: data.message || 'No se pudo finalizar el evento.',
+                                icon: 'error',
+                                confirmButtonColor: '#FF5500',
+                                background: '#14141E',
+                                color: '#FFFFFF'
+                            });
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Error al finalizar evento:', err);
+                        Swal.fire({
+                            title: 'Error de Red',
+                            text: 'Ocurrió un error al comunicarse con el servidor.',
+                            icon: 'error',
+                            confirmButtonColor: '#FF5500',
+                            background: '#14141E',
+                            color: '#FFFFFF'
+                        });
+                    });
+                }
+            });
+        }
 
         document.addEventListener('DOMContentLoaded', function () {
             // Inicializar paginación estilo DataTable para el registro de ventas

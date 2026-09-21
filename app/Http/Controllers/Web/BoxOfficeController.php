@@ -183,6 +183,30 @@ class BoxOfficeController extends Controller
     }
 
     /**
+     * Finaliza manualmente un evento desde el módulo de Taquilla.
+     */
+    public function finalizeEvent(Request $request, $id): JsonResponse
+    {
+        $adminId = session('admin_id');
+        $loggedAdmin = $adminId ? \App\Models\Administrator::find($adminId) : null;
+        if ($loggedAdmin && !$loggedAdmin->canAccessEvent($id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permisos para gestionar este evento.',
+            ], 403);
+        }
+
+        $event = Event::findOrFail($id);
+        $event->status = 'Finalizado';
+        $event->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => "El evento \"{$event->title}\" ha sido finalizado con éxito. La venta de entradas en taquilla física, digital y plataforma web ha quedado cerrada.",
+        ]);
+    }
+
+    /**
      * Muestra la pantalla POS / Gestión de Ventas de un evento específico.
      */
     public function manage($id): View

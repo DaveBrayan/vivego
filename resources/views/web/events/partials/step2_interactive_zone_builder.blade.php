@@ -217,11 +217,11 @@
                                 <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.5rem; width: 100%; box-sizing: border-box;">
                                     <div style="min-width: 0;">
                                         <label style="font-size: 0.65rem; color: #94A3B8;">% DCTO.</label>
-                                        <input type="number" id="inspectorZonePresaleDiscount" class="form-input-custom" value="20" min="1" max="99" style="width: 100%; box-sizing: border-box; font-size: 0.775rem; padding: 0.35rem;" oninput="SeatMapEditor.updateSelectedZoneProps()">
+                                        <input type="number" id="inspectorZonePresaleDiscount" class="form-input-custom" value="20" min="0" max="99" style="width: 100%; box-sizing: border-box; font-size: 0.775rem; padding: 0.35rem;" oninput="SeatMapEditor.updateSelectedZoneProps('discount')">
                                     </div>
                                     <div style="min-width: 0;">
-                                        <label style="font-size: 0.65rem; color: #94A3B8;">PRECIO PREVENTA</label>
-                                        <input type="text" id="inspectorZonePresalePriceDisplay" class="form-input-custom" value="S/ 40.00" readonly style="width: 100%; box-sizing: border-box; font-size: 0.775rem; padding: 0.35rem; color: #38BDF8; font-weight: 800;">
+                                        <label style="font-size: 0.65rem; color: #94A3B8;">PRECIO PREVENTA (S/)</label>
+                                        <input type="number" step="0.50" id="inspectorZonePresalePriceDisplay" class="form-input-custom" value="40.00" min="0" style="width: 100%; box-sizing: border-box; font-size: 0.775rem; padding: 0.35rem; color: #38BDF8; font-weight: 800;" oninput="SeatMapEditor.updateSelectedZoneProps('price')">
                                     </div>
                                 </div>
                                 <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.5rem; width: 100%; box-sizing: border-box;">

@@ -144,8 +144,10 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <span class="dash-badge-custom {{ $evt['status_class'] }}">
-                                                @if($evt['status'] === 'Publicado')
+                                            <span class="dash-badge-custom {{ $evt['status_class'] }}" @if(!empty($evt['is_past']) || $evt['status'] === 'Finalizado') style="background: rgba(148, 163, 184, 0.15); color: #94A3B8; border: 1px solid rgba(148, 163, 184, 0.35);" @endif>
+                                                @if(!empty($evt['is_past']) || $evt['status'] === 'Finalizado')
+                                                    ⌛ Finalizado
+                                                @elseif($evt['status'] === 'Publicado')
                                                     🌐 Público
                                                 @elseif($evt['status'] === 'Oculto' || $evt['status'] === 'No Marketplace' || $evt['status'] === 'unlisted')
                                                     🔗 Oculto en Marketplace
@@ -161,10 +163,18 @@
                                         <td style="text-align: right;">
                                             <div class="dash-actions-cell" style="justify-content: flex-end;">
                                                 <a href="{{ route('web.event.detail', $evt['slug']) }}" class="dash-btn-icon-action" title="Previsualizar Evento" target="_blank" style="color: var(--color-neon-cyan);">👁️</a>
-                                                <a href="{{ route('web.events.edit', $evt['id']) }}" class="dash-btn-icon-action" title="Editar Evento">✏️</a>
-                                                @if(!isset($canDelete) || $canDelete)
-                                                <button type="button" class="dash-btn-icon-action btn-duplicate-event" data-id="{{ $evt['id'] }}" data-title="{{ $evt['title'] }}" title="Duplicar Evento Completo" style="color: #A855F7;">📋</button>
-                                                <button type="button" class="dash-btn-icon-action btn-delete-event" data-id="{{ $evt['id'] }}" data-title="{{ $evt['title'] }}" title="Eliminar Evento" style="color: #FF1E3C;">🗑️</button>
+                                                @if(!empty($evt['is_past']) || $evt['status'] === 'Finalizado')
+                                                    <span class="dash-btn-icon-action" title="Evento Finalizado (Edición bloqueada)" style="opacity: 0.35; cursor: not-allowed; filter: grayscale(1); pointer-events: auto; display: inline-flex; align-items: center; justify-content: center;" onclick="Swal.fire({title: 'Evento Finalizado', text: 'Este evento ya ha concluido o fue finalizado. La edición se encuentra bloqueada.', icon: 'info', background: '#14141E', color: '#FFFFFF', confirmButtonColor: '#FF5500'});">✏️</span>
+                                                    @if(!isset($canDelete) || $canDelete)
+                                                    <button type="button" class="dash-btn-icon-action btn-duplicate-event" data-id="{{ $evt['id'] }}" data-title="{{ $evt['title'] }}" title="Duplicar Evento Completo" style="color: #A855F7;">📋</button>
+                                                    <span class="dash-btn-icon-action" title="Evento Finalizado (Eliminación bloqueada)" style="opacity: 0.35; cursor: not-allowed; filter: grayscale(1); pointer-events: auto; display: inline-flex; align-items: center; justify-content: center;" onclick="Swal.fire({title: 'Evento Finalizado', text: 'No es posible eliminar un evento finalizado para preservar el histórico de ventas y boletos.', icon: 'info', background: '#14141E', color: '#FFFFFF', confirmButtonColor: '#FF5500'});">🗑️</span>
+                                                    @endif
+                                                @else
+                                                    <a href="{{ route('web.events.edit', $evt['id']) }}" class="dash-btn-icon-action" title="Editar Evento">✏️</a>
+                                                    @if(!isset($canDelete) || $canDelete)
+                                                    <button type="button" class="dash-btn-icon-action btn-duplicate-event" data-id="{{ $evt['id'] }}" data-title="{{ $evt['title'] }}" title="Duplicar Evento Completo" style="color: #A855F7;">📋</button>
+                                                    <button type="button" class="dash-btn-icon-action btn-delete-event" data-id="{{ $evt['id'] }}" data-title="{{ $evt['title'] }}" title="Eliminar Evento" style="color: #FF1E3C;">🗑️</button>
+                                                    @endif
                                                 @endif
                                             </div>
                                         </td>

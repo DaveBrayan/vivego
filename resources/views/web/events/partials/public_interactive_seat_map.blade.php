@@ -521,7 +521,7 @@
                             subTxt.setAttribute('font-size', Math.max(9.5, Math.min(13, titleFontSize * 0.45)));
                             subTxt.setAttribute('font-weight', '800');
                             subTxt.setAttribute('font-family', 'sans-serif');
-                            subTxt.textContent = `${priceFormatted}${z.capacity ? ` • ${z.capacity} cap.` : ''}`;
+                            subTxt.textContent = priceFormatted;
                             textG.appendChild(subTxt);
                         }
                     }
@@ -563,8 +563,10 @@
             if (capEl) {
                 if (isStage && priceVal === 0) {
                     capEl.textContent = 'Zona de Presentación';
+                } else if (hasSeats) {
+                    capEl.textContent = 'Zona con Selección de Butacas';
                 } else {
-                    capEl.textContent = `Aforo: ${z.capacity || 'General'}`;
+                    capEl.textContent = 'Admisión General';
                 }
             }
 
