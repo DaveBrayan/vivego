@@ -63,9 +63,16 @@ class Event extends Model
         }
 
         try {
-            $dateStr = $this->event_date instanceof \DateTimeInterface
-                ? $this->event_date->format('Y-m-d')
-                : substr((string) $this->event_date, 0, 10);
+            if ($this->event_date instanceof \DateTimeInterface) {
+                $dateCarbon = \Carbon\Carbon::instance($this->event_date);
+            } else {
+                $raw = trim((string) $this->event_date);
+                if (preg_match('/^\d{2}\/\d{2}\/\d{4}/', $raw)) {
+                    $dateCarbon = \Carbon\Carbon::createFromFormat('d/m/Y', substr($raw, 0, 10));
+                } else {
+                    $dateCarbon = \Carbon\Carbon::parse($raw);
+                }
+            }
 
             $timeStr = !empty($this->event_time) ? trim(preg_replace('/[^0-9:]/', '', (string) $this->event_time)) : '23:59:59';
             if (empty($timeStr) || strlen($timeStr) < 4) {
@@ -74,7 +81,12 @@ class Event extends Model
                 $timeStr .= ':00';
             }
 
-            $eventDateTime = \Carbon\Carbon::parse("{$dateStr} {$timeStr}");
+            $parts = explode(':', $timeStr);
+            $hour = isset($parts[0]) ? (int)$parts[0] : 23;
+            $min = isset($parts[1]) ? (int)$parts[1] : 59;
+            $sec = isset($parts[2]) ? (int)$parts[2] : 59;
+
+            $eventDateTime = $dateCarbon->setTime($hour, $min, $sec);
             return \Carbon\Carbon::now()->greaterThan($eventDateTime);
         } catch (\Throwable $e) {
             return false;

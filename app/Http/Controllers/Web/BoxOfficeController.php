@@ -103,6 +103,7 @@ class BoxOfficeController extends Controller
             }
 
             $isPast = $ev->isPast();
+            $isDatePassed = $ev->isDatePassed();
             $statusText = $isPast ? 'Finalizado' : ($ev->status ?? 'Publicado');
             $statusClass = $isPast ? 'badge-gray' : ($ev->status === 'Agotado' ? 'badge-red' : 'badge-green');
 
@@ -128,6 +129,7 @@ class BoxOfficeController extends Controller
                 'status' => $statusText,
                 'status_class' => $statusClass,
                 'is_past' => $isPast,
+                'is_date_passed' => $isDatePassed,
                 'sales_type' => $ev->sales_type ?? 'fisica',
                 'zones' => $zones,
                 'sales_count' => $ev->sales ? $ev->sales->count() : TicketSale::where('event_id', $ev->id)->count(),
@@ -197,6 +199,13 @@ class BoxOfficeController extends Controller
         }
 
         $event = Event::findOrFail($id);
+        if (!$event->isDatePassed()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Solo puedes finalizar el evento una vez que haya concluido la fecha programada del mismo.',
+            ], 422);
+        }
+
         $event->status = 'Finalizado';
         $event->save();
 

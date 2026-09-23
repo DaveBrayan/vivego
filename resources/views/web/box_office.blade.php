@@ -193,10 +193,12 @@
                                                     <span class="dash-badge-custom {{ $evt['status_class'] }}">
                                                         @if($evt['status'] === 'Publicado') ✓ Publicado @elseif($evt['status'] === 'Agotado') 🚫 Agotado @else ⏳ {{ $evt['status'] }} @endif
                                                     </span>
-                                                    <button type="button" class="btn btn-sm btn-finalize-boxoffice" data-id="{{ $evt['id'] }}" data-title="{{ $evt['title'] }}" style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); color: #F87171; font-size: 0.725rem; font-weight: 800; padding: 0.25rem 0.65rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.12)'">
-                                                        <span>⏹️</span>
-                                                        <span>Finalizar Evento</span>
-                                                    </button>
+                                                    @if(!empty($evt['is_date_passed']))
+                                                        <button type="button" class="btn btn-sm btn-finalize-boxoffice" data-id="{{ $evt['id'] }}" data-title="{{ $evt['title'] }}" style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); color: #F87171; font-size: 0.725rem; font-weight: 800; padding: 0.25rem 0.65rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.12)'" title="El día del evento ya pasó. Finalizar y cerrar caja.">
+                                                            <span>⏹️</span>
+                                                            <span>Finalizar Evento</span>
+                                                        </button>
+                                                    @endif
                                                 </div>
                                             @endif
                                         </td>

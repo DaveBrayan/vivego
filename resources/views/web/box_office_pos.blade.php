@@ -690,10 +690,12 @@
                                     <span class="dash-badge-custom badge-red" style="font-size: 0.75rem; padding: 0.25rem 0.65rem; background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.4);">⌛ Evento Finalizado (Caja Cerrada)</span>
                                 @else
                                     <span class="dash-badge-custom badge-green" style="font-size: 0.75rem; padding: 0.25rem 0.65rem;">✓ Caja Abierta</span>
-                                    <button type="button" class="btn btn-sm" onclick="finalizeCurrentEventPos()" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #F87171; font-size: 0.75rem; font-weight: 800; padding: 0.2rem 0.65rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;" title="Cerrar caja y finalizar este evento">
-                                        <span>⏹️</span>
-                                        <span>Finalizar Evento</span>
-                                    </button>
+                                    @if($event->isDatePassed())
+                                        <button type="button" class="btn btn-sm" onclick="finalizeCurrentEventPos()" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #F87171; font-size: 0.75rem; font-weight: 800; padding: 0.2rem 0.65rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;" title="Cerrar caja y finalizar este evento">
+                                            <span>⏹️</span>
+                                            <span>Finalizar Evento</span>
+                                        </button>
+                                    @endif
                                 @endif
                             </div>
                             <h1 style="font-size: 1.85rem; font-weight: 900; color: #FFFFFF; margin: 0 0 0.45rem 0; line-height: 1.25; letter-spacing: -0.5px; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">
