@@ -119,7 +119,7 @@
                         @foreach($cartItems as $index => $item)
                             @php
                                 $isItemUpgrade = !empty($item['is_upgrade']);
-                                $isPresale = !empty($item['is_presale']) || (!empty($item['presale_discount']) && (float)$item['presale_discount'] > 0);
+                                $isPresale = !empty($item['is_presale']) && !empty($item['presale_discount']) && (float)$item['presale_discount'] > 0;
                                 $hasCamp = !empty($item['has_campaign']);
                                 $basePrice = !empty($item['base_price']) ? (float)$item['base_price'] : (!empty($item['regular_price']) ? (float)$item['regular_price'] : (float)$item['price']);
                                 $regPrice = !empty($item['regular_price']) ? (float)$item['regular_price'] : (float)$item['price'];

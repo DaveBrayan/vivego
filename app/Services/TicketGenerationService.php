@@ -32,11 +32,19 @@ class TicketGenerationService
     }
 
     /**
-     * Sincroniza y pre-genera automáticamente todos los boletos oficiales (QR, correlativo y hash)
-     * para el aforo configurado en las zonas del evento.
+     * Asegura que los boletos físicos existan únicamente cuando se solicitan
+     * para la generación e impresión de planchas de imprenta.
+     */
+    public static function ensurePhysicalTicketsForEvent(Event $event): array
+    {
+        return self::syncEventTickets($event);
+    }
+
+    /**
+     * Sincroniza y pre-genera automáticamente los boletos físicos oficiales (QR, correlativo y hash)
+     * para el aforo físico configurado en las zonas del evento (para planchas de imprenta).
      *
-     * Si el aforo aumentó o se agregaron nuevas butacas, genera solo los faltantes respetando
-     * el orden correlativo continuo y protegiendo las entradas ya vendidas o impresas.
+     * Las entradas digitales NUNCA se pre-generan vacías; se emiten On-Demand al momento de la venta.
      */
     public static function syncEventTickets(Event $event): array
     {
@@ -164,7 +172,7 @@ class TicketGenerationService
                             if ($existingTicket) {
                                 // Butaca ya existe en BD: respetar si ya está vendida
                                 if (!empty($existingTicket->ticket_sale_id) || $existingTicket->status === 'sold') {
-                                    $isSoldPhys = ($existingTicket->ticket_type === 'fisica' || $existingTicket->source !== 'web_checkout');
+                                    $isSoldPhys = ($existingTicket->ticket_type === 'fisica');
                                     if ($isSoldPhys) {
                                         $assignedPhys++;
                                     }
@@ -192,44 +200,40 @@ class TicketGenerationService
                                 continue;
                             }
 
-                            // Si no existía en BD, crear la nueva butaca
+                            // Si no existía en BD, crear la nueva butaca SOLO SI ES FÍSICA para plancha
                             if ($shouldBePhys) {
                                 $ticketNumber = $zonePhysCounters[$cleanZoneUpper]++;
                                 $ticketType = 'fisica';
                                 $source = 'pdf_batch';
                                 $buyerDesc = 'Talonario Físico / Taquilla';
                                 $assignedPhys++;
-                            } else {
-                                $ticketNumber = $zoneVirtCounters[$cleanZoneUpper]++;
-                                $ticketType = 'digital';
-                                $source = 'web_checkout';
-                                $buyerDesc = 'Boleto Digital Web';
+
+                                $ticketCode = 'N° ' . str_pad($ticketNumber, 5, '0', STR_PAD_LEFT);
+                                $validationHash = 'VG' . strtoupper(substr(md5(uniqid('vg_' . substr($ticketType, 0, 1) . '_', true) . $event->id . $ticketNumber), 0, 8));
+                                $qrPayload = "VIVEGO|EVT-{$event->id}|TICK-{$ticketNumber}|HASH-{$validationHash}";
+                                $fullZoneName = function_exists('formatZoneWithSeat') ? formatZoneWithSeat($zoneName, $seat) : "{$zoneName} ({$seatCode})";
+
+                                $newTicket = EventTicket::create([
+                                    'event_id' => $event->id,
+                                    'ticket_sale_id' => null,
+                                    'ticket_code' => $ticketCode,
+                                    'ticket_number' => $ticketNumber,
+                                    'zone_name' => $fullZoneName,
+                                    'unit_price' => $zonePrice,
+                                    'qr_payload' => $qrPayload,
+                                    'validation_hash' => $validationHash,
+                                    'buyer_name' => $buyerDesc,
+                                    'buyer_dni' => '00000000',
+                                    'source' => $source,
+                                    'ticket_type' => $ticketType,
+                                    'is_used' => false,
+                                    'status' => 'valid',
+                                ]);
+
+                                $existingNumberedSeats[$seatKey] = $newTicket;
+                                $createdCount++;
                             }
-
-                            $ticketCode = 'N° ' . str_pad($ticketNumber, 5, '0', STR_PAD_LEFT);
-                            $validationHash = 'VG' . strtoupper(substr(md5(uniqid('vg_' . substr($ticketType, 0, 1) . '_', true) . $event->id . $ticketNumber), 0, 8));
-                            $qrPayload = "VIVEGO|EVT-{$event->id}|TICK-{$ticketNumber}|HASH-{$validationHash}";
-                            $fullZoneName = function_exists('formatZoneWithSeat') ? formatZoneWithSeat($zoneName, $seat) : "{$zoneName} ({$seatCode})";
-
-                            $newTicket = EventTicket::create([
-                                'event_id' => $event->id,
-                                'ticket_sale_id' => null,
-                                'ticket_code' => $ticketCode,
-                                'ticket_number' => $ticketNumber,
-                                'zone_name' => $fullZoneName,
-                                'unit_price' => $zonePrice,
-                                'qr_payload' => $qrPayload,
-                                'validation_hash' => $validationHash,
-                                'buyer_name' => $buyerDesc,
-                                'buyer_dni' => '00000000',
-                                'source' => $source,
-                                'ticket_type' => $ticketType,
-                                'is_used' => false,
-                                'status' => 'valid',
-                            ]);
-
-                            $existingNumberedSeats[$seatKey] = $newTicket;
-                            $createdCount++;
+                            // NOTA ON-DEMAND: Las butacas digitales NO se pre-generan vacías; se crearán en el instante de la venta.
                         }
                     } else {
                         // ZONA GENERAL NO NUMERADA: RECONCILIAR CUPO FÍSICO Y DIGITAL
@@ -239,24 +243,10 @@ class TicketGenerationService
                                   ->orWhereRaw("UPPER(TRIM(zone_name)) = ?", [$cleanZoneUpper]);
                             })
                             ->whereNotNull('ticket_sale_id')
-                            ->where(function($q) {
-                                $q->where('ticket_type', 'fisica')->orWhere('source', '!=', 'web_checkout');
-                            })
-                            ->count();
-
-                        $soldVirtCount = EventTicket::where('event_id', $event->id)
-                            ->where(function($q) use ($zoneName, $cleanZoneUpper) {
-                                $q->where('zone_name', $zoneName)
-                                  ->orWhereRaw("UPPER(TRIM(zone_name)) = ?", [$cleanZoneUpper]);
-                            })
-                            ->whereNotNull('ticket_sale_id')
-                            ->where(function($q) {
-                                $q->where('ticket_type', 'digital')->orWhere('source', 'web_checkout');
-                            })
+                            ->where('ticket_type', 'fisica')
                             ->count();
 
                         $neededUnsoldPhys = max(0, $targetPhysCap - $soldPhysCount);
-                        $neededUnsoldVirt = max(0, $targetVirtCap - $soldVirtCount);
 
                         $unsoldGeneralTickets = EventTicket::where('event_id', $event->id)
                             ->where(function($q) use ($zoneName, $cleanZoneUpper) {
@@ -268,7 +258,6 @@ class TicketGenerationService
                             ->get();
 
                         $assignedUnsoldPhys = 0;
-                        $assignedUnsoldVirt = 0;
 
                         foreach ($unsoldGeneralTickets as $t) {
                             if ($assignedUnsoldPhys < $neededUnsoldPhys) {
@@ -280,22 +269,13 @@ class TicketGenerationService
                                     ]);
                                 }
                                 $assignedUnsoldPhys++;
-                            } elseif ($assignedUnsoldVirt < $neededUnsoldVirt) {
-                                if ($t->ticket_type !== 'digital' || $t->source !== 'web_checkout') {
-                                    $t->update([
-                                        'ticket_type' => 'digital',
-                                        'source' => 'web_checkout',
-                                        'buyer_name' => 'Boleto Digital Web',
-                                    ]);
-                                }
-                                $assignedUnsoldVirt++;
                             } else {
-                                // Boletos sobrantes que exceden el aforo actual configurado
+                                // Boletos sobrantes o digitales vacíos que ya no deben existir sin venta
                                 $t->delete();
                             }
                         }
 
-                        // Si aún faltan entradas físicas por crear
+                        // Si aún faltan entradas físicas por crear para la plancha
                         $missingPhys = max(0, $neededUnsoldPhys - $assignedUnsoldPhys);
                         for ($k = 0; $k < $missingPhys; $k++) {
                             $ticketNumber = $zonePhysCounters[$cleanZoneUpper]++;
@@ -322,32 +302,7 @@ class TicketGenerationService
                             $createdCount++;
                         }
 
-                        // Si aún faltan entradas virtuales por crear
-                        $missingVirt = max(0, $neededUnsoldVirt - $assignedUnsoldVirt);
-                        for ($k = 0; $k < $missingVirt; $k++) {
-                            $ticketNumber = $zoneVirtCounters[$cleanZoneUpper]++;
-                            $ticketCode = 'N° ' . str_pad($ticketNumber, 5, '0', STR_PAD_LEFT);
-                            $validationHash = 'VG' . strtoupper(substr(md5(uniqid('vg_d_', true) . $event->id . $ticketNumber), 0, 8));
-                            $qrPayload = "VIVEGO|EVT-{$event->id}|TICK-{$ticketNumber}|HASH-{$validationHash}";
-
-                            EventTicket::create([
-                                'event_id' => $event->id,
-                                'ticket_sale_id' => null,
-                                'ticket_code' => $ticketCode,
-                                'ticket_number' => $ticketNumber,
-                                'zone_name' => $zoneName,
-                                'unit_price' => $zonePrice,
-                                'qr_payload' => $qrPayload,
-                                'validation_hash' => $validationHash,
-                                'buyer_name' => 'Boleto Digital Web',
-                                'buyer_dni' => '00000000',
-                                'source' => 'web_checkout',
-                                'ticket_type' => 'digital',
-                                'is_used' => false,
-                                'status' => 'valid',
-                            ]);
-                            $createdCount++;
-                        }
+                        // NOTA ON-DEMAND: Las entradas digitales virtuales NO se pre-generan vacías; se generan al vender.
                     }
                 }
 
@@ -506,32 +461,7 @@ class TicketGenerationService
                             $createdCount++;
                         }
 
-                        // 2. Generar Cortesías Digitales faltantes (para emisión / compras web)
-                        $missingVirtCort = max(0, $virtCortCap - $assignedUnsoldVirtCort);
-                        for ($k = 0; $k < $missingVirtCort; $k++) {
-                            $ticketNumber = $zoneCortVirtCounters[$cleanCourtesyUpper]++;
-                            $ticketCode = 'N° ' . str_pad($ticketNumber, 5, '0', STR_PAD_LEFT);
-                            $validationHash = 'VG' . strtoupper(substr(md5(uniqid('vg_cd_', true) . $event->id . $ticketNumber), 0, 8));
-                            $qrPayload = "VIVEGO|EVT-{$event->id}|TICK-{$ticketNumber}|HASH-{$validationHash}";
-
-                            EventTicket::create([
-                                'event_id' => $event->id,
-                                'ticket_sale_id' => null,
-                                'ticket_code' => $ticketCode,
-                                'ticket_number' => $ticketNumber,
-                                'zone_name' => $courtesyZoneName,
-                                'unit_price' => 0.00,
-                                'qr_payload' => $qrPayload,
-                                'validation_hash' => $validationHash,
-                                'buyer_name' => 'Pase de Cortesía Web',
-                                'buyer_dni' => '00000000',
-                                'source' => 'web_checkout',
-                                'ticket_type' => 'cortesia_digital',
-                                'is_used' => false,
-                                'status' => 'valid',
-                            ]);
-                            $createdCount++;
-                        }
+                        // NOTA ON-DEMAND: Las cortesías digitales virtuales NO se pre-generan vacías; se emiten en taquilla POS al instante.
                     }
                 } else {
                     // Si cortesías están desactivadas, podar cortesías no vendidas
@@ -544,6 +474,12 @@ class TicketGenerationService
                         })
                         ->delete();
                 }
+
+                // Purgar boletos digitales o cortesías digitales vacíos sin venta
+                EventTicket::where('event_id', $event->id)
+                    ->whereNull('ticket_sale_id')
+                    ->whereIn('ticket_type', ['digital', 'cortesia_digital'])
+                    ->delete();
 
             } else {
                 // =========================================================================

@@ -107,11 +107,17 @@
             <!-- COLUMNA 2 (CENTRO): Selección de Zonas y Cantidades -->
             <div style="display: flex; flex-direction: column; gap: 0.55rem;">
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
-                    <span style="font-size: 0.75rem; font-weight: 800; color: #60A5FA; text-transform: uppercase; letter-spacing: 0.5px;">2. Zonas y Cantidad de Boletos</span>
+                    <span style="font-size: 0.75rem; font-weight: 800; color: #60A5FA; text-transform: uppercase; letter-spacing: 0.5px;">2. Zonas y Rango de Boletos</span>
                     <span id="plancha_zones_badge_count" style="font-size: 0.7rem; color: #10B981; font-weight: 800; white-space: nowrap;">Calculando...</span>
                 </div>
 
-
+                <!-- Botones de Acción Global Rápida -->
+                <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
+                    <button type="button" onclick="setGlobalPlanchaFilter('ALL')" style="background: rgba(37, 99, 235, 0.18); border: 1px solid rgba(37, 99, 235, 0.4); color: #93C5FD; font-size: 0.68rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;">🌟 Todas las Entradas</button>
+                    <button type="button" onclick="setGlobalPlanchaFilter('ONLY_NEW')" style="background: rgba(16, 185, 129, 0.18); border: 1px solid rgba(16, 185, 129, 0.4); color: #34D399; font-size: 0.68rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;">⚡ Solo Nuevas / Pendientes</button>
+                    <button type="button" onclick="setGlobalPlanchaFilter('CHECK_ALL')" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); color: #CBD5E1; font-size: 0.68rem; font-weight: 800; padding: 0.2rem 0.45rem; border-radius: 6px; cursor: pointer;">✓ Marcar Todo</button>
+                    <button type="button" onclick="setGlobalPlanchaFilter('UNCHECK_ALL')" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); color: #94A3B8; font-size: 0.68rem; font-weight: 800; padding: 0.2rem 0.45rem; border-radius: 6px; cursor: pointer;">✕ Desmarcar</button>
+                </div>
                 
                 <!-- Contenedor lista de zonas con scroll vertical -->
                 <div id="plancha_zones_list_container" style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 0.5rem; max-height: 440px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.45rem; flex: 1;">
@@ -530,6 +536,16 @@
             existingByZone[zKey].push(t);
         });
 
+        // Ordenar internamente los boletos de cada zona por ticketNumberVal ascendente
+        Object.keys(existingByZone).forEach(k => {
+            existingByZone[k].sort((a, b) => {
+                const numA = parseInt(a.ticketNumberVal || a.ticket_number, 10) || 0;
+                const numB = parseInt(b.ticketNumberVal || b.ticket_number, 10) || 0;
+                if (numA !== numB) return numA - numB;
+                return (a.id || 0) - (b.id || 0);
+            });
+        });
+
         // Extraer configuración de división de aforo físico vs digital si existe
         let splitSettings = evt.quota_split_settings || {};
         if (typeof splitSettings === 'string') {
@@ -598,7 +614,37 @@
                 zCap = alreadyGenCount;
             }
 
-            const pendingCount = Math.max(0, zCap - alreadyGenCount);
+            const zoneNums = existingList.map(t => parseInt(t.ticketNumberVal || t.ticket_number, 10)).filter(n => !isNaN(n) && n > 0);
+            const minNum = zoneNums.length > 0 ? Math.min(...zoneNums) : 1;
+            const maxNum = zoneNums.length > 0 ? Math.max(...zoneNums) : (zCap > 0 ? zCap : 24);
+
+            // Detección inteligente de tandas / boletos nuevos por timestamps (aforos aumentados)
+            const timestamps = existingList.map(t => t.createdAt ? new Date(t.createdAt).getTime() : 0).filter(t => t > 0);
+            const latestTime = timestamps.length > 0 ? Math.max(...timestamps) : 0;
+            const earliestTime = timestamps.length > 0 ? Math.min(...timestamps) : 0;
+            let batchNewStart = minNum;
+
+            if (latestTime > 0 && (latestTime - earliestTime) > 30000) { // Si hay más de 30s de diferencia entre tandas
+                const sorted = [...existingList].sort((a,b) => (parseInt(a.ticketNumberVal || a.ticket_number, 10) || 0) - (parseInt(b.ticketNumberVal || b.ticket_number, 10) || 0));
+                for (let item of sorted) {
+                    const tTime = item.createdAt ? new Date(item.createdAt).getTime() : 0;
+                    if (tTime >= (latestTime - 60000)) {
+                        batchNewStart = parseInt(item.ticketNumberVal || item.ticket_number, 10) || minNum;
+                        break;
+                    }
+                }
+            }
+
+            // Detección por historial de impresión en el navegador
+            const storedLastPrinted = (evt && evt.id) ? parseInt(localStorage.getItem(`plancha_last_printed_${evt.id}_${zKey}`), 10) || 0 : 0;
+            let effectiveNewStart = batchNewStart;
+            if (storedLastPrinted >= minNum && storedLastPrinted < maxNum) {
+                effectiveNewStart = Math.max(effectiveNewStart, storedLastPrinted + 1);
+            }
+
+            const newStartNum = effectiveNewStart;
+            const hasNewTickets = (newStartNum > minNum && newStartNum <= maxNum);
+            const pendingCount = hasNewTickets ? (maxNum - newStartNum + 1) : 0;
 
             totalConfigCapacity += zCap;
             totalAlreadyGenerated += alreadyGenCount;
@@ -614,7 +660,11 @@
                 isNumberedZone: isNumbered,
                 alreadyGenerated: alreadyGenCount,
                 pendingNew: pendingCount,
-                existingTickets: existingList
+                existingTickets: existingList,
+                minNum: minNum,
+                maxNum: maxNum,
+                newStartNum: newStartNum,
+                hasNewTickets: hasNewTickets
             });
         });
 
@@ -691,7 +741,36 @@
                     (z.capacity_type && /butaca|asiento|numerad/i.test(z.capacity_type)) ||
                     /butaca|asiento|numerad/i.test(zName);
 
-                const pendingCount = Math.max(0, czCap - alreadyGenCount);
+                const courtesyNums = existingCourtesyList.map(t => parseInt(t.ticketNumberVal || t.ticket_number, 10)).filter(n => !isNaN(n) && n > 0);
+                const czMinNum = courtesyNums.length > 0 ? Math.min(...courtesyNums) : 1;
+                const czMaxNum = courtesyNums.length > 0 ? Math.max(...courtesyNums) : (czCap > 0 ? czCap : 24);
+
+                // Detección inteligente para cortesías
+                const czTimestamps = existingCourtesyList.map(t => t.createdAt ? new Date(t.createdAt).getTime() : 0).filter(t => t > 0);
+                const czLatestTime = czTimestamps.length > 0 ? Math.max(...czTimestamps) : 0;
+                const czEarliestTime = czTimestamps.length > 0 ? Math.min(...czTimestamps) : 0;
+                let czBatchNewStart = czMinNum;
+
+                if (czLatestTime > 0 && (czLatestTime - czEarliestTime) > 30000) {
+                    const sorted = [...existingCourtesyList].sort((a,b) => (parseInt(a.ticketNumberVal || a.ticket_number, 10) || 0) - (parseInt(b.ticketNumberVal || b.ticket_number, 10) || 0));
+                    for (let item of sorted) {
+                        const tTime = item.createdAt ? new Date(item.createdAt).getTime() : 0;
+                        if (tTime >= (czLatestTime - 60000)) {
+                            czBatchNewStart = parseInt(item.ticketNumberVal || item.ticket_number, 10) || czMinNum;
+                            break;
+                        }
+                    }
+                }
+
+                const czStoredLastPrinted = (evt && evt.id) ? parseInt(localStorage.getItem(`plancha_last_printed_${evt.id}_${courtesyZKey}`), 10) || 0 : 0;
+                let czEffectiveNewStart = czBatchNewStart;
+                if (czStoredLastPrinted >= czMinNum && czStoredLastPrinted < czMaxNum) {
+                    czEffectiveNewStart = Math.max(czEffectiveNewStart, czStoredLastPrinted + 1);
+                }
+
+                const czNewStartNum = czEffectiveNewStart;
+                const czHasNewTickets = (czNewStartNum > czMinNum && czNewStartNum <= czMaxNum);
+                const pendingCount = czHasNewTickets ? (czMaxNum - czNewStartNum + 1) : 0;
 
                 totalConfigCapacity += czCap;
                 totalAlreadyGenerated += alreadyGenCount;
@@ -707,12 +786,16 @@
                     isNumberedZone: isNumbered,
                     alreadyGenerated: alreadyGenCount,
                     pendingNew: pendingCount,
-                    existingTickets: existingCourtesyList
+                    existingTickets: existingCourtesyList,
+                    minNum: czMinNum,
+                    maxNum: czMaxNum,
+                    newStartNum: czNewStartNum,
+                    hasNewTickets: czHasNewTickets
                 });
             });
         }
 
-        // 1. Renderizar lista visual de zonas en Columna 1
+        // 1. Renderizar lista visual de zonas en Columna 2
         const zonesContainer = document.getElementById('plancha_zones_list_container');
         const badgeCount = document.getElementById('plancha_zones_badge_count');
         if (badgeCount) {
@@ -723,22 +806,6 @@
             } else {
                 badgeCount.textContent = `${planchaZoneBreakdown.length} zonas (${totalConfigCapacity} aforo total)`;
             }
-        }
-
-        // Poblar selector rápido de zonas
-        const quickFilter = document.getElementById('plancha_quick_zone_filter');
-        if (quickFilter) {
-            let filterHtml = '<option value="ALL">🌟 Todas las Zonas</option>';
-            if (isCourtesyActive) {
-                filterHtml += '<option value="REGULAR_ONLY">🎟️ Solo Zonas Regulares</option>';
-                filterHtml += '<option value="COURTESY_ONLY">🎁 Solo Zonas de Cortesía</option>';
-            }
-            planchaZoneBreakdown.forEach((zb, idx) => {
-                const icon = zb.isCourtesy ? '🎁' : '🎟️';
-                filterHtml += `<option value="${idx}">${icon} ${zb.name}</option>`;
-            });
-            quickFilter.innerHTML = filterHtml;
-            quickFilter.value = 'ALL';
         }
 
         if (zonesContainer) {
@@ -758,21 +825,11 @@
                     ? `<span style="background: rgba(245,158,11,0.15); color: #F59E0B; border: 1px solid rgba(245,158,11,0.3); font-size: 0.63rem; font-weight: 800; padding: 0.12rem 0.4rem; border-radius: 6px; margin-left: 0.35rem;">🪑 ${zb.seats.length > 0 ? zb.seats.length : zb.capacity} Butacas</span>`
                     : '';
 
-                // Cantidad y selección por defecto inteligente según aforo pendiente
-                let defaultQty = 24;
-                let defaultChecked = true;
-                if (totalPendingNew > 0) {
-                    if (zb.pendingNew > 0) {
-                        defaultQty = zb.capacity > 0 ? Math.min(zb.capacity, zb.pendingNew) : zb.pendingNew;
-                        defaultChecked = true;
-                    } else {
-                        defaultQty = 0;
-                        defaultChecked = false;
-                    }
-                } else {
-                    defaultQty = zb.capacity > 0 ? Math.min(zb.capacity, (zb.alreadyGenerated > 0 ? zb.alreadyGenerated : zb.capacity)) : (zb.alreadyGenerated > 0 ? zb.alreadyGenerated : 24);
-                    defaultChecked = true;
-                }
+                // Cantidad y selección por defecto inteligente: seleccionar todas las zonas activas por defecto
+                let defaultChecked = (zb.alreadyGenerated > 0 || zb.capacity > 0);
+                let defaultFrom = zb.minNum;
+                let defaultTo = zb.maxNum;
+                let defaultQty = zb.alreadyGenerated > 0 ? (zb.maxNum - zb.minNum + 1) : (zb.capacity > 0 ? zb.capacity : 24);
 
                 const cardOpacity = defaultChecked ? '1' : '0.45';
                 const cardBorder = zb.isCourtesy
@@ -806,11 +863,11 @@
                 const chkAccent = zb.isCourtesy ? '#10B981' : '#2563EB';
 
                 html += `
-                    <div id="plancha_zone_card_${idx}" class="${zb.isCourtesy ? 'card-is-courtesy' : 'card-is-regular'}" style="background: ${zb.isCourtesy ? 'rgba(16, 185, 129, 0.04)' : 'rgba(255,255,255,0.02)'}; border: 1.5px solid ${cardBorder}; opacity: ${cardOpacity}; border-radius: 12px; padding: 0.6rem 0.75rem; display: flex; flex-direction: column; gap: 0.4rem; transition: all 0.2s ease;">
+                    <div id="plancha_zone_card_${idx}" class="${zb.isCourtesy ? 'card-is-courtesy' : 'card-is-regular'}" style="background: ${zb.isCourtesy ? 'rgba(16, 185, 129, 0.04)' : 'rgba(255,255,255,0.02)'}; border: 1.5px solid ${cardBorder}; opacity: ${cardOpacity}; border-radius: 12px; padding: 0.65rem 0.8rem; display: flex; flex-direction: column; gap: 0.45rem; transition: all 0.2s ease;">
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
                             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; flex: 1; min-width: 0; margin: 0;">
                                 <input type="checkbox" id="plancha_zone_chk_${idx}" ${defaultChecked ? 'checked' : ''} onchange="onPlanchaZoneCheckChange(${idx})" style="width: 16px; height: 16px; accent-color: ${chkAccent}; cursor: pointer; border-radius: 4px; flex-shrink: 0;" />
-                                <span style="font-weight: 800; font-size: 0.83rem; color: #FFFFFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                <span style="font-weight: 800; font-size: 0.84rem; color: #FFFFFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                     ${icon} ${zb.name}
                                 </span>
                                 ${courtesyTag}
@@ -823,27 +880,23 @@
 
                         <div style="font-size: 0.7rem; color: #94A3B8; display: flex; align-items: center; justify-content: space-between; padding-left: 1.5rem;">
                             <span>Precio: <strong style="color: #10B981;">${priceLabel}</strong></span>
-                            <span>${refLabel} <strong style="color: #FFFFFF;">${zb.capacity}</strong> • En BD: <strong style="color: #34D399;">${zb.alreadyGenerated}</strong></span>
+                            <span>${refLabel} <strong style="color: #FFFFFF;">${zb.capacity}</strong> • En BD: <strong style="color: #34D399;">${zb.alreadyGenerated}</strong> <span style="font-family: monospace; color: #F59E0B; font-weight: 700;">(N° ${String(zb.minNum).padStart(5, '0')} → N° ${String(zb.maxNum).padStart(5, '0')})</span></span>
                         </div>
 
-                        <div id="plancha_zone_qty_row_${idx}" style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; background: rgba(15, 23, 42, 0.7); padding: 0.35rem 0.55rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.07); margin-left: 1.5rem; flex-wrap: wrap;">
-                            <div style="display: flex; align-items: center; gap: 0.4rem;">
-                                <span style="font-size: 0.7rem; color: ${zb.isCourtesy ? '#6EE7B7' : '#93C5FD'}; font-weight: 800; white-space: nowrap;">Cantidad:</span>
-                                <input type="number" 
-                                       id="plancha_zone_qty_${idx}" 
-                                       min="1" 
-                                       max="${zb.capacity > 0 ? zb.capacity : 99999}" 
-                                       value="${defaultQty}" 
-                                       ${inputDisabled}
-                                       oninput="onPlanchaZoneQtyInput(${idx})" 
-                                       style="width: 70px; background: rgba(255,255,255,0.08); border: 1.5px solid ${inputBorder}; color: #FFFFFF; border-radius: 6px; padding: 0.2rem 0.35rem; font-size: 0.82rem; font-weight: 900; text-align: center; outline: none;" />
+                        <div id="plancha_zone_qty_row_${idx}" style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; background: rgba(15, 23, 42, 0.7); padding: 0.4rem 0.6rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.07); margin-left: 1.5rem; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.72rem;">
+                                <span style="color: #93C5FD; font-weight: 800;">Desde:</span>
+                                <input type="number" id="plancha_zone_from_${idx}" min="${zb.minNum}" max="${zb.maxNum}" value="${defaultFrom}" ${inputDisabled} oninput="onPlanchaZoneRangeInput(${idx})" style="width: 58px; background: rgba(255,255,255,0.08); border: 1.5px solid ${inputBorder}; color: #F59E0B; border-radius: 6px; padding: 0.2rem 0.25rem; font-size: 0.78rem; font-weight: 900; text-align: center; outline: none;" />
+                                <span style="color: #93C5FD; font-weight: 800;">Hasta:</span>
+                                <input type="number" id="plancha_zone_to_${idx}" min="${zb.minNum}" max="${zb.maxNum}" value="${defaultTo}" ${inputDisabled} oninput="onPlanchaZoneRangeInput(${idx})" style="width: 58px; background: rgba(255,255,255,0.08); border: 1.5px solid ${inputBorder}; color: #F59E0B; border-radius: 6px; padding: 0.2rem 0.25rem; font-size: 0.78rem; font-weight: 900; text-align: center; outline: none;" />
+                                <span style="color: #94A3B8; font-weight: 700; margin-left: 0.2rem;">(<span id="plancha_zone_qty_label_${idx}" style="color: #FFFFFF; font-weight: 900;">${defaultQty}</span> u.)</span>
+                                <input type="hidden" id="plancha_zone_qty_${idx}" value="${defaultQty}" />
                             </div>
                             <div style="display: flex; gap: 0.25rem; flex-wrap: wrap;">
-                                ${zb.pendingNew > 0 ? `<button type="button" onclick="setZoneQtyPreset(${idx}, 'pending')" style="background: rgba(16,185,129,0.22); border: 1.5px solid rgba(16,185,129,0.5); color: #34D399; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 5px; cursor: pointer;">⚡ Restantes (${zb.pendingNew})</button>` : ''}
-                                <button type="button" onclick="adjustZoneQty(${idx}, 10)" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #CBD5E1; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.4rem; border-radius: 5px; cursor: pointer;">+10</button>
-                                <button type="button" onclick="setZoneQtyPreset(${idx}, 'sheet')" id="btn_preset_sheet_${idx}" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #CBD5E1; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.4rem; border-radius: 5px; cursor: pointer;">${sheetLabel}</button>
-                                <button type="button" onclick="setZoneQtyPreset(${idx}, 'capacity')" style="background: ${zb.isCourtesy ? 'rgba(16,185,129,0.25)' : 'rgba(37,99,235,0.25)'}; border: 1.5px solid ${zb.isCourtesy ? 'rgba(16,185,129,0.5)' : 'rgba(37,99,235,0.5)'}; color: ${zb.isCourtesy ? '#6EE7B7' : '#93C5FD'}; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.4rem; border-radius: 5px; cursor: pointer;">${zb.isCourtesy ? 'Cupo' : 'Aforo'} (${zb.capacity})</button>
-                                ${zb.alreadyGenerated > 0 ? `<button type="button" onclick="setZoneQtyPreset(${idx}, 'existing')" style="background: rgba(16,185,129,0.2); border: 1px solid rgba(16,185,129,0.4); color: #34D399; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.4rem; border-radius: 5px; cursor: pointer;">En BD (${zb.alreadyGenerated})</button>` : ''}
+                                <button type="button" onclick="setZoneRangePreset(${idx}, 'all')" style="background: ${zb.isCourtesy ? 'rgba(16,185,129,0.25)' : 'rgba(37,99,235,0.25)'}; border: 1.5px solid ${zb.isCourtesy ? 'rgba(16,185,129,0.5)' : 'rgba(37,99,235,0.5)'}; color: ${zb.isCourtesy ? '#6EE7B7' : '#93C5FD'}; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.4rem; border-radius: 5px; cursor: pointer;">Todo (${zb.minNum}..${zb.maxNum})</button>
+                                ${zb.hasNewTickets ? `<button type="button" onclick="setZoneRangePreset(${idx}, 'new')" style="background: rgba(16,185,129,0.22); border: 1.5px solid rgba(16,185,129,0.5); color: #34D399; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 5px; cursor: pointer;">⚡ Solo Nuevas (${zb.newStartNum}..${zb.maxNum})</button>` : ''}
+                                <button type="button" onclick="setZoneRangePreset(${idx}, 'sheet')" id="btn_preset_sheet_${idx}" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #CBD5E1; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.4rem; border-radius: 5px; cursor: pointer;">${sheetLabel}</button>
+                                <button type="button" onclick="adjustZoneRange(${idx}, 10)" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #CBD5E1; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.4rem; border-radius: 5px; cursor: pointer;">+10</button>
                             </div>
                         </div>
                     </div>
@@ -865,7 +918,7 @@
         if (alertContent) {
             alertContent.innerHTML = `
                 <strong style="color: #34D399; display: block; font-size: 0.88rem; margin-bottom: 0.2rem;">✓ Boletos Oficiales Listos (${totalAlreadyGenerated} en BD)</strong>
-                <span style="color: #CBD5E1;">Todas las entradas y códigos QR del aforo configurado están registrados en la base de datos. Selecciona las zonas deseadas y haz clic en <b>"GENERAR PLANCHA PDF"</b>.</span>
+                <span style="color: #CBD5E1;">Todas las entradas y códigos QR están ordenados por zonas. Selecciona los rangos que deseas imprimir y haz clic en <b>"GENERAR PLANCHA PDF"</b>.</span>
             `;
         }
 
@@ -878,7 +931,8 @@
     function onPlanchaZoneCheckChange(idx) {
         const chk = document.getElementById(`plancha_zone_chk_${idx}`);
         const card = document.getElementById(`plancha_zone_card_${idx}`);
-        const qtyInput = document.getElementById(`plancha_zone_qty_${idx}`);
+        const fromEl = document.getElementById(`plancha_zone_from_${idx}`);
+        const toEl = document.getElementById(`plancha_zone_to_${idx}`);
         const btns = card ? card.querySelectorAll('button') : [];
 
         if (chk && card) {
@@ -886,170 +940,160 @@
             if (chk.checked) {
                 card.style.opacity = '1';
                 card.style.borderColor = isCourtesy ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255,255,255,0.08)';
-                if (qtyInput) qtyInput.disabled = false;
+                if (fromEl) fromEl.disabled = false;
+                if (toEl) toEl.disabled = false;
                 btns.forEach(b => b.disabled = false);
             } else {
                 card.style.opacity = '0.45';
                 card.style.borderColor = isCourtesy ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.04)';
-                if (qtyInput) qtyInput.disabled = true;
+                if (fromEl) fromEl.disabled = true;
+                if (toEl) toEl.disabled = true;
                 btns.forEach(b => b.disabled = true);
             }
         }
 
-        // Sincronizar el selector desplegable rápido
-        const quickFilter = document.getElementById('plancha_quick_zone_filter');
-        if (quickFilter && Array.isArray(planchaZoneBreakdown)) {
-            const allChecked = planchaZoneBreakdown.every((_, i) => document.getElementById(`plancha_zone_chk_${i}`)?.checked);
-            const regularZones = planchaZoneBreakdown.map((zb, i) => (!zb.isCourtesy ? i : null)).filter(v => v !== null);
-            const courtesyZones = planchaZoneBreakdown.map((zb, i) => (zb.isCourtesy ? i : null)).filter(v => v !== null);
-
-            const regularAllChecked = regularZones.length > 0 && regularZones.every(i => document.getElementById(`plancha_zone_chk_${i}`)?.checked) && (courtesyZones.length === 0 || courtesyZones.every(i => !document.getElementById(`plancha_zone_chk_${i}`)?.checked));
-            const courtesyAllChecked = courtesyZones.length > 0 && courtesyZones.every(i => document.getElementById(`plancha_zone_chk_${i}`)?.checked) && regularZones.every(i => !document.getElementById(`plancha_zone_chk_${i}`)?.checked);
-
-            if (allChecked) {
-                quickFilter.value = 'ALL';
-            } else if (regularAllChecked && courtesyZones.length > 0) {
-                quickFilter.value = 'REGULAR_ONLY';
-            } else if (courtesyAllChecked) {
-                quickFilter.value = 'COURTESY_ONLY';
-            } else {
-                const checkedIndices = planchaZoneBreakdown
-                    .map((_, i) => document.getElementById(`plancha_zone_chk_${i}`)?.checked ? i : null)
-                    .filter(v => v !== null);
-                if (checkedIndices.length === 1) {
-                    quickFilter.value = String(checkedIndices[0]);
-                }
-            }
-        }
-
         updatePlanchaSummary();
     }
 
     /**
-     * Filtro desplegable de zonas (Todas, Solo Regulares, Solo Cortesías, o una zona específica)
+     * Manejador al escribir rango Desde / Hasta por zona
      */
-    function onPlanchaZoneFilterChange(val) {
-        if (!Array.isArray(planchaZoneBreakdown)) return;
-
-        if (val === 'ALL') {
-            planchaZoneBreakdown.forEach((zb, idx) => {
-                const chk = document.getElementById(`plancha_zone_chk_${idx}`);
-                const card = document.getElementById(`plancha_zone_card_${idx}`);
-                if (card) card.style.display = 'flex';
-                if (chk) {
-                    chk.checked = true;
-                    onPlanchaZoneCheckChange(idx);
-                }
-            });
-            const cHeader = document.getElementById('plancha_courtesy_zones_header');
-            if (cHeader) cHeader.style.display = 'flex';
-        } else if (val === 'REGULAR_ONLY') {
-            planchaZoneBreakdown.forEach((zb, idx) => {
-                const chk = document.getElementById(`plancha_zone_chk_${idx}`);
-                const card = document.getElementById(`plancha_zone_card_${idx}`);
-                if (zb.isCourtesy) {
-                    if (card) card.style.display = 'none';
-                    if (chk) { chk.checked = false; onPlanchaZoneCheckChange(idx); }
-                } else {
-                    if (card) card.style.display = 'flex';
-                    if (chk) { chk.checked = true; onPlanchaZoneCheckChange(idx); }
-                }
-            });
-            const cHeader = document.getElementById('plancha_courtesy_zones_header');
-            if (cHeader) cHeader.style.display = 'none';
-        } else if (val === 'COURTESY_ONLY') {
-            planchaZoneBreakdown.forEach((zb, idx) => {
-                const chk = document.getElementById(`plancha_zone_chk_${idx}`);
-                const card = document.getElementById(`plancha_zone_card_${idx}`);
-                if (zb.isCourtesy) {
-                    if (card) card.style.display = 'flex';
-                    if (chk) { chk.checked = true; onPlanchaZoneCheckChange(idx); }
-                } else {
-                    if (card) card.style.display = 'none';
-                    if (chk) { chk.checked = false; onPlanchaZoneCheckChange(idx); }
-                }
-            });
-            const cHeader = document.getElementById('plancha_courtesy_zones_header');
-            if (cHeader) cHeader.style.display = 'flex';
-        } else {
-            const targetIdx = parseInt(val, 10);
-            planchaZoneBreakdown.forEach((zb, idx) => {
-                const chk = document.getElementById(`plancha_zone_chk_${idx}`);
-                const card = document.getElementById(`plancha_zone_card_${idx}`);
-                if (card) card.style.display = 'flex';
-                if (chk) {
-                    chk.checked = (idx === targetIdx);
-                    onPlanchaZoneCheckChange(idx);
-                }
-            });
-            const cHeader = document.getElementById('plancha_courtesy_zones_header');
-            if (cHeader) {
-                const targetIsCourtesy = planchaZoneBreakdown[targetIdx]?.isCourtesy;
-                cHeader.style.display = targetIsCourtesy ? 'flex' : 'none';
-            }
-        }
-
-        updatePlanchaSummary();
-    }
-
-    /**
-     * Validación en tiempo real del campo cantidad por zona
-     */
-    function onPlanchaZoneQtyInput(idx) {
-        const input = document.getElementById(`plancha_zone_qty_${idx}`);
+    function onPlanchaZoneRangeInput(idx) {
+        const fromEl = document.getElementById(`plancha_zone_from_${idx}`);
+        const toEl = document.getElementById(`plancha_zone_to_${idx}`);
+        const qtyEl = document.getElementById(`plancha_zone_qty_${idx}`);
+        const qtyLabel = document.getElementById(`plancha_zone_qty_label_${idx}`);
         const zb = (Array.isArray(planchaZoneBreakdown) && planchaZoneBreakdown[idx]) ? planchaZoneBreakdown[idx] : null;
-        if (input && zb && zb.capacity > 0) {
-            let val = parseInt(input.value, 10);
-            if (val > zb.capacity) {
-                input.value = zb.capacity;
-            }
+
+        if (fromEl && toEl && zb) {
+            let fromVal = parseInt(fromEl.value, 10);
+            let toVal = parseInt(toEl.value, 10);
+
+            if (isNaN(fromVal) || fromVal < zb.minNum) fromVal = zb.minNum;
+            if (isNaN(toVal) || toVal > zb.maxNum) toVal = zb.maxNum;
+            if (toVal < fromVal) toVal = fromVal;
+
+            const qty = Math.max(0, toVal - fromVal + 1);
+            if (qtyEl) qtyEl.value = qty;
+            if (qtyLabel) qtyLabel.textContent = qty;
         }
+
         updatePlanchaSummary();
     }
 
     /**
-     * Sumar o restar cantidad dinámicamente (+10, etc.)
+     * Preajuste rápido de rango en la tarjeta de zona
      */
-    function adjustZoneQty(idx, amount) {
-        const input = document.getElementById(`plancha_zone_qty_${idx}`);
+    function setZoneRangePreset(idx, type) {
+        const fromEl = document.getElementById(`plancha_zone_from_${idx}`);
+        const toEl = document.getElementById(`plancha_zone_to_${idx}`);
         const chk = document.getElementById(`plancha_zone_chk_${idx}`);
-        if (!input) return;
-        if (chk && !chk.checked) {
-            chk.checked = true;
-            onPlanchaZoneCheckChange(idx);
-        }
         const zb = (Array.isArray(planchaZoneBreakdown) && planchaZoneBreakdown[idx]) ? planchaZoneBreakdown[idx] : null;
-        const maxLimit = (zb && zb.capacity > 0) ? zb.capacity : 99999;
-        let current = parseInt(input.value, 10) || 0;
-        input.value = Math.min(maxLimit, Math.max(1, current + amount));
-        updatePlanchaSummary();
-    }
-
-    /**
-     * Botones de atajo rápido de cantidad (Aforo / 1 Hoja o Pliego / En BD)
-     */
-    function setZoneQtyPreset(idx, type) {
-        const input = document.getElementById(`plancha_zone_qty_${idx}`);
-        const chk = document.getElementById(`plancha_zone_chk_${idx}`);
-        if (!input) return;
+        if (!zb) return;
 
         if (chk && !chk.checked) {
             chk.checked = true;
             onPlanchaZoneCheckChange(idx);
         }
 
-        const zb = (Array.isArray(planchaZoneBreakdown) && planchaZoneBreakdown[idx]) ? planchaZoneBreakdown[idx] : null;
-
-        if (type === 'pending') {
-            input.value = Math.max(1, zb ? (zb.capacity > 0 ? Math.min(zb.capacity, zb.pendingNew) : zb.pendingNew) : 1);
-        } else if (type === 'capacity') {
-            input.value = Math.max(1, zb ? zb.capacity : 24);
-        } else if (type === 'existing') {
-            input.value = Math.max(1, zb ? (zb.capacity > 0 ? Math.min(zb.capacity, zb.alreadyGenerated) : zb.alreadyGenerated) : 24);
+        if (type === 'all') {
+            if (fromEl) fromEl.value = zb.minNum;
+            if (toEl) toEl.value = zb.maxNum;
+        } else if (type === 'new') {
+            const startVal = (zb.newStartNum && zb.newStartNum > zb.minNum && zb.newStartNum <= zb.maxNum)
+                ? zb.newStartNum
+                : zb.minNum;
+            if (fromEl) fromEl.value = startVal;
+            if (toEl) toEl.value = zb.maxNum;
         } else if (type === 'sheet') {
             const perSheet = selectedPlanchaSizeKey === 'a4' ? 6 : 24;
-            input.value = (zb && zb.capacity > 0) ? Math.min(zb.capacity, perSheet) : perSheet;
+            if (fromEl) fromEl.value = zb.minNum;
+            if (toEl) toEl.value = Math.min(zb.maxNum, zb.minNum + perSheet - 1);
         }
+
+        onPlanchaZoneRangeInput(idx);
+    }
+
+    /**
+     * Sumar o restar rango dinámicamente (+10, etc.)
+     */
+    function adjustZoneRange(idx, amount) {
+        const toEl = document.getElementById(`plancha_zone_to_${idx}`);
+        const chk = document.getElementById(`plancha_zone_chk_${idx}`);
+        const zb = (Array.isArray(planchaZoneBreakdown) && planchaZoneBreakdown[idx]) ? planchaZoneBreakdown[idx] : null;
+        if (!toEl || !zb) return;
+
+        if (chk && !chk.checked) {
+            chk.checked = true;
+            onPlanchaZoneCheckChange(idx);
+        }
+
+        const currentTo = parseInt(toEl.value, 10) || zb.minNum;
+        toEl.value = Math.min(zb.maxNum, Math.max(zb.minNum, currentTo + amount));
+        onPlanchaZoneRangeInput(idx);
+    }
+
+    /**
+     * Filtros y acciones globales de selección
+     */
+    function setGlobalPlanchaFilter(type) {
+        if (!Array.isArray(planchaZoneBreakdown)) return;
+
+        if (type === 'ALL') {
+            planchaZoneBreakdown.forEach((zb, idx) => {
+                const chk = document.getElementById(`plancha_zone_chk_${idx}`);
+                const fromEl = document.getElementById(`plancha_zone_from_${idx}`);
+                const toEl = document.getElementById(`plancha_zone_to_${idx}`);
+                if (chk) chk.checked = true;
+                if (fromEl) fromEl.value = zb.minNum;
+                if (toEl) toEl.value = zb.maxNum;
+                onPlanchaZoneCheckChange(idx);
+                onPlanchaZoneRangeInput(idx);
+            });
+        } else if (type === 'ONLY_NEW') {
+            let anyNewFound = false;
+            planchaZoneBreakdown.forEach((zb, idx) => {
+                const chk = document.getElementById(`plancha_zone_chk_${idx}`);
+                const fromEl = document.getElementById(`plancha_zone_from_${idx}`);
+                const toEl = document.getElementById(`plancha_zone_to_${idx}`);
+                
+                const hasNew = (zb.newStartNum && zb.newStartNum > zb.minNum && zb.newStartNum <= zb.maxNum);
+                if (hasNew) anyNewFound = true;
+                const startVal = hasNew ? zb.newStartNum : zb.minNum;
+
+                if (chk) chk.checked = true;
+                if (fromEl) fromEl.value = startVal;
+                if (toEl) toEl.value = zb.maxNum;
+                onPlanchaZoneCheckChange(idx);
+                onPlanchaZoneRangeInput(idx);
+            });
+
+            if (!anyNewFound && typeof Swal !== 'undefined') {
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    background: '#1E293B',
+                    color: '#FFFFFF'
+                });
+                Toast.fire({
+                    icon: 'info',
+                    title: 'Todas las entradas registradas pertenecen a la tanda actual'
+                });
+            }
+        } else if (type === 'CHECK_ALL') {
+            planchaZoneBreakdown.forEach((_, idx) => {
+                const chk = document.getElementById(`plancha_zone_chk_${idx}`);
+                if (chk) { chk.checked = true; onPlanchaZoneCheckChange(idx); }
+            });
+        } else if (type === 'UNCHECK_ALL') {
+            planchaZoneBreakdown.forEach((_, idx) => {
+                const chk = document.getElementById(`plancha_zone_chk_${idx}`);
+                if (chk) { chk.checked = false; onPlanchaZoneCheckChange(idx); }
+            });
+        }
+
         updatePlanchaSummary();
     }
 
@@ -1076,19 +1120,36 @@
         const dimEl = document.getElementById('plancha_summary_dimensions');
         if (dimEl) dimEl.textContent = planchaSizeLabel;
 
-        // Calcular boletos que se imprimirán según las zonas seleccionadas y sus cantidades
         let ticketsToPrintCount = 0;
         let selectedZonesCount = 0;
+        let zoneSummaries = [];
 
         if (Array.isArray(planchaZoneBreakdown)) {
             planchaZoneBreakdown.forEach((zb, idx) => {
                 const chk = document.getElementById(`plancha_zone_chk_${idx}`);
                 if (chk && chk.checked) {
                     selectedZonesCount++;
-                    const input = document.getElementById(`plancha_zone_qty_${idx}`);
-                    const rawQty = input ? (parseInt(input.value, 10) || 0) : 0;
-                    const qty = zb.capacity > 0 ? Math.min(rawQty, zb.capacity) : rawQty;
-                    ticketsToPrintCount += Math.max(0, qty);
+                    const fromEl = document.getElementById(`plancha_zone_from_${idx}`);
+                    const toEl = document.getElementById(`plancha_zone_to_${idx}`);
+                    const fromVal = fromEl ? parseInt(fromEl.value, 10) : zb.minNum;
+                    const toVal = toEl ? parseInt(toEl.value, 10) : zb.maxNum;
+
+                    // Filtrar boletos existentes de esta zona dentro del rango
+                    const zKey = cleanZoneBase(zb.name);
+                    const zoneExisting = planchaExistingTickets.filter(t => resolveTicketZoneKey(t) === zKey);
+                    const zoneFiltered = zoneExisting.filter(t => {
+                        const n = parseInt(t.ticketNumberVal || t.ticket_number, 10) || 0;
+                        return n >= fromVal && n <= toVal;
+                    });
+
+                    const count = zoneFiltered.length;
+                    ticketsToPrintCount += count;
+
+                    if (count > 0) {
+                        const minN = Math.min(...zoneFiltered.map(t => parseInt(t.ticketNumberVal || t.ticket_number, 10)));
+                        const maxN = Math.max(...zoneFiltered.map(t => parseInt(t.ticketNumberVal || t.ticket_number, 10)));
+                        zoneSummaries.push(`${zb.name}: N° ${String(minN).padStart(5, '0')}→${String(maxN).padStart(5, '0')} (${count})`);
+                    }
                 }
             });
         }
@@ -1096,21 +1157,6 @@
         const dbCount = Array.isArray(planchaExistingTickets) ? planchaExistingTickets.length : 0;
         const dbTotalEl = document.getElementById('plancha_summary_db_tickets');
         if (dbTotalEl) dbTotalEl.textContent = `${dbCount} entradas`;
-
-        let maxExistingNum = 0;
-        if (Array.isArray(planchaExistingTickets)) {
-            planchaExistingTickets.forEach(t => {
-                const n = parseInt(t.ticketNumberVal || t.ticket_number, 10);
-                if (n > maxExistingNum) maxExistingNum = n;
-            });
-        }
-
-        let totalPendingRemaining = 0;
-        if (Array.isArray(planchaZoneBreakdown)) {
-            planchaZoneBreakdown.forEach(zb => {
-                totalPendingRemaining += (zb.pendingNew || 0);
-            });
-        }
 
         const sheetsCount = Math.ceil(ticketsToPrintCount / perSheet) || 0;
 
@@ -1123,64 +1169,21 @@
         if (totalEl) totalEl.textContent = `${ticketsToPrintCount} boletos (${selectedZonesCount} zona${selectedZonesCount === 1 ? '' : 's'})`;
         if (sheetsEl) sheetsEl.textContent = `${sheetsCount} ${sheetTypeWord}`;
 
-        // Calcular rango correlativo exacto de los boletos seleccionados para imprimir
-        let selectedPrintTickets = [];
-        if (Array.isArray(planchaZoneBreakdown)) {
-            planchaZoneBreakdown.forEach((zb, idx) => {
-                const chk = document.getElementById(`plancha_zone_chk_${idx}`);
-                if (chk && chk.checked) {
-                    const zKey = cleanZoneBase(zb.name);
-                    const zoneExisting = planchaExistingTickets.filter(t => resolveTicketZoneKey(t) === zKey);
-                    const input = document.getElementById(`plancha_zone_qty_${idx}`);
-                    const rawQty = input ? (parseInt(input.value, 10) || 0) : 0;
-                    const qtyWanted = zb.capacity > 0 ? Math.min(rawQty, zb.capacity) : rawQty;
-                    if (qtyWanted > 0 && zoneExisting.length > 0) {
-                        const slice = zoneExisting.slice(0, qtyWanted);
-                        selectedPrintTickets = selectedPrintTickets.concat(slice);
-                    }
-                }
-            });
-        }
-        
         if (rangeEl) {
-            if (selectedPrintTickets.length > 0) {
-                const nums = selectedPrintTickets.map(t => parseInt(t.ticketNumberVal || t.ticket_number, 10)).filter(n => !isNaN(n) && n > 0);
-                if (nums.length > 0) {
-                    const minN = Math.min(...nums);
-                    const maxN = Math.max(...nums);
-                    rangeEl.textContent = `N° ${String(minN).padStart(5, '0')} → N° ${String(maxN).padStart(5, '0')}`;
-                } else {
-                    rangeEl.textContent = `N° 00001 → N° ${String(selectedPrintTickets.length).padStart(5, '0')}`;
-                }
-            } else if (ticketsToPrintCount > 0) {
-                let startNum = maxExistingNum + 1;
-                let endNum = maxExistingNum + ticketsToPrintCount;
-                rangeEl.textContent = `N° ${String(startNum).padStart(5, '0')} → N° ${String(endNum).padStart(5, '0')} (Por emitir)`;
-            } else {
-                rangeEl.textContent = 'Sin boletos seleccionados';
+            if (zoneSummaries.length > 0) {
+                rangeEl.textContent = zoneSummaries.join(' • ');
+                rangeEl.title = zoneSummaries.join('\n');
+            } else if (ticketsToPrintCount === 0) {
+                rangeEl.textContent = 'Sin boletos en rango seleccionado';
+                rangeEl.title = '';
             }
         }
 
-        // Botón GENERAR PDF: Habilitado cuando se hayan seleccionado boletos
-        let generatedInDbForSelectedZones = 0;
-        if (Array.isArray(planchaZoneBreakdown)) {
-            planchaZoneBreakdown.forEach((zb, idx) => {
-                const chk = document.getElementById(`plancha_zone_chk_${idx}`);
-                if (chk && chk.checked) {
-                    const zKey = cleanZoneBase(zb.name);
-                    const zoneExisting = planchaExistingTickets.filter(t => resolveTicketZoneKey(t) === zKey);
-                    const input = document.getElementById(`plancha_zone_qty_${idx}`);
-                    const qtyWanted = input ? (parseInt(input.value, 10) || 0) : 0;
-                    generatedInDbForSelectedZones += Math.min(qtyWanted, zoneExisting.length);
-                }
-            });
-        }
-
         if (btnText && btnPlancha) {
-            if (generatedInDbForSelectedZones > 0) {
+            if (ticketsToPrintCount > 0) {
                 btnText.textContent = isA4 
-                    ? `GENERAR PDF A4 (${generatedInDbForSelectedZones} BOLETOS)` 
-                    : `GENERAR PLANCHA PDF (${generatedInDbForSelectedZones} BOLETOS)`;
+                    ? `GENERAR PDF A4 (${ticketsToPrintCount} BOLETOS)` 
+                    : `GENERAR PLANCHA PDF (${ticketsToPrintCount} BOLETOS)`;
                 btnPlancha.disabled = false;
                 btnPlancha.style.opacity = '1';
                 btnPlancha.style.cursor = 'pointer';
@@ -1202,7 +1205,7 @@
     }
 
     /**
-     * GENERACIÓN DE PDF (Distribuir / mapear entradas ya registradas en la hoja A4 o Plancha)
+     * GENERACIÓN DE PDF (Distribuir / mapear entradas agrupadas zona por zona en la hoja A4 o Plancha)
      */
     async function startPlanchaPdfGeneration() {
         if (!activePlanchaEvent) {
@@ -1273,26 +1276,51 @@
             marginY = (600 - (6 * 88.3 + 5 * 6)) / 2;
         }
 
-        // Recolectar las entradas correspondientes a las zonas marcadas
+        // Recolectar las entradas correspondientes a las zonas marcadas en orden estricto de zona
         let candidateTickets = [];
+        let zoneSummaryList = [];
 
         if (Array.isArray(planchaZoneBreakdown)) {
             planchaZoneBreakdown.forEach((zb, zIdx) => {
                 const chk = document.getElementById(`plancha_zone_chk_${zIdx}`);
                 if (!chk || !chk.checked) return;
 
-                const qtyInput = document.getElementById(`plancha_zone_qty_${zIdx}`);
-                const rawQty = qtyInput ? (parseInt(qtyInput.value, 10) || 0) : 0;
-                const qtyWanted = zb.capacity > 0 ? Math.min(rawQty, zb.capacity) : rawQty;
-                if (qtyWanted <= 0) return;
+                const fromEl = document.getElementById(`plancha_zone_from_${zIdx}`);
+                const toEl = document.getElementById(`plancha_zone_to_${zIdx}`);
+                const fromVal = fromEl ? parseInt(fromEl.value, 10) : zb.minNum;
+                const toVal = toEl ? parseInt(toEl.value, 10) : zb.maxNum;
 
                 // Filtrar las entradas registradas de esta zona
-                const zoneTickets = planchaExistingTickets.filter(t => resolveTicketZoneKey(t) === cleanZoneBase(zb.name));
+                const zKey = cleanZoneBase(zb.name);
+                const zoneTickets = planchaExistingTickets.filter(t => resolveTicketZoneKey(t) === zKey);
                 if (zoneTickets.length === 0) return;
-                
-                const sliceTickets = zoneTickets.slice(0, qtyWanted);
 
-                sliceTickets.forEach(t => {
+                // Ordenar las entradas de esta zona por correlativo ascendente
+                zoneTickets.sort((a, b) => {
+                    const numA = parseInt(a.ticketNumberVal || a.ticket_number, 10) || 0;
+                    const numB = parseInt(b.ticketNumberVal || b.ticket_number, 10) || 0;
+                    if (numA !== numB) return numA - numB;
+                    return (a.id || 0) - (b.id || 0);
+                });
+
+                const zoneFiltered = zoneTickets.filter(t => {
+                    const n = parseInt(t.ticketNumberVal || t.ticket_number, 10) || 0;
+                    return n >= fromVal && n <= toVal;
+                });
+
+                if (zoneFiltered.length === 0) return;
+
+                const zMin = Math.min(...zoneFiltered.map(t => parseInt(t.ticketNumberVal || t.ticket_number, 10)));
+                const zMax = Math.max(...zoneFiltered.map(t => parseInt(t.ticketNumberVal || t.ticket_number, 10)));
+                zoneSummaryList.push({
+                    name: zb.name,
+                    isCourtesy: zb.isCourtesy,
+                    count: zoneFiltered.length,
+                    min: zMin,
+                    max: zMax
+                });
+
+                zoneFiltered.forEach(t => {
                     const zName = t.zoneName || t.zone_name || zb.name;
                     let sCode = t.seatCode || t.seat || '';
                     if (!sCode) {
@@ -1308,6 +1336,7 @@
                         ticketNumberVal: numSeq,
                         ticketCode: correlativeFormatted,
                         zoneName: zName,
+                        baseZoneName: zb.baseZoneName || zb.name,
                         seatCode: sCode,
                         zonePrice: isTicketCourtesy ? '0.00' : (t.zonePrice || (parseFloat(t.unit_price) || 0).toFixed(2)),
                         validationHash: t.validationHash || t.validation_hash,
@@ -1325,7 +1354,7 @@
             Swal.fire({
                 icon: 'warning',
                 title: 'Sin boletos a generar en PDF',
-                text: 'No se encontraron boletos registrados para las zonas y cantidades seleccionadas. Recuerda que los boletos se crean automáticamente al configurar el aforo en el evento.',
+                text: 'No se encontraron boletos registrados para los rangos seleccionados.',
                 confirmButtonColor: '#2563EB',
                 background: '#14141E',
                 color: '#FFFFFF'
@@ -1333,66 +1362,41 @@
             return;
         }
 
-        // Ordenar correlativamente agrupando regulares primero y cortesías después
-        candidateTickets.sort((a, b) => {
-            const aIsCort = !!a.isCourtesy;
-            const bIsCort = !!b.isCourtesy;
-            if (aIsCort !== bIsCort) {
-                return aIsCort ? 1 : -1;
-            }
-            return a.ticketNumberVal - b.ticketNumberVal;
-        });
-
         const formatTitle = isA4 ? 'Hoja A4' : `Plancha ${planchaSizeLabel}`;
         const sheetUnitName = isA4 ? 'hoja(s) A4' : 'plancha(s)';
+        const totalSheets = Math.ceil(candidateTickets.length / perSheet);
 
-        const minNum = candidateTickets[0].ticketNumberVal;
-        const maxNum = candidateTickets[candidateTickets.length - 1].ticketNumberVal;
-        const minTicketStr = String(minNum).padStart(5, '0');
-        const maxTicketStr = String(maxNum).padStart(5, '0');
+        let zoneBreakdownHtml = '';
+        zoneSummaryList.forEach(zs => {
+            const icon = zs.isCourtesy ? '🎁' : '🎟️';
+            zoneBreakdownHtml += `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0.2rem; border-bottom: 1px dashed rgba(255,255,255,0.08); font-size: 0.78rem;">
+                    <span><b>${icon} ${zs.name}</b> (${zs.count} boletos)</span>
+                    <span style="font-family: monospace; color: #F59E0B; font-weight: 800;">N° ${String(zs.min).padStart(5, '0')} → N° ${String(zs.max).padStart(5, '0')}</span>
+                </div>
+            `;
+        });
 
-        // Confirmar con el usuario permitiendo elegir o ajustar rango de números correlativos
+        // Confirmar con el usuario mostrando el desglose por zona
         const confirmRes = await Swal.fire({
             title: `Generar PDF en ${formatTitle}`,
             html: `
                 <div style="text-align: left; font-size: 0.82rem; color: #CBD5E1;">
-                    <p style="margin: 0 0 0.85rem 0; color: #94A3B8; line-height: 1.4;">
-                        Configura el <b>rango de números correlativos</b> que deseas imprimir en esta plancha. Puedes imprimir todo el rango seleccionado o indicar un tramo específico:
+                    <p style="margin: 0 0 0.75rem 0; color: #94A3B8; line-height: 1.4;">
+                        Se compilarán los boletos agrupados <b>en orden por cada zona</b>:
                     </p>
                     
-                    <div style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 0.85rem; margin-bottom: 0.85rem;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
-                            <div>
-                                <label style="display: block; font-size: 0.72rem; font-weight: 800; color: #60A5FA; margin-bottom: 0.35rem; text-transform: uppercase;">
-                                    🔢 Desde Correlativo
-                                </label>
-                                <input id="swal_range_start" type="number" class="swal2-input" value="${minNum}" min="${minNum}" max="${maxNum}" 
-                                       style="width: 100%; margin: 0; padding: 0.5rem 0.65rem; height: 42px; font-size: 1rem; font-weight: 900; color: #F59E0B; text-align: center; background: rgba(15, 23, 42, 0.9); border: 1.5px solid rgba(245, 158, 11, 0.4); border-radius: 8px; box-sizing: border-box;" 
-                                       oninput="updateSwalRangeSummary()">
-                            </div>
-                            <div>
-                                <label style="display: block; font-size: 0.72rem; font-weight: 800; color: #60A5FA; margin-bottom: 0.35rem; text-transform: uppercase;">
-                                    🔢 Hasta Correlativo
-                                </label>
-                                <input id="swal_range_end" type="number" class="swal2-input" value="${maxNum}" min="${minNum}" max="${maxNum}" 
-                                       style="width: 100%; margin: 0; padding: 0.5rem 0.65rem; height: 42px; font-size: 1rem; font-weight: 900; color: #F59E0B; text-align: center; background: rgba(15, 23, 42, 0.9); border: 1.5px solid rgba(245, 158, 11, 0.4); border-radius: 8px; box-sizing: border-box;" 
-                                       oninput="updateSwalRangeSummary()">
-                            </div>
-                        </div>
-
-                        <div style="margin-top: 0.65rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.73rem; color: #94A3B8; border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 0.55rem;">
-                            <span>Rango total en selección:</span>
-                            <span style="font-family: monospace; font-weight: 800; color: #FFFFFF;">N° ${minTicketStr} → N° ${maxTicketStr} (${candidateTickets.length} disp.)</span>
-                        </div>
+                    <div style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 0.75rem 0.85rem; margin-bottom: 0.85rem; max-height: 180px; overflow-y: auto;">
+                        ${zoneBreakdownHtml}
                     </div>
 
-                    <div id="swal_range_preview_box" style="background: rgba(37, 99, 235, 0.1); border: 1px solid rgba(37, 99, 235, 0.3); border-radius: 8px; padding: 0.55rem 0.75rem; font-size: 0.76rem; color: #93C5FD; display: flex; justify-content: space-between; align-items: center;">
-                        <span id="swal_range_preview_text">Se imprimirán <b>${candidateTickets.length} boletos</b></span>
-                        <span id="swal_range_preview_sheets" style="color: #F59E0B; font-weight: 800;">(${Math.ceil(candidateTickets.length / perSheet)} ${sheetUnitName})</span>
+                    <div id="swal_range_preview_box" style="background: rgba(37, 99, 235, 0.1); border: 1px solid rgba(37, 99, 235, 0.3); border-radius: 8px; padding: 0.6rem 0.8rem; font-size: 0.78rem; color: #93C5FD; display: flex; justify-content: space-between; align-items: center;">
+                        <span>Total a imprimir: <b>${candidateTickets.length} boletos</b></span>
+                        <span style="color: #F59E0B; font-weight: 800;">(${totalSheets} ${sheetUnitName})</span>
                     </div>
 
                     <div style="margin-top: 0.6rem; font-size: 0.72rem; color: #10B981; font-weight: 700; text-align: center;">
-                        ✓ Códigos QR oficiales y correlativos continuos sincronizados para impresión
+                        ✓ Impresión secuencial zona por zona • Códigos QR oficiales
                     </div>
                 </div>
             `,
@@ -1403,50 +1407,14 @@
             confirmButtonText: '🖨️ Sí, Compilar y Descargar PDF',
             cancelButtonText: 'Cancelar',
             background: '#14141E',
-            color: '#FFFFFF',
-            didOpen: () => {
-                window.updateSwalRangeSummary = function() {
-                    const s = parseInt(document.getElementById('swal_range_start')?.value, 10);
-                    const e = parseInt(document.getElementById('swal_range_end')?.value, 10);
-                    const previewText = document.getElementById('swal_range_preview_text');
-                    const previewSheets = document.getElementById('swal_range_preview_sheets');
-                    if (isNaN(s) || isNaN(e) || s > e) {
-                        if (previewText) previewText.innerHTML = '<span style="color: #EF4444;">Rango correlativo inválido</span>';
-                        if (previewSheets) previewSheets.textContent = '';
-                        return;
-                    }
-                    const count = candidateTickets.filter(t => t.ticketNumberVal >= s && t.ticketNumberVal <= e).length;
-                    const sheets = Math.ceil(count / perSheet);
-                    if (previewText) previewText.innerHTML = `Se imprimirán <b>${count} boletos</b>`;
-                    if (previewSheets) previewSheets.textContent = `(${sheets} ${sheetUnitName})`;
-                };
-            },
-            preConfirm: () => {
-                const s = parseInt(document.getElementById('swal_range_start')?.value, 10);
-                const e = parseInt(document.getElementById('swal_range_end')?.value, 10);
-                if (isNaN(s) || isNaN(e)) {
-                    Swal.showValidationMessage('Por favor ingresa números correlativos válidos.');
-                    return false;
-                }
-                if (s > e) {
-                    Swal.showValidationMessage('El correlativo inicial no puede ser mayor que el correlativo final.');
-                    return false;
-                }
-                const filtered = candidateTickets.filter(t => t.ticketNumberVal >= s && t.ticketNumberVal <= e);
-                if (filtered.length === 0) {
-                    Swal.showValidationMessage(`No existen boletos con correlativos entre N° ${s} y N° ${e} en las zonas seleccionadas.`);
-                    return false;
-                }
-                return { start: s, end: e, tickets: filtered };
-            }
+            color: '#FFFFFF'
         });
 
-        if (!confirmRes.isConfirmed || !confirmRes.value || !confirmRes.value.tickets) {
+        if (!confirmRes.isConfirmed) {
             return;
         }
 
-        const ticketsToPrint = confirmRes.value.tickets;
-        const totalSheets = Math.ceil(ticketsToPrint.length / perSheet);
+        const ticketsToPrint = candidateTickets;
 
         planchaIsGenerating = true;
         const progressBox = document.getElementById('plancha_render_progress_box');
@@ -1638,6 +1606,17 @@
             const safeEventName = (eventTitle || 'Evento').replace(/[^a-zA-Z0-9_\-]/g, '_');
             const fileName = `Plancha_${planchaSizeLabel}_${safeEventName}_Total_${ticketsToPrint.length}.pdf`;
             pdf.save(fileName);
+
+            // Registrar en memoria local el máximo correlativo impreso por cada zona para este evento
+            if (Array.isArray(zoneSummaryList) && evt && evt.id) {
+                zoneSummaryList.forEach(zs => {
+                    const zKey = cleanZoneBase(zs.name);
+                    if (zs.max) {
+                        const prevMax = parseInt(localStorage.getItem(`plancha_last_printed_${evt.id}_${zKey}`), 10) || 0;
+                        localStorage.setItem(`plancha_last_printed_${evt.id}_${zKey}`, Math.max(prevMax, zs.max));
+                    }
+                });
+            }
 
             planchaIsGenerating = false;
             if (progressBox) progressBox.style.display = 'none';

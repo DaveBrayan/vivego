@@ -166,13 +166,8 @@
                 </div>
             </div>
 
-            <!-- Área del SVG Auto-Centrado en Fondo Blanco -->
+            <!-- Área del SVG Auto-Centrado en Fondo Blanco Limpio -->
             <div id="publicSeatMapCanvasLayer" class="public-seatmap-canvas-layer">
-                
-                @if(!empty($event['reference_image']))
-                    <img id="publicSeatMapBgImg" src="{{ $event['reference_image'] }}" alt="Plano de Fondo" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; opacity: 0.85;">
-                @endif
-
                 <svg id="publicSeatMapSvg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible;" preserveAspectRatio="xMidYMid meet">
                     <defs>
                         <filter id="publicSeatShadow" x="-20%" y="-20%" width="140%" height="140%">

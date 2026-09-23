@@ -222,7 +222,7 @@ class CheckoutController extends Controller
                     foreach ($zones as $z) {
                         $regularPrice = (float)($z['price'] ?? 100.00);
                         $effectivePrice = $regularPrice;
-                        $hasPresale = !empty($z['has_presale']) || (!empty($z['presale_discount']) && (float)$z['presale_discount'] > 0);
+                        $hasPresale = !empty($z['has_presale']) && ($z['has_presale'] === true || $z['has_presale'] === 1 || $z['has_presale'] === '1' || $z['has_presale'] === 'true');
                         $discountPercent = (float)($z['presale_discount'] ?? 0);
                         $presaleStart = $z['presale_start_date'] ?? null;
                         $presaleEnd = $z['presale_end_date'] ?? null;
@@ -1570,15 +1570,7 @@ class CheckoutController extends Controller
                     $zName = strtoupper(trim($z['name'] ?? $z['capacity_type'] ?? ''));
                     $cleanZName = preg_replace('/\s*\([^)]*\)$/', '', $zName);
 
-                    // Descontar aforo de la zona
-                    if (isset($qtyPerZone[$cleanZName]) || isset($qtyPerZone[$zName])) {
-                        $deductQty = $qtyPerZone[$cleanZName] ?? $qtyPerZone[$zName];
-                        $currentCap = isset($z['capacity']) ? (int) $z['capacity'] : 0;
-                        $z['capacity'] = max(0, $currentCap - $deductQty);
-                        $zonesUpdated = true;
-                    }
-
-                    // Marcar butacas seleccionadas como ocupadas
+                    // Marcar butacas seleccionadas como ocupadas si corresponde (sin modificar el aforo base)
                     $targetSeats = $seatsPerZone[$cleanZName] ?? ($seatsPerZone[$zName] ?? []);
                     if (!empty($targetSeats) && !empty($z['seats']) && is_array($z['seats'])) {
                         foreach ($z['seats'] as &$seatItem) {

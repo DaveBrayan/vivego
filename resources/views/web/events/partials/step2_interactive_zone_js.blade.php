@@ -143,6 +143,8 @@
 
                     const hasPts = Array.isArray(pz.points) && pz.points.length >= 3;
 
+                    const isPresale = !!(pz.has_presale === true || pz.has_presale === 1 || pz.has_presale === '1' || pz.has_presale === 'true' || pz.presale_enabled === true || pz.presale_enabled === 'true' || pz.presale_enabled === 1);
+
                     this.zones.push({
                         id: pz.id || ('zone_' + Date.now() + '_' + idx),
                         name: pz.name || ('Zona ' + (idx + 1)),
@@ -150,12 +152,12 @@
                         price: parseFloat(pz.price) || 50,
                         capacity_type: pz.capacity_type || 'Aforo General',
                         color: pz.color || defaultColors[idx % defaultColors.length],
-                        presale_enabled: !!(pz.has_presale || pz.presale_enabled),
-                        presale_discount: parseFloat(pz.presale_discount) || 20,
-                        presale_price: parseFloat(pz.presale_price) || null,
-                        presale_start_date: pz.presale_start_date || null,
-                        presale_end_date: pz.presale_end_date || null,
-                        presale_stock: parseInt(pz.presale_stock) || null,
+                        presale_enabled: isPresale,
+                        presale_discount: isPresale ? (parseFloat(pz.presale_discount) || 20) : (parseFloat(pz.presale_discount) || 0),
+                        presale_price: isPresale ? (parseFloat(pz.presale_price) || null) : null,
+                        presale_start_date: isPresale ? (pz.presale_start_date || null) : null,
+                        presale_end_date: isPresale ? (pz.presale_end_date || null) : null,
+                        presale_stock: isPresale ? (parseInt(pz.presale_stock) || null) : null,
                         points: hasPts ? pz.points : defaultPoints,
                         seats: Array.isArray(pz.seats) ? pz.seats : [],
                         seat_rows: sRows,
@@ -178,11 +180,11 @@
                         const price = parseFloat(row.querySelector('.zone-price-input')?.value) || 50;
                         
                         const presaleRow = row.nextElementSibling;
-                        const isPresale = presaleRow?.querySelector('.zone-presale-enabled')?.checked || false;
-                        const presaleDisc = parseFloat(presaleRow?.querySelector('.zone-presale-discount')?.value) || 20;
-                        const presaleStart = presaleRow?.querySelector('.zone-presale-start')?.value || null;
-                        const presaleEnd = presaleRow?.querySelector('.zone-presale-end')?.value || null;
-                        const presaleStock = parseInt(presaleRow?.querySelector('.zone-presale-stock')?.value) || null;
+                        const isPresale = !!(presaleRow?.querySelector('.zone-presale-enabled')?.checked);
+                        const presaleDisc = isPresale ? (parseFloat(presaleRow?.querySelector('.zone-presale-discount')?.value) || 20) : 0;
+                        const presaleStart = isPresale ? (presaleRow?.querySelector('.zone-presale-start')?.value || null) : null;
+                        const presaleEnd = isPresale ? (presaleRow?.querySelector('.zone-presale-end')?.value || null) : null;
+                        const presaleStock = isPresale ? (parseInt(presaleRow?.querySelector('.zone-presale-stock')?.value) || null) : null;
 
                         const yOffset = 70 + (idx * 105);
                         const defaultPoints = [
@@ -260,6 +262,8 @@
                     // Omitir Escenario / Tarima de la tabla de tickets comercial
                     if (this.isStageZone(z)) return;
 
+                    const isPresaleActive = !this.isStageZone(z) && !!(z.presale_enabled === true || z.has_presale === true || z.presale_enabled === 'true' || z.has_presale === 'true');
+
                     const row = document.createElement('tr');
                     row.className = 'zone-row';
                     row.innerHTML = `
@@ -288,8 +292,8 @@
                             <input type="number" step="0.50" class="form-input-custom zone-price-input" value="${(parseFloat(z.price) || 0).toFixed(2)}" min="0" style="font-size: 0.85rem; padding: 0.55rem; color: #10B981; font-weight: 800;" oninput="if(typeof updateZonePresaleCalc==='function') updateZonePresaleCalc(this); if(typeof recalculateTotalCapacity==='function') recalculateTotalCapacity(); if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function') SeatMapEditor.syncFromStandardTable();">
                         </td>
                         <td>
-                            <button type="button" class="btn btn-sm btn-toggle-presale" style="background: rgba(255,85,0,0.15); border: 1.5px solid #FF5500; color: #FF5500; font-size: 0.775rem; font-weight: 800; padding: 0.45rem 0.65rem; border-radius: 8px; width: 100%; text-align: center;" onclick="if(typeof toggleZonePresaleBox==='function') toggleZonePresaleBox(this)">
-                                🔥 Configurar
+                            <button type="button" class="btn btn-sm btn-toggle-presale" style="background: ${isPresaleActive ? 'var(--color-primary-orange, #FF5500)' : 'rgba(255,85,0,0.15)'}; border: 1.5px solid #FF5500; color: ${isPresaleActive ? '#FFFFFF' : '#FF5500'}; font-size: 0.775rem; font-weight: 800; padding: 0.45rem 0.65rem; border-radius: 8px; width: 100%; text-align: center;" onclick="if(typeof toggleZonePresaleBox==='function') toggleZonePresaleBox(this)">
+                                🔥 ${isPresaleActive ? 'Preventa Activa' : 'Configurar'}
                             </button>
                         </td>
                         <td style="text-align: center;">
@@ -300,26 +304,27 @@
 
                     const presaleRow = document.createElement('tr');
                     presaleRow.className = 'zone-presale-row';
-                    presaleRow.style.display = z.presale_enabled ? 'table-row' : 'none';
+                    presaleRow.style.display = isPresaleActive ? 'table-row' : 'none';
                     presaleRow.style.background = 'rgba(255, 85, 0, 0.03)';
-                    const discPrice = z.price ? (z.price * (1 - (z.presale_discount || 0) / 100)) : 0;
+                    const pDisc = (z.presale_discount !== undefined && z.presale_discount !== null && parseFloat(z.presale_discount) > 0) ? parseFloat(z.presale_discount) : 20;
+                    const discPrice = z.price ? (z.price * (1 - pDisc / 100)) : 0;
 
                     presaleRow.innerHTML = `
                         <td colspan="6" style="padding: 0.85rem 1.25rem; border-bottom: 1.5px solid rgba(255,85,0,0.25);">
                             <div style="background: rgba(15,23,42,0.8); border: 1.5px dashed rgba(255,85,0,0.4); border-radius: 12px; padding: 1rem 1.25rem;">
                                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
                                     <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin: 0;">
-                                        <input type="checkbox" class="zone-presale-enabled" ${z.presale_enabled ? 'checked' : ''} onchange="if(typeof togglePresaleInputs==='function') togglePresaleInputs(this)" style="accent-color: #FF5500; width: 18px; height: 18px;">
+                                        <input type="checkbox" class="zone-presale-enabled" ${isPresaleActive ? 'checked' : ''} onchange="if(typeof togglePresaleInputs==='function') togglePresaleInputs(this)" style="accent-color: #FF5500; width: 18px; height: 18px;">
                                         <strong style="color: #FF5500; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px;">🔥 Activar Preventa para esta Zona</strong>
                                     </label>
-                                    <span class="presale-preview-badge" style="font-size: 0.75rem; font-weight: 800; color: ${z.presale_enabled ? '#38BDF8' : '#94A3B8'}; background: rgba(255,255,255,0.08); padding: 3px 10px; border-radius: 6px;">
-                                        ${z.presale_enabled ? 'Preventa Activa' : 'Preventa Inactiva'}
+                                    <span class="presale-preview-badge" style="font-size: 0.75rem; font-weight: 800; color: ${isPresaleActive ? '#38BDF8' : '#94A3B8'}; background: rgba(255,255,255,0.08); padding: 3px 10px; border-radius: 6px;">
+                                        ${isPresaleActive ? 'Preventa Activa' : 'Preventa Inactiva'}
                                     </span>
                                 </div>
-                                <div class="zone-presale-inputs-grid" style="display: grid; grid-template-columns: 1.3fr 1.35fr 1.4fr 1.4fr 1.2fr; gap: 0.85rem; ${z.presale_enabled ? '' : 'opacity: 0.4; pointer-events: none;'}">
+                                <div class="zone-presale-inputs-grid" style="display: grid; grid-template-columns: 1.3fr 1.35fr 1.4fr 1.4fr 1.2fr; gap: 0.85rem; ${isPresaleActive ? '' : 'opacity: 0.4; pointer-events: none;'}">
                                     <div style="min-width: 0;">
                                         <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">% DESCUENTO</label>
-                                        <input type="number" class="form-input-custom zone-presale-discount" value="${z.presale_discount || 20}" min="0" max="99" style="font-size: 0.85rem; padding: 0.45rem 0.4rem; text-align: center; width: 100%; box-sizing: border-box;" oninput="if(typeof updateZonePresaleCalc==='function') updateZonePresaleCalc(this, 'discount')">
+                                        <input type="number" class="form-input-custom zone-presale-discount" value="${pDisc}" min="0" max="99" style="font-size: 0.85rem; padding: 0.45rem 0.4rem; text-align: center; width: 100%; box-sizing: border-box;" oninput="if(typeof updateZonePresaleCalc==='function') updateZonePresaleCalc(this, 'discount')">
                                     </div>
                                     <div style="min-width: 0;">
                                         <label style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700; display: block; margin-bottom: 0.25rem;">PRECIO PREVENTA (S/)</label>
@@ -368,12 +373,12 @@
                 const price = parseFloat(row.querySelector('.zone-price-input')?.value) || 50;
                 
                 const presaleRow = row.nextElementSibling;
-                const isPresale = presaleRow?.querySelector('.zone-presale-enabled')?.checked || false;
-                const presaleDisc = parseFloat(presaleRow?.querySelector('.zone-presale-discount')?.value) || 20;
-                const presalePriceVal = parseFloat(presaleRow?.querySelector('.zone-presale-price')?.value);
-                const presaleStart = presaleRow?.querySelector('.zone-presale-start')?.value || null;
-                const presaleEnd = presaleRow?.querySelector('.zone-presale-end')?.value || null;
-                const presaleStock = parseInt(presaleRow?.querySelector('.zone-presale-stock')?.value) || null;
+                const isPresale = !!(presaleRow?.querySelector('.zone-presale-enabled')?.checked);
+                const presaleDisc = isPresale ? (parseFloat(presaleRow?.querySelector('.zone-presale-discount')?.value) || 20) : 0;
+                const presalePriceVal = isPresale ? parseFloat(presaleRow?.querySelector('.zone-presale-price')?.value) : null;
+                const presaleStart = isPresale ? (presaleRow?.querySelector('.zone-presale-start')?.value || null) : null;
+                const presaleEnd = isPresale ? (presaleRow?.querySelector('.zone-presale-end')?.value || null) : null;
+                const presaleStock = isPresale ? (parseInt(presaleRow?.querySelector('.zone-presale-stock')?.value) || null) : null;
 
                 const existing = this.zones ? this.zones.find(ez => !this.isStageZone(ez) && (ez.name === name || ez.id === ('zone_' + idx))) : null;
 
@@ -393,8 +398,8 @@
                     capacity_type: capType,
                     color: existing ? existing.color : defaultColors[idx % defaultColors.length],
                     presale_enabled: isPresale,
-                    presale_discount: presaleDisc,
-                    presale_price: !isNaN(presalePriceVal) ? presalePriceVal : (price * (1 - (presaleDisc / 100))),
+                    presale_discount: isPresale ? presaleDisc : 0,
+                    presale_price: isPresale ? (!isNaN(presalePriceVal) && presalePriceVal !== null ? presalePriceVal : (price * (1 - (presaleDisc / 100)))) : null,
                     presale_start_date: presaleStart,
                     presale_end_date: presaleEnd,
                     presale_stock: presaleStock,
@@ -423,6 +428,19 @@
         getExportZones: function() {
             return (this.zones || []).map(z => {
                 const isStage = this.isStageZone(z);
+                const isPresale = !isStage && !!(z.presale_enabled === true || z.presale_enabled === 'true' || z.presale_enabled === 1 || z.has_presale === true || z.has_presale === 'true');
+                const pDisc = isPresale ? (parseFloat(z.presale_discount) || 0) : 0;
+                let pPrice = null;
+                if (isPresale) {
+                    if (z.presale_price !== undefined && z.presale_price !== null && !isNaN(parseFloat(z.presale_price)) && parseFloat(z.presale_price) > 0) {
+                        pPrice = parseFloat(z.presale_price);
+                    } else if (z.price) {
+                        pPrice = parseFloat((z.price * (1 - (pDisc / 100))).toFixed(2));
+                    } else {
+                        pPrice = 0;
+                    }
+                }
+
                 return {
                     id: z.id,
                     name: z.name || (isStage ? 'ESCENARIO' : 'Zona'),
@@ -436,12 +454,12 @@
                     is_interactive: true,
                     color: z.color || (isStage ? '#334155' : '#FF5500'),
                     points: Array.isArray(z.points) ? z.points : [],
-                    has_presale: isStage ? false : !!z.presale_enabled,
-                    presale_discount: isStage ? 0 : (parseFloat(z.presale_discount) || 0),
-                    presale_price: isStage ? 0 : (z.presale_price !== undefined && z.presale_price !== null && !isNaN(parseFloat(z.presale_price)) ? parseFloat(z.presale_price) : (z.price ? parseFloat((z.price * (1 - (parseFloat(z.presale_discount) || 0) / 100)).toFixed(2)) : 0)),
-                    presale_start_date: isStage ? null : (z.presale_start_date || null),
-                    presale_end_date: isStage ? null : (z.presale_end_date || null),
-                    presale_stock: isStage ? null : (parseInt(z.presale_stock) || null),
+                    has_presale: isPresale,
+                    presale_discount: pDisc,
+                    presale_price: pPrice,
+                    presale_start_date: isPresale ? (z.presale_start_date || null) : null,
+                    presale_end_date: isPresale ? (z.presale_end_date || null) : null,
+                    presale_stock: isPresale ? (parseInt(z.presale_stock) || null) : null,
                     seats: isStage ? [] : (Array.isArray(z.seats) ? z.seats : []),
                     seat_rows: isStage ? null : (parseInt(z.seat_rows || z.rows) || null),
                     seat_cols: isStage ? null : (parseInt(z.seat_cols || z.cols) || null),
@@ -2308,17 +2326,18 @@
                 const capEl = document.getElementById('inspectorZoneCapacity');
                 if (capEl) capEl.value = z.capacity || 0;
 
-                const isPresale = !!z.presale_enabled;
+                const isPresale = !isStage && !!(z.presale_enabled === true || z.presale_enabled === 'true' || z.presale_enabled === 1 || z.has_presale === true || z.has_presale === 'true');
                 const presaleCheck = document.getElementById('inspectorZonePresaleEnabled');
                 if (presaleCheck) presaleCheck.checked = isPresale;
                 const discEl = document.getElementById('inspectorZonePresaleDiscount');
-                if (discEl) discEl.value = (z.presale_discount !== undefined && z.presale_discount !== null) ? z.presale_discount : 20;
+                if (discEl) discEl.value = (z.presale_discount !== undefined && z.presale_discount !== null && parseFloat(z.presale_discount) > 0) ? z.presale_discount : 20;
 
                 let pPrice;
-                if (z.presale_price !== undefined && z.presale_price !== null && !isNaN(parseFloat(z.presale_price))) {
+                if (z.presale_price !== undefined && z.presale_price !== null && !isNaN(parseFloat(z.presale_price)) && parseFloat(z.presale_price) > 0) {
                     pPrice = parseFloat(z.presale_price);
                 } else {
-                    pPrice = Math.max(0, (parseFloat(z.price) || 0) * (1 - ((parseFloat(z.presale_discount) || 20) / 100)));
+                    const tempDisc = (discEl && parseFloat(discEl.value) > 0) ? parseFloat(discEl.value) : 20;
+                    pPrice = Math.max(0, (parseFloat(z.price) || 0) * (1 - (tempDisc / 100)));
                 }
                 const presaleDisp = document.getElementById('inspectorZonePresalePriceDisplay');
                 if (presaleDisp) presaleDisp.value = pPrice.toFixed(2);

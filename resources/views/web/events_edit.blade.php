@@ -724,8 +724,8 @@
                                                     continue;
                                                 }
 
-                                                $hasPresale = !empty($zone['has_presale']) || (!empty($zone['presale_discount']) && (float)$zone['presale_discount'] > 0);
-                                                $pDiscount = $zone['presale_discount'] ?? 20;
+                                                $hasPresale = !empty($zone['has_presale']) && ($zone['has_presale'] === true || $zone['has_presale'] === 1 || $zone['has_presale'] === '1' || $zone['has_presale'] === 'true');
+                                                $pDiscount = (isset($zone['presale_discount']) && (float)$zone['presale_discount'] > 0) ? $zone['presale_discount'] : 20;
                                                 $regPrice = (float)($zone['price'] ?? 50);
                                                 $pPrice = !empty($zone['presale_price']) ? (float)$zone['presale_price'] : round($regPrice * (1 - ($pDiscount / 100)), 2);
                                                 $pStart = $zone['presale_start_date'] ?? date('Y-m-d');

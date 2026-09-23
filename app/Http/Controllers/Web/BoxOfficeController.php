@@ -200,9 +200,15 @@ class BoxOfficeController extends Controller
         $event->status = 'Finalizado';
         $event->save();
 
+        // Purgar automáticamente cualquier entrada no vendida (digitales o vacías sin venta) para mantener la base de datos limpia
+        $purgedCount = \App\Models\EventTicket::where('event_id', $event->id)
+            ->whereNull('ticket_sale_id')
+            ->delete();
+
         return response()->json([
             'success' => true,
-            'message' => "El evento \"{$event->title}\" ha sido finalizado con éxito. La venta de entradas en taquilla física, digital y plataforma web ha quedado cerrada.",
+            'message' => "El evento \"{$event->title}\" ha sido finalizado con éxito. La venta de entradas ha quedado cerrada y se purgaron {$purgedCount} entradas no vendidas de la base de datos.",
+            'purged_tickets' => $purgedCount,
         ]);
     }
 
@@ -410,11 +416,24 @@ class BoxOfficeController extends Controller
             ], 422);
         }
 
+        $cleanBaseZone = preg_replace('/\s*\([^)]*\)$/', '', trim($validated['zone_name']));
+        $cleanZName = strtoupper($cleanBaseZone);
+
+        // Calcular stock disponible en tiempo real (Aforo total configurado - Entradas ya vendidas)
+        $alreadySoldQty = (int) TicketSale::where('event_id', $event->id)
+            ->where(function ($q) use ($validated, $cleanBaseZone) {
+                $q->where('zone_name', $validated['zone_name'])
+                  ->orWhere('zone_name', 'LIKE', $cleanBaseZone . '%');
+            })
+            ->sum('quantity');
+
+        $availableStock = max(0, $currentCapacity - $alreadySoldQty);
+
         // Verificar si hay stock suficiente en la zona
-        if ($currentCapacity < $validated['quantity']) {
+        if ($availableStock < $validated['quantity']) {
             return response()->json([
                 'success' => false,
-                'message' => "Stock insuficiente en {$validated['zone_name']}. Disponibles: {$currentCapacity} entradas.",
+                'message' => "Stock insuficiente en {$validated['zone_name']}. Disponibles: {$availableStock} entradas.",
             ], 422);
         }
 
@@ -441,7 +460,6 @@ class BoxOfficeController extends Controller
                 }
             }
 
-            $cleanZName = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $validated['zone_name'])));
             $targetSplitZone = null;
             if (!empty($splitSettings['zones']) && is_array($splitSettings['zones'])) {
                 foreach ($splitSettings['zones'] as $sz) {
@@ -510,23 +528,23 @@ class BoxOfficeController extends Controller
             $changeAmount = max(0, round($amountPaid - $totalAmount, 2));
         }
 
-        // Descontar stock de la zona y actualizar evento
-        $zones[$targetZoneIndex]['capacity'] = max(0, $currentCapacity - $validated['quantity']);
-
-        // Marcar butacas seleccionadas como ocupadas si corresponde
+        // Marcar butacas seleccionadas como ocupadas si corresponde (sin modificar el aforo base)
         $selectedSeats = is_array($validated['selected_seats'] ?? null) ? array_values($validated['selected_seats']) : [];
         if (!empty($selectedSeats) && !empty($zones[$targetZoneIndex]['seats']) && is_array($zones[$targetZoneIndex]['seats'])) {
+            $seatsUpdated = false;
             foreach ($zones[$targetZoneIndex]['seats'] as &$seatItem) {
                 $sCode = formatShortSeatCode($seatItem);
                 if (in_array($sCode, $selectedSeats)) {
                     $seatItem['status'] = 'occupied';
+                    $seatsUpdated = true;
                 }
             }
             unset($seatItem);
+            if ($seatsUpdated) {
+                $event->zones = $zones;
+                $event->save();
+            }
         }
-
-        $event->zones = $zones;
-        $event->save();
 
         // Generar correlativo de recibo único global (REC-000001)
         $lastSale = TicketSale::orderBy('id', 'desc')->first();

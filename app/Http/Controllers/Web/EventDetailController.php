@@ -145,7 +145,7 @@ class EventDetailController extends Controller
                     $isAvailable = $remainingCapacity > 0;
 
                     // Datos de Preventa
-                    $hasPresale = !empty($zone['has_presale']) || (!empty($zone['presale_discount']) && (float)$zone['presale_discount'] > 0);
+                    $hasPresale = !empty($zone['has_presale']) && ($zone['has_presale'] === true || $zone['has_presale'] === 1 || $zone['has_presale'] === '1' || $zone['has_presale'] === 'true');
                     $discountPercent = isset($zone['presale_discount']) ? (float)$zone['presale_discount'] : 0;
                     $presaleStart = !empty($zone['presale_start_date']) ? $zone['presale_start_date'] : null;
                     $presaleEnd = !empty($zone['presale_end_date']) ? $zone['presale_end_date'] : null;
@@ -383,12 +383,35 @@ class EventDetailController extends Controller
                 ],
                 'tags' => $tags,
                 'zones' => $zones,
-                'interactive_zones' => array_values(array_filter($zones, function($z) {
-                    return !empty($z['points']) && is_array($z['points']) && count($z['points']) >= 3;
-                })),
-                'has_interactive_zones' => !empty(array_filter($zones, function($z) {
-                    return !empty($z['points']) && is_array($z['points']) && count($z['points']) >= 3;
-                })),
+                'interactive_zones' => (function() use ($zones) {
+                    $hasExplicitInteractive = collect($zones)->contains(fn($z) => (!empty($z['is_interactive']) && $z['is_interactive'] !== 'false') || ($z['zone_mode'] ?? '') === 'interactive');
+                    $hasExplicitStandard = collect($zones)->contains(fn($z) => (isset($z['is_interactive']) && ($z['is_interactive'] === false || $z['is_interactive'] === 'false')) || ($z['zone_mode'] ?? '') === 'standard');
+                    $hasNumberedSeats = collect($zones)->contains(fn($z) => (!empty($z['seats']) && is_array($z['seats']) && count($z['seats']) > 0) || (($z['capacity_type'] ?? '') === 'Butacas Numeradas'));
+
+                    $isInteractive = $hasExplicitInteractive || (!$hasExplicitStandard && $hasNumberedSeats);
+                    if (!$isInteractive) {
+                        return [];
+                    }
+
+                    return array_values(array_filter($zones, function($z) {
+                        return !empty($z['points']) && is_array($z['points']) && count($z['points']) >= 3;
+                    }));
+                })(),
+                'has_interactive_zones' => (function() use ($zones) {
+                    $hasExplicitInteractive = collect($zones)->contains(fn($z) => (!empty($z['is_interactive']) && $z['is_interactive'] !== 'false') || ($z['zone_mode'] ?? '') === 'interactive');
+                    $hasExplicitStandard = collect($zones)->contains(fn($z) => (isset($z['is_interactive']) && ($z['is_interactive'] === false || $z['is_interactive'] === 'false')) || ($z['zone_mode'] ?? '') === 'standard');
+                    $hasNumberedSeats = collect($zones)->contains(fn($z) => (!empty($z['seats']) && is_array($z['seats']) && count($z['seats']) > 0) || (($z['capacity_type'] ?? '') === 'Butacas Numeradas'));
+
+                    $isInteractive = $hasExplicitInteractive || (!$hasExplicitStandard && $hasNumberedSeats);
+                    if (!$isInteractive) {
+                        return false;
+                    }
+
+                    $list = array_filter($zones, function($z) {
+                        return !empty($z['points']) && is_array($z['points']) && count($z['points']) >= 3;
+                    });
+                    return !empty($list);
+                })(),
             ];
 
             $izipay = \App\Models\PaymentGateway::getIzipay();

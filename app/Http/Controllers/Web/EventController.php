@@ -389,13 +389,8 @@ class EventController extends Controller
             $event->save();
         }
 
-        // Pre-generar y sincronizar automáticamente todos los boletos oficiales (QR, correlativo y hash) para todo el aforo
-        try {
-            $event->refresh();
-            \App\Services\TicketGenerationService::syncEventTickets($event);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Error pre-generando boletos en creación de evento: ' . $e->getMessage());
-        }
+        // Modelo On-Demand: No se pre-generan entradas digitales vacías.
+        // Las entradas se emiten al instante de la venta (Web/POS) o al imprimir planchas físicas.
 
         return response()->json([
             'success' => true,
@@ -718,13 +713,7 @@ class EventController extends Controller
             }
         }
 
-        // Pre-generar y sincronizar automáticamente boletos faltantes si se aumentó el aforo o se agregaron butacas
-        try {
-            $event->refresh();
-            \App\Services\TicketGenerationService::syncEventTickets($event);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Error sincronizando boletos en edición de evento: ' . $e->getMessage());
-        }
+        // Modelo On-Demand: Los aforos se actualizan sin necesidad de pre-generar entradas digitales vacías.
 
         return response()->json([
             'success' => true,
@@ -801,9 +790,15 @@ class EventController extends Controller
         $event->status = 'Finalizado';
         $event->save();
 
+        // Purgar automáticamente cualquier entrada no vendida (digitales o vacías sin venta) para mantener la base de datos limpia
+        $purgedCount = \App\Models\EventTicket::where('event_id', $event->id)
+            ->whereNull('ticket_sale_id')
+            ->delete();
+
         return response()->json([
             'success' => true,
-            'message' => "El evento \"{$event->title}\" ha sido finalizado con éxito.",
+            'message' => "El evento \"{$event->title}\" ha sido finalizado con éxito. Se purgaron {$purgedCount} entradas no vendidas de la base de datos.",
+            'purged_tickets' => $purgedCount,
         ]);
     }
 
@@ -983,11 +978,11 @@ class EventController extends Controller
      */
     public function getRegisteredTickets(Event $event): JsonResponse
     {
-        // Asegurar que las entradas para todo el aforo configurado estén creadas en MySQL
+        // Asegurar que las entradas físicas requeridas para la plancha/impresión estén creadas en MySQL
         try {
-            \App\Services\TicketGenerationService::syncEventTickets($event);
+            \App\Services\TicketGenerationService::ensurePhysicalTicketsForEvent($event);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Error sincronizando boletos en getRegisteredTickets: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Error sincronizando boletos físicos en getRegisteredTickets: ' . $e->getMessage());
         }
 
         $splitSettings = is_array($event->quota_split_settings) 
@@ -1021,14 +1016,52 @@ class EventController extends Controller
             });
         }
 
+        $rawZones = is_array($event->zones) ? $event->zones : (json_decode($event->zones ?? '[]', true) ?: []);
+        $zoneOrderMap = [];
+        $orderIndex = 0;
+        foreach ($rawZones as $z) {
+            $zName = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $z['name'] ?? '')));
+            if ($zName && !isset($zoneOrderMap[$zName])) {
+                $zoneOrderMap[$zName] = $orderIndex++;
+            }
+        }
+
         $tickets = $ticketsQuery
             ->where(function($q) {
                 $q->whereRaw("UPPER(TRIM(COALESCE(zone_name, ''))) NOT LIKE '%ESCENARIO%'")
                   ->whereRaw("UPPER(TRIM(COALESCE(zone_name, ''))) NOT LIKE '%TARIMA%'");
             })
-            ->orderBy('ticket_number', 'asc')
-            ->orderBy('id', 'asc')
             ->get()
+            ->sort(function ($a, $b) use ($zoneOrderMap) {
+                $cleanA = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $a->zone_name ?? '')));
+                $cleanB = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $b->zone_name ?? '')));
+
+                $isCortA = ($a->ticket_type === 'cortesia' || str_starts_with($cleanA, 'CORTESIA'));
+                $isCortB = ($b->ticket_type === 'cortesia' || str_starts_with($cleanB, 'CORTESIA'));
+
+                if ($isCortA !== $isCortB) {
+                    return $isCortA ? 1 : -1;
+                }
+
+                $baseA = preg_replace('/^CORTESIA\s*[-–]?\s*/i', '', $cleanA);
+                $baseB = preg_replace('/^CORTESIA\s*[-–]?\s*/i', '', $cleanB);
+
+                $orderA = $zoneOrderMap[$baseA] ?? 999;
+                $orderB = $zoneOrderMap[$baseB] ?? 999;
+
+                if ($orderA !== $orderB) {
+                    return $orderA <=> $orderB;
+                }
+
+                $numA = (int) ($a->ticket_number ?: 0);
+                $numB = (int) ($b->ticket_number ?: 0);
+
+                if ($numA !== $numB) {
+                    return $numA <=> $numB;
+                }
+
+                return $a->id <=> $b->id;
+            })
             ->values()
             ->map(function ($t, $index) use ($event) {
                 $num = (int) $t->ticket_number > 0 ? (int) $t->ticket_number : ($index + 1);
@@ -1048,6 +1081,7 @@ class EventController extends Controller
                     'buyerDni' => $t->buyer_dni ?: '00000000',
                     'source' => $t->source,
                     'ticketType' => $t->ticket_type ?: 'fisica',
+                    'createdAt' => $t->created_at ? $t->created_at->toIso8601String() : null,
                 ];
             });
 
