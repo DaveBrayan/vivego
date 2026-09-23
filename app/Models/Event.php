@@ -46,14 +46,18 @@ class Event extends Model
     ];
 
     /**
-     * Determina si el evento ya concluyó o su fecha/hora ya pasaron.
+     * Determina si el evento ya concluyó o fue finalizado manualmente por el organizador/administrador.
      */
     public function isPast(): bool
     {
-        if (in_array(strtolower(trim((string) $this->status)), ['finalizado', 'concluido', 'terminado', 'cancelado'])) {
-            return true;
-        }
+        return in_array(strtolower(trim((string) $this->status)), ['finalizado', 'concluido', 'terminado', 'cancelado']);
+    }
 
+    /**
+     * Determina si la fecha/hora del calendario ya pasaron (independientemente del estado).
+     */
+    public function isDatePassed(): bool
+    {
         if (empty($this->event_date)) {
             return false;
         }

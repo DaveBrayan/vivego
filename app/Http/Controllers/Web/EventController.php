@@ -259,8 +259,21 @@ class EventController extends Controller
 
         // Cargar Plantillas de Boletos desde MySQL
         $templates = TicketTemplate::orderBy('is_default', 'desc')->get();
+        $defaultTemplateModel = TicketTemplate::where('is_default', 1)->first() ?? TicketTemplate::first();
 
-        return view('web.events_create', compact('companies', 'categories', 'capacityTypes', 'templates', 'settings', 'organizer'));
+        $defaultTemplateData = $defaultTemplateModel ? [
+            'id' => $defaultTemplateModel->id,
+            'name' => $defaultTemplateModel->name,
+            'category' => $defaultTemplateModel->category,
+            'type' => $defaultTemplateModel->type,
+            'bg_color' => ($defaultTemplateModel->bg_color) ? $defaultTemplateModel->bg_color : '#FFFFFF',
+            'bg_image' => $defaultTemplateModel->bg_image,
+            'strip_color' => ($defaultTemplateModel->strip_color) ? $defaultTemplateModel->strip_color : '#000000',
+            'positions' => $defaultTemplateModel->positions ?? [],
+            'elements' => $defaultTemplateModel->elements ?? [],
+        ] : null;
+
+        return view('web.events_create', compact('companies', 'categories', 'capacityTypes', 'templates', 'defaultTemplateData', 'settings', 'organizer'));
     }
 
     /**
@@ -388,7 +401,7 @@ class EventController extends Controller
             'success' => true,
             'message' => '¡Evento publicado exitosamente!',
             'event' => $event,
-            'redirect' => route('events.index')
+            'redirect' => route('web.events')
         ]);
     }
 

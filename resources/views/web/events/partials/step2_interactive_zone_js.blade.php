@@ -1659,6 +1659,11 @@
         },
 
         validateUnpopulatedSeats: function() {
+            // Solo validar butacas interactivas si el modo activo es interactivo
+            if (typeof window.currentStep2ZoneMode !== 'undefined' && window.currentStep2ZoneMode !== 'interactive') {
+                return true;
+            }
+
             // 1. Validar la zona activa actualmente en el inspector si tiene butacas o si se editaron filas/asientos
             const z = this.getSelectedZone();
             const rowsInput = document.getElementById('seatGenRows');

@@ -710,22 +710,22 @@
                                     <!-- Zona 1 -->
                                     <tr class="zone-row">
                                         <td>
-                                            <select class="form-select-custom zone-capacity-type" style="font-size: 0.85rem; padding: 0.55rem;">
+                                            <select class="form-select-custom zone-capacity-type" style="font-size: 0.85rem; padding: 0.55rem;" onchange="if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function')SeatMapEditor.syncFromStandardTable();">
                                                 @foreach($capacityTypes as $ct)
-                                                    <option value="{{ is_array($ct) ? $ct['name'] : $ct->name }}" selected>
+                                                    <option value="{{ is_array($ct) ? $ct['name'] : $ct->name }}" {{ (is_array($ct) ? $ct['name'] : $ct->name) == 'BOX PLATINUM COMPLETO' || $loop->first ? 'selected' : '' }}>
                                                         🏟️ {{ is_array($ct) ? $ct['name'] : $ct->name }}
                                                     </option>
                                                 @endforeach
                                             </select>
                                         </td>
                                         <td>
-                                            <input type="text" class="form-input-custom zone-name-input" value="ZONA PLATINUM" style="font-size: 0.85rem; padding: 0.55rem;">
+                                            <input type="text" class="form-input-custom zone-name-input" value="ZONA PLATINUM" style="font-size: 0.85rem; padding: 0.55rem;" oninput="if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function') SeatMapEditor.syncFromStandardTable();">
                                         </td>
                                         <td>
-                                            <input type="number" class="form-input-custom zone-capacity-input" value="800" min="1" style="font-size: 0.85rem; padding: 0.55rem;" oninput="recalculateTotalCapacity()">
+                                            <input type="number" class="form-input-custom zone-capacity-input" value="800" min="1" style="font-size: 0.85rem; padding: 0.55rem;" oninput="recalculateTotalCapacity(); if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function') SeatMapEditor.syncFromStandardTable();">
                                         </td>
                                         <td>
-                                            <input type="number" step="0.50" class="form-input-custom zone-price-input" value="150.00" min="0" style="font-size: 0.85rem; padding: 0.55rem; color: #10B981; font-weight: 800;" oninput="updateZonePresaleCalc(this); recalculateTotalCapacity();">
+                                            <input type="number" step="0.50" class="form-input-custom zone-price-input" value="150.00" min="0" style="font-size: 0.85rem; padding: 0.55rem; color: #10B981; font-weight: 800;" oninput="updateZonePresaleCalc(this); recalculateTotalCapacity(); if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function') SeatMapEditor.syncFromStandardTable();">
                                         </td>
                                         <td>
                                             <button type="button" class="btn btn-sm btn-toggle-presale" style="background: rgba(255,85,0,0.15); border: 1.5px solid #FF5500; color: #FF5500; font-size: 0.775rem; font-weight: 800; padding: 0.45rem 0.65rem; border-radius: 8px; width: 100%; text-align: center;" onclick="toggleZonePresaleBox(this)">
@@ -777,7 +777,7 @@
                                     <!-- Zona 2 -->
                                     <tr class="zone-row">
                                         <td>
-                                            <select class="form-select-custom zone-capacity-type" style="font-size: 0.85rem; padding: 0.55rem;">
+                                            <select class="form-select-custom zone-capacity-type" style="font-size: 0.85rem; padding: 0.55rem;" onchange="if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function')SeatMapEditor.syncFromStandardTable();">
                                                 @foreach($capacityTypes as $ct)
                                                     <option value="{{ is_array($ct) ? $ct['name'] : $ct->name }}" {{ (is_array($ct) ? $ct['name'] : $ct->name) == 'ZONA GENERAL' ? 'selected' : '' }}>
                                                         🏟️ {{ is_array($ct) ? $ct['name'] : $ct->name }}
@@ -786,13 +786,13 @@
                                             </select>
                                         </td>
                                         <td>
-                                            <input type="text" class="form-input-custom zone-name-input" value="ZONA GENERAL" style="font-size: 0.85rem; padding: 0.55rem;">
+                                            <input type="text" class="form-input-custom zone-name-input" value="ZONA GENERAL" style="font-size: 0.85rem; padding: 0.55rem;" oninput="if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function') SeatMapEditor.syncFromStandardTable();">
                                         </td>
                                         <td>
-                                            <input type="number" class="form-input-custom zone-capacity-input" value="2000" min="1" style="font-size: 0.85rem; padding: 0.55rem;" oninput="recalculateTotalCapacity()">
+                                            <input type="number" class="form-input-custom zone-capacity-input" value="2000" min="1" style="font-size: 0.85rem; padding: 0.55rem;" oninput="recalculateTotalCapacity(); if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function') SeatMapEditor.syncFromStandardTable();">
                                         </td>
                                         <td>
-                                            <input type="number" step="0.50" class="form-input-custom zone-price-input" value="60.00" min="0" style="font-size: 0.85rem; padding: 0.55rem; color: #10B981; font-weight: 800;" oninput="updateZonePresaleCalc(this); recalculateTotalCapacity();">
+                                            <input type="number" step="0.50" class="form-input-custom zone-price-input" value="60.00" min="0" style="font-size: 0.85rem; padding: 0.55rem; color: #10B981; font-weight: 800;" oninput="updateZonePresaleCalc(this); recalculateTotalCapacity(); if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function') SeatMapEditor.syncFromStandardTable();">
                                         </td>
                                         <td>
                                             <button type="button" class="btn btn-sm btn-toggle-presale" style="background: rgba(255,85,0,0.15); border: 1.5px solid #FF5500; color: #FF5500; font-size: 0.775rem; font-weight: 800; padding: 0.45rem 0.65rem; border-radius: 8px; width: 100%; text-align: center;" onclick="toggleZonePresaleBox(this)">
@@ -1058,12 +1058,13 @@
                                     <span style="color: #94A3B8; font-size: 0.825rem;">
                                         🗺️ Zonas configuradas: <strong id="navInteractiveZoneCountBadge" style="color: #10B981; font-weight: 800;">0</strong>
                                     </span>
-                                    <button type="button" class="btn btn-primary btn-save-settings" style="padding: 0.85rem 2.2rem; font-size: 1rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(255, 85, 0, 0.4);" onclick="if(typeof SeatMapEditor !== 'undefined' && typeof SeatMapEditor.syncToStandardTable === 'function') { SeatMapEditor.syncToStandardTable(); } goToStep(3);">
+                                    <button type="button" class="btn btn-primary btn-save-settings" style="padding: 0.85rem 2.2rem; font-size: 1rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(255, 85, 0, 0.4);" onclick="if(typeof SeatMapEditor !== 'undefined') { if(window.currentStep2ZoneMode === 'interactive' && typeof SeatMapEditor.syncToStandardTable === 'function') { SeatMapEditor.syncToStandardTable(); } else if(typeof SeatMapEditor.syncFromStandardTable === 'function') { SeatMapEditor.syncFromStandardTable(); } } goToStep(3);">
                                         <span>Continuar a Plantilla Canva (Paso 3)</span> ➔
                                     </button>
                                 </div>
                             </div>
                         </div>
+                    </div>
                 </div>
 
                 <!-- STEP 3: DISEÑADOR INTERACTIVO ESTILO ELEMENTOR / CERTIFICADOS (20.40 CM × 9.80 CM) -->
@@ -1751,6 +1752,7 @@
         ];
 
         // MOTOR DEL DISEÑADOR INTERACTIVO (20.40 CM × 9.80 CM)
+        const defaultTemplateData = @json($defaultTemplateData ?? null);
         let certState = { background: null, elements: [] };
         let selectedElementId = null;
         let currentZoom = 1.0;
@@ -1759,20 +1761,217 @@
         let mediaContext = null;
         let quillEditor = null;
 
-        function goToStep(step) {
-            console.log(`[ViveGo Stepper] 🚀 Navegando hacia el Paso ${step}...`);
+        console.log('[ViveGo Stepper] 📦 defaultTemplateData recibido:', defaultTemplateData);
 
-            // Si intenta avanzar más allá del paso 2 (zonas), validar que no hayan butacas pendientes de poblar
-            if (step > 2 && typeof SeatMapEditor !== 'undefined' && typeof SeatMapEditor.validateUnpopulatedSeats === 'function') {
+        // INICIALIZACIÓN DE PLANTILLA PREDEFINIDA EN CREACIÓN
+        if (defaultTemplateData) {
+            const rawTpl = defaultTemplateData;
+            const tpl = typeof rawTpl === 'string' ? JSON.parse(rawTpl) : rawTpl;
+
+            if (tpl) {
+                if (tpl.elements && Array.isArray(tpl.elements) && tpl.elements.length > 0) {
+                    certState.background = tpl.background || tpl.bg_image || null;
+                    certState.elements = tpl.elements;
+                    console.log('[ViveGo Stepper] ✓ Plantilla cargada desde elements:', certState.elements.length, 'elementos');
+                } else if (tpl.positions) {
+                    certState.background = tpl.bg_image || null;
+                    certState.elements = [];
+                    Object.keys(tpl.positions).forEach((key, idx) => {
+                        const p = tpl.positions[key];
+                        if (p) {
+                            let type = 'system_tag';
+                            if (key.includes('Logo') || key.includes('logo')) type = 'logo';
+                            else if (key.includes('Banner') || key.includes('banner')) type = 'banner';
+                            else if (key.includes('QR') || key.includes('qr')) type = 'qr';
+
+                            certState.elements.push({
+                                id: key,
+                                type: type,
+                                src: p.src || null,
+                                x: parseInt(p.left) || (40 + idx * 15),
+                                y: parseInt(p.top) || (40 + idx * 15),
+                                content: p.text || p.html || 'Etiqueta',
+                                style: {
+                                    fontFamily: p.fontFamily || 'font-montserrat',
+                                    fontSize: p.fontSize || '12px',
+                                    color: p.color || '#000000',
+                                    fontWeight: p.fontWeight || 'normal',
+                                    fontStyle: p.fontStyle || 'normal',
+                                    textAlign: p.textAlign || 'left',
+                                    width: p.width || 'auto',
+                                    height: p.height || 'auto',
+                                    rotation: parseInt(p.rotate || p.rotation || 0),
+                                    objectFit: p.objectFit || 'cover'
+                                }
+                            });
+                        }
+                    });
+                    console.log('[ViveGo Stepper] ✓ Plantilla convertida desde positions:', certState.elements.length, 'elementos');
+                }
+            }
+        }
+
+        // Si no existen elementos en la plantilla, inicializar con el diseño oficial predeterminado de ViveGo
+        if (!certState.elements || certState.elements.length === 0) {
+            console.log('[ViveGo Stepper] ℹ️ Inicializando elementos predeterminados estándar de ViveGo.');
+            certState.elements = [
+                {
+                    id: 'el_logo_brand',
+                    type: 'logo',
+                    src: '/images/logo.png',
+                    x: 25,
+                    y: 20,
+                    content: 'Logo Marca',
+                    style: { fontFamily: 'font-montserrat', fontSize: '12px', color: '#000000', fontWeight: 'normal', fontStyle: 'normal', textAlign: 'left', width: '120px', height: 'auto', rotation: 0, objectFit: 'contain' }
+                },
+                {
+                    id: 'el_event_title',
+                    type: 'system_tag',
+                    src: null,
+                    x: 160,
+                    y: 18,
+                    content: '<strong>Gran Concierto Principal 2026</strong>',
+                    style: { fontFamily: 'font-montserrat', fontSize: '15px', color: '#FF5500', fontWeight: 'bold', fontStyle: 'normal', textAlign: 'left', width: '380px', height: 'auto', rotation: 0, objectFit: 'cover' }
+                },
+                {
+                    id: 'el_event_zone',
+                    type: 'system_tag',
+                    src: null,
+                    x: 160,
+                    y: 48,
+                    content: 'Sector: <b>ZONA PLATINUM</b>',
+                    style: { fontFamily: 'font-montserrat', fontSize: '13px', color: '#000000', fontWeight: 'bold', fontStyle: 'normal', textAlign: 'left', width: '220px', height: 'auto', rotation: 0, objectFit: 'cover' }
+                },
+                {
+                    id: 'el_event_price',
+                    type: 'system_tag',
+                    src: null,
+                    x: 390,
+                    y: 48,
+                    content: 'Precio: <b>S/ 150.00</b>',
+                    style: { fontFamily: 'font-montserrat', fontSize: '13px', color: '#10B981', fontWeight: 'bold', fontStyle: 'normal', textAlign: 'right', width: '150px', height: 'auto', rotation: 0, objectFit: 'cover' }
+                },
+                {
+                    id: 'el_event_banner',
+                    type: 'banner',
+                    src: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=600&q=80',
+                    x: 160,
+                    y: 80,
+                    content: 'Banner Ticket',
+                    style: { fontFamily: 'font-montserrat', fontSize: '12px', color: '#000000', fontWeight: 'normal', fontStyle: 'normal', textAlign: 'left', width: '380px', height: '145px', rotation: 0, objectFit: 'cover' }
+                },
+                {
+                    id: 'el_event_datetime',
+                    type: 'system_tag',
+                    src: null,
+                    x: 160,
+                    y: 240,
+                    content: '📅 15/11/2026 — 20:00 hrs',
+                    style: { fontFamily: 'font-montserrat', fontSize: '11px', color: '#475569', fontWeight: 'bold', fontStyle: 'normal', textAlign: 'left', width: '220px', height: 'auto', rotation: 0, objectFit: 'cover' }
+                },
+                {
+                    id: 'el_event_venue',
+                    type: 'system_tag',
+                    src: null,
+                    x: 380,
+                    y: 240,
+                    content: '📍 Estadio Nacional Ayacucho',
+                    style: { fontFamily: 'font-montserrat', fontSize: '11px', color: '#475569', fontWeight: 'normal', fontStyle: 'normal', textAlign: 'right', width: '160px', height: 'auto', rotation: 0, objectFit: 'cover' }
+                },
+                {
+                    id: 'el_event_qr',
+                    type: 'qr',
+                    src: null,
+                    x: 580,
+                    y: 30,
+                    content: 'Código QR',
+                    style: { fontFamily: 'font-montserrat', fontSize: '12px', color: '#000000', fontWeight: 'normal', fontStyle: 'normal', textAlign: 'center', width: '150px', height: '150px', rotation: 0, objectFit: 'contain' }
+                },
+                {
+                    id: 'el_event_hash',
+                    type: 'system_tag',
+                    src: null,
+                    x: 580,
+                    y: 190,
+                    content: 'Hash: VG-8A9B-2026',
+                    style: { fontFamily: 'font-space-grotesk', fontSize: '10px', color: '#64748B', fontWeight: 'bold', fontStyle: 'normal', textAlign: 'center', width: '150px', height: 'auto', rotation: 0, objectFit: 'cover' }
+                },
+                {
+                    id: 'el_event_num',
+                    type: 'system_tag',
+                    src: null,
+                    x: 580,
+                    y: 210,
+                    content: 'N° 000001',
+                    style: { fontFamily: 'font-montserrat', fontSize: '11px', color: '#000000', fontWeight: 'bold', fontStyle: 'normal', textAlign: 'center', width: '150px', height: 'auto', rotation: 0, objectFit: 'cover' }
+                },
+                {
+                    id: 'el_event_disclaimer',
+                    type: 'system_tag',
+                    src: null,
+                    x: 25,
+                    y: 310,
+                    content: 'La responsabilidad de este boleto es exclusiva del cliente, no compartir ni duplicar.',
+                    style: { fontFamily: 'font-montserrat', fontSize: '9px', color: '#94A3B8', fontWeight: 'normal', fontStyle: 'normal', textAlign: 'center', width: '720px', height: 'auto', rotation: 0, objectFit: 'cover' }
+                }
+            ];
+        }
+
+        function syncStep1DataToCanva() {
+            try {
+                const titleVal = document.getElementById('event_title')?.value;
+                const bannerVal = document.getElementById('event_banner')?.value;
+                const dateVal = document.getElementById('event_date_picker')?.value || document.getElementById('event_date')?.value;
+                const timeVal = document.getElementById('event_time_picker')?.value || document.getElementById('event_time')?.value;
+                const venueVal = document.getElementById('event_venue')?.value;
+
+                if (titleVal) {
+                    const titleEl = certState.elements.find(e => e.id === 'el_event_title' || e.id === 'canvaElTitle' || (e.content && e.content.includes('Concierto')));
+                    if (titleEl) titleEl.content = `<strong>${titleVal}</strong>`;
+                }
+                if (bannerVal) {
+                    const bannerEl = certState.elements.find(e => e.type === 'banner' || e.id === 'el_event_banner' || e.id === 'canvaElBanner');
+                    if (bannerEl) bannerEl.src = bannerVal;
+                }
+                if (dateVal && timeVal) {
+                    const dtEl = certState.elements.find(e => e.id === 'el_event_datetime' || (e.content && (e.content.includes('📅') || e.content.includes('hrs'))));
+                    if (dtEl) dtEl.content = `📅 ${dateVal} — ${timeVal} hrs`;
+                }
+                if (venueVal) {
+                    const vEl = certState.elements.find(e => e.id === 'el_event_venue' || e.id === 'canvaElVenue' || (e.content && e.content.includes('📍')));
+                    if (vEl) vEl.content = `📍 ${venueVal}`;
+                }
+                console.log('[ViveGo Stepper] ✓ Datos del Paso 1 sincronizados en las etiquetas del Canva.');
+            } catch(e) {
+                console.warn('[ViveGo Stepper] ⚠️ Error al sincronizar datos del Paso 1 al Canva:', e);
+            }
+        }
+
+        function goToStep(step) {
+            console.group(`[ViveGo Stepper] 🚀 Navegando hacia el Paso ${step}`);
+            console.log('• Paso previo:', currentStep);
+            console.log('• Paso solicitado:', step);
+            console.log('• Modo de zonas actual:', window.currentStep2ZoneMode || 'standard');
+            console.log('• Estado actual de certState:', JSON.parse(JSON.stringify(certState)));
+
+            // Si intenta avanzar más allá del paso 2 (zonas), validar que no hayan butacas pendientes de poblar (solo en modo interactivo)
+            if (step > 2 && window.currentStep2ZoneMode === 'interactive' && typeof SeatMapEditor !== 'undefined' && typeof SeatMapEditor.validateUnpopulatedSeats === 'function') {
                 if (!SeatMapEditor.validateUnpopulatedSeats()) {
+                    console.warn('[ViveGo Stepper] ⚠️ Validación de butacas interactiva falló, cancelando navegación.');
+                    console.groupEnd();
                     return false;
                 }
             }
 
             try {
-                if (typeof SeatMapEditor !== 'undefined' && typeof SeatMapEditor.syncToStandardTable === 'function') {
-                    SeatMapEditor.syncToStandardTable();
-                    console.log('[ViveGo Stepper] ✓ Zonas interactivas sincronizadas con éxito.');
+                if (typeof SeatMapEditor !== 'undefined') {
+                    if (window.currentStep2ZoneMode === 'interactive' && typeof SeatMapEditor.syncToStandardTable === 'function') {
+                        SeatMapEditor.syncToStandardTable();
+                        console.log('[ViveGo Stepper] ✓ Zonas interactivas sincronizadas con la tabla estándar.');
+                    } else if (typeof SeatMapEditor.syncFromStandardTable === 'function') {
+                        SeatMapEditor.syncFromStandardTable();
+                        console.log('[ViveGo Stepper] ✓ Zonas de tabla estándar sincronizadas a SeatMapEditor.');
+                    }
                 }
             } catch(e) {
                 console.warn('[ViveGo Stepper] ⚠️ Error al sincronizar SeatMapEditor:', e);
@@ -1790,7 +1989,7 @@
             if (targetPanel) {
                 targetPanel.classList.add('active');
                 targetPanel.style.display = 'block';
-                console.log(`[ViveGo Stepper] ✓ Panel #stepPanel${step} activado y visible.`, targetPanel);
+                console.log(`[ViveGo Stepper] ✓ Panel #stepPanel${step} activado y visible.`);
             } else {
                 console.error(`[ViveGo Stepper] ❌ No se encontró el elemento #stepPanel${step} en el DOM!`);
             }
@@ -1806,17 +2005,19 @@
             }
             if (step === 3) {
                 console.log('[ViveGo Stepper] 🎨 Inicializando Diseñador Canva (Paso 3)...');
+                syncStep1DataToCanva();
                 setTimeout(() => {
                     try {
                         if (!quillEditor && document.getElementById('cert-text-editor') && typeof initQuillEditor === 'function') {
                             initQuillEditor();
+                            console.log('[ViveGo Stepper] ✓ Quill Editor inicializado.');
                         }
                         if (typeof renderCanvas === 'function') {
                             renderCanvas();
-                            console.log('[ViveGo Stepper] ✓ Canva renderizado correctamente.');
+                            console.log(`[ViveGo Stepper] ✓ Canva renderizado correctamente con ${certState.elements.length} elementos.`);
                         }
                     } catch(err) {
-                        console.error('[ViveGo Stepper] ❌ Error renderizando Canva:', err);
+                        console.error('[ViveGo Stepper] ❌ Error renderizando Canva en Paso 3:', err);
                     }
                 }, 100);
             }
@@ -1831,6 +2032,7 @@
                     console.warn('[ViveGo Stepper] ⚠️ Error en updateReviewSummary:', err);
                 }
             }
+            console.groupEnd();
         }
 
         function initQuillEditor() {
