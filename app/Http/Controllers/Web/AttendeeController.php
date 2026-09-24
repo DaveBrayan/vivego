@@ -41,14 +41,14 @@ class AttendeeController extends Controller
 
             // Total boletos registrados en el sistema (excluyendo boletos anulados por upgrade)
             $ticketsIssued = EventTicket::where('event_id', $ev->id)->where('status', '!=', 'upgraded')->where('status', '!=', 'cancelled')->count();
-            if ($ticketsIssued === 0) {
-                $ticketsIssued = max($ticketsSold, $totalCapacity);
-            }
+            
+            // Aforo total del evento (capacidad configurada en zonas o boletos)
+            $displayAforo = max($totalCapacity, $ticketsIssued, $ticketsSold);
 
             // Total validados / ingresados
             $checkedInCount = EventTicket::where('event_id', $ev->id)->where('is_used', true)->where('status', '!=', 'upgraded')->where('status', '!=', 'cancelled')->count();
-            $pendingCount = max(0, $ticketsIssued - $checkedInCount);
-            $attendanceRate = $ticketsIssued > 0 ? min(100, round(($checkedInCount / $ticketsIssued) * 100, 1)) : 0;
+            $pendingCount = max(0, $displayAforo - $checkedInCount);
+            $attendanceRate = $displayAforo > 0 ? min(100, round(($checkedInCount / $displayAforo) * 100, 1)) : 0;
 
             $bannerImg = $ev->banner_image ?: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=1200&q=80';
             $venueName = $ev->venue_name ?: 'Recinto Principal';
@@ -69,7 +69,7 @@ class AttendeeController extends Controller
                 'image' => $bannerImg,
                 'sales_type' => $ev->sales_type ?? 'fisica',
                 'status' => $ev->status,
-                'total_capacity' => $totalCapacity,
+                'total_capacity' => $displayAforo,
                 'tickets_sold' => $ticketsSold,
                 'tickets_issued' => $ticketsIssued,
                 'checked_in_count' => $checkedInCount,
@@ -504,6 +504,11 @@ class AttendeeController extends Controller
      */
     private function getAttendanceMetrics(int $eventId): array
     {
+        $event = Event::find($eventId);
+        $zones = $event && is_array($event->zones) ? $event->zones : [];
+        $totalCapacity = (int) array_sum(array_column($zones, 'capacity'));
+        $ticketsSold = (int) TicketSale::where('event_id', $eventId)->where('status', '!=', 'upgraded')->where('status', '!=', 'cancelled')->sum('quantity');
+
         $stats = EventTicket::where('event_id', $eventId)
             ->where('status', '!=', 'upgraded')
             ->where('status', '!=', 'cancelled')
@@ -518,9 +523,10 @@ class AttendeeController extends Controller
             ->first();
 
         $ticketsIssued = (int) ($stats->total ?? 0);
+        $totalAforo = max($totalCapacity, $ticketsIssued, $ticketsSold);
         $checkedInCount = (int) ($stats->checked_in ?? 0);
-        $pendingCount = max(0, $ticketsIssued - $checkedInCount);
-        $attendanceRate = $ticketsIssued > 0 ? min(100, round(($checkedInCount / $ticketsIssued) * 100, 1)) : 0;
+        $pendingCount = max(0, $totalAforo - $checkedInCount);
+        $attendanceRate = $totalAforo > 0 ? min(100, round(($checkedInCount / $totalAforo) * 100, 1)) : 0;
 
         $digitalIssued = (int) ($stats->digital_total ?? 0);
         $digitalChecked = (int) ($stats->digital_checked ?? 0);
@@ -533,6 +539,7 @@ class AttendeeController extends Controller
         $physicalRate = $physicalIssued > 0 ? min(100, round(($physicalChecked / $physicalIssued) * 100, 1)) : 0;
 
         return [
+            'total_capacity' => $totalAforo,
             'tickets_issued' => $ticketsIssued,
             'checked_in_count' => $checkedInCount,
             'pending_count' => $pendingCount,
@@ -569,27 +576,55 @@ class AttendeeController extends Controller
             ->get()
             ->keyBy('zone_name');
 
+        $splitSettings = is_array($event->quota_split_settings) 
+            ? $event->quota_split_settings 
+            : (json_decode($event->quota_split_settings ?? '[]', true) ?: []);
+        $splitZones = !empty($splitSettings['zones']) && is_array($splitSettings['zones']) ? $splitSettings['zones'] : [];
+        $splitMap = [];
+        foreach ($splitZones as $sz) {
+            if (!empty($sz['name'])) {
+                $cleanSzName = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $sz['name'])));
+                $splitMap[$cleanSzName] = $sz;
+            }
+        }
+
         $zones = is_array($event->zones) ? $event->zones : [];
         $zonesAttendance = [];
 
         foreach ($zones as $z) {
             $zName = $z['name'] ?? 'General';
+            $cleanBase = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $zName)));
+            $zCap = (int) ($z['capacity'] ?? 0);
+            $sz = $splitMap[$cleanBase] ?? null;
+
             $st = $statsByZone->get($zName);
             $zIssued = $st ? (int) $st->total : 0;
+            $displayZoneTotal = max($zCap, $zIssued);
             $zChecked = $st ? (int) $st->checked_in : 0;
-            $zRate = $zIssued > 0 ? round(($zChecked / $zIssued) * 100, 1) : 0;
+            $zRate = $displayZoneTotal > 0 ? round(($zChecked / $displayZoneTotal) * 100, 1) : 0;
 
-            $zDigitalIssued = $st ? (int) $st->digital_total : 0;
             $zDigitalChecked = $st ? (int) $st->digital_checked : 0;
-            $zPhysicalIssued = $st ? (int) $st->physical_total : 0;
             $zPhysicalChecked = $st ? (int) $st->physical_checked : 0;
+
+            if ($sz && isset($sz['physical']) && isset($sz['virtual'])) {
+                $zPhysicalIssued = (int) $sz['physical'];
+                $zDigitalIssued = (int) $sz['virtual'];
+            } else {
+                $zDigitalIssued = $st ? (int) $st->digital_total : 0;
+                $zPhysicalIssued = $st ? (int) $st->physical_total : 0;
+                if ($zDigitalIssued === 0 && $zPhysicalIssued === 0) {
+                    $zPhysicalIssued = $displayZoneTotal;
+                }
+            }
 
             $zonesAttendance[] = [
                 'name' => $zName,
                 'price' => $z['price'] ?? 0,
-                'issued' => $zIssued,
+                'capacity' => $displayZoneTotal,
+                'issued' => $displayZoneTotal,
+                'tickets_count' => $zIssued,
                 'checked_in' => $zChecked,
-                'pending' => max(0, $zIssued - $zChecked),
+                'pending' => max(0, $displayZoneTotal - $zChecked),
                 'rate' => $zRate,
                 'digital_issued' => $zDigitalIssued,
                 'digital_checked' => $zDigitalChecked,

@@ -158,7 +158,7 @@
                                         <td>
                                             <div style="width: 140px;">
                                                 <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 0.85rem; font-weight: 800; margin-bottom: 0.35rem;">
-                                                    <span style="color: #FFFFFF; font-weight: 900; letter-spacing: 0.3px;"><strong>{{ $evt['checked_in_count'] }}</strong> / {{ $evt['tickets_issued'] }}</span>
+                                                    <span style="color: #FFFFFF; font-weight: 900; letter-spacing: 0.3px;"><strong>{{ number_format($evt['checked_in_count']) }}</strong> / {{ number_format($evt['total_capacity']) }}</span>
                                                     <span style="color: #10B981; font-weight: 900; font-size: 0.85rem;">{{ $evt['attendance_rate'] }}%</span>
                                                 </div>
                                                 <div style="width: 100%; height: 7px; background: rgba(255,255,255,0.12); border-radius: 10px; overflow: hidden;">
