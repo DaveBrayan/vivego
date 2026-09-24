@@ -245,46 +245,49 @@
                         <div class="dash-table-header">
                             <div>
                                 <h3 class="dash-card-title">Mis Eventos Activos</h3>
-                                <p class="dash-card-subtitle">Administración de taquilla y estado de venta</p>
+                                <p class="dash-card-subtitle">Administración de taquilla y estado de venta en vivo</p>
                             </div>
-                            <a href="{{ route('web.events') }}" class="dash-link-orange">Ver Todos ({{ $totalEventsCount ?? count($events) }}) ➔</a>
+                            <a href="{{ route('web.events') }}" class="dash-btn-view-all">
+                                <span>🎟️ Ver Mis Eventos ({{ $totalEventsCount ?? count($events) }})</span>
+                                <span class="dash-btn-arrow">➔</span>
+                            </a>
                         </div>
 
                         <div class="dash-table-responsive">
                             <table class="dash-table">
                                 <thead>
                                     <tr>
-                                        <th>EVENTO</th>
-                                        <th>FECHA & LUGAR</th>
+                                        <th>EVENTO & UBICACIÓN</th>
                                         <th>VENDIDOS</th>
                                         <th>RECAUDACIÓN</th>
                                         <th>ESTADO</th>
-                                        <th>ACCIONES</th>
+                                        <th style="text-align: right;">ACCESOS DIRECTOS</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach($events as $event)
+                                    @forelse($events as $event)
                                         <tr>
                                             <td>
                                                 <div class="dash-event-cell">
                                                     <img src="{{ $event['image'] }}" alt="{{ $event['title'] }}"
                                                         class="dash-event-thumb">
-                                                    <div>
-                                                        <h4 class="dash-event-name">{{ $event['title'] }}</h4>
-                                                        <span class="dash-event-category">{{ $event['category'] }}</span>
+                                                    <div style="min-width: 0;">
+                                                        <h4 class="dash-event-name" title="{{ $event['title'] }}">{{ $event['title'] }}</h4>
+                                                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.2rem; flex-wrap: wrap; font-size: 0.775rem; color: #94A3B8;">
+                                                            <span style="color: #CBD5E1; font-weight: 600;">🗓️ {{ $event['date'] }}</span>
+                                                            <span style="color: #64748B;">•</span>
+                                                            <span style="color: #94A3B8; font-weight: 600;">📍 {{ $event['venue'] }}</span>
+                                                        </div>
+                                                        <div style="margin-top: 0.25rem;">
+                                                            <span class="dash-event-category">{{ $event['category'] }}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td>
-                                                <div class="dash-venue-cell">
-                                                    <span class="dash-venue-date">📅 {{ $event['date'] }}</span>
-                                                    <span class="dash-venue-place">📍 {{ $event['venue'] }}</span>
-                                                </div>
-                                            </td>
-                                            <td>
                                                 <div class="dash-progress-cell">
-                                                    <span class="dash-progress-num">{{ $event['tickets_sold'] }} /
-                                                        {{ $event['tickets_total'] }}</span>
+                                                    <span class="dash-progress-num">{{ number_format($event['tickets_sold']) }} /
+                                                        {{ number_format($event['tickets_total']) }}</span>
                                                     <div class="dash-progress-track">
                                                         <div class="dash-progress-fill"
                                                             style="width: {{ $event['tickets_total'] > 0 ? ($event['tickets_sold'] / $event['tickets_total']) * 100 : 0 }}%;">
@@ -300,21 +303,35 @@
                                                     <span class="dash-badge-status status-success">🟢 {{ $event['status'] }}</span>
                                                 @elseif($event['status_color'] === 'warning')
                                                     <span class="dash-badge-status status-warning">🔥 {{ $event['status'] }}</span>
+                                                @elseif($event['status'] === 'Finalizado')
+                                                    <span class="dash-badge-status status-gray">⌛ Finalizado</span>
                                                 @else
                                                     <span class="dash-badge-status status-info">🔵 {{ $event['status'] }}</span>
                                                 @endif
                                             </td>
-                                            <td>
+                                            <td style="text-align: right;">
                                                 <div class="dash-actions-cell">
+                                                    <a href="{{ route('web.box_office.manage', $event['id']) }}" class="dash-quick-btn-pos" title="Abrir Punto de Venta / Taquilla POS">
+                                                        <span>💼</span>
+                                                        <span>Taquilla</span>
+                                                    </a>
+                                                    <a href="{{ route('web.attendees.scanner', $event['id']) }}" class="dash-quick-btn-scan" title="Abrir Scanner QR y Control de Asistencia">
+                                                        <span>📲</span>
+                                                        <span>Scanner</span>
+                                                    </a>
                                                     <a href="{{ !empty($event['slug']) ? route('web.event.detail', $event['slug']) : route('web.events') }}"
-                                                        class="dash-btn-icon-action" title="Ver Evento" target="_blank">👁️</a>
-                                                    <a href="{{ route('web.box_office.manage', $event['id']) }}" class="dash-btn-icon-action"
-                                                        title="Administrar Taquilla">🎟️</a>
-                                                    <a href="{{ route('web.events.edit', $event['id']) }}" class="dash-btn-icon-action" title="Editar Evento">✏️</a>
+                                                        class="dash-btn-icon-action" title="Ver Detalle del Evento" target="_blank">👁️</a>
                                                 </div>
                                             </td>
                                         </tr>
-                                    @endforeach
+                                    @empty
+                                        <tr>
+                                            <td colspan="5" style="text-align: center; padding: 2.5rem; color: #94A3B8;">
+                                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎟️</div>
+                                                <strong>No tienes eventos registrados aún.</strong>
+                                            </td>
+                                        </tr>
+                                    @endforelse
                                 </tbody>
                             </table>
                         </div>
@@ -323,16 +340,24 @@
                     <!-- FEED DE ACTIVIDAD EN TIEMPO REAL -->
                     <div class="dash-feed-card">
                         <div class="dash-feed-header">
-                            <h3 class="dash-card-title">Ventas en Tiempo Real</h3>
-                            <span class="dash-live-badge-green">● En directo</span>
+                            <div>
+                                <h3 class="dash-card-title" style="font-size: 1.1rem; margin-bottom: 0.15rem;">Ventas en Vivo</h3>
+                                <p style="font-size: 0.75rem; color: #94A3B8; margin: 0;">Transacciones recientes de taquilla</p>
+                            </div>
+                            <span class="dash-live-badge-green">
+                                <span class="dash-live-pulse-dot" style="width: 8px; height: 8px; background: #10B981; border-radius: 50%; display: inline-block;"></span>
+                                <span>En directo</span>
+                            </span>
                         </div>
 
                         <div class="dash-feed-list">
-                            @foreach($activities as $act)
+                            @forelse($activities as $act)
                                 <div class="dash-feed-item">
                                     <div class="dash-feed-icon-box">
                                         @if($act['type'] === 'ticket')
                                             🎟️
+                                        @elseif($act['type'] === 'digital')
+                                            📱
                                         @elseif($act['type'] === 'promo')
                                             🏷️
                                         @else
@@ -349,7 +374,12 @@
                                     </div>
                                     <div class="dash-feed-amount">{{ $act['amount'] }}</div>
                                 </div>
-                            @endforeach
+                            @empty
+                                <div style="text-align: center; padding: 2rem 1rem; color: #94A3B8;">
+                                    <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">🛍️</div>
+                                    <p style="font-size: 0.85rem; margin: 0;">Aún no se registran ventas en taquilla hoy.</p>
+                                </div>
+                            @endforelse
                         </div>
                     </div>
                 </div>

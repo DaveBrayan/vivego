@@ -41,14 +41,13 @@ class DashboardController extends Controller
         $totalEventsCount = $dbEvents->count();
         $allowedEventIds = $dbEvents->pluck('id')->toArray();
 
-        // 3. Métricas reales calculadas
-        $totalTicketsSold = $admin && $admin->allowed_scope === 'specific' 
-            ? EventTicket::whereIn('event_id', $allowedEventIds)->count() 
-            : EventTicket::count();
-
-        $totalPosSales = $admin && $admin->allowed_scope === 'specific' 
-            ? TicketSale::whereIn('event_id', $allowedEventIds)->count() 
-            : TicketSale::count();
+        // 3. Métricas reales calculadas desde las transacciones reales (TicketSale)
+        $salesQuery = TicketSale::whereNotIn('status', ['cancelled', 'upgraded']);
+        if ($admin && $admin->allowed_scope === 'specific') {
+            $salesQuery->whereIn('event_id', $allowedEventIds);
+        }
+        $totalTicketsSold = (int) $salesQuery->sum('quantity');
+        $totalSales = (float) $salesQuery->sum('total_amount');
 
         // Capacidad global sumando todas las zonas de los eventos
         $totalCapacity = 0;
@@ -62,30 +61,25 @@ class DashboardController extends Controller
                 $totalCapacity += 100;
             }
         }
-        if ($totalCapacity == 0) $totalCapacity = max($totalTicketsSold, 100);
-
-        // Recaudación total real de tickets y taquilla
-        $ticketRevenue = (float) ($admin && $admin->allowed_scope === 'specific'
-            ? EventTicket::whereIn('event_id', $allowedEventIds)->sum('unit_price')
-            : EventTicket::sum('unit_price'));
-
-        $posRevenue = (float) ($admin && $admin->allowed_scope === 'specific'
-            ? TicketSale::whereIn('event_id', $allowedEventIds)->sum('total_amount')
-            : TicketSale::sum('total_amount'));
-
-        $totalSales = $ticketRevenue + $posRevenue;
+        if ($totalCapacity == 0) {
+            $totalCapacity = max($totalTicketsSold, 100);
+        }
 
         // Porcentaje de ocupación global
         $ticketsPercentage = $totalCapacity > 0 ? min(100, round(($totalTicketsSold / $totalCapacity) * 100, 1)) : 0;
 
-        // Tasa de asistencia (check-ins confirmados)
-        $usedTicketsCount = $admin && $admin->allowed_scope === 'specific'
-            ? EventTicket::whereIn('event_id', $allowedEventIds)->where(function($q){ $q->where('is_used', true)->orWhereNotNull('checked_in_at'); })->count()
-            : EventTicket::where('is_used', true)->orWhereNotNull('checked_in_at')->count();
+        // Tasa de asistencia (check-ins confirmados en accesos)
+        $usedTicketsQuery = EventTicket::where(function ($q) {
+            $q->where('is_used', true)->orWhereNotNull('checked_in_at');
+        });
+        if ($admin && $admin->allowed_scope === 'specific') {
+            $usedTicketsQuery->whereIn('event_id', $allowedEventIds);
+        }
+        $usedTicketsCount = $usedTicketsQuery->count();
 
         $attendanceRate = $totalTicketsSold > 0 ? round(($usedTicketsCount / $totalTicketsSold) * 100, 1) : 0;
 
-        // Ingresos netos estimados
+        // Ingresos netos estimados (95% post comisiones)
         $netRevenue = $totalSales > 0 ? ($totalSales * 0.95) : 0;
 
         $metrics = [
@@ -101,7 +95,14 @@ class DashboardController extends Controller
 
         // 4. Mapeo de eventos reales para la tabla del Dashboard
         $events = $dbEvents->take(6)->map(function ($evt) {
-            $soldCount = EventTicket::where('event_id', $evt->id)->count();
+            $soldCount = (int) TicketSale::where('event_id', $evt->id)
+                ->whereNotIn('status', ['cancelled', 'upgraded'])
+                ->sum('quantity');
+
+            $eventRevenue = (float) TicketSale::where('event_id', $evt->id)
+                ->whereNotIn('status', ['cancelled', 'upgraded'])
+                ->sum('total_amount');
+
             $eventCap = 0;
             $zones = is_array($evt->zones) ? $evt->zones : (is_string($evt->zones) ? json_decode($evt->zones, true) : []);
             if (!empty($zones)) {
@@ -109,9 +110,9 @@ class DashboardController extends Controller
                     $eventCap += (int) ($z['capacity'] ?? $z['stock'] ?? 0);
                 }
             }
-            if ($eventCap == 0) $eventCap = max($soldCount, 100);
-
-            $eventRevenue = (float) EventTicket::where('event_id', $evt->id)->sum('unit_price');
+            if ($eventCap == 0) {
+                $eventCap = max($soldCount, 100);
+            }
 
             return [
                 'id' => $evt->id,
@@ -130,20 +131,32 @@ class DashboardController extends Controller
             ];
         })->toArray();
 
-        // 5. Actividad reciente de tickets
-        $recentTickets = EventTicket::with('event')->orderBy('id', 'desc')->take(4)->get();
+        // 5. Actividad reciente de ventas en tiempo real (TicketSale)
+        $recentSalesQuery = TicketSale::with('event')
+            ->whereNotIn('status', ['cancelled', 'upgraded'])
+            ->orderBy('id', 'desc');
+
+        if ($admin && $admin->allowed_scope === 'specific') {
+            $recentSalesQuery->whereIn('event_id', $allowedEventIds);
+        }
+
+        $recentSales = $recentSalesQuery->take(6)->get();
         $activities = [];
 
-        if ($recentTickets->count() > 0) {
-            foreach ($recentTickets as $rt) {
+        if ($recentSales->count() > 0) {
+            foreach ($recentSales as $sale) {
+                $qtyText = $sale->quantity == 1 ? '1 entrada' : "{$sale->quantity} entradas";
+                $typeLabel = ($sale->sale_type === 'fisica') ? '🎟️ Talonario Físico' : '📱 Boleto Digital';
+                $zoneText = $sale->zone_name ?: 'General';
+
                 $activities[] = [
-                    'id' => $rt->id,
-                    'user' => $rt->buyer_name ?: 'Cliente',
-                    'action' => "Boleto N° " . str_pad($rt->ticket_number, 5, '0', STR_PAD_LEFT) . " ({$rt->zone_name})",
-                    'event' => $rt->event ? $rt->event->title : 'Evento Vive Go',
-                    'amount' => 'S/ ' . number_format((float) $rt->unit_price, 2),
-                    'time' => $rt->created_at ? $rt->created_at->diffForHumans() : 'Reciente',
-                    'type' => 'ticket',
+                    'id' => $sale->id,
+                    'user' => $sale->buyer_name ?: 'Cliente Taquilla',
+                    'action' => "{$typeLabel} • {$zoneText} ({$qtyText})",
+                    'event' => $sale->event ? $sale->event->title : 'Evento Vive Go',
+                    'amount' => 'S/ ' . number_format((float) $sale->total_amount, 2),
+                    'time' => $sale->created_at ? $sale->created_at->diffForHumans() : 'Reciente',
+                    'type' => ($sale->sale_type === 'fisica') ? 'ticket' : 'digital',
                 ];
             }
         } else {
@@ -152,7 +165,7 @@ class DashboardController extends Controller
                     'id' => 1,
                     'user' => 'Sistema Vive Go',
                     'action' => 'Control de Taquilla y Accesos en Vivo',
-                    'event' => 'Plataforma Operativa',
+                    'event' => 'Sin ventas recientes',
                     'amount' => '✓ Activo',
                     'time' => 'Hoy',
                     'type' => 'promo',

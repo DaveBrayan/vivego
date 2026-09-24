@@ -3880,15 +3880,23 @@ html, body {
 /* FILA 3: TABLA DE EVENTOS ACTIVOS & FEED DE ACTIVIDAD */
 .dash-bottom-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: minmax(0, 1.85fr) minmax(320px, 1.15fr);
   gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 1240px) {
+  .dash-bottom-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .dash-table-card {
   background: #14141E;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 28px;
-  padding: 2rem;
+  padding: 1.75rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
 }
 
 .dash-table-header {
@@ -3896,6 +3904,40 @@ html, body {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 1.5rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.dash-btn-view-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 85, 0, 0.15);
+  border: 1.5px solid #FF5500;
+  color: #FFFFFF !important;
+  font-weight: 800;
+  font-size: 0.825rem;
+  padding: 0.45rem 1.1rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(255, 85, 0, 0.3);
+  text-decoration: none;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.dash-btn-view-all:hover {
+  background: linear-gradient(135deg, #FF5500, #FF7733);
+  color: #FFFFFF !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 85, 0, 0.55);
+}
+
+.dash-btn-view-all .dash-btn-arrow {
+  transition: transform 0.2s ease;
+}
+
+.dash-btn-view-all:hover .dash-btn-arrow {
+  transform: translateX(3px);
 }
 
 .dash-link-orange {
@@ -3925,7 +3967,7 @@ html, body {
 }
 
 .dash-table td {
-  padding: 1.15rem 1rem;
+  padding: 1rem 0.85rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   vertical-align: middle;
 }
@@ -3941,11 +3983,14 @@ html, body {
   height: 48px;
   border-radius: 14px;
   object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #0A0A10;
 }
 
 .dash-event-name {
   font-family: var(--font-heading);
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 800;
   color: #FFFFFF;
 }
@@ -3977,7 +4022,7 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  min-width: 120px;
+  min-width: 110px;
 }
 
 .dash-progress-num {
@@ -4000,38 +4045,52 @@ html, body {
 
 .dash-revenue-text {
   font-family: var(--font-heading);
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 900;
   color: #FFFFFF;
+  white-space: nowrap;
 }
 
 .dash-badge-status {
-  font-size: 0.75rem;
+  font-size: 0.725rem;
   font-weight: 800;
-  padding: 0.3rem 0.75rem;
+  padding: 0.25rem 0.65rem;
   border-radius: var(--radius-pill);
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 .status-success {
   background: rgba(16, 185, 129, 0.15);
   color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .status-warning {
   background: rgba(255, 85, 0, 0.15);
   color: #FF5500;
+  border: 1px solid rgba(255, 85, 0, 0.3);
 }
 
 .status-info {
   background: rgba(59, 130, 246, 0.15);
   color: #3B82F6;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.status-gray {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94A3B8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
 }
 
 .dash-actions-cell {
   display: flex;
   align-items: center;
   gap: 0.45rem;
+  justify-content: flex-end;
 }
 
 .dash-btn-icon-action {
@@ -4041,16 +4100,68 @@ html, body {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: #FFFFFF;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 0.85rem;
+  text-decoration: none;
   transition: all var(--transition-fast);
 }
 
 .dash-btn-icon-action:hover {
   background: var(--color-brand-gradient);
+  border-color: #FF5500;
+  color: #FFFFFF;
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 85, 0, 0.35);
+}
+
+.dash-quick-btn-pos {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  border-radius: 10px;
+  background: rgba(255, 85, 0, 0.12);
+  border: 1.5px solid rgba(255, 85, 0, 0.4);
+  color: #FF7733;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.dash-quick-btn-pos:hover {
+  background: linear-gradient(135deg, #FF5500, #FF7733);
+  color: #FFFFFF;
+  border-color: #FF5500;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(255, 85, 0, 0.4);
+}
+
+.dash-quick-btn-scan {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1.5px solid rgba(16, 185, 129, 0.4);
+  color: #34D399;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.dash-quick-btn-scan:hover {
+  background: linear-gradient(135deg, #10B981, #059669);
+  color: #FFFFFF;
+  border-color: #10B981;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(16, 185, 129, 0.4);
 }
 
 /* FEED DE ACTIVIDAD */
@@ -4058,33 +4169,37 @@ html, body {
   background: #14141E;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 28px;
-  padding: 2rem;
+  padding: 1.75rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
 }
 
 .dash-feed-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
 }
 
 .dash-live-badge-green {
   font-size: 0.75rem;
   font-weight: 900;
   color: #10B981;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .dash-feed-list {
   display: flex;
   flex-direction: column;
-  gap: 1.15rem;
+  gap: 1rem;
 }
 
 .dash-feed-item {
   display: flex;
   align-items: flex-start;
   gap: 0.85rem;
-  padding-bottom: 1rem;
+  padding-bottom: 0.9rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -4111,34 +4226,46 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+  min-width: 0;
 }
 
 .dash-feed-top-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.5rem;
 }
 
 .dash-feed-user {
   font-size: 0.875rem;
   font-weight: 800;
   color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dash-feed-time {
   font-size: 0.7rem;
   color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .dash-feed-action {
-  font-size: 0.8rem;
+  font-size: 0.775rem;
   color: #CBD5E1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dash-feed-event-name {
   font-size: 0.725rem;
   color: var(--color-primary-orange);
   font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dash-feed-amount {
@@ -4147,6 +4274,138 @@ html, body {
   font-weight: 900;
   color: #10B981;
   white-space: nowrap;
+}
+
+/* ==========================================================================
+   SISTEMA DE PAGINACIÓN GLOBAL DATATABLE PRO MAX
+   ========================================================================== */
+.dt-pagination-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.95rem 1.25rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0 0 20px 20px;
+}
+
+.dt-pagination-info {
+  color: #94A3B8;
+  font-size: 0.825rem;
+  font-weight: 600;
+}
+
+.dt-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.dt-page-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #CBD5E1;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  user-select: none;
+}
+
+.dt-page-btn:hover:not(:disabled) {
+  background: rgba(255, 85, 0, 0.15);
+  border-color: rgba(255, 85, 0, 0.4);
+  color: #FF5500;
+}
+
+.dt-page-btn.active {
+  background: linear-gradient(135deg, #FF5500, #FF7700) !important;
+  border-color: #FF5500 !important;
+  color: #FFFFFF !important;
+  font-weight: 900;
+  box-shadow: 0 2px 8px rgba(255, 85, 0, 0.4);
+}
+
+.dt-page-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.dt-page-dots {
+  color: #64748B;
+  padding: 0 0.35rem;
+  font-weight: 700;
+  user-select: none;
+}
+
+.theme-light .dt-page-btn {
+  background: #F1F5F9;
+  border-color: #CBD5E1;
+  color: #334155;
+}
+
+.theme-light .dt-page-btn.active {
+  color: #FFFFFF !important;
+}
+
+/* ==========================================================================
+   BOTONES PÍLDORA DE FILTRADO (FILTER-PILL-BTN) GLOBAL PRO MAX
+   ========================================================================== */
+.filter-pill-btn {
+  background: rgba(255, 255, 255, 0.07) !important;
+  color: #F8FAFC !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.18) !important;
+  font-family: inherit !important;
+  font-weight: 800 !important;
+  font-size: 0.825rem !important;
+  padding: 0.45rem 0.95rem !important;
+  border-radius: 12px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.4rem !important;
+  user-select: none !important;
+  white-space: nowrap !important;
+  outline: none !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+}
+
+.filter-pill-btn:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  color: #FFFFFF !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+.filter-pill-btn.active {
+  background: linear-gradient(135deg, #FF5500, #FF7733) !important;
+  color: #FFFFFF !important;
+  border-color: #FF5500 !important;
+  box-shadow: 0 4px 16px rgba(255, 85, 0, 0.45) !important;
+}
+
+.theme-light .filter-pill-btn {
+  background: #F1F5F9 !important;
+  border-color: #CBD5E1 !important;
+  color: #334155 !important;
+}
+
+.theme-light .filter-pill-btn.active {
+  background: linear-gradient(135deg, #FF5500, #FF7733) !important;
+  color: #FFFFFF !important;
 }
 
 /* ==========================================================================
