@@ -614,6 +614,11 @@
                 zCap = alreadyGenCount;
             }
 
+            // Si la zona no tiene aforo físico asignado (ej: 100% digital) y no tiene boletos físicos en BD, omitirla de la plancha
+            if (zCap <= 0 && alreadyGenCount <= 0) {
+                return;
+            }
+
             const zoneNums = existingList.map(t => parseInt(t.ticketNumberVal || t.ticket_number, 10)).filter(n => !isNaN(n) && n > 0);
             const minNum = zoneNums.length > 0 ? Math.min(...zoneNums) : 1;
             const maxNum = zoneNums.length > 0 ? Math.max(...zoneNums) : (zCap > 0 ? zCap : 24);

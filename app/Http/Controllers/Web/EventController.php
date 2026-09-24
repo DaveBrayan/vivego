@@ -713,7 +713,12 @@ class EventController extends Controller
             }
         }
 
-        // Modelo On-Demand: Los aforos se actualizan sin necesidad de pre-generar entradas digitales vacías.
+        // Sincronizar automáticamente los boletos físicos oficiales con los nuevos aforos y tarifas
+        try {
+            \App\Services\TicketGenerationService::syncEventTickets($event);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error sincronizando boletos al actualizar evento: ' . $e->getMessage());
+        }
 
         return response()->json([
             'success' => true,
