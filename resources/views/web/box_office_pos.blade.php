@@ -1037,46 +1037,73 @@
                                             <strong style="color: #10B981; font-size: 1rem; font-weight: 900;">
                                                 S/ {{ number_format($sale->total_amount, 2) }}
                                             </strong>
-                                        </td>
+                                        @php
+                                            $isPhysicalSale = ($sale->sale_type === 'fisica' || ($sale->source ?? '') === 'pos_physical' || ($sale->source ?? '') === 'courtesy_physical');
+                                            $isCourtesySale = in_array(strtolower($sale->payment_method ?? ''), ['cortesia', 'cortesía']);
+                                        @endphp
                                         <td>
-                                            @if($sale->payment_method === 'Efectivo')
-                                                <span class="dash-badge-custom badge-green" style="font-size: 0.75rem;">💵 Efectivo</span>
-                                            @elseif($sale->payment_method === 'Tarjeta')
-                                                <span class="dash-badge-custom badge-blue" style="font-size: 0.75rem;">💳 Tarjeta</span>
-                                            @elseif($sale->payment_method === 'Cortesia' || $sale->payment_method === 'cortesia')
-                                                @if(($sale->source ?? '') === 'courtesy_physical')
-                                                    <span class="dash-badge-custom badge-purple" style="font-size: 0.75rem; background: rgba(168, 85, 247, 0.15); color: #C084FC; border: 1px solid rgba(168, 85, 247, 0.35); font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;">
-                                                        <span>🎟️</span> <span>Cortesía Fís.</span>
-                                                    </span>
-                                                @elseif(($sale->source ?? '') === 'courtesy_digital')
-                                                    <span class="dash-badge-custom badge-cyan" style="font-size: 0.75rem; background: rgba(0, 240, 255, 0.15); color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.35); font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;">
-                                                        <span>🌐</span> <span>Cortesía Web</span>
-                                                    </span>
+                                            <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.3rem;">
+                                                @if($isPhysicalSale)
+                                                    @if($isCourtesySale)
+                                                        <span class="dash-badge-custom" style="font-size: 0.68rem; font-weight: 900; background: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.35); padding: 0.12rem 0.45rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                                            🎟️ CORTESÍA FÍSICA
+                                                        </span>
+                                                    @else
+                                                        <span class="dash-badge-custom" style="font-size: 0.68rem; font-weight: 900; background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.35); padding: 0.12rem 0.45rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                                            🎟️ VENTA FÍSICA
+                                                        </span>
+                                                    @endif
                                                 @else
-                                                    <span class="dash-badge-custom badge-green" style="font-size: 0.75rem; background: rgba(168, 85, 247, 0.15); color: #10B981; border: 1px solid rgba(168, 85, 247, 0.35); font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;">
-                                                        <span>🎁</span> <span>Cortesía Adm</span>
-                                                    </span>
+                                                    @if($isCourtesySale)
+                                                        <span class="dash-badge-custom" style="font-size: 0.68rem; font-weight: 900; background: rgba(0, 240, 255, 0.15); color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.35); padding: 0.12rem 0.45rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                                            🌐 CORTESÍA DIGITAL
+                                                        </span>
+                                                    @else
+                                                        <span class="dash-badge-custom" style="font-size: 0.68rem; font-weight: 900; background: rgba(59, 130, 246, 0.15); color: #60A5FA; border: 1px solid rgba(59, 130, 246, 0.35); padding: 0.12rem 0.45rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                                            📱 VENTA DIGITAL
+                                                        </span>
+                                                    @endif
                                                 @endif
-                                            @elseif($sale->payment_method === 'Yape')
-                                                <span class="dash-badge-custom badge-purple" style="font-size: 0.75rem; background: rgba(168, 85, 247, 0.15); color: #A855F7; border: 1px solid rgba(168, 85, 247, 0.3);">📱 Yape</span>
-                                            @elseif($sale->payment_method === 'Plin')
-                                                <span class="dash-badge-custom badge-cyan" style="font-size: 0.75rem; color: #00F0FF; background: rgba(0, 240, 255, 0.15); border: 1px solid rgba(0, 240, 255, 0.3);">🟣 Plin</span>
-                                            @elseif(str_starts_with(strtolower($sale->payment_method), 'izipay') || $sale->payment_method === 'izipay_online' || $sale->payment_method === 'Izipay')
-                                                <div style="display: inline-flex; flex-direction: column; align-items: flex-start; gap: 0.15rem;">
-                                                    <span class="dash-badge-custom badge-blue" style="font-size: 0.75rem; font-weight: 800; background: rgba(0, 210, 196, 0.15); color: #00D2C4; border: 1px solid rgba(0, 210, 196, 0.35); padding: 0.2rem 0.55rem; border-radius: 6px;">
-                                                        💳 Izipay
-                                                    </span>
-                                                    <small style="font-size: 0.7rem; color: #94A3B8; font-weight: 600;">
-                                                        @php
-                                                            $tData = is_array($sale->tickets_data) ? $sale->tickets_data : json_decode($sale->tickets_data, true);
-                                                            $subM = $tData['sub_method'] ?? (str_contains(strtolower($sale->payment_method), 'qr') ? 'QR Yape / Plin' : 'Tarjeta');
-                                                        @endphp
-                                                        {{ $subM }}
-                                                    </small>
-                                                </div>
-                                            @else
-                                                <span class="dash-badge-custom badge-blue" style="font-size: 0.75rem;">💳 {{ $sale->payment_method }}</span>
-                                            @endif
+
+                                                @if($sale->payment_method === 'Efectivo')
+                                                    <span class="dash-badge-custom badge-green" style="font-size: 0.75rem;">💵 Efectivo</span>
+                                                @elseif($sale->payment_method === 'Tarjeta')
+                                                    <span class="dash-badge-custom badge-blue" style="font-size: 0.75rem;">💳 Tarjeta</span>
+                                                @elseif($sale->payment_method === 'Cortesia' || $sale->payment_method === 'cortesia')
+                                                    @if(($sale->source ?? '') === 'courtesy_physical')
+                                                        <span class="dash-badge-custom badge-purple" style="font-size: 0.75rem; background: rgba(168, 85, 247, 0.15); color: #C084FC; border: 1px solid rgba(168, 85, 247, 0.35); font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                                            <span>🎟️</span> <span>Cortesía Fís.</span>
+                                                        </span>
+                                                    @elseif(($sale->source ?? '') === 'courtesy_digital')
+                                                        <span class="dash-badge-custom badge-cyan" style="font-size: 0.75rem; background: rgba(0, 240, 255, 0.15); color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.35); font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                                            <span>🌐</span> <span>Cortesía Web</span>
+                                                        </span>
+                                                    @else
+                                                        <span class="dash-badge-custom badge-green" style="font-size: 0.75rem; background: rgba(168, 85, 247, 0.15); color: #10B981; border: 1px solid rgba(168, 85, 247, 0.35); font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                                            <span>🎁</span> <span>Cortesía Adm</span>
+                                                        </span>
+                                                    @endif
+                                                @elseif($sale->payment_method === 'Yape')
+                                                    <span class="dash-badge-custom badge-purple" style="font-size: 0.75rem; background: rgba(168, 85, 247, 0.15); color: #A855F7; border: 1px solid rgba(168, 85, 247, 0.3);">📱 Yape</span>
+                                                @elseif($sale->payment_method === 'Plin')
+                                                    <span class="dash-badge-custom badge-cyan" style="font-size: 0.75rem; color: #00F0FF; background: rgba(0, 240, 255, 0.15); border: 1px solid rgba(0, 240, 255, 0.3);">🟣 Plin</span>
+                                                @elseif(str_starts_with(strtolower($sale->payment_method), 'izipay') || $sale->payment_method === 'izipay_online' || $sale->payment_method === 'Izipay')
+                                                    <div style="display: inline-flex; flex-direction: column; align-items: flex-start; gap: 0.15rem;">
+                                                        <span class="dash-badge-custom badge-blue" style="font-size: 0.75rem; font-weight: 800; background: rgba(0, 210, 196, 0.15); color: #00D2C4; border: 1px solid rgba(0, 210, 196, 0.35); padding: 0.2rem 0.55rem; border-radius: 6px;">
+                                                            💳 Izipay
+                                                        </span>
+                                                        <small style="font-size: 0.7rem; color: #94A3B8; font-weight: 600;">
+                                                            @php
+                                                                $tData = is_array($sale->tickets_data) ? $sale->tickets_data : json_decode($sale->tickets_data, true);
+                                                                $subM = $tData['sub_method'] ?? (str_contains(strtolower($sale->payment_method), 'qr') ? 'QR Yape / Plin' : 'Tarjeta');
+                                                            @endphp
+                                                            {{ $subM }}
+                                                        </small>
+                                                    </div>
+                                                @else
+                                                    <span class="dash-badge-custom badge-blue" style="font-size: 0.75rem;">💳 {{ $sale->payment_method }}</span>
+                                                @endif
+                                            </div>
                                         </td>
                                         <td style="text-align: right;">
                                             <div style="display: inline-flex; align-items: center; gap: 0.4rem; justify-content: flex-end;">
@@ -1084,7 +1111,7 @@
                                                     <span>🧾</span>
                                                     <span>Recibo</span>
                                                 </button>
-                                                @if(($sale->source ?? '') !== 'pos_physical')
+                                                @if(!$isPhysicalSale)
                                                     @if($event->isPast())
                                                         <button type="button" class="btn btn-secondary btn-sm" onclick="showPastEventActionAlert('descargar boletos PDF')" title="Evento finalizado - Descarga PDF desactivada" style="background: rgba(148, 163, 184, 0.15); border: 1px solid rgba(148, 163, 184, 0.25); color: #94A3B8; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; cursor: not-allowed; opacity: 0.6;">
                                                             <span>🎟️</span>
@@ -5472,8 +5499,26 @@
                         newRow.className = 'sale-row-item';
                         newRow.setAttribute('data-sale-id', data.sale.id);
                         
+                        const isPhys = (data.sale.sale_type === 'fisica' || data.sale_mode === 'fisica' || data.sale.source === 'pos_physical' || data.sale.source === 'courtesy_physical');
+                        const isCourtesy = (data.sale.payment_method === 'Cortesía' || data.sale.payment_method === 'cortesia');
+
+                        let typeBadge = '';
+                        if (isPhys) {
+                            if (isCourtesy) {
+                                typeBadge = `<span class="dash-badge-custom" style="font-size: 0.68rem; font-weight: 900; background: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.35); padding: 0.12rem 0.45rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem;">🎟️ CORTESÍA FÍSICA</span>`;
+                            } else {
+                                typeBadge = `<span class="dash-badge-custom" style="font-size: 0.68rem; font-weight: 900; background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.35); padding: 0.12rem 0.45rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem;">🎟️ VENTA FÍSICA</span>`;
+                            }
+                        } else {
+                            if (isCourtesy) {
+                                typeBadge = `<span class="dash-badge-custom" style="font-size: 0.68rem; font-weight: 900; background: rgba(0, 240, 255, 0.15); color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.35); padding: 0.12rem 0.45rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem;">🌐 CORTESÍA DIGITAL</span>`;
+                            } else {
+                                typeBadge = `<span class="dash-badge-custom" style="font-size: 0.68rem; font-weight: 900; background: rgba(59, 130, 246, 0.15); color: #60A5FA; border: 1px solid rgba(59, 130, 246, 0.35); padding: 0.12rem 0.45rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem;">📱 VENTA DIGITAL</span>`;
+                            }
+                        }
+
                         let paymentBadge = `<span class="dash-badge-custom badge-green" style="font-size: 0.75rem;">💵 Efectivo</span>`;
-                        if (data.sale.payment_method === 'Cortesía' || data.sale.payment_method === 'cortesia') {
+                        if (isCourtesy) {
                             const isWeb = (data.sale.seller_name && data.sale.seller_name.toLowerCase().includes('web'));
                             paymentBadge = isWeb
                                 ? `<span class="dash-badge-custom badge-cyan" style="font-size: 0.75rem; background: rgba(0, 240, 255, 0.15); color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.35); font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;"><span>🌐</span> <span>Cortesía Web</span></span>`
@@ -5492,7 +5537,7 @@
                                 <span>Recibo</span>
                             </button>
                         `;
-                        if (data.sale_mode !== 'fisica') {
+                        if (!isPhys) {
                             rowActionBtns += `
                                 <button type="button" class="btn btn-secondary btn-sm" onclick="downloadPosSalePdf(${data.sale.id})" title="Descargar Entrada PDF" style="background: linear-gradient(135deg, #06B6D4, #0284C7); border: 1px solid rgba(6,182,212,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3); cursor: pointer;">
                                     <span>🎟️</span>
@@ -5564,7 +5609,10 @@
                                 </strong>
                             </td>
                             <td>
-                                ${paymentBadge}
+                                <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.3rem;">
+                                    ${typeBadge}
+                                    ${paymentBadge}
+                                </div>
                             </td>
                             <td style="text-align: right;">
                                 <div style="display: inline-flex; align-items: center; gap: 0.4rem; justify-content: flex-end;">
@@ -5926,10 +5974,44 @@
                         newRow.className = 'sale-row-item';
                         newRow.setAttribute('data-sale-id', data.sale.id);
                         
+                        const isPhys = (data.sale.sale_type === 'fisica' || data.sale_mode === 'fisica' || data.sale.source === 'courtesy_physical' || data.sale.source === 'pos_physical');
+                        
+                        let typeBadge = '';
+                        if (isPhys) {
+                            typeBadge = `<span class="dash-badge-custom" style="font-size: 0.68rem; font-weight: 900; background: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.35); padding: 0.12rem 0.45rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem;">🎟️ CORTESÍA FÍSICA</span>`;
+                        } else {
+                            typeBadge = `<span class="dash-badge-custom" style="font-size: 0.68rem; font-weight: 900; background: rgba(0, 240, 255, 0.15); color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.35); padding: 0.12rem 0.45rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem;">🌐 CORTESÍA DIGITAL</span>`;
+                        }
+
                         const isWeb = (data.sale.seller_name && data.sale.seller_name.toLowerCase().includes('web'));
                         const courtesyBadge = isWeb
                             ? `<span class="dash-badge-custom badge-cyan" style="font-size: 0.75rem; background: rgba(0, 240, 255, 0.15); color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.35); font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;"><span>🌐</span> <span>Cortesía Web</span></span>`
                             : `<span class="dash-badge-custom badge-green" style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.35); font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;"><span>🎁</span> <span>Cortesía Adm</span></span>`;
+
+                        let rowActionBtns = `
+                            <button type="button" class="btn btn-primary btn-sm" onclick="reprintReceipt(${data.sale.id})" title="Reimprimir Recibo Térmico" style="background: linear-gradient(135deg, #10B981, #059669); border: 1px solid rgba(16,185,129,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); cursor: pointer;">
+                                <span>🧾</span>
+                                <span>Recibo</span>
+                            </button>
+                        `;
+                        if (!isPhys) {
+                            rowActionBtns += `
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="downloadPosSalePdf(${data.sale.id})" title="Descargar Entrada PDF" style="background: linear-gradient(135deg, #06B6D4, #0284C7); border: 1px solid rgba(6,182,212,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3); cursor: pointer;">
+                                    <span>🎟️</span>
+                                    <span>Entrada PDF</span>
+                                </button>
+                                <button type="button" class="btn btn-info btn-sm" onclick="emailPosSalePdf(${data.sale.id})" title="Enviar Entrada al Correo" style="background: linear-gradient(135deg, #6366F1, #4F46E5); border: 1px solid rgba(99,102,241,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); cursor: pointer;">
+                                    <span>✉️</span>
+                                    <span>Enviar Correo</span>
+                                </button>
+                            `;
+                        }
+                        rowActionBtns += `
+                            <button type="button" class="btn btn-danger btn-sm" onclick="deletePosSale(${data.sale.id})" title="Borrar Entrada" style="background: linear-gradient(135deg, #EF4444, #DC2626); border: 1px solid rgba(239,68,68,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); cursor: pointer;">
+                                <span>🗑️</span>
+                                <span>Borrar Entrada</span>
+                            </button>
+                        `;
 
                         const bName = data.sale.buyer_name || 'Público General';
                         const bDni = data.sale.buyer_dni || '';
@@ -5984,26 +6066,14 @@
                                 </strong>
                             </td>
                             <td>
-                                ${courtesyBadge}
+                                <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.3rem;">
+                                    ${typeBadge}
+                                    ${courtesyBadge}
+                                </div>
                             </td>
                             <td style="text-align: right;">
                                 <div style="display: inline-flex; align-items: center; gap: 0.4rem; justify-content: flex-end;">
-                                    <button type="button" class="btn btn-primary btn-sm" onclick="reprintReceipt(${data.sale.id})" title="Reimprimir Recibo Térmico" style="background: linear-gradient(135deg, #10B981, #059669); border: 1px solid rgba(16,185,129,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); cursor: pointer;">
-                                        <span>🧾</span>
-                                        <span>Recibo</span>
-                                    </button>
-                                    <button type="button" class="btn btn-secondary btn-sm" onclick="downloadPosSalePdf(${data.sale.id})" title="Descargar Entrada PDF" style="background: linear-gradient(135deg, #06B6D4, #0284C7); border: 1px solid rgba(6,182,212,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3); cursor: pointer;">
-                                        <span>🎟️</span>
-                                        <span>Entrada PDF</span>
-                                    </button>
-                                    <button type="button" class="btn btn-info btn-sm" onclick="emailPosSalePdf(${data.sale.id})" title="Enviar Entrada al Correo" style="background: linear-gradient(135deg, #6366F1, #4F46E5); border: 1px solid rgba(99,102,241,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); cursor: pointer;">
-                                        <span>✉️</span>
-                                        <span>Enviar Correo</span>
-                                    </button>
-                                    <button type="button" class="btn btn-danger btn-sm" onclick="deletePosSale(${data.sale.id})" title="Borrar Entrada" style="background: linear-gradient(135deg, #EF4444, #DC2626); border: 1px solid rgba(239,68,68,0.6); color: #FFFFFF; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); cursor: pointer;">
-                                        <span>🗑️</span>
-                                        <span>Borrar Entrada</span>
-                                    </button>
+                                    ${rowActionBtns}
                                 </div>
                             </td>
                         `;
