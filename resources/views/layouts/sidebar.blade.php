@@ -483,6 +483,12 @@
                     <span class="dash-nav-text">Registro de Correos</span>
                 </a>
             </li>
+            <li class="dash-nav-item {{ (request()->routeIs('web.checkout_logs*') || request()->is('admin/logs-pagos*')) ? 'active' : '' }}">
+                <a href="{{ \Illuminate\Support\Facades\Route::has('web.checkout_logs') ? route('web.checkout_logs') : url('/admin/logs-pagos') }}" class="dash-nav-link">
+                    <span class="dash-nav-icon">🧾</span>
+                    <span class="dash-nav-text">Logs de Pagos</span>
+                </a>
+            </li>
             <li class="dash-nav-item {{ (request()->routeIs('web.payment_methods*') || request()->is('admin/metodos-pago*')) ? 'active' : '' }}">
                 <a href="{{ \Illuminate\Support\Facades\Route::has('web.payment_methods') ? route('web.payment_methods') : url('/admin/metodos-pago') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">💳</span>

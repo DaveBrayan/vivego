@@ -25,6 +25,7 @@ use App\Http\Controllers\Web\ClaimBookController;
 use App\Http\Controllers\Web\ClaimAdminController;
 use App\Http\Controllers\Web\DeviceController;
 use App\Http\Controllers\Web\EmailLogController;
+use App\Http\Controllers\Web\CheckoutLogController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -196,6 +197,12 @@ Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group
     Route::get('/admin/registro-correos/{id}', [EmailLogController::class, 'show'])->name('web.email_logs.show');
     Route::post('/admin/registro-correos/{id}/reenviar', [EmailLogController::class, 'resend'])->name('web.email_logs.resend');
     Route::delete('/admin/registro-correos/{id}', [EmailLogController::class, 'destroy'])->name('web.email_logs.destroy');
+
+    // Logs de Pagos & Auditoría de Checkout
+    Route::get('/admin/logs-pagos', [CheckoutLogController::class, 'index'])->name('web.checkout_logs');
+    Route::get('/admin/logs-pagos/descargar', [CheckoutLogController::class, 'download'])->name('web.checkout_logs.download');
+    Route::post('/admin/logs-pagos/limpiar', [CheckoutLogController::class, 'clear'])->name('web.checkout_logs.clear');
+    Route::get('/admin/logs-pagos/feed', [CheckoutLogController::class, 'apiFeed'])->name('web.checkout_logs.feed');
 
     // Información Empresarial: Compañías
     Route::get('/admin/compania', [CompanyController::class, 'index'])->name('web.companies');

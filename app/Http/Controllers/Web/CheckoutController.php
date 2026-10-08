@@ -22,6 +22,18 @@ use Illuminate\Support\Str;
 class CheckoutController extends Controller
 {
     /**
+     * Registra un evento en el canal dedicado de logs de checkout (storage/logs/checkout.log)
+     */
+    protected function logCheckout(string $level, string $message, array $context = []): void
+    {
+        try {
+            Log::channel('checkout')->$level($message, $context);
+        } catch (\Throwable $e) {
+            Log::$level("[Checkout] " . $message, $context);
+        }
+    }
+
+    /**
      * Valida un código de cupón en tiempo real vía AJAX
      */
     public function validateCoupon(Request $request): JsonResponse
@@ -429,6 +441,14 @@ class CheckoutController extends Controller
         $response = $izipayService->createPaymentToken($payload);
 
         if (isset($response['status']) && $response['status'] === 'SUCCESS' && isset($response['answer']['formToken'])) {
+            $this->logCheckout('info', "Izipay [Sesión Token Creada]: {$orderId} para {$validated['customer_email']} - Total: S/ " . number_format($validated['amount'], 2), [
+                'order_id' => $orderId,
+                'customer_name' => $validated['customer_name'],
+                'customer_email' => $validated['customer_email'],
+                'amount' => $validated['amount'],
+                'tickets_count' => count($validated['tickets']),
+            ]);
+
             return response()->json([
                 'success' => true,
                 'formToken' => $response['answer']['formToken'],
@@ -440,7 +460,7 @@ class CheckoutController extends Controller
         }
 
         $errorMessage = $response['answer']['errorMessage'] ?? $response['message'] ?? 'No se pudo generar la sesión de pago con Izipay.';
-        Log::error('Error al generar formToken Izipay: ' . json_encode($response));
+        $this->logCheckout('error', "Izipay [Error Crear Sesión]: {$errorMessage}", ['response' => $response]);
 
         return response()->json([
             'success' => false,
@@ -453,7 +473,7 @@ class CheckoutController extends Controller
      */
     public function completeIzipayPayment(Request $request, IzipayService $izipayService): JsonResponse
     {
-        Log::info('Izipay Payment Callback Received:', $request->all());
+        $this->logCheckout('info', 'Izipay [Callback Recibido]: Petición de pago recibida', $request->except(['ticket_pdf_base64']));
 
         $krAnswerRaw = $request->input('kr-answer') 
             ?: $request->input('rawClientAnswer') 
@@ -471,6 +491,7 @@ class CheckoutController extends Controller
             ?: $request->input('kr_hash');
 
         if (empty($krAnswerRaw)) {
+            $this->logCheckout('warning', 'Izipay [Error Callback]: Respuesta de pago incompleta. No se recibieron datos.');
             return response()->json([
                 'success' => false,
                 'message' => 'Respuesta de pago incompleta. No se recibieron datos de la pasarela.',
@@ -479,6 +500,7 @@ class CheckoutController extends Controller
 
         $answer = json_decode($krAnswerRaw, true);
         if (!is_array($answer)) {
+            $this->logCheckout('warning', 'Izipay [Error Callback]: Formato JSON de respuesta no válido.');
             return response()->json([
                 'success' => false,
                 'message' => 'Formato de respuesta de Izipay no válido.',
@@ -491,7 +513,7 @@ class CheckoutController extends Controller
         if (!empty($krHash)) {
             $isValidHash = $izipayService->checkHash($krAnswerRaw, $krHash);
             if (!$isValidHash && $orderStatus !== 'PAID') {
-                Log::warning('Firma HMAC inválida en checkout Izipay: ' . $krHash);
+                $this->logCheckout('warning', "Izipay [Firma HMAC Inválida]: Hash {$krHash} no coincide con la respuesta.");
                 return response()->json([
                     'success' => false,
                     'message' => 'Firma digital de Izipay no verificada.',
@@ -500,6 +522,7 @@ class CheckoutController extends Controller
         }
 
         if ($orderStatus !== 'PAID') {
+            $this->logCheckout('warning', "Izipay [Pago No Aprobado]: Estado bancario '{$orderStatus}'", ['answer' => $answer]);
             return response()->json([
                 'success' => false,
                 'message' => 'El pago no fue aprobado por la entidad bancaria. Estado: ' . ($orderStatus ?: 'NO_PAGADO'),
@@ -713,6 +736,15 @@ class CheckoutController extends Controller
             \App\Services\EmailLogService::sendTicketPurchaseMail($sale, $tempPassword, $isNewUser, $request->input('ticket_pdf_base64'));
         }
 
+        $this->logCheckout('info', "Izipay [Venta Completada]: Venta #{$sale->id} registrada exitosamente", [
+            'receipt' => $receiptNumber,
+            'buyer' => $buyerName,
+            'email' => $buyerEmail,
+            'total' => $orderTotal,
+            'tickets_count' => $totalQty,
+            'order_id' => $orderId,
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => '¡Pago procesado exitosamente con Izipay!',
@@ -811,6 +843,16 @@ class CheckoutController extends Controller
             Cache::put('culqi_order_ctx_' . $response['id'], $orderContext, now()->addHours(48));
             Cache::put('culqi_order_ctx_' . $orderNumber, $orderContext, now()->addHours(48));
 
+            $this->logCheckout('info', "Culqi [Orden QR Generada]: {$response['id']} (#{$orderNumber}) para {$validated['customer_email']} - Total: S/ " . number_format($validated['amount'], 2), [
+                'order_id' => $response['id'],
+                'order_number' => $orderNumber,
+                'customer_name' => $validated['customer_name'],
+                'customer_doc' => $validated['customer_doc'] ?? '',
+                'tickets_count' => count($validated['tickets']),
+                'has_qr' => !empty($response['qr']),
+                'has_cip' => !empty($response['payment_code']),
+            ]);
+
             return response()->json([
                 'success' => true,
                 'orderId' => $response['id'],
@@ -825,7 +867,7 @@ class CheckoutController extends Controller
 
         // Si Culqi devuelve error o no genera orden, aún podemos proceder con tokenización directa en el frontend
         $errorMessage = $response['user_message'] ?? $response['merchant_message'] ?? $response['message'] ?? 'No se pudo generar la sesión de orden con Culqi.';
-        Log::warning('Respuesta al crear orden Culqi: ' . json_encode($response));
+        $this->logCheckout('warning', "Culqi [Orden Warning]: No se generó orden oficial en Culqi API - {$errorMessage}", ['response' => $response]);
 
         return response()->json([
             'success' => true,
@@ -847,17 +889,22 @@ class CheckoutController extends Controller
         // 1. Verificación de Idempotencia: ¿Ya existe una venta para esta orden de Culqi?
         $existingSale = TicketSale::where('tickets_data', 'LIKE', '%' . $orderId . '%')->first();
         if ($existingSale) {
-            Log::info("Orden Culqi {$orderId} ya procesada previamente con Sale #{$existingSale->id}.");
+            $this->logCheckout('info', "Culqi [Idempotencia]: Orden {$orderId} ya procesada previamente con Venta #{$existingSale->id} (Recibo: {$existingSale->receipt_number})");
             return $existingSale;
         }
 
         // 2. Consultar el estado real de la Orden directamente en Culqi API
         $orderResponse = $culqiService->getOrder($orderId);
-        Log::info("Culqi getOrder response para {$orderId}:", $orderResponse);
-
         $orderState = strtolower($orderResponse['state'] ?? 'pending');
+
+        $this->logCheckout('info', "Culqi [Verificación API]: Orden {$orderId} consultada en Culqi -> Estado: {$orderState}", [
+            'order_id' => $orderId,
+            'state' => $orderState,
+            'amount' => $orderResponse['amount'] ?? null,
+        ]);
+
         if (!in_array($orderState, ['paid', 'pagado'])) {
-            Log::warning("Intento de procesar Orden Culqi {$orderId} que no está en estado 'paid'. Estado actual: {$orderState}");
+            $this->logCheckout('warning', "Culqi [Orden no pagada]: Intento de procesar Orden {$orderId} con estado no pagado: '{$orderState}'");
             return null;
         }
 
@@ -868,7 +915,7 @@ class CheckoutController extends Controller
         if (!empty($orderNumber)) {
             $existingByOrderNum = TicketSale::where('tickets_data', 'LIKE', '%' . $orderNumber . '%')->first();
             if ($existingByOrderNum) {
-                Log::info("Orden Culqi con número {$orderNumber} ya procesada previamente con Sale #{$existingByOrderNum->id}.");
+                $this->logCheckout('info', "Culqi [Idempotencia]: Orden con número {$orderNumber} ya procesada previamente con Venta #{$existingByOrderNum->id}");
                 return $existingByOrderNum;
             }
         }
@@ -1089,6 +1136,17 @@ class CheckoutController extends Controller
             \App\Services\EmailLogService::sendTicketPurchaseMail($sale, $tempPassword, $isNewUser, $clientOverrideData['ticket_pdf_base64'] ?? null);
         }
 
+        $this->logCheckout('info', "Culqi [Venta QR Completada]: Venta #{$sale->id} registrada exitosamente para orden {$orderId}", [
+            'sale_id' => $sale->id,
+            'receipt' => $receiptNumber,
+            'order_id' => $orderId,
+            'buyer' => $buyerName,
+            'email' => $buyerEmail,
+            'total' => $orderTotal,
+            'tickets_count' => $totalQty,
+            'is_new_user' => $isNewUser,
+        ]);
+
         return $sale;
     }
 
@@ -1097,7 +1155,7 @@ class CheckoutController extends Controller
      */
     public function completeCulqiPayment(Request $request, CulqiService $culqiService): JsonResponse
     {
-        Log::info('Culqi Payment Callback Received:', $request->all());
+        $this->logCheckout('info', 'Culqi [Callback Completar]: Petición recibida en frontend', $request->except(['ticket_pdf_base64']));
 
         $tokenId = $request->input('token_id') ?: $request->input('tokenId');
         $orderId = $request->input('order_id') ?: $request->input('orderId');
@@ -1127,6 +1185,7 @@ class CheckoutController extends Controller
             // Verificar idempotencia si este token ya fue procesado
             $existingSaleToken = TicketSale::where('tickets_data', 'LIKE', '%' . $tokenId . '%')->first();
             if ($existingSaleToken) {
+                $this->logCheckout('info', "Culqi [Idempotencia Tarjeta]: Token {$tokenId} ya procesado con Venta #{$existingSaleToken->id}");
                 return response()->json([
                     'success' => true,
                     'message' => '¡Pago ya registrado previamente!',
@@ -1169,13 +1228,15 @@ class CheckoutController extends Controller
             ];
 
             $chargeResponse = $culqiService->createCharge($chargePayload);
-            Log::info('Respuesta de Cargo Culqi:', $chargeResponse);
+            $this->logCheckout('info', "Culqi [Cargo Tarjeta Respuesta]: Token {$tokenId}", ['response' => $chargeResponse]);
 
             $chargeObj = $chargeResponse['object'] ?? '';
             $isPaid = ($chargeObj === 'charge') && (($chargeResponse['capture'] ?? false) || ($chargeResponse['outcome']['type'] ?? '') === 'venta_exitosa');
 
             if (!$isPaid && !isset($chargeResponse['id'])) {
                 $errorMsg = $chargeResponse['user_message'] ?? $chargeResponse['merchant_message'] ?? 'El pago con tarjeta no pudo ser procesado por Culqi.';
+                $this->logCheckout('warning', "Culqi [Cargo Tarjeta Rechazado]: {$errorMsg}", ['response' => $chargeResponse]);
+
                 return response()->json([
                     'success' => false,
                     'message' => $errorMsg,
@@ -1319,7 +1380,7 @@ class CheckoutController extends Controller
                     'is_upgrade' => !empty($upgradeSaleId),
                     'upgrade_sale_id' => $upgradeSaleId,
                 ],
-                'seller_name' => 'Pasarela Web Culqi',
+                'seller_name' => 'Pasarela Web Culqi (Tarjeta)',
             ]);
 
             // Invalidar boleto previo si fue upgrade y registrar boletos oficiales en event_tickets
@@ -1379,6 +1440,15 @@ class CheckoutController extends Controller
                 \App\Services\EmailLogService::sendTicketPurchaseMail($sale, $tempPassword, $isNewUser, $request->input('ticket_pdf_base64'));
             }
 
+            $this->logCheckout('info', "Culqi [Venta Tarjeta Completada]: Venta #{$sale->id} registrada exitosamente", [
+                'receipt' => $receiptNumber,
+                'buyer' => $buyerName,
+                'email' => $buyerEmail,
+                'total' => $orderTotal,
+                'transaction_id' => $transactionId,
+                'brand' => $brand,
+            ]);
+
             return response()->json([
                 'success' => true,
                 'message' => '¡Pago procesado exitosamente con Culqi!',
@@ -1408,6 +1478,8 @@ class CheckoutController extends Controller
         // 1. Verificación rápida: si ya fue procesada y registrada en BD (ej. por Webhook), retornar éxito directo
         $existingSale = TicketSale::where('tickets_data', 'LIKE', '%' . $orderId . '%')->first();
         if ($existingSale) {
+            $this->logCheckout('debug', "Culqi [Polling]: Orden {$orderId} ya existe en BD con Sale #{$existingSale->id}");
+
             return response()->json([
                 'success' => true,
                 'order_id' => $orderId,
@@ -1425,6 +1497,8 @@ class CheckoutController extends Controller
 
         $saleId = null;
         $redirectUrl = null;
+
+        $this->logCheckout('debug', "Culqi [Polling]: Consultando estado orden {$orderId} -> '{$state}' (Pagado: " . ($isPaid ? 'SÍ' : 'NO') . ")");
 
         // 3. Si Culqi confirma que está pagada, materializar de inmediato la venta y los boletos
         if ($isPaid) {
@@ -1451,18 +1525,18 @@ class CheckoutController extends Controller
      */
     public function culqiWebhook(Request $request, CulqiService $culqiService): JsonResponse
     {
-        Log::info('Culqi Webhook Received:', $request->all());
-
         $payload = $request->all();
         if (empty($payload)) {
             $payload = json_decode($request->getContent(), true) ?: [];
         }
 
-        $eventType = $payload['type'] ?? ($payload['event'] ?? '');
+        $eventType = $payload['type'] ?? ($payload['event'] ?? 'unknown');
         $data = $payload['data'] ?? [];
         if (is_string($data)) {
             $data = json_decode($data, true) ?: [];
         }
+
+        $this->logCheckout('info', "Culqi [Webhook Recibido]: Evento '{$eventType}'", ['payload' => $payload]);
 
         // Extraer identificadores posibles (Order ID o Charge ID)
         $orderId = $data['id'] ?? ($data['order_id'] ?? ($payload['order_id'] ?? null));
@@ -1481,10 +1555,10 @@ class CheckoutController extends Controller
 
         // Procesar si tenemos un Order ID
         if (!empty($orderId) && str_starts_with($orderId, 'ord_')) {
-            Log::info("Culqi Webhook procesando emisión de boletos para orden: {$orderId}");
+            $this->logCheckout('info', "Culqi [Webhook Procesando Orden]: {$orderId}");
             $sale = $this->processCulqiPaidOrder($orderId, $culqiService);
             if ($sale) {
-                Log::info("Culqi Webhook completó exitosamente la venta #{$sale->id} para la orden {$orderId}");
+                $this->logCheckout('info', "Culqi [Webhook Éxito]: Venta #{$sale->id} (Recibo: {$sale->receipt_number}) completada desatendida vía Webhook para orden {$orderId}");
                 return response()->json([
                     'status' => 'success',
                     'message' => 'Order processed and tickets generated successfully',
@@ -1665,6 +1739,13 @@ class CheckoutController extends Controller
         if (!empty($buyerEmail) && filter_var($buyerEmail, FILTER_VALIDATE_EMAIL)) {
             \App\Services\EmailLogService::sendTicketPurchaseMail($sale, $tempPassword, $isNewUser, $request->input('ticket_pdf_base64'));
         }
+
+        $this->logCheckout('info', "Cortesía [Venta Emitida]: Venta #{$sale->id} (Recibo: {$sale->receipt_number}) emitida", [
+            'buyer' => $buyerName,
+            'email' => $buyerEmail,
+            'event_id' => $event->id,
+            'tickets_count' => $totalQty,
+        ]);
 
         // Limpiar carrito en sesión
         session()->forget(['checkout_cart_' . $event->id, 'checkout_date_' . $event->id]);
