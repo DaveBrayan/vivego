@@ -2301,7 +2301,22 @@
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': getCsrfToken()
                 },
-                body: JSON.stringify({ order_id: currentCulqiOrderId })
+                body: JSON.stringify({ 
+                    order_id: currentCulqiOrderId,
+                    event_id: eventData.id,
+                    tickets: cartItems,
+                    customer_email: document.getElementById('buyerEmail')?.value || '',
+                    customer_name: document.getElementById('buyerFullName')?.value || '',
+                    customer_doc: document.getElementById('buyerDoc')?.value || '',
+                    customer_phone: document.getElementById('buyerPhone')?.value || '',
+                    coupon_code: appliedCoupon ? appliedCoupon.code : null,
+                    coupon_discount: couponDiscountTotal,
+                    campaign_name: activeCampaign ? activeCampaign.name : null,
+                    campaign_discount: campaignDiscountTotal,
+                    original_subtotal: baseSubtotal,
+                    upgrade_sale_id: upgradeData ? upgradeData.sale_id : null,
+                    is_upgrade: isUpgrade
+                })
             })
             .then(res => res.json())
             .then(data => {
@@ -2312,7 +2327,11 @@
 
                 if (data.success && data.is_paid) {
                     if (culqiPollingInterval) clearInterval(culqiPollingInterval);
-                    processCulqiComplete({ order_id: currentCulqiOrderId });
+                    if (data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    } else {
+                        processCulqiComplete({ order_id: currentCulqiOrderId });
+                    }
                 } else {
                     const statusMsg = document.getElementById('culqiStatusMessage');
                     if (statusMsg) {
@@ -2388,14 +2407,33 @@
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': getCsrfToken()
                     },
-                    body: JSON.stringify({ order_id: orderId })
+                    body: JSON.stringify({ 
+                        order_id: orderId,
+                        event_id: eventData.id,
+                        tickets: cartItems,
+                        customer_email: document.getElementById('buyerEmail')?.value || '',
+                        customer_name: document.getElementById('buyerFullName')?.value || '',
+                        customer_doc: document.getElementById('buyerDoc')?.value || '',
+                        customer_phone: document.getElementById('buyerPhone')?.value || '',
+                        coupon_code: appliedCoupon ? appliedCoupon.code : null,
+                        coupon_discount: couponDiscountTotal,
+                        campaign_name: activeCampaign ? activeCampaign.name : null,
+                        campaign_discount: campaignDiscountTotal,
+                        original_subtotal: baseSubtotal,
+                        upgrade_sale_id: upgradeData ? upgradeData.sale_id : null,
+                        is_upgrade: isUpgrade
+                    })
                 })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success && data.is_paid) {
                         clearInterval(culqiPollingInterval);
                         if (typeof Culqi !== 'undefined' && Culqi.close) Culqi.close();
-                        processCulqiComplete({ order_id: orderId });
+                        if (data.redirect_url) {
+                            window.location.href = data.redirect_url;
+                        } else {
+                            processCulqiComplete({ order_id: orderId });
+                        }
                     }
                 })
                 .catch(err => console.warn('[Culqi] Polling status:', err));

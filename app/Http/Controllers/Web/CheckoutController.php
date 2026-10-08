@@ -14,6 +14,7 @@ use App\Services\IzipayService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -783,7 +784,33 @@ class CheckoutController extends Controller
 
         $response = $culqiService->createOrder($payload);
 
+        // Guardar contexto completo de la orden en Cache para permitir emisión desatendida vía Webhook
+        $orderContext = [
+            'event_id' => $validated['event_id'] ?? null,
+            'event_title' => $validated['event_title'] ?? '',
+            'date_selected' => $validated['date_selected'] ?? '',
+            'tickets' => $request->input('tickets') ?: [],
+            'customer_name' => $validated['customer_name'] ?? '',
+            'customer_email' => $validated['customer_email'] ?? '',
+            'customer_phone' => $validated['customer_phone'] ?? '',
+            'customer_doc' => $validated['customer_doc'] ?? '',
+            'customer_country' => $request->input('customer_country', 'PE'),
+            'customer_city' => $request->input('customer_city', 'Lima'),
+            'coupon_code' => $request->input('coupon_code'),
+            'coupon_discount' => (float) $request->input('coupon_discount', 0),
+            'campaign_name' => $request->input('campaign_name'),
+            'campaign_discount' => (float) $request->input('campaign_discount', 0),
+            'original_subtotal' => (float) $request->input('original_subtotal', 0),
+            'upgrade_sale_id' => $request->input('upgrade_sale_id'),
+            'is_upgrade' => (bool) $request->input('is_upgrade', false),
+            'amount' => (float) $validated['amount'],
+            'order_number' => $orderNumber,
+        ];
+
         if (isset($response['id']) && str_starts_with($response['id'], 'ord_')) {
+            Cache::put('culqi_order_ctx_' . $response['id'], $orderContext, now()->addHours(48));
+            Cache::put('culqi_order_ctx_' . $orderNumber, $orderContext, now()->addHours(48));
+
             return response()->json([
                 'success' => true,
                 'orderId' => $response['id'],
@@ -801,7 +828,7 @@ class CheckoutController extends Controller
         Log::warning('Respuesta al crear orden Culqi: ' . json_encode($response));
 
         return response()->json([
-            'success' => true, // Permitimos proceder con Checkout directo pasando la publicKey
+            'success' => true,
             'orderId' => null,
             'orderNumber' => $orderNumber,
             'publicKey' => $culqiService->getPublicKey(),
@@ -809,6 +836,260 @@ class CheckoutController extends Controller
             'amountFormatted' => 'S/ ' . number_format($validated['amount'], 2),
             'warning' => $errorMessage,
         ]);
+    }
+
+    /**
+     * Procesa y materializa una Orden de Culqi pagada (creando TicketSale, EventTickets, Usuario y Correo)
+     * Método idempotente: si la orden ya fue procesada, retorna la venta existente sin duplicar boletos.
+     */
+    public function processCulqiPaidOrder(string $orderId, CulqiService $culqiService, array $clientOverrideData = []): ?TicketSale
+    {
+        // 1. Verificación de Idempotencia: ¿Ya existe una venta para esta orden de Culqi?
+        $existingSale = TicketSale::where('tickets_data', 'LIKE', '%' . $orderId . '%')->first();
+        if ($existingSale) {
+            Log::info("Orden Culqi {$orderId} ya procesada previamente con Sale #{$existingSale->id}.");
+            return $existingSale;
+        }
+
+        // 2. Consultar el estado real de la Orden directamente en Culqi API
+        $orderResponse = $culqiService->getOrder($orderId);
+        Log::info("Culqi getOrder response para {$orderId}:", $orderResponse);
+
+        $orderState = strtolower($orderResponse['state'] ?? 'pending');
+        if (!in_array($orderState, ['paid', 'pagado'])) {
+            Log::warning("Intento de procesar Orden Culqi {$orderId} que no está en estado 'paid'. Estado actual: {$orderState}");
+            return null;
+        }
+
+        // 3. Recuperar contexto guardado en Cache o Metadata
+        $cachedContext = Cache::get('culqi_order_ctx_' . $orderId, []);
+        $orderNumber = $orderResponse['order_number'] ?? ($cachedContext['order_number'] ?? ('VG-' . strtoupper(Str::random(4)) . '-' . time()));
+        
+        if (!empty($orderNumber)) {
+            $existingByOrderNum = TicketSale::where('tickets_data', 'LIKE', '%' . $orderNumber . '%')->first();
+            if ($existingByOrderNum) {
+                Log::info("Orden Culqi con número {$orderNumber} ya procesada previamente con Sale #{$existingByOrderNum->id}.");
+                return $existingByOrderNum;
+            }
+        }
+
+        // 4. Extraer datos del comprador con fallbacks en cascada
+        $clientDetails = $orderResponse['client_details'] ?? [];
+        $firstName = $clientOverrideData['customer_name'] 
+            ?? ($cachedContext['customer_name'] 
+            ?? trim(($clientDetails['first_name'] ?? '') . ' ' . ($clientDetails['last_name'] ?? '')));
+        $buyerName = !empty($firstName) ? $firstName : 'Cliente ViveGo';
+
+        $buyerEmail = $clientOverrideData['customer_email'] 
+            ?? ($cachedContext['customer_email'] 
+            ?? ($clientDetails['email'] ?? ''));
+        $buyerEmail = strtolower(trim($buyerEmail));
+
+        $buyerPhone = $clientOverrideData['customer_phone'] 
+            ?? ($cachedContext['customer_phone'] 
+            ?? ($clientDetails['phone_number'] ?? '999999999'));
+
+        $metadata = $orderResponse['metadata'] ?? [];
+        $buyerDni = $clientOverrideData['customer_doc'] 
+            ?? ($cachedContext['customer_doc'] 
+            ?? ($metadata['buyer_doc'] ?? '00000000'));
+
+        $orderTotal = isset($orderResponse['amount']) ? ((float)$orderResponse['amount'] / 100) : (float)($clientOverrideData['amount'] ?? ($cachedContext['amount'] ?? 0));
+
+        $paymentType = strtoupper(!empty($orderResponse['payment_code']) ? 'PAGOEFECTIVO' : 'QR_BILLETERAS');
+        $subMethod = $paymentType === 'PAGOEFECTIVO' ? 'PagoEfectivo (CIP)' : 'QR Billeteras (Yape / Plin)';
+
+        // 5. Correlativo continuo REC-XXXXXX
+        $allReceipts = TicketSale::where('receipt_number', 'LIKE', 'REC-%')->pluck('receipt_number');
+        $maxNum = 0;
+        foreach ($allReceipts as $rec) {
+            if (preg_match('/REC-(\d+)/i', $rec, $m)) {
+                $val = (int) $m[1];
+                if ($val > $maxNum) {
+                    $maxNum = $val;
+                }
+            }
+        }
+        $nextNum = max(1, $maxNum + 1);
+        $receiptNumber = 'REC-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
+        while (TicketSale::where('receipt_number', $receiptNumber)->exists()) {
+            $nextNum++;
+            $receiptNumber = 'REC-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
+        }
+
+        // 6. Evento
+        $eventId = $clientOverrideData['event_id'] 
+            ?? ($cachedContext['event_id'] 
+            ?? ($metadata['event_id'] ?? null));
+        $event = $eventId ? Event::find($eventId) : Event::first();
+
+        // 7. Datos de boletos / items
+        $ticketsData = $clientOverrideData['tickets'] 
+            ?? ($cachedContext['tickets'] 
+            ?? [
+                ['name' => 'Entrada General', 'quantity' => 1, 'price' => $orderTotal]
+            ]);
+
+        $totalQty = 0;
+        foreach ($ticketsData as $t) {
+            $totalQty += (int)($t['quantity'] ?? 1);
+        }
+
+        // 8. Descuentos y cupones
+        $couponCodeInput = strtoupper(trim((string)($clientOverrideData['coupon_code'] ?? ($cachedContext['coupon_code'] ?? ''))));
+        $couponDiscount = (float)($clientOverrideData['coupon_discount'] ?? ($cachedContext['coupon_discount'] ?? 0));
+        $campaignNameInput = $clientOverrideData['campaign_name'] ?? ($cachedContext['campaign_name'] ?? null);
+        $campaignDiscountInput = (float)($clientOverrideData['campaign_discount'] ?? ($cachedContext['campaign_discount'] ?? 0));
+        $originalSubtotalInput = (float)($clientOverrideData['original_subtotal'] ?? ($cachedContext['original_subtotal'] ?? 0));
+
+        if ($couponCodeInput) {
+            $appliedCoupon = Coupon::where('code', $couponCodeInput)->first();
+            if ($appliedCoupon) {
+                $appliedCoupon->incrementUsage();
+            }
+        }
+
+        $totalDiscountAmount = $couponDiscount + $campaignDiscountInput;
+        $discountDescParts = [];
+        if ($campaignNameInput && $campaignDiscountInput > 0) {
+            $discountDescParts[] = "Campaña {$campaignNameInput}: -S/ " . number_format($campaignDiscountInput, 2);
+        }
+        if ($couponCodeInput && $couponDiscount > 0) {
+            $discountDescParts[] = "Cupón {$couponCodeInput}: -S/ " . number_format($couponDiscount, 2);
+        }
+        $discountDescription = implode(' | ', $discountDescParts);
+
+        // 9. Upgrades
+        $upgradeSaleId = $clientOverrideData['upgrade_sale_id'] ?? ($cachedContext['upgrade_sale_id'] ?? null);
+        if ($upgradeSaleId) {
+            $origSale = TicketSale::find($upgradeSaleId);
+            if ($origSale) {
+                if (($buyerDni === '00000000' || empty($buyerDni)) && !empty($origSale->buyer_dni)) {
+                    $buyerDni = $origSale->buyer_dni;
+                }
+                if (empty($buyerEmail)) {
+                    $origTData = is_array($origSale->tickets_data) ? $origSale->tickets_data : json_decode($origSale->tickets_data, true);
+                    $buyerEmail = strtolower(trim($origTData['customer_email'] ?? ''));
+                }
+                if ($buyerName === 'Cliente ViveGo' && !empty($origSale->buyer_name)) {
+                    $buyerName = $origSale->buyer_name;
+                }
+            }
+        }
+
+        $effectiveZoneName = $ticketsData[0]['zone_name'] ?? $ticketsData[0]['name'] ?? 'General';
+        if (preg_match('/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?(.+)/iu', $effectiveZoneName, $matches)) {
+            $effectiveZoneName = trim($matches[1]);
+        }
+        foreach ($ticketsData as &$t) {
+            $rawZ = $t['zone_name'] ?? $t['name'] ?? $effectiveZoneName;
+            if (preg_match('/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?(.+)/iu', $rawZ, $m)) {
+                $rawZ = trim($m[1]);
+            }
+            $t['name'] = $rawZ;
+            $t['zone_name'] = $rawZ;
+            $t['is_presale'] = function_exists('isSalePresale') ? isSalePresale($t) : (!empty($t['is_presale_active']) || !empty($t['is_presale']));
+        }
+        unset($t);
+
+        // 10. Crear TicketSale
+        $sale = TicketSale::create([
+            'event_id' => $event?->id ?? 1,
+            'receipt_number' => $receiptNumber,
+            'buyer_name' => $buyerName,
+            'buyer_dni' => $buyerDni ?: '00000000',
+            'buyer_phone' => $buyerPhone ?: '999999999',
+            'zone_name' => $effectiveZoneName,
+            'unit_price' => $orderTotal / max(1, $totalQty),
+            'quantity' => max(1, $totalQty),
+            'original_subtotal' => $originalSubtotalInput > 0 ? $originalSubtotalInput : ($orderTotal + $totalDiscountAmount),
+            'discount_amount' => $totalDiscountAmount,
+            'discount_description' => $discountDescription ?: null,
+            'campaign_name' => $campaignNameInput ?: null,
+            'coupon_code' => $couponCodeInput ?: null,
+            'total_amount' => $orderTotal,
+            'payment_method' => 'Culqi',
+            'amount_paid' => $orderTotal,
+            'change_amount' => 0.00,
+            'status' => 'completed',
+            'is_upgrade' => !empty($upgradeSaleId),
+            'upgraded_from_sale_id' => $upgradeSaleId,
+            'upgrade_difference' => !empty($upgradeSaleId) ? $orderTotal : 0.00,
+            'tickets_data' => [
+                'items' => $ticketsData,
+                'is_presale' => function_exists('isSalePresale') ? isSalePresale(['items' => $ticketsData]) : false,
+                'sub_method' => $subMethod,
+                'customer_email' => $buyerEmail,
+                'culqi_transaction_id' => $orderResponse['id'] ?? $orderId,
+                'culqi_order_id' => $orderId,
+                'culqi_order_number' => $orderNumber,
+                'coupon_code' => $couponCodeInput ?: null,
+                'coupon_discount' => $couponDiscount,
+                'campaign_name' => $campaignNameInput ?: null,
+                'campaign_discount' => $campaignDiscountInput,
+                'is_upgrade' => !empty($upgradeSaleId),
+                'upgrade_sale_id' => $upgradeSaleId,
+            ],
+            'seller_name' => 'Pasarela Web Culqi (QR/Auto)',
+        ]);
+
+        // 11. Generar EventTickets oficiales
+        $this->processSaleCompletionAndTickets($sale, $event, $totalQty, $upgradeSaleId, $ticketsData);
+
+        // 12. Sincronizar cuenta de usuario
+        $isNewUser = false;
+        $tempPassword = null;
+        if (!empty($buyerEmail)) {
+            $customerUser = User::where('email', strtolower($buyerEmail))->first();
+            if (!$customerUser) {
+                $tempPassword = 'VG' . rand(100000, 999999);
+                $customerUser = User::create([
+                    'name' => $buyerName,
+                    'email' => strtolower($buyerEmail),
+                    'dni' => $buyerDni ?: '00000000',
+                    'phone' => $buyerPhone ?: '999999999',
+                    'password' => Hash::make($tempPassword),
+                    'role' => 'customer',
+                    'status' => 'active',
+                ]);
+                $isNewUser = true;
+            } else {
+                if (empty($customerUser->dni) && !empty($buyerDni)) {
+                    $customerUser->dni = $buyerDni;
+                }
+                if (empty($customerUser->phone) && !empty($buyerPhone)) {
+                    $customerUser->phone = $buyerPhone;
+                }
+                $customerUser->save();
+            }
+
+            // Si hay sesión HTTP activa, loguearlo
+            if (session()) {
+                session()->forget([
+                    'admin_logged_in',
+                    'admin_id',
+                    'admin_name',
+                    'admin_email',
+                    'admin_role',
+                    'admin_avatar',
+                ]);
+                session([
+                    'customer_logged_in' => true,
+                    'customer_id' => $customerUser->id,
+                    'customer_name' => $customerUser->name,
+                    'customer_email' => $customerUser->email,
+                    'customer_dni' => $customerUser->dni,
+                    'customer_phone' => $customerUser->phone,
+                ]);
+            }
+        }
+
+        // 13. Enviar Correo Electrónico Automático
+        if (!empty($buyerEmail) && filter_var($buyerEmail, FILTER_VALIDATE_EMAIL)) {
+            \App\Services\EmailLogService::sendTicketPurchaseMail($sale, $tempPassword, $isNewUser, $clientOverrideData['ticket_pdf_base64'] ?? null);
+        }
+
+        return $sale;
     }
 
     /**
@@ -820,25 +1101,54 @@ class CheckoutController extends Controller
 
         $tokenId = $request->input('token_id') ?: $request->input('tokenId');
         $orderId = $request->input('order_id') ?: $request->input('orderId');
-        $amount = (float) $request->input('amount', 0);
-        $amountCents = (int) round($amount * 100);
 
-        $buyerName = trim($request->input('customer_name') ?: 'Cliente ViveGo');
-        $buyerEmail = trim($request->input('customer_email') ?: '');
-        $buyerDni = trim($request->input('customer_doc') ?: '00000000');
-        $buyerPhone = trim($request->input('customer_phone') ?: '999999999');
+        // CASO 2: Pago con QR / Billeteras Móviles / PagoEfectivo mediante Orden de Culqi
+        if (!empty($orderId)) {
+            $sale = $this->processCulqiPaidOrder($orderId, $culqiService, $request->all());
+            if (!$sale) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La orden en Culqi aún no registra confirmación de pago.',
+                ], 422);
+            }
 
-        $nameParts = explode(' ', $buyerName, 2);
-        $firstName = $nameParts[0] ?? 'Cliente';
-        $lastName = $nameParts[1] ?? 'ViveGo';
-
-        $subMethod = 'Culqi';
-        $transactionId = null;
-        $brand = null;
-        $orderTotal = $amount;
+            return response()->json([
+                'success' => true,
+                'message' => '¡Pago procesado exitosamente con Culqi!',
+                'orderId' => $orderId,
+                'receiptNumber' => $sale->receipt_number,
+                'saleId' => $sale->id,
+                'redirect_url' => route('web.checkout.confirmation', $sale->id),
+            ]);
+        }
 
         // CASO 1: Pago con Tarjeta mediante Token generado por Culqi
         if (!empty($tokenId)) {
+            // Verificar idempotencia si este token ya fue procesado
+            $existingSaleToken = TicketSale::where('tickets_data', 'LIKE', '%' . $tokenId . '%')->first();
+            if ($existingSaleToken) {
+                return response()->json([
+                    'success' => true,
+                    'message' => '¡Pago ya registrado previamente!',
+                    'orderId' => $existingSaleToken->receipt_number,
+                    'receiptNumber' => $existingSaleToken->receipt_number,
+                    'saleId' => $existingSaleToken->id,
+                    'redirect_url' => route('web.checkout.confirmation', $existingSaleToken->id),
+                ]);
+            }
+
+            $amount = (float) $request->input('amount', 0);
+            $amountCents = (int) round($amount * 100);
+
+            $buyerName = trim($request->input('customer_name') ?: 'Cliente ViveGo');
+            $buyerEmail = trim($request->input('customer_email') ?: '');
+            $buyerDni = trim($request->input('customer_doc') ?: '00000000');
+            $buyerPhone = trim($request->input('customer_phone') ?: '999999999');
+
+            $nameParts = explode(' ', $buyerName, 2);
+            $firstName = $nameParts[0] ?? 'Cliente';
+            $lastName = $nameParts[1] ?? 'ViveGo';
+
             $chargePayload = [
                 'amount' => $amountCents,
                 'capture' => true,
@@ -876,230 +1186,213 @@ class CheckoutController extends Controller
             $brand = strtoupper($chargeResponse['source']['iin']['card_brand'] ?? $chargeResponse['source']['brand'] ?? 'TARJETA');
             $subMethod = 'Tarjeta ' . ($brand ?: 'Crédito/Débito');
             $orderTotal = ($chargeResponse['amount'] ?? $amountCents) / 100;
-        } 
-        // CASO 2: Pago con QR / Billeteras Móviles / PagoEfectivo mediante Orden de Culqi
-        elseif (!empty($orderId)) {
-            $orderResponse = $culqiService->getOrder($orderId);
-            Log::info('Consulta de Orden Culqi:', $orderResponse);
 
-            $orderState = strtolower($orderResponse['state'] ?? 'pending');
-            $transactionId = $orderResponse['id'] ?? $orderId;
-            $orderTotal = ($orderResponse['amount'] ?? $amountCents) / 100;
-            $paymentType = strtoupper($orderResponse['payment_code'] ? 'PAGOEFECTIVO' : 'QR_BILLETERAS');
-
-            if ($paymentType === 'PAGOEFECTIVO') {
-                $subMethod = 'PagoEfectivo (CIP)';
-            } else {
-                $subMethod = 'QR Billeteras (Yape / Plin)';
-            }
-        } else {
-            return response()->json([
-                'success' => false,
-                'message' => 'No se recibió un identificador de Token ni de Orden de Culqi.',
-            ], 400);
-        }
-
-        // Obtener correlativo secuencial continuo (REC-000046)
-        $allReceipts = TicketSale::where('receipt_number', 'LIKE', 'REC-%')->pluck('receipt_number');
-        $maxNum = 0;
-        foreach ($allReceipts as $rec) {
-            if (preg_match('/REC-(\d+)/i', $rec, $m)) {
-                $val = (int) $m[1];
-                if ($val > $maxNum) {
-                    $maxNum = $val;
+            // Obtener correlativo secuencial continuo (REC-000046)
+            $allReceipts = TicketSale::where('receipt_number', 'LIKE', 'REC-%')->pluck('receipt_number');
+            $maxNum = 0;
+            foreach ($allReceipts as $rec) {
+                if (preg_match('/REC-(\d+)/i', $rec, $m)) {
+                    $val = (int) $m[1];
+                    if ($val > $maxNum) {
+                        $maxNum = $val;
+                    }
                 }
             }
-        }
-        $nextNum = max(1, $maxNum + 1);
-        $receiptNumber = 'REC-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
-        while (TicketSale::where('receipt_number', $receiptNumber)->exists()) {
-            $nextNum++;
+            $nextNum = max(1, $maxNum + 1);
             $receiptNumber = 'REC-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
-        }
-
-        // Buscar evento
-        $eventId = $request->input('event_id');
-        $event = $eventId ? Event::find($eventId) : Event::first();
-
-        if ($event && $event->isPast()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Este evento ya finalizó. No es posible registrar nuevas compras.',
-            ], 422);
-        }
-
-        $ticketsData = $request->input('tickets') ?: [
-            ['name' => 'Entrada General', 'quantity' => 1, 'price' => $orderTotal]
-        ];
-
-        $totalQty = 0;
-        foreach ($ticketsData as $t) {
-            $totalQty += (int)($t['quantity'] ?? 1);
-        }
-
-        // Descuentos de Campaña y Cupones
-        $couponCodeInput = strtoupper(trim((string)$request->input('coupon_code', '')));
-        $couponDiscount = (float) $request->input('coupon_discount', 0);
-        $campaignNameInput = $request->input('campaign_name');
-        $campaignDiscountInput = (float) $request->input('campaign_discount', 0);
-        $originalSubtotalInput = (float) $request->input('original_subtotal', 0);
-
-        if ($couponCodeInput) {
-            $appliedCoupon = Coupon::where('code', $couponCodeInput)->first();
-            if ($appliedCoupon) {
-                $appliedCoupon->incrementUsage();
+            while (TicketSale::where('receipt_number', $receiptNumber)->exists()) {
+                $nextNum++;
+                $receiptNumber = 'REC-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
             }
-        }
 
-        $totalDiscountAmount = $couponDiscount + $campaignDiscountInput;
-        $discountDescParts = [];
-        if ($campaignNameInput && $campaignDiscountInput > 0) {
-            $discountDescParts[] = "Campaña {$campaignNameInput}: -S/ " . number_format($campaignDiscountInput, 2);
-        }
-        if ($couponCodeInput && $couponDiscount > 0) {
-            $discountDescParts[] = "Cupón {$couponCodeInput}: -S/ " . number_format($couponDiscount, 2);
-        }
-        $discountDescription = implode(' | ', $discountDescParts);
+            // Buscar evento
+            $eventId = $request->input('event_id');
+            $event = $eventId ? Event::find($eventId) : Event::first();
 
-        // Detectar si es Mejora de Entrada (Upgrade)
-        $upgradeSaleId = $request->input('upgrade_sale_id') ?: ($ticketsData[0]['upgrade_sale_id'] ?? null);
-        if ($upgradeSaleId) {
-            $origSale = TicketSale::find($upgradeSaleId);
-            if ($origSale) {
-                if (($buyerDni === '00000000' || empty($buyerDni)) && !empty($origSale->buyer_dni)) {
-                    $buyerDni = $origSale->buyer_dni;
-                }
-                if (empty($buyerEmail)) {
-                    $origTData = is_array($origSale->tickets_data) ? $origSale->tickets_data : json_decode($origSale->tickets_data, true);
-                    $buyerEmail = strtolower(trim($origTData['customer_email'] ?? ''));
-                }
-                if ($buyerName === 'Cliente ViveGo' && !empty($origSale->buyer_name)) {
-                    $buyerName = $origSale->buyer_name;
+            if ($event && $event->isPast()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Este evento ya finalizó. No es posible registrar nuevas compras.',
+                ], 422);
+            }
+
+            $ticketsData = $request->input('tickets') ?: [
+                ['name' => 'Entrada General', 'quantity' => 1, 'price' => $orderTotal]
+            ];
+
+            $totalQty = 0;
+            foreach ($ticketsData as $t) {
+                $totalQty += (int)($t['quantity'] ?? 1);
+            }
+
+            // Descuentos de Campaña y Cupones
+            $couponCodeInput = strtoupper(trim((string)$request->input('coupon_code', '')));
+            $couponDiscount = (float) $request->input('coupon_discount', 0);
+            $campaignNameInput = $request->input('campaign_name');
+            $campaignDiscountInput = (float) $request->input('campaign_discount', 0);
+            $originalSubtotalInput = (float) $request->input('original_subtotal', 0);
+
+            if ($couponCodeInput) {
+                $appliedCoupon = Coupon::where('code', $couponCodeInput)->first();
+                if ($appliedCoupon) {
+                    $appliedCoupon->incrementUsage();
                 }
             }
-        }
-        $effectiveZoneName = $ticketsData[0]['zone_name'] ?? $ticketsData[0]['name'] ?? 'General';
-        if (preg_match('/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?(.+)/iu', $effectiveZoneName, $matches)) {
-            $effectiveZoneName = trim($matches[1]);
-        }
-        foreach ($ticketsData as &$t) {
-            $rawZ = $t['zone_name'] ?? $t['name'] ?? $effectiveZoneName;
-            if (preg_match('/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?(.+)/iu', $rawZ, $m)) {
-                $rawZ = trim($m[1]);
-            }
-            $t['name'] = $rawZ;
-            $t['zone_name'] = $rawZ;
-            $t['is_presale'] = function_exists('isSalePresale') ? isSalePresale($t) : (!empty($t['is_presale_active']) || !empty($t['is_presale']));
-        }
-        unset($t);
 
-        // Registrar la venta en la base de datos
-        $sale = TicketSale::create([
-            'event_id' => $event?->id ?? 1,
-            'receipt_number' => $receiptNumber,
-            'buyer_name' => $buyerName,
-            'buyer_dni' => $buyerDni ?: '00000000',
-            'buyer_phone' => $buyerPhone ?: '999999999',
-            'zone_name' => $effectiveZoneName,
-            'unit_price' => $orderTotal / max(1, $totalQty),
-            'quantity' => max(1, $totalQty),
-            'original_subtotal' => $originalSubtotalInput > 0 ? $originalSubtotalInput : ($orderTotal + $totalDiscountAmount),
-            'discount_amount' => $totalDiscountAmount,
-            'discount_description' => $discountDescription ?: null,
-            'campaign_name' => $campaignNameInput ?: null,
-            'coupon_code' => $couponCodeInput ?: null,
-            'total_amount' => $orderTotal,
-            'payment_method' => 'Culqi',
-            'amount_paid' => $orderTotal,
-            'change_amount' => 0.00,
-            'status' => 'completed',
-            'is_upgrade' => !empty($upgradeSaleId),
-            'upgraded_from_sale_id' => $upgradeSaleId,
-            'upgrade_difference' => !empty($upgradeSaleId) ? $orderTotal : 0.00,
-            'tickets_data' => [
-                'items' => $ticketsData,
-                'is_presale' => function_exists('isSalePresale') ? isSalePresale(['items' => $ticketsData]) : false,
-                'sub_method' => $subMethod,
-                'customer_email' => $buyerEmail,
-                'culqi_transaction_id' => $transactionId,
-                'culqi_order_id' => $orderId,
-                'culqi_token_id' => $tokenId,
-                'brand' => $brand,
-                'coupon_code' => $couponCodeInput ?: null,
-                'coupon_discount' => $couponDiscount,
+            $totalDiscountAmount = $couponDiscount + $campaignDiscountInput;
+            $discountDescParts = [];
+            if ($campaignNameInput && $campaignDiscountInput > 0) {
+                $discountDescParts[] = "Campaña {$campaignNameInput}: -S/ " . number_format($campaignDiscountInput, 2);
+            }
+            if ($couponCodeInput && $couponDiscount > 0) {
+                $discountDescParts[] = "Cupón {$couponCodeInput}: -S/ " . number_format($couponDiscount, 2);
+            }
+            $discountDescription = implode(' | ', $discountDescParts);
+
+            // Detectar si es Mejora de Entrada (Upgrade)
+            $upgradeSaleId = $request->input('upgrade_sale_id') ?: ($ticketsData[0]['upgrade_sale_id'] ?? null);
+            if ($upgradeSaleId) {
+                $origSale = TicketSale::find($upgradeSaleId);
+                if ($origSale) {
+                    if (($buyerDni === '00000000' || empty($buyerDni)) && !empty($origSale->buyer_dni)) {
+                        $buyerDni = $origSale->buyer_dni;
+                    }
+                    if (empty($buyerEmail)) {
+                        $origTData = is_array($origSale->tickets_data) ? $origSale->tickets_data : json_decode($origSale->tickets_data, true);
+                        $buyerEmail = strtolower(trim($origTData['customer_email'] ?? ''));
+                    }
+                    if ($buyerName === 'Cliente ViveGo' && !empty($origSale->buyer_name)) {
+                        $buyerName = $origSale->buyer_name;
+                    }
+                }
+            }
+            $effectiveZoneName = $ticketsData[0]['zone_name'] ?? $ticketsData[0]['name'] ?? 'General';
+            if (preg_match('/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?(.+)/iu', $effectiveZoneName, $matches)) {
+                $effectiveZoneName = trim($matches[1]);
+            }
+            foreach ($ticketsData as &$t) {
+                $rawZ = $t['zone_name'] ?? $t['name'] ?? $effectiveZoneName;
+                if (preg_match('/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?(.+)/iu', $rawZ, $m)) {
+                    $rawZ = trim($m[1]);
+                }
+                $t['name'] = $rawZ;
+                $t['zone_name'] = $rawZ;
+                $t['is_presale'] = function_exists('isSalePresale') ? isSalePresale($t) : (!empty($t['is_presale_active']) || !empty($t['is_presale']));
+            }
+            unset($t);
+
+            // Registrar la venta en la base de datos
+            $sale = TicketSale::create([
+                'event_id' => $event?->id ?? 1,
+                'receipt_number' => $receiptNumber,
+                'buyer_name' => $buyerName,
+                'buyer_dni' => $buyerDni ?: '00000000',
+                'buyer_phone' => $buyerPhone ?: '999999999',
+                'zone_name' => $effectiveZoneName,
+                'unit_price' => $orderTotal / max(1, $totalQty),
+                'quantity' => max(1, $totalQty),
+                'original_subtotal' => $originalSubtotalInput > 0 ? $originalSubtotalInput : ($orderTotal + $totalDiscountAmount),
+                'discount_amount' => $totalDiscountAmount,
+                'discount_description' => $discountDescription ?: null,
                 'campaign_name' => $campaignNameInput ?: null,
-                'campaign_discount' => $campaignDiscountInput,
+                'coupon_code' => $couponCodeInput ?: null,
+                'total_amount' => $orderTotal,
+                'payment_method' => 'Culqi',
+                'amount_paid' => $orderTotal,
+                'change_amount' => 0.00,
+                'status' => 'completed',
                 'is_upgrade' => !empty($upgradeSaleId),
-                'upgrade_sale_id' => $upgradeSaleId,
-            ],
-            'seller_name' => 'Pasarela Web Culqi',
-        ]);
+                'upgraded_from_sale_id' => $upgradeSaleId,
+                'upgrade_difference' => !empty($upgradeSaleId) ? $orderTotal : 0.00,
+                'tickets_data' => [
+                    'items' => $ticketsData,
+                    'is_presale' => function_exists('isSalePresale') ? isSalePresale(['items' => $ticketsData]) : false,
+                    'sub_method' => $subMethod,
+                    'customer_email' => $buyerEmail,
+                    'culqi_transaction_id' => $transactionId,
+                    'culqi_token_id' => $tokenId,
+                    'brand' => $brand,
+                    'coupon_code' => $couponCodeInput ?: null,
+                    'coupon_discount' => $couponDiscount,
+                    'campaign_name' => $campaignNameInput ?: null,
+                    'campaign_discount' => $campaignDiscountInput,
+                    'is_upgrade' => !empty($upgradeSaleId),
+                    'upgrade_sale_id' => $upgradeSaleId,
+                ],
+                'seller_name' => 'Pasarela Web Culqi',
+            ]);
 
-        // Invalidar boleto previo si fue upgrade y registrar boletos oficiales en event_tickets
-        $this->processSaleCompletionAndTickets($sale, $event, $totalQty, $upgradeSaleId, $ticketsData);
+            // Invalidar boleto previo si fue upgrade y registrar boletos oficiales en event_tickets
+            $this->processSaleCompletionAndTickets($sale, $event, $totalQty, $upgradeSaleId, $ticketsData);
 
-        // 1. Crear o sincronizar cuenta de Cliente para que pueda ver "Mis Boletos" y "Mis Recibos"
-        $isNewUser = false;
-        $tempPassword = null;
+            // 1. Crear o sincronizar cuenta de Cliente para que pueda ver "Mis Boletos" y "Mis Recibos"
+            $isNewUser = false;
+            $tempPassword = null;
 
-        if (!empty($buyerEmail)) {
-            $customerUser = User::where('email', strtolower($buyerEmail))->first();
-            if (!$customerUser) {
-                $tempPassword = 'VG' . rand(100000, 999999);
-                $customerUser = User::create([
-                    'name' => $buyerName,
-                    'email' => strtolower($buyerEmail),
-                    'dni' => $buyerDni ?: '00000000',
-                    'phone' => $buyerPhone ?: '999999999',
-                    'password' => Hash::make($tempPassword),
-                    'role' => 'customer',
-                    'status' => 'active',
+            if (!empty($buyerEmail)) {
+                $customerUser = User::where('email', strtolower($buyerEmail))->first();
+                if (!$customerUser) {
+                    $tempPassword = 'VG' . rand(100000, 999999);
+                    $customerUser = User::create([
+                        'name' => $buyerName,
+                        'email' => strtolower($buyerEmail),
+                        'dni' => $buyerDni ?: '00000000',
+                        'phone' => $buyerPhone ?: '999999999',
+                        'password' => Hash::make($tempPassword),
+                        'role' => 'customer',
+                        'status' => 'active',
+                    ]);
+                    $isNewUser = true;
+                } else {
+                    if (empty($customerUser->dni) && !empty($buyerDni)) {
+                        $customerUser->dni = $buyerDni;
+                    }
+                    if (empty($customerUser->phone) && !empty($buyerPhone)) {
+                        $customerUser->phone = $buyerPhone;
+                    }
+                    $customerUser->save();
+                }
+
+                // Limpiar cualquier residuo de sesión administrativa
+                session()->forget([
+                    'admin_logged_in',
+                    'admin_id',
+                    'admin_name',
+                    'admin_email',
+                    'admin_role',
+                    'admin_avatar',
                 ]);
-                $isNewUser = true;
-            } else {
-                if (empty($customerUser->dni) && !empty($buyerDni)) {
-                    $customerUser->dni = $buyerDni;
-                }
-                if (empty($customerUser->phone) && !empty($buyerPhone)) {
-                    $customerUser->phone = $buyerPhone;
-                }
-                $customerUser->save();
+
+                // Iniciar sesión del cliente automáticamente
+                session([
+                    'customer_logged_in' => true,
+                    'customer_id' => $customerUser->id,
+                    'customer_name' => $customerUser->name,
+                    'customer_email' => $customerUser->email,
+                    'customer_dni' => $customerUser->dni,
+                    'customer_phone' => $customerUser->phone,
+                ]);
             }
 
-            // Limpiar cualquier residuo de sesión administrativa
-            session()->forget([
-                'admin_logged_in',
-                'admin_id',
-                'admin_name',
-                'admin_email',
-                'admin_role',
-                'admin_avatar',
-            ]);
+            // 2. Enviar Correo Electrónico Automático con Recibo, Boletos y Credenciales y registrar en EmailLog
+            if (!empty($buyerEmail) && filter_var($buyerEmail, FILTER_VALIDATE_EMAIL)) {
+                \App\Services\EmailLogService::sendTicketPurchaseMail($sale, $tempPassword, $isNewUser, $request->input('ticket_pdf_base64'));
+            }
 
-            // Iniciar sesión del cliente automáticamente
-            session([
-                'customer_logged_in' => true,
-                'customer_id' => $customerUser->id,
-                'customer_name' => $customerUser->name,
-                'customer_email' => $customerUser->email,
-                'customer_dni' => $customerUser->dni,
-                'customer_phone' => $customerUser->phone,
+            return response()->json([
+                'success' => true,
+                'message' => '¡Pago procesado exitosamente con Culqi!',
+                'orderId' => $transactionId,
+                'receiptNumber' => $receiptNumber,
+                'saleId' => $sale->id,
+                'redirect_url' => route('web.checkout.confirmation', $sale->id),
             ]);
-        }
-
-        // 2. Enviar Correo Electrónico Automático con Recibo, Boletos y Credenciales y registrar en EmailLog
-        if (!empty($buyerEmail) && filter_var($buyerEmail, FILTER_VALIDATE_EMAIL)) {
-            \App\Services\EmailLogService::sendTicketPurchaseMail($sale, $tempPassword, $isNewUser, $request->input('ticket_pdf_base64'));
         }
 
         return response()->json([
-            'success' => true,
-            'message' => '¡Pago procesado exitosamente con Culqi!',
-            'orderId' => $transactionId,
-            'receiptNumber' => $receiptNumber,
-            'saleId' => $sale->id,
-            'redirect_url' => route('web.checkout.confirmation', $sale->id),
-        ]);
+            'success' => false,
+            'message' => 'No se recibió un identificador de Token ni de Orden de Culqi.',
+        ], 400);
     }
 
     /**
@@ -1112,15 +1405,44 @@ class CheckoutController extends Controller
             return response()->json(['success' => false, 'message' => 'Order ID requerido.'], 400);
         }
 
+        // 1. Verificación rápida: si ya fue procesada y registrada en BD (ej. por Webhook), retornar éxito directo
+        $existingSale = TicketSale::where('tickets_data', 'LIKE', '%' . $orderId . '%')->first();
+        if ($existingSale) {
+            return response()->json([
+                'success' => true,
+                'order_id' => $orderId,
+                'state' => 'paid',
+                'is_paid' => true,
+                'saleId' => $existingSale->id,
+                'redirect_url' => route('web.checkout.confirmation', $existingSale->id),
+            ]);
+        }
+
+        // 2. Consultar directamente a la API de Culqi
         $order = $culqiService->getOrder($orderId);
         $state = strtolower($order['state'] ?? 'pending');
+        $isPaid = in_array($state, ['paid', 'pagado']);
+
+        $saleId = null;
+        $redirectUrl = null;
+
+        // 3. Si Culqi confirma que está pagada, materializar de inmediato la venta y los boletos
+        if ($isPaid) {
+            $sale = $this->processCulqiPaidOrder($orderId, $culqiService, $request->all());
+            if ($sale) {
+                $saleId = $sale->id;
+                $redirectUrl = route('web.checkout.confirmation', $sale->id);
+            }
+        }
 
         return response()->json([
             'success' => true,
             'order_id' => $orderId,
             'state' => $state,
-            'is_paid' => in_array($state, ['paid', 'pagado']),
+            'is_paid' => $isPaid,
             'order' => $order,
+            'saleId' => $saleId,
+            'redirect_url' => $redirectUrl,
         ]);
     }
 
@@ -1131,13 +1453,51 @@ class CheckoutController extends Controller
     {
         Log::info('Culqi Webhook Received:', $request->all());
 
-        $event = $request->input('type');
-        $data = $request->input('data');
+        $payload = $request->all();
+        if (empty($payload)) {
+            $payload = json_decode($request->getContent(), true) ?: [];
+        }
+
+        $eventType = $payload['type'] ?? ($payload['event'] ?? '');
+        $data = $payload['data'] ?? [];
+        if (is_string($data)) {
+            $data = json_decode($data, true) ?: [];
+        }
+
+        // Extraer identificadores posibles (Order ID o Charge ID)
+        $orderId = $data['id'] ?? ($data['order_id'] ?? ($payload['order_id'] ?? null));
+        $chargeId = null;
+
+        if (is_string($orderId) && (str_starts_with($orderId, 'chr_') || str_starts_with($orderId, 'chg_'))) {
+            $chargeId = $orderId;
+            $orderId = $data['order_id'] ?? null;
+        }
+
+        // Si tenemos un Charge ID y no hay orderId, intentar obtener la orden desde el cargo
+        if (empty($orderId) && !empty($chargeId)) {
+            $chargeInfo = $culqiService->getCharge($chargeId);
+            $orderId = $chargeInfo['order_id'] ?? null;
+        }
+
+        // Procesar si tenemos un Order ID
+        if (!empty($orderId) && str_starts_with($orderId, 'ord_')) {
+            Log::info("Culqi Webhook procesando emisión de boletos para orden: {$orderId}");
+            $sale = $this->processCulqiPaidOrder($orderId, $culqiService);
+            if ($sale) {
+                Log::info("Culqi Webhook completó exitosamente la venta #{$sale->id} para la orden {$orderId}");
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Order processed and tickets generated successfully',
+                    'sale_id' => $sale->id,
+                    'receipt_number' => $sale->receipt_number,
+                ], 200);
+            }
+        }
 
         return response()->json([
             'status' => 'received',
-            'event' => $event,
-        ]);
+            'event' => $eventType,
+        ], 200);
     }
 
     /**
