@@ -14,6 +14,9 @@
     <!-- Assets Compilados de Producción con Caché HTTP del Navegador -->
     @php
         $manifestPath = public_path('build/manifest.json');
+        if (!file_exists($manifestPath)) {
+            $manifestPath = public_path('build/.vite/manifest.json');
+        }
         $cssFile = null;
         $jsAsset = null;
         if (file_exists($manifestPath)) {
@@ -21,12 +24,32 @@
             $cssFile = $manifestData['resources/css/app.css']['file'] ?? null;
             $jsAsset = $manifestData['resources/js/app.js']['file'] ?? null;
         }
+
+        // Fallback: Si no hay manifest pero existen assets compilados en public/build/assets/
+        if (!$cssFile && is_dir(public_path('build/assets'))) {
+            $cssFiles = glob(public_path('build/assets/app-*.css'));
+            if (!empty($cssFiles)) {
+                $cssFile = 'assets/' . basename(end($cssFiles));
+            }
+            $jsFiles = glob(public_path('build/assets/app-*.js'));
+            if (!empty($jsFiles)) {
+                $jsAsset = 'assets/' . basename(end($jsFiles));
+            }
+        }
     @endphp
 
     @if($cssFile && file_exists(public_path('build/' . $cssFile)))
         <link rel="stylesheet" href="{{ asset('build/' . $cssFile) }}">
     @else
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @php
+            if (file_exists(public_path('hot')) || app()->environment('local')) {
+                try {
+                    echo app(\Illuminate\Foundation\Vite::class)(['resources/css/app.css', 'resources/js/app.js']);
+                } catch (\Throwable $e) {
+                    // Fallback silencioso si Vite manifest o dev server no están disponibles
+                }
+            }
+        @endphp
     @endif
 
     @if($jsAsset && file_exists(public_path('build/' . $jsAsset)))

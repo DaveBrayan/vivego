@@ -371,37 +371,37 @@
     <nav class="dash-nav-menu">
         <div class="dash-nav-section-title">MENÚ PRINCIPAL</div>
         <ul class="dash-nav-list">
-            <li class="dash-nav-item {{ request()->routeIs('web.dashboard*') ? 'active' : '' }}">
-                <a href="{{ route('web.dashboard') }}" class="dash-nav-link">
+            <li class="dash-nav-item {{ (request()->routeIs('web.dashboard*') || request()->is('dashboard*')) ? 'active' : '' }}">
+                <a href="{{ \Illuminate\Support\Facades\Route::has('web.dashboard') ? route('web.dashboard') : url('/dashboard') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">📊</span>
                     <span class="dash-nav-text">Dashboard</span>
                 </a>
             </li>
-            <li class="dash-nav-item {{ request()->routeIs('web.events*') ? 'active' : '' }}">
-                <a href="{{ route('web.events') }}" class="dash-nav-link">
+            <li class="dash-nav-item {{ (request()->routeIs('web.events*') || request()->is('admin/eventos*')) ? 'active' : '' }}">
+                <a href="{{ \Illuminate\Support\Facades\Route::has('web.events') ? route('web.events') : url('/admin/eventos') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">🎟️</span>
                     <span class="dash-nav-text">Mis Eventos</span>
                 </a>
             </li>
             @if($isAdmin || $isVentas)
-            <li class="dash-nav-item {{ request()->routeIs('web.box_office*') ? 'active' : '' }}">
-                <a href="{{ route('web.box_office') }}" class="dash-nav-link">
+            <li class="dash-nav-item {{ (request()->routeIs('web.box_office*') || request()->is('admin/taquilla*')) ? 'active' : '' }}">
+                <a href="{{ \Illuminate\Support\Facades\Route::has('web.box_office') ? route('web.box_office') : url('/admin/taquilla') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">💰</span>
                     <span class="dash-nav-text">Taquilla & Ventas</span>
                 </a>
             </li>
             @endif
             @if($isAdmin || $isValidador)
-            <li class="dash-nav-item {{ request()->routeIs('web.attendees*') ? 'active' : '' }}">
-                <a href="{{ route('web.attendees') }}" class="dash-nav-link">
+            <li class="dash-nav-item {{ (request()->routeIs('web.attendees*') || request()->is('admin/asistentes*')) ? 'active' : '' }}">
+                <a href="{{ \Illuminate\Support\Facades\Route::has('web.attendees') ? route('web.attendees') : url('/admin/asistentes') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">👥</span>
                     <span class="dash-nav-text">Asistentes & Scanner</span>
                 </a>
             </li>
             @endif
             @if($isAdmin)
-            <li class="dash-nav-item {{ request()->routeIs('web.devices*') ? 'active' : '' }}">
-                <a href="{{ route('web.devices') }}" class="dash-nav-link">
+            <li class="dash-nav-item {{ (request()->routeIs('web.devices*') || request()->is('admin/dispositivos*')) ? 'active' : '' }}">
+                <a href="{{ \Illuminate\Support\Facades\Route::has('web.devices') ? route('web.devices') : url('/admin/dispositivos') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">📱</span>
                     <span class="dash-nav-text">Dispositivos</span>
                 </a>
@@ -412,20 +412,20 @@
         @if($isAdmin)
         <div class="dash-nav-section-title" style="margin-top: 1.5rem;">GESTIÓN & HERRAMIENTAS</div>
         <ul class="dash-nav-list">
-            <li class="dash-nav-item {{ request()->routeIs('web.campaigns*') ? 'active' : '' }}">
-                <a href="{{ route('web.campaigns') }}" class="dash-nav-link">
+            <li class="dash-nav-item {{ (request()->routeIs('web.campaigns*') || request()->is('admin/campanas*')) ? 'active' : '' }}">
+                <a href="{{ \Illuminate\Support\Facades\Route::has('web.campaigns') ? route('web.campaigns') : url('/admin/campanas') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">🔥</span>
                     <span class="dash-nav-text">Campañas</span>
                 </a>
             </li>
-            <li class="dash-nav-item {{ request()->routeIs('web.coupons*') ? 'active' : '' }}">
-                <a href="{{ route('web.coupons') }}" class="dash-nav-link">
+            <li class="dash-nav-item {{ (request()->routeIs('web.coupons*') || request()->is('admin/cupones*')) ? 'active' : '' }}">
+                <a href="{{ \Illuminate\Support\Facades\Route::has('web.coupons') ? route('web.coupons') : url('/admin/cupones') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">🎟️</span>
                     <span class="dash-nav-text">Cupones</span>
                 </a>
             </li>
-            <li class="dash-nav-item {{ request()->routeIs('web.categories*') ? 'active' : '' }}">
-                <a href="{{ route('web.categories') }}" class="dash-nav-link">
+            <li class="dash-nav-item {{ (request()->routeIs('web.categories*') || request()->is('admin/categorias*')) ? 'active' : '' }}">
+                <a href="{{ \Illuminate\Support\Facades\Route::has('web.categories') ? route('web.categories') : url('/admin/categorias') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">📂</span>
                     <span class="dash-nav-text">Categorías</span>
                 </a>
@@ -443,26 +443,26 @@
                 </a>
             </li>
             @if($isAdmin)
-            <li class="dash-nav-item {{ request()->routeIs('web.companies*') ? 'active' : '' }}">
-                <a href="{{ route('web.companies') }}" class="dash-nav-link">
+            <li class="dash-nav-item {{ (request()->routeIs('web.companies*') || request()->is('admin/compania*')) ? 'active' : '' }}">
+                <a href="{{ \Illuminate\Support\Facades\Route::has('web.companies') ? route('web.companies') : url('/admin/compania') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">🏢</span>
                     <span class="dash-nav-text">Compañía</span>
                 </a>
             </li>
-            <li class="dash-nav-item {{ request()->routeIs('web.managers*') ? 'active' : '' }}">
-                <a href="{{ route('web.managers') }}" class="dash-nav-link">
+            <li class="dash-nav-item {{ (request()->routeIs('web.managers*') || request()->is('admin/responsable*')) ? 'active' : '' }}">
+                <a href="{{ \Illuminate\Support\Facades\Route::has('web.managers') ? route('web.managers') : url('/admin/responsable') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">👤</span>
                     <span class="dash-nav-text">Responsables</span>
                 </a>
             </li>
-            <li class="dash-nav-item {{ request()->routeIs('web.capacity_types*') ? 'active' : '' }}">
-                <a href="{{ route('web.capacity_types') }}" class="dash-nav-link">
+            <li class="dash-nav-item {{ (request()->routeIs('web.capacity_types*') || request()->is('admin/aforo*')) ? 'active' : '' }}">
+                <a href="{{ \Illuminate\Support\Facades\Route::has('web.capacity_types') ? route('web.capacity_types') : url('/admin/aforo') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">🏟️</span>
                     <span class="dash-nav-text">Tipos de Aforo</span>
                 </a>
             </li>
             <li class="dash-nav-item {{ (request()->routeIs('web.claims*') || request()->is('admin/reclamaciones*')) ? 'active' : '' }}">
-                <a href="{{ route('web.claims') }}" class="dash-nav-link">
+                <a href="{{ \Illuminate\Support\Facades\Route::has('web.claims') ? route('web.claims') : url('/admin/reclamaciones') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">📖</span>
                     <span class="dash-nav-text">Reclamaciones</span>
                     @if(!empty($pendingClaimsCount) && $pendingClaimsCount > 0)
@@ -477,26 +477,26 @@
         @if($isAdmin)
         <div class="dash-nav-section-title" style="margin-top: 1.5rem;">ADMINISTRACIÓN</div>
         <ul class="dash-nav-list">
-            <li class="dash-nav-item {{ request()->routeIs('web.email_logs*') ? 'active' : '' }}">
-                <a href="{{ route('web.email_logs') }}" class="dash-nav-link">
+            <li class="dash-nav-item {{ (request()->routeIs('web.email_logs*') || request()->is('admin/registro-correos*')) ? 'active' : '' }}">
+                <a href="{{ \Illuminate\Support\Facades\Route::has('web.email_logs') ? route('web.email_logs') : url('/admin/registro-correos') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">📬</span>
                     <span class="dash-nav-text">Registro de Correos</span>
                 </a>
             </li>
-            <li class="dash-nav-item {{ request()->routeIs('web.payment_methods*') ? 'active' : '' }}">
-                <a href="{{ route('web.payment_methods') }}" class="dash-nav-link">
+            <li class="dash-nav-item {{ (request()->routeIs('web.payment_methods*') || request()->is('admin/metodos-pago*')) ? 'active' : '' }}">
+                <a href="{{ \Illuminate\Support\Facades\Route::has('web.payment_methods') ? route('web.payment_methods') : url('/admin/metodos-pago') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">💳</span>
                     <span class="dash-nav-text">Métodos de Pago</span>
                 </a>
             </li>
-            <li class="dash-nav-item {{ request()->routeIs('web.admins*') ? 'active' : '' }}">
-                <a href="{{ route('web.admins') }}" class="dash-nav-link">
+            <li class="dash-nav-item {{ (request()->routeIs('web.admins*') || request()->is('admin/administradores*')) ? 'active' : '' }}">
+                <a href="{{ \Illuminate\Support\Facades\Route::has('web.admins') ? route('web.admins') : url('/admin/administradores') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">🛡️</span>
                     <span class="dash-nav-text">Administradores</span>
                 </a>
             </li>
-            <li class="dash-nav-item {{ request()->routeIs('web.settings*') ? 'active' : '' }}">
-                <a href="{{ route('web.settings') }}" class="dash-nav-link">
+            <li class="dash-nav-item {{ (request()->routeIs('web.settings*') || request()->is('admin/configuracion*')) ? 'active' : '' }}">
+                <a href="{{ \Illuminate\Support\Facades\Route::has('web.settings') ? route('web.settings') : url('/admin/configuracion') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">⚙️</span>
                     <span class="dash-nav-text">Configuración</span>
                 </a>
@@ -517,7 +517,7 @@
             <span class="dash-btn-logout-text">Cerrar Sesión</span>
         </a>
 
-        <form id="sidebar-logout-form" action="{{ route('web.logout') }}" method="POST" style="display: none;">
+        <form id="sidebar-logout-form" action="{{ \Illuminate\Support\Facades\Route::has('web.logout') ? route('web.logout') : url('/logout') }}" method="POST" style="display: none;">
             @csrf
         </form>
     </div>
