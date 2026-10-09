@@ -4787,25 +4787,11 @@
 
             // 1. Si la venta ya tiene event_tickets cargados con su zone_name (ej: "Butacas Numeradas (A1)")
             let rawEventTickets = sale.event_tickets || sale.eventTickets || [];
+            const maxQty = parseInt(sale.quantity || 1, 10);
             if (Array.isArray(rawEventTickets) && rawEventTickets.length > 0) {
-                // Deduplicar si hay registros duplicados por número/código de boleto o tipo
-                const seenCodes = new Set();
-                const uniqueTickets = [];
-                const maxQty = parseInt(sale.quantity || 1, 10);
-                
-                for (const et of rawEventTickets) {
-                    const codeKey = (et.ticket_code || et.ticket_number || '').toString().trim();
-                    if (codeKey && seenCodes.has(codeKey)) {
-                        continue; // Evitar duplicar el mismo correlativo de entrada
-                    }
-                    if (codeKey) seenCodes.add(codeKey);
-                    uniqueTickets.push(et);
-                    if (maxQty > 0 && uniqueTickets.length >= maxQty) {
-                        break; // No exceder la cantidad oficial comprada en la venta
-                    }
-                }
+                const ticketsToUse = rawEventTickets.slice(0, maxQty > 0 ? maxQty : rawEventTickets.length);
 
-                uniqueTickets.forEach((et, i) => {
+                ticketsToUse.forEach((et, i) => {
                     ticketsList.push({
                         ticket_code: et.ticket_code || `TK-${sale.receipt_number}-${i + 1}`,
                         ticket_number: et.ticket_number || (i + 1),
@@ -4871,6 +4857,27 @@
                         ticket_number: q + 1,
                         zone: sale.zone_name,
                         price: sale.unit_price,
+                        buyer_name: sale.buyer_name,
+                        buyer_dni: sale.buyer_dni,
+                        is_courtesy: isCourtesy,
+                        validation_hash: null,
+                        qr_payload: null
+                    });
+                }
+            }
+
+            if (maxQty > 0 && ticketsList.length < maxQty) {
+                const missing = maxQty - ticketsList.length;
+                const lastTicket = ticketsList[ticketsList.length - 1] || {};
+                const baseZone = lastTicket.zone || sale.zone_name;
+                const basePrice = lastTicket.price || sale.unit_price;
+                for (let m = 0; m < missing; m++) {
+                    const idx = ticketsList.length + 1;
+                    ticketsList.push({
+                        ticket_code: `TK-${sale.receipt_number}-${idx}`,
+                        ticket_number: idx,
+                        zone: baseZone,
+                        price: basePrice,
                         buyer_name: sale.buyer_name,
                         buyer_dni: sale.buyer_dni,
                         is_courtesy: isCourtesy,

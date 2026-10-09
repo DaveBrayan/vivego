@@ -1864,6 +1864,7 @@ class CheckoutController extends Controller
 
             $currentIdx = 0;
             $matchedPhysicalTickets = [];
+            $matchedTicketNumbers = [];
 
             foreach ($itemsToProcess as $entry) {
                 $currentIdx++;
@@ -1896,6 +1897,7 @@ class CheckoutController extends Controller
                             $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
                         })
                         ->whereNotIn('id', array_keys($matchedPhysicalTickets))
+                        ->whereNotIn('ticket_number', $matchedTicketNumbers)
                         ->tap($applyTicketTypeFilter)
                         ->where(function ($q) use ($entry, $cleanBaseZone, $seatCode, $seatDigits, $seatLetter) {
                             $q->where('zone_name', $entry['zone'])
@@ -1906,12 +1908,13 @@ class CheckoutController extends Controller
                         ->orderBy('id', 'asc')
                         ->first();
                 } else {
-                    // Caso Zona General: buscar el siguiente boleto disponible del pool
+                    // Caso Zona General: buscar el siguiente boleto disponible del pool garantizando correlativo único
                     $physicalTicket = \App\Models\EventTicket::where('event_id', $targetEvent->id)
                         ->where(function ($q) {
                             $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
                         })
                         ->whereNotIn('id', array_keys($matchedPhysicalTickets))
+                        ->whereNotIn('ticket_number', $matchedTicketNumbers)
                         ->tap($applyTicketTypeFilter)
                         ->where(function ($q) use ($entry, $cleanBaseZone) {
                             $q->where('zone_name', $entry['zone'])
@@ -1928,6 +1931,7 @@ class CheckoutController extends Controller
                                 $q->whereNull('ticket_sale_id')->orWhere('ticket_sale_id', 0);
                             })
                             ->whereNotIn('id', array_keys($matchedPhysicalTickets))
+                            ->whereNotIn('ticket_number', $matchedTicketNumbers)
                             ->tap($applyTicketTypeFilter)
                             ->where(function ($q) use ($entry, $cleanBaseZone) {
                                 $q->where('zone_name', $entry['zone'])
@@ -1942,6 +1946,7 @@ class CheckoutController extends Controller
                 if ($physicalTicket) {
                     // USAR EL MISMO BOLETO FÍSICO QUE SE IMPRIMIÓ EN LA PLANCHA (Mismo QR, Hash y Código)
                     $matchedPhysicalTickets[$physicalTicket->id] = $physicalTicket;
+                    $matchedTicketNumbers[] = (int)$physicalTicket->ticket_number;
                     $physicalTicket->update([
                         'ticket_sale_id' => $sale->id,
                         'buyer_name' => $sale->buyer_name,
@@ -1951,10 +1956,20 @@ class CheckoutController extends Controller
                         'is_used' => false,
                     ]);
                 } else {
-                    // Fallback: Generar nuevo código único virtual solo si no existe boleto físico pre-impreso
-                    $currentSeq = $startSeq + ($currentIdx - 1);
+                    // Fallback: Generar nuevo código único virtual garantizando correlativo secuencial sin colisiones
+                    $targetTicketType = $requiredTicketType ?: 'digital';
+                    $latestDigitalSeq = (int) \App\Models\EventTicket::where('event_id', $targetEvent->id)
+                        ->where('ticket_type', $targetTicketType)
+                        ->max('ticket_number') ?: 0;
+                    $currentSeq = max($startSeq, $latestDigitalSeq + 1);
+                    while (in_array($currentSeq, $matchedTicketNumbers)) {
+                        $currentSeq++;
+                    }
+                    $startSeq = $currentSeq + 1;
+                    $matchedTicketNumbers[] = $currentSeq;
+
                     $ticketCode = 'TK-' . strtoupper(substr(\Illuminate\Support\Str::slug($targetEvent->title), 0, 3)) . '-' . str_pad($currentSeq, 5, '0', STR_PAD_LEFT);
-                    $validationHash = 'VG' . strtoupper(substr(md5($sale->receipt_number . $currentIdx . $sale->id), 0, 8));
+                    $validationHash = 'VG' . strtoupper(substr(md5($sale->receipt_number . $currentIdx . $sale->id . uniqid()), 0, 8));
                     $qrPayload = "VIVEGO|{$sale->receipt_number}|EVT-{$sale->event_id}|DNI-{$sale->buyer_dni}|TICK-{$currentSeq}|{$validationHash}";
 
                     \App\Models\EventTicket::create([
@@ -1969,7 +1984,7 @@ class CheckoutController extends Controller
                         'buyer_name' => $sale->buyer_name,
                         'buyer_dni' => $sale->buyer_dni,
                         'source' => $sale->seller_name ?: 'web_checkout',
-                        'ticket_type' => $requiredTicketType ?: 'digital',
+                        'ticket_type' => $targetTicketType,
                         'is_used' => false,
                         'status' => 'valid',
                     ]);
