@@ -101,6 +101,7 @@ Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group
     // Directorio & Gestión de Clientes
     Route::get('/admin/clientes', [CustomerController::class, 'index'])->name('web.customers');
     Route::get('/admin/clientes/{id}/detalle', [CustomerController::class, 'getCustomerDetails'])->name('web.customers.details');
+    Route::put('/admin/clientes/{id}', [CustomerController::class, 'update'])->name('web.customers.update');
     Route::post('/admin/clientes/{id}/reset-password', [CustomerController::class, 'resetPassword'])->name('web.customers.reset_password');
     Route::delete('/admin/clientes/{id}', [CustomerController::class, 'destroy'])->name('web.customers.destroy');
 
