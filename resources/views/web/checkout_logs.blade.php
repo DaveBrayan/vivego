@@ -4,7 +4,217 @@
 
 @push('styles')
     <style>
-        /* Estilos de Paginación */
+        /* Estilos de la Terminal en Vivo */
+        .terminal-window {
+            background: #07090E;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.75);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .terminal-header {
+            background: #0D1117;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 0.75rem 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .terminal-dots {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .dot-red { background: #EF4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.6); }
+        .dot-yellow { background: #F59E0B; box-shadow: 0 0 6px rgba(245, 158, 11, 0.6); }
+        .dot-green { background: #10B981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.6); }
+
+        .terminal-body {
+            background: #05070A;
+            padding: 1.25rem;
+            min-height: 520px;
+            max-height: 720px;
+            overflow-y: auto;
+            font-family: 'Fira Code', 'JetBrains Mono', Consolas, Monaco, monospace;
+            font-size: 0.825rem;
+            line-height: 1.65;
+            color: #E2E8F0;
+            scroll-behavior: smooth;
+        }
+
+        .terminal-body::-webkit-scrollbar {
+            width: 8px;
+        }
+        .terminal-body::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.4);
+        }
+        .terminal-body::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+        }
+        .terminal-body::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 85, 0, 0.5);
+        }
+
+        .terminal-line {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.65rem;
+            padding: 0.35rem 0.5rem;
+            border-radius: 6px;
+            transition: background 0.15s ease;
+            word-break: break-word;
+        }
+
+        .terminal-line:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .terminal-line.log-new-flash {
+            animation: terminalFlash 1.5s ease-out;
+        }
+
+        @keyframes terminalFlash {
+            0% { background: rgba(255, 85, 0, 0.25); }
+            100% { background: transparent; }
+        }
+
+        .t-time {
+            color: #67E8F9;
+            font-weight: 700;
+            font-size: 0.775rem;
+            white-space: nowrap;
+            user-select: none;
+            flex-shrink: 0;
+        }
+
+        .t-tag {
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 0.1rem 0.45rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            flex-shrink: 0;
+            user-select: none;
+        }
+
+        /* Colores de Tags de Pasarela */
+        .tag-culqi { background: rgba(255, 136, 0, 0.2); color: #FFA500; border: 1px solid rgba(255, 136, 0, 0.4); }
+        .tag-izipay { background: rgba(99, 102, 241, 0.2); color: #818CF8; border: 1px solid rgba(99, 102, 241, 0.4); }
+        .tag-cortesia { background: rgba(20, 184, 166, 0.2); color: #2DD4BF; border: 1px solid rgba(20, 184, 166, 0.4); }
+        .tag-system { background: rgba(148, 163, 184, 0.15); color: #CBD5E1; border: 1px solid rgba(148, 163, 184, 0.3); }
+
+        /* Colores de Niveles */
+        .level-info { color: #38BDF8; font-weight: 700; }
+        .level-success { color: #34D399; font-weight: 800; }
+        .level-warn { color: #FBBF24; font-weight: 800; }
+        .level-error { color: #F87171; font-weight: 900; }
+
+        .terminal-msg {
+            flex: 1;
+            color: #F1F5F9;
+        }
+
+        .terminal-json-toggle {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #94A3B8;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-left: 0.5rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            user-select: none;
+        }
+
+        .terminal-json-toggle:hover {
+            background: rgba(255, 85, 0, 0.2);
+            border-color: rgba(255, 85, 0, 0.4);
+            color: #FF7700;
+        }
+
+        .terminal-json-block {
+            background: #030508;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-left: 3px solid var(--color-primary-orange);
+            border-radius: 6px;
+            padding: 0.65rem 0.85rem;
+            margin-top: 0.4rem;
+            font-size: 0.75rem;
+            color: #CBD5E1;
+            white-space: pre-wrap;
+            word-break: break-word;
+            display: none;
+        }
+
+        /* Pulsador Live */
+        .live-pulse-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #10B981;
+            box-shadow: 0 0 0 rgba(16, 185, 129, 0.6);
+            animation: pulse-green-glow 1.8s infinite;
+            display: inline-block;
+        }
+
+        @keyframes pulse-green-glow {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* Botones de Barra de Navegación */
+        .term-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #E2E8F0;
+            font-size: 0.785rem;
+            font-weight: 700;
+            padding: 0.45rem 0.85rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            text-decoration: none;
+        }
+
+        .term-btn:hover {
+            background: rgba(255, 85, 0, 0.15);
+            border-color: rgba(255, 85, 0, 0.4);
+            color: #FF5500;
+            transform: translateY(-1px);
+        }
+
+        .term-btn.active {
+            background: linear-gradient(135deg, #FF5500, #FF7700);
+            border-color: #FF5500;
+            color: #FFFFFF;
+            box-shadow: 0 2px 10px rgba(255, 85, 0, 0.35);
+        }
+
+        /* Paginador Tabla */
         .dt-page-btn {
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.12);
@@ -20,7 +230,6 @@
             justify-content: center;
             min-width: 34px;
             text-decoration: none !important;
-            user-select: none;
             line-height: 1.2;
         }
 
@@ -28,7 +237,6 @@
             background: rgba(255, 85, 0, 0.15);
             border-color: rgba(255, 85, 0, 0.4);
             color: #FF5500;
-            transform: translateY(-1px);
         }
 
         .dt-page-btn.active {
@@ -36,8 +244,6 @@
             border-color: #FF5500 !important;
             color: #FFFFFF !important;
             font-weight: 900;
-            box-shadow: 0 2px 8px rgba(255, 85, 0, 0.4);
-            cursor: default;
         }
 
         .dt-page-btn.disabled {
@@ -51,95 +257,6 @@
             color: #64748B;
             padding: 0 0.35rem;
             font-weight: 700;
-            user-select: none;
-            display: inline-flex;
-            align-items: center;
-        }
-
-        /* Log Level Badges */
-        .badge-level-info {
-            background: rgba(16, 185, 129, 0.15);
-            color: #34D399;
-            border: 1px solid rgba(16, 185, 129, 0.35);
-        }
-        .badge-level-warning {
-            background: rgba(245, 158, 11, 0.15);
-            color: #FBBF24;
-            border: 1px solid rgba(245, 158, 11, 0.35);
-        }
-        .badge-level-error {
-            background: rgba(239, 68, 68, 0.18);
-            color: #F87171;
-            border: 1px solid rgba(239, 68, 68, 0.4);
-        }
-        .badge-level-debug {
-            background: rgba(139, 92, 246, 0.15);
-            color: #A78BFA;
-            border: 1px solid rgba(139, 92, 246, 0.35);
-        }
-
-        /* Gateway Badges */
-        .badge-gw-culqi {
-            background: rgba(255, 136, 0, 0.15);
-            color: #FFA500;
-            border: 1px solid rgba(255, 136, 0, 0.35);
-        }
-        .badge-gw-izipay {
-            background: rgba(99, 102, 241, 0.15);
-            color: #818CF8;
-            border: 1px solid rgba(99, 102, 241, 0.35);
-        }
-        .badge-gw-cortesia {
-            background: rgba(20, 184, 166, 0.15);
-            color: #2DD4BF;
-            border: 1px solid rgba(20, 184, 166, 0.35);
-        }
-        .badge-gw-sistema {
-            background: rgba(148, 163, 184, 0.15);
-            color: #CBD5E1;
-            border: 1px solid rgba(148, 163, 184, 0.3);
-        }
-
-        /* Live Indicator */
-        .live-pulse {
-            width: 9px;
-            height: 9px;
-            border-radius: 50%;
-            background: #10B981;
-            box-shadow: 0 0 0 rgba(16, 185, 129, 0.6);
-            animation: pulse-green 2s infinite;
-        }
-        @keyframes pulse-green {
-            0% {
-                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-            }
-            70% {
-                box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
-            }
-            100% {
-                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-            }
-        }
-
-        .json-pre-viewer {
-            background: #08080E;
-            color: #E2E8F0;
-            padding: 1rem;
-            border-radius: 10px;
-            font-family: 'Fira Code', monospace, Consolas, monospace;
-            font-size: 0.8rem;
-            max-height: 400px;
-            overflow-y: auto;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            line-height: 1.5;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-
-        .theme-light .json-pre-viewer {
-            background: #F8FAFC;
-            color: #0F172A;
-            border-color: #E2E8F0;
         }
     </style>
 @endpush
@@ -155,7 +272,7 @@
             <header class="dash-top-navbar">
                 <form action="{{ route('web.checkout_logs') }}" method="GET" class="dash-search-container" style="flex: 1; max-width: 450px;">
                     <span class="dash-search-icon">🔍</span>
-                    <input type="text" name="q" value="{{ $search }}" class="dash-search-input" placeholder="Buscar por ID de orden, recibo, correo, token o error...">
+                    <input type="text" name="q" value="{{ $search }}" class="dash-search-input" placeholder="Buscar por DNI, correo, recibo, token o error...">
                     @if($levelFilter !== 'all')
                         <input type="hidden" name="level" value="{{ $levelFilter }}">
                     @endif
@@ -177,24 +294,13 @@
             <div class="dash-container">
                 <!-- NOTIFICACIONES FLASH -->
                 @if(session('success'))
-                    <div class="alert-custom alert-success" style="margin-bottom: 1.5rem;">
-                        <div class="alert-icon-box">✓</div>
-                        <div class="alert-content">
-                            <h4>¡Operación Exitosa!</h4>
-                            <p>{{ session('success') }}</p>
-                        </div>
-                        <button class="alert-close-btn" onclick="this.parentElement.remove()">✕</button>
+                    <div class="alert-custom alert-success" style="margin-bottom: 1.5rem; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #34D399; padding: 1rem 1.25rem; border-radius: 12px; font-weight: 700;">
+                        <span>✓</span> {{ session('success') }}
                     </div>
                 @endif
-
                 @if(session('error'))
-                    <div class="alert-custom alert-danger" style="margin-bottom: 1.5rem; background: rgba(239, 68, 68, 0.15); border-left: 4px solid #EF4444; color: #FCA5A5; display: flex; align-items: center; gap: 1rem; padding: 1rem; border-radius: 12px;">
-                        <div style="font-size: 1.5rem;">⚠️</div>
-                        <div style="flex: 1;">
-                            <h4 style="margin: 0 0 0.25rem 0; color: #FFFFFF; font-size: 0.95rem;">Error en la Operación</h4>
-                            <p style="margin: 0; font-size: 0.85rem;">{{ session('error') }}</p>
-                        </div>
-                        <button style="background: none; border: none; color: #CBD5E1; cursor: pointer;" onclick="this.parentElement.remove()">✕</button>
+                    <div class="alert-custom alert-danger" style="margin-bottom: 1.5rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #F87171; padding: 1rem 1.25rem; border-radius: 12px; font-weight: 700;">
+                        <span>⚠️</span> {{ session('error') }}
                     </div>
                 @endif
 
@@ -203,179 +309,219 @@
                     <div>
                         <div style="display: flex; align-items: center; gap: 0.65rem;">
                             <span class="settings-tag" style="background: rgba(255, 85, 0, 0.15); color: #FF7700; border: 1px solid rgba(255, 85, 0, 0.35);">
-                                🧾 AUDITORÍA DE PAGOS
+                                🧾 AUDITORÍA EN TIEMPO REAL
                             </span>
                             <div style="display: inline-flex; align-items: center; gap: 0.45rem; background: rgba(16, 185, 129, 0.12); padding: 0.25rem 0.65rem; border-radius: 9999px; border: 1px solid rgba(16, 185, 129, 0.25);">
-                                <span class="live-pulse"></span>
-                                <span style="font-size: 0.75rem; color: #34D399; font-weight: 700;">Archivo Único: checkout.log</span>
+                                <span class="live-pulse-dot" id="headerLiveDot"></span>
+                                <span style="font-size: 0.75rem; color: #34D399; font-weight: 700;" id="headerLiveStatus">Transmisión en Vivo</span>
                             </div>
                         </div>
-                        <h1 class="settings-page-title" style="margin-top: 0.4rem;">Logs de Pagos & Pasarelas</h1>
-                        <p class="settings-page-subtitle">Monitoreo en tiempo real de transacciones, tokens de tarjeta, webhooks asíncronos y pagos QR de Culqi, Izipay y Cortesías.</p>
+                        <h1 class="settings-page-title" style="margin-top: 0.4rem;">Logs de Pagos & Checkout Live Terminal</h1>
+                        <p class="settings-page-subtitle">Monitoreo paso a paso del ciclo de compra: ingreso al checkout, datos del comprador, pasarela seleccionada (Culqi QR/Tarjeta, Izipay), aprobación de pago, entrega de boletos, despacho de correo y trazabilidad de errores.</p>
                     </div>
 
-                    <!-- BOTONERA DE ACCIONES -->
-                    <div style="display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center;">
-                        <!-- Toggle Live Auto-Refresh -->
-                        <button type="button" id="btnToggleLive" class="btn" onclick="toggleLiveFeed()" style="display: inline-flex; align-items: center; gap: 0.45rem; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); color: #34D399; border-radius: 10px; padding: 0.65rem 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">
-                            <span id="liveIcon">🟢</span> <span id="liveText">Modo en Vivo (ON)</span>
-                        </button>
+                    <!-- SELECTOR DE VISTA (TERMINAL VS TABLA) & BOTONERA -->
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+                        <div style="background: rgba(0,0,0,0.4); padding: 0.25rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); display: flex; gap: 0.25rem;">
+                            <button type="button" class="term-btn active" id="btnSwitchTerminal" onclick="switchViewMode('terminal')">
+                                <span>🖥️</span> <span>Modo Terminal</span>
+                            </button>
+                            <button type="button" class="term-btn" id="btnSwitchTable" onclick="switchViewMode('table')">
+                                <span>📊</span> <span>Modo Tabla</span>
+                            </button>
+                        </div>
 
                         <!-- Descargar Archivo -->
-                        <a href="{{ route('web.checkout_logs.download') }}" class="btn" style="display: inline-flex; align-items: center; gap: 0.45rem; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.35); color: #60A5FA; border-radius: 10px; padding: 0.65rem 1.1rem; font-weight: 700; text-decoration: none; transition: all 0.2s;" title="Descargar checkout.log">
-                            <span>📥</span> Descargar Log
+                        <a href="{{ route('web.checkout_logs.download') }}" class="term-btn" title="Descargar checkout.log">
+                            <span>📥</span> <span>Descargar .log</span>
                         </a>
 
                         <!-- Vaciar Log -->
-                        <button type="button" class="btn" onclick="openClearLogModal()" style="display: inline-flex; align-items: center; gap: 0.45rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #F87171; border-radius: 10px; padding: 0.65rem 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.2s;" title="Limpiar y vaciar checkout.log">
-                            <span>🗑️</span> Vaciar Log
+                        <button type="button" class="term-btn" onclick="openClearLogModal()" style="background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.35); color: #F87171;" title="Limpiar y vaciar checkout.log">
+                            <span>🗑️</span> <span>Vaciar</span>
                         </button>
                     </div>
                 </div>
 
                 <!-- STATS CARDS -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.75rem;">
-                    <!-- Total Eventos -->
-                    <div class="settings-card-box" style="margin: 0; padding: 1.25rem; display: flex; align-items: center; gap: 1rem;">
-                        <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(37,99,235,0.15); border: 1px solid rgba(37,99,235,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; color: #60A5FA;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                    <!-- Total Registros -->
+                    <div class="settings-card-box" style="margin: 0; padding: 1.15rem; display: flex; align-items: center; gap: 0.85rem;">
+                        <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(37,99,235,0.15); border: 1px solid rgba(37,99,235,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #60A5FA;">
                             🧾
                         </div>
                         <div>
-                            <span style="font-size: 0.75rem; color: #94A3B8; display: block; font-weight: 600; text-transform: uppercase;">Total Registros</span>
-                            <strong style="font-size: 1.5rem; color: #FFFFFF; font-weight: 800;" id="statTotal">{{ number_format($totalCount) }}</strong>
+                            <span style="font-size: 0.725rem; color: #94A3B8; display: block; font-weight: 700; text-transform: uppercase;">Total Registros</span>
+                            <strong style="font-size: 1.4rem; color: #FFFFFF; font-weight: 900;" id="statTotal">{{ number_format($totalCount) }}</strong>
                         </div>
                     </div>
 
                     <!-- Culqi Perú -->
-                    <div class="settings-card-box" style="margin: 0; padding: 1.25rem; display: flex; align-items: center; gap: 1rem;">
-                        <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(255,136,0,0.15); border: 1px solid rgba(255,136,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; color: #FFA500;">
+                    <div class="settings-card-box" style="margin: 0; padding: 1.15rem; display: flex; align-items: center; gap: 0.85rem;">
+                        <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(255,136,0,0.15); border: 1px solid rgba(255,136,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #FFA500;">
                             💳
                         </div>
                         <div>
-                            <span style="font-size: 0.75rem; color: #94A3B8; display: block; font-weight: 600; text-transform: uppercase;">Culqi (QR & Tarjeta)</span>
-                            <strong style="font-size: 1.5rem; color: #FFA500; font-weight: 800;">{{ number_format($culqiCount) }}</strong>
+                            <span style="font-size: 0.725rem; color: #94A3B8; display: block; font-weight: 700; text-transform: uppercase;">Culqi (QR / Tarjeta)</span>
+                            <strong style="font-size: 1.4rem; color: #FFA500; font-weight: 900;" id="statCulqi">{{ number_format($culqiCount) }}</strong>
                         </div>
                     </div>
 
                     <!-- Izipay -->
-                    <div class="settings-card-box" style="margin: 0; padding: 1.25rem; display: flex; align-items: center; gap: 1rem;">
-                        <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; color: #818CF8;">
+                    <div class="settings-card-box" style="margin: 0; padding: 1.15rem; display: flex; align-items: center; gap: 0.85rem;">
+                        <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #818CF8;">
                             🟣
                         </div>
                         <div>
-                            <span style="font-size: 0.75rem; color: #94A3B8; display: block; font-weight: 600; text-transform: uppercase;">Izipay Pasarela</span>
-                            <strong style="font-size: 1.5rem; color: #818CF8; font-weight: 800;">{{ number_format($izipayCount) }}</strong>
+                            <span style="font-size: 0.725rem; color: #94A3B8; display: block; font-weight: 700; text-transform: uppercase;">Izipay Pasarela</span>
+                            <strong style="font-size: 1.4rem; color: #818CF8; font-weight: 900;" id="statIzipay">{{ number_format($izipayCount) }}</strong>
                         </div>
                     </div>
 
-                    <!-- Advertencias / Errores -->
-                    <div class="settings-card-box" style="margin: 0; padding: 1.25rem; display: flex; align-items: center; gap: 1rem;">
-                        <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; color: #F87171;">
+                    <!-- Boletos Emitidos -->
+                    <div class="settings-card-box" style="margin: 0; padding: 1.15rem; display: flex; align-items: center; gap: 0.85rem;">
+                        <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #34D399;">
+                            🎟️
+                        </div>
+                        <div>
+                            <span style="font-size: 0.725rem; color: #94A3B8; display: block; font-weight: 700; text-transform: uppercase;">Entrega Boletos</span>
+                            <strong style="font-size: 1.4rem; color: #34D399; font-weight: 900;">{{ number_format($ticketEventsCount) }}</strong>
+                        </div>
+                    </div>
+
+                    <!-- Avisos / Errores -->
+                    <div class="settings-card-box" style="margin: 0; padding: 1.15rem; display: flex; align-items: center; gap: 0.85rem;">
+                        <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #F87171;">
                             ⚠️
                         </div>
                         <div>
-                            <span style="font-size: 0.75rem; color: #94A3B8; display: block; font-weight: 600; text-transform: uppercase;">Avisos & Errores</span>
-                            <strong style="font-size: 1.5rem; color: #EF4444; font-weight: 800;">{{ number_format($warningErrorCount) }}</strong>
-                        </div>
-                    </div>
-
-                    <!-- Tamaño del Archivo -->
-                    <div class="settings-card-box" style="margin: 0; padding: 1.25rem; display: flex; align-items: center; gap: 1rem;">
-                        <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; color: #34D399;">
-                            💾
-                        </div>
-                        <div>
-                            <span style="font-size: 0.75rem; color: #94A3B8; display: block; font-weight: 600; text-transform: uppercase;">Peso storage/logs</span>
-                            <strong style="font-size: 1.5rem; color: #10B981; font-weight: 800;">{{ $fileSizeFormatted }}</strong>
+                            <span style="font-size: 0.725rem; color: #94A3B8; display: block; font-weight: 700; text-transform: uppercase;">Avisos & Errores</span>
+                            <strong style="font-size: 1.4rem; color: #EF4444; font-weight: 900;" id="statErrors">{{ number_format($warningErrorCount) }}</strong>
                         </div>
                     </div>
                 </div>
 
-                <!-- BARRA DE FILTROS AVANZADOS -->
-                <div class="settings-card-box" style="margin-bottom: 1.5rem; padding: 1.25rem;">
-                    <form action="{{ route('web.checkout_logs') }}" method="GET" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
-                        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; flex: 1; min-width: 300px;">
-                            <!-- Filtro de Nivel -->
-                            <div style="display: inline-flex; background: rgba(0,0,0,0.3); padding: 0.25rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
-                                <a href="{{ route('web.checkout_logs', array_merge(request()->query(), ['level' => 'all'])) }}" 
-                                   style="padding: 0.45rem 0.85rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; text-decoration: none; transition: all 0.2s; {{ $levelFilter === 'all' ? 'background: #FF5500; color: #FFFFFF; box-shadow: 0 2px 8px rgba(255,85,0,0.4);' : 'color: #94A3B8;' }}">
-                                    Todos ({{ $totalCount }})
-                                </a>
-                                <a href="{{ route('web.checkout_logs', array_merge(request()->query(), ['level' => 'info'])) }}" 
-                                   style="padding: 0.45rem 0.85rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; text-decoration: none; transition: all 0.2s; {{ $levelFilter === 'info' ? 'background: #10B981; color: #FFFFFF; box-shadow: 0 2px 8px rgba(16,185,129,0.4);' : 'color: #94A3B8;' }}">
-                                    ✓ INFO
-                                </a>
-                                <a href="{{ route('web.checkout_logs', array_merge(request()->query(), ['level' => 'warning'])) }}" 
-                                   style="padding: 0.45rem 0.85rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; text-decoration: none; transition: all 0.2s; {{ $levelFilter === 'warning' ? 'background: #F59E0B; color: #FFFFFF; box-shadow: 0 2px 8px rgba(245,158,11,0.4);' : 'color: #94A3B8;' }}">
-                                    ⚠️ WARNING
-                                </a>
-                                <a href="{{ route('web.checkout_logs', array_merge(request()->query(), ['level' => 'error'])) }}" 
-                                   style="padding: 0.45rem 0.85rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; text-decoration: none; transition: all 0.2s; {{ $levelFilter === 'error' ? 'background: #EF4444; color: #FFFFFF; box-shadow: 0 2px 8px rgba(239,68,68,0.4);' : 'color: #94A3B8;' }}">
-                                    ✕ ERROR
-                                </a>
-                                <a href="{{ route('web.checkout_logs', array_merge(request()->query(), ['level' => 'debug'])) }}" 
-                                   style="padding: 0.45rem 0.85rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; text-decoration: none; transition: all 0.2s; {{ $levelFilter === 'debug' ? 'background: #8B5CF6; color: #FFFFFF; box-shadow: 0 2px 8px rgba(139,92,246,0.4);' : 'color: #94A3B8;' }}">
-                                    🔍 DEBUG
-                                </a>
+                <!-- CONTENEDOR VISTA TERMINAL (MODO TERMINAL) -->
+                <div id="terminalViewContainer" class="terminal-window">
+                    <!-- BARRA SUPERIOR DE LA TERMINAL -->
+                    <div class="terminal-header">
+                        <div style="display: flex; align-items: center; gap: 0.85rem;">
+                            <div class="terminal-dots">
+                                <span class="terminal-dot dot-red"></span>
+                                <span class="terminal-dot dot-yellow"></span>
+                                <span class="terminal-dot dot-green"></span>
                             </div>
-
-                            <!-- Filtro por Pasarela -->
-                            <div style="display: inline-flex; background: rgba(0,0,0,0.3); padding: 0.25rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
-                                <a href="{{ route('web.checkout_logs', array_merge(request()->query(), ['gateway' => 'all'])) }}" 
-                                   style="padding: 0.45rem 0.85rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; text-decoration: none; {{ $gatewayFilter === 'all' ? 'background: #3B82F6; color: #FFFFFF;' : 'color: #94A3B8;' }}">
-                                    Todas
-                                </a>
-                                <a href="{{ route('web.checkout_logs', array_merge(request()->query(), ['gateway' => 'culqi'])) }}" 
-                                   style="padding: 0.45rem 0.85rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; text-decoration: none; {{ $gatewayFilter === 'culqi' ? 'background: #FF8800; color: #FFFFFF; box-shadow: 0 2px 8px rgba(255,136,0,0.4);' : 'color: #94A3B8;' }}">
-                                    Culqi ({{ $culqiCount }})
-                                </a>
-                                <a href="{{ route('web.checkout_logs', array_merge(request()->query(), ['gateway' => 'izipay'])) }}" 
-                                   style="padding: 0.45rem 0.85rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; text-decoration: none; {{ $gatewayFilter === 'izipay' ? 'background: #6366F1; color: #FFFFFF; box-shadow: 0 2px 8px rgba(99,102,241,0.4);' : 'color: #94A3B8;' }}">
-                                    Izipay ({{ $izipayCount }})
-                                </a>
-                            </div>
-
-                            <!-- Selector Registros por Página -->
-                            <div style="display: inline-flex; align-items: center; gap: 0.4rem;">
-                                <span style="font-size: 0.75rem; color: #94A3B8;">Ver:</span>
-                                <select name="per_page" onchange="this.form.submit()" style="background: #0B0B12; border: 1px solid rgba(255,255,255,0.12); color: #FFFFFF; padding: 0.45rem 0.75rem; border-radius: 8px; font-size: 0.8rem;">
-                                    <option value="15" {{ $perPage == 15 ? 'selected' : '' }}>15 / pág</option>
-                                    <option value="30" {{ $perPage == 30 ? 'selected' : '' }}>30 / pág</option>
-                                    <option value="50" {{ $perPage == 50 ? 'selected' : '' }}>50 / pág</option>
-                                    <option value="100" {{ $perPage == 100 ? 'selected' : '' }}>100 / pág</option>
-                                </select>
-                            </div>
-
-                            @if(!empty($search))
-                                <input type="hidden" name="q" value="{{ $search }}">
-                            @endif
+                            <span style="font-family: monospace; font-size: 0.85rem; font-weight: 800; color: #94A3B8;">
+                                <strong style="color: #FF5500;">vivego@checkout</strong>:<span style="color: #60A5FA;">/storage/logs</span>$ <span style="color: #34D399;">tail -f checkout.log</span>
+                            </span>
                         </div>
 
-                        <!-- Botón Limpiar Filtros -->
-                        @if(!empty($search) || $levelFilter !== 'all' || $gatewayFilter !== 'all' || $perPage != 30)
-                            <div>
-                                <a href="{{ route('web.checkout_logs') }}" style="color: #94A3B8; font-size: 0.825rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.85rem; background: rgba(255,255,255,0.04); border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
-                                    ✕ Limpiar Filtros
-                                </a>
+                        <!-- HERRAMIENTAS DE LA TERMINAL -->
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <!-- Botón Pausar / Reanudar Stream -->
+                            <button type="button" id="btnToggleStream" class="term-btn" onclick="toggleStreamFeed()" style="font-size: 0.75rem; padding: 0.35rem 0.7rem;">
+                                <span id="streamIcon">⏸️</span> <span id="streamText">Pausar Stream</span>
+                            </button>
+
+                            <!-- Botón Auto-Scroll -->
+                            <button type="button" id="btnToggleAutoScroll" class="term-btn active" onclick="toggleAutoScroll()" style="font-size: 0.75rem; padding: 0.35rem 0.7rem;">
+                                <span>⬇️</span> <span id="autoScrollText">Auto-Scroll: ON</span>
+                            </button>
+
+                            <!-- Botón Copiar Todo -->
+                            <button type="button" class="term-btn" onclick="copyTerminalLogs()" style="font-size: 0.75rem; padding: 0.35rem 0.7rem;" title="Copiar salida de texto de la terminal">
+                                <span>📋</span> <span>Copiar</span>
+                            </button>
+
+                            <!-- Botón Limpiar Pantalla -->
+                            <button type="button" class="term-btn" onclick="clearTerminalScreen()" style="font-size: 0.75rem; padding: 0.35rem 0.7rem;" title="Limpiar la vista actual de la pantalla">
+                                <span>🧹</span> <span>Limpiar Pantalla</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- BARRA DE FILTRADO RÁPIDO EN TERMINAL -->
+                    <div style="background: #080C14; border-bottom: 1px solid rgba(255,255,255,0.06); padding: 0.65rem 1.25rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; max-width: 480px;">
+                            <span style="color: #64748B; font-size: 0.85rem;">🔎</span>
+                            <input type="text" id="terminalFilterInput" oninput="filterTerminalLines(this.value)" placeholder="Filtrar consola (ej: DNI, correo, 'culqi', 'izipay', 'REC-', 'ERROR', 'boletos')..." style="width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: #FFF; font-family: monospace; font-size: 0.8rem; padding: 0.4rem 0.75rem; border-radius: 6px;">
+                        </div>
+
+                        <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
+                            <button type="button" onclick="setTerminalCategoryFilter('ALL')" class="term-btn active term-filter-tag" data-cat="ALL" style="font-size: 0.7rem; padding: 0.25rem 0.55rem;">Todos</button>
+                            <button type="button" onclick="setTerminalCategoryFilter('ERROR')" class="term-btn term-filter-tag" data-cat="ERROR" style="font-size: 0.7rem; padding: 0.25rem 0.55rem; color: #F87171;">🚨 Errores</button>
+                            <button type="button" onclick="setTerminalCategoryFilter('PAGO')" class="term-btn term-filter-tag" data-cat="PAGO" style="font-size: 0.7rem; padding: 0.25rem 0.55rem; color: #34D399;">💳 Pagos</button>
+                            <button type="button" onclick="setTerminalCategoryFilter('BOLETOS')" class="term-btn term-filter-tag" data-cat="BOLETOS" style="font-size: 0.7rem; padding: 0.25rem 0.55rem; color: #60A5FA;">🎟️ Boletos</button>
+                            <button type="button" onclick="setTerminalCategoryFilter('CORREO')" class="term-btn term-filter-tag" data-cat="CORREO" style="font-size: 0.7rem; padding: 0.25rem 0.55rem; color: #A78BFA;">📧 Correos</button>
+                        </div>
+                    </div>
+
+                    <!-- CUERPO DE LA TERMINAL -->
+                    <div id="terminalBody" class="terminal-body">
+                        @php
+                            $chronologicalLogs = array_reverse($terminalLogs);
+                        @endphp
+
+                        @forelse($chronologicalLogs as $log)
+                            @php
+                                $levelClass = match(strtoupper($log['level'])) {
+                                    'ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY' => 'level-error',
+                                    'WARNING' => 'level-warn',
+                                    'DEBUG' => 'level-info',
+                                    default => 'level-success',
+                                };
+
+                                $gwClass = match(true) {
+                                    str_contains(strtoupper($log['gateway']), 'CULQI') => 'tag-culqi',
+                                    str_contains(strtoupper($log['gateway']), 'IZIPAY') => 'tag-izipay',
+                                    str_contains(strtoupper($log['gateway']), 'CORTES') => 'tag-cortesia',
+                                    default => 'tag-system',
+                                };
+
+                                $hasCtx = !empty($log['context']) && is_array($log['context']);
+                            @endphp
+                            <div class="terminal-line" data-search="{{ strtolower($log['timestamp'] . ' ' . $log['level'] . ' ' . $log['gateway'] . ' ' . $log['category'] . ' ' . $log['message'] . ' ' . json_encode($log['context'])) }}">
+                                <span class="t-time">[{{ $log['timestamp'] }}]</span>
+                                <span class="t-tag {{ $gwClass }}">{{ $log['gateway'] }}</span>
+                                <span class="{{ $levelClass }}">[{{ $log['level'] }}]</span>
+                                <div class="terminal-msg">
+                                    <span>{{ $log['message'] }}</span>
+                                    @if($hasCtx)
+                                        <button type="button" class="terminal-json-toggle" onclick="toggleInlineJson(this)">
+                                            <span>▶</span> JSON
+                                        </button>
+                                        <div class="terminal-json-block">{{ json_encode($log['context'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</div>
+                                    @endif
+                                </div>
                             </div>
-                        @endif
-                    </form>
+                        @empty
+                            <div style="color: #64748B; text-align: center; padding: 4rem 1rem;">
+                                <span>⚡ No se registran eventos de checkout en el archivo de log aún.</span>
+                            </div>
+                        @endforelse
+                    </div>
+
+                    <!-- FOOTER DE LA TERMINAL -->
+                    <div style="background: #0D1117; border-top: 1px solid rgba(255,255,255,0.08); padding: 0.65rem 1.25rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.775rem; color: #94A3B8;">
+                        <span id="termLineCountLabel">Mostrando {{ count($terminalLogs) }} eventos recientes en buffer</span>
+                        <span>Tamaño de Archivo: <strong style="color: #FFFFFF;">{{ $fileSizeFormatted }}</strong></span>
+                    </div>
                 </div>
 
-                <!-- TABLA PRINCIPAL DE LOGS -->
-                <div class="settings-card-box" style="padding: 0; overflow: hidden;">
+                <!-- CONTENEDOR VISTA TABLA CLÁSICA (MODO TABLA) -->
+                <div id="tableViewContainer" class="settings-card-box" style="display: none; padding: 0; overflow: hidden; margin-top: 1.5rem;">
                     <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: space-between;">
                         <div style="display: flex; align-items: center; gap: 0.75rem;">
                             <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(255,85,0,0.12); border: 1px solid rgba(255,85,0,0.3); color: #FF5500; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
                                 📜
                             </div>
                             <div>
-                                <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #FFFFFF;">Flujo de Checkout & Pasarelas de Pago</h3>
-                                <p style="margin: 0.2rem 0 0 0; font-size: 0.8rem; color: #94A3B8;">Eventos registrados en <code style="color: #60A5FA; background: rgba(37,99,235,0.1); padding: 0.15rem 0.4rem; border-radius: 4px;">storage/logs/checkout.log</code></p>
+                                <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #FFFFFF;">Tabla de Auditoría Paginada</h3>
+                                <p style="margin: 0.2rem 0 0 0; font-size: 0.8rem; color: #94A3B8;">Registros extraídos de <code style="color: #60A5FA;">storage/logs/checkout.log</code></p>
                             </div>
                         </div>
 
-                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <div>
                             <span style="font-size: 0.8rem; color: #94A3B8; background: rgba(255,255,255,0.04); padding: 0.35rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
                                 Registros: {{ $paginatedLogs->firstItem() ?? 0 }} - {{ $paginatedLogs->lastItem() ?? 0 }} de {{ $paginatedLogs->total() }}
                             </span>
@@ -387,110 +533,52 @@
                             <thead>
                                 <tr style="background: rgba(255,255,255,0.02); font-size: 0.75rem; color: #94A3B8; text-transform: uppercase;">
                                     <th style="padding: 0.85rem 1rem; width: 60px;">#</th>
-                                    <th style="padding: 0.85rem 1rem; width: 155px;">Fecha & Hora</th>
+                                    <th style="padding: 0.85rem 1rem; width: 175px;">Fecha & Hora (Precisa)</th>
                                     <th style="padding: 0.85rem 1rem; width: 95px;">Nivel</th>
-                                    <th style="padding: 0.85rem 1rem; width: 120px;">Pasarela</th>
-                                    <th style="padding: 0.85rem 1rem; width: 160px;">Categoría</th>
+                                    <th style="padding: 0.85rem 1rem; width: 125px;">Pasarela</th>
                                     <th style="padding: 0.85rem 1rem;">Mensaje / Operación</th>
-                                    <th style="padding: 0.85rem 1rem; width: 120px; text-align: right;">Detalle</th>
+                                    <th style="padding: 0.85rem 1rem; width: 100px; text-align: right;">Detalle</th>
                                 </tr>
                             </thead>
-                            <tbody id="logsTableBody">
+                            <tbody>
                                 @forelse($paginatedLogs as $log)
                                     @php
                                         $levelUpper = strtoupper($log['level'] ?? 'INFO');
                                         $levelBadgeClass = match($levelUpper) {
                                             'ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY' => 'badge-level-error',
                                             'WARNING' => 'badge-level-warning',
-                                            'DEBUG' => 'badge-level-debug',
                                             default => 'badge-level-info',
                                         };
-
-                                        $gwUpper = strtoupper($log['gateway'] ?? '');
-                                        $gwBadgeClass = match(true) {
-                                            str_contains($gwUpper, 'CULQI') => 'badge-gw-culqi',
-                                            str_contains($gwUpper, 'IZIPAY') => 'badge-gw-izipay',
-                                            str_contains($gwUpper, 'CORTES') => 'badge-gw-cortesia',
-                                            default => 'badge-gw-sistema',
-                                        };
-
                                         $hasContext = !empty($log['context']) && is_array($log['context']);
                                     @endphp
-                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
-                                        <!-- ID / Seq -->
+                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                                        <td style="padding: 0.85rem 1rem; color: #64748B; font-weight: 800; font-family: monospace;">{{ $log['id'] }}</td>
                                         <td style="padding: 0.85rem 1rem;">
-                                            <span style="font-weight: 800; color: #64748B; font-size: 0.8rem; font-family: monospace;">{{ $log['id'] }}</span>
+                                            <span style="font-family: monospace; font-size: 0.8rem; font-weight: 700; color: #67E8F9;">{{ $log['timestamp'] }}</span>
                                         </td>
-
-                                        <!-- Timestamp -->
                                         <td style="padding: 0.85rem 1rem;">
-                                            <span style="display: block; font-weight: 700; color: #FFFFFF; font-size: 0.825rem; font-family: monospace;">{{ date('d/m/Y', strtotime($log['timestamp'])) }}</span>
-                                            <span style="display: block; font-size: 0.75rem; color: #94A3B8; font-family: monospace;">{{ date('H:i:s', strtotime($log['timestamp'])) }}</span>
+                                            <span class="t-tag" style="background: rgba(255,255,255,0.08); color: #FFF;">{{ $log['level'] }}</span>
                                         </td>
-
-                                        <!-- Level Badge -->
                                         <td style="padding: 0.85rem 1rem;">
-                                            <span class="{{ $levelBadgeClass }}" style="display: inline-block; padding: 0.2rem 0.55rem; border-radius: 6px; font-size: 0.725rem; font-weight: 900; letter-spacing: 0.5px;">
-                                                {{ $levelUpper }}
-                                            </span>
+                                            <strong style="color: #FFA500; font-size: 0.85rem;">{{ $log['gateway'] }}</strong>
                                         </td>
-
-                                        <!-- Gateway Badge -->
                                         <td style="padding: 0.85rem 1rem;">
-                                            <span class="{{ $gwBadgeClass }}" style="display: inline-block; padding: 0.2rem 0.55rem; border-radius: 6px; font-size: 0.725rem; font-weight: 700;">
-                                                {{ $log['gateway'] }}
-                                            </span>
+                                            <span style="color: #E2E8F0; font-size: 0.85rem;">{{ $log['message'] }}</span>
                                         </td>
-
-                                        <!-- Categoría / Tag -->
-                                        <td style="padding: 0.85rem 1rem;">
-                                            <span style="display: inline-block; background: rgba(255,255,255,0.05); color: #E2E8F0; padding: 0.2rem 0.55rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; border: 1px solid rgba(255,255,255,0.08);">
-                                                {{ $log['category'] }}
-                                            </span>
-                                        </td>
-
-                                        <!-- Mensaje / Detalle -->
-                                        <td style="padding: 0.85rem 1rem;">
-                                            <div style="font-size: 0.85rem; color: #FFFFFF; font-weight: 500; line-height: 1.4;">
-                                                {{ $log['message'] }}
-                                            </div>
-                                            @if($hasContext && isset($log['context']['order_id']))
-                                                <span style="display: inline-block; margin-top: 0.25rem; font-size: 0.725rem; color: #60A5FA; background: rgba(37,99,235,0.1); padding: 0.1rem 0.4rem; border-radius: 4px; font-family: monospace;">
-                                                    Orden: {{ $log['context']['order_id'] }}
-                                                </span>
-                                            @endif
-                                            @if($hasContext && isset($log['context']['receipt']))
-                                                <span style="display: inline-block; margin-top: 0.25rem; font-size: 0.725rem; color: #34D399; background: rgba(16,185,129,0.1); padding: 0.1rem 0.4rem; border-radius: 4px; font-family: monospace;">
-                                                    Recibo: {{ $log['context']['receipt'] }}
-                                                </span>
-                                            @endif
-                                        </td>
-
-                                        <!-- Botón Ver Contexto / JSON -->
                                         <td style="padding: 0.85rem 1rem; text-align: right;">
                                             @if($hasContext)
-                                                <button type="button" class="btn btn-sm" onclick="showLogDetail({{ json_encode($log) }})" style="background: rgba(37,99,235,0.15); border: 1px solid rgba(37,99,235,0.35); color: #60A5FA; border-radius: 6px; padding: 0.35rem 0.65rem; font-size: 0.75rem; font-weight: 700; cursor: pointer;" title="Ver Contexto Completo JSON">
-                                                    <span>🔍</span> JSON
+                                                <button type="button" class="btn btn-sm" onclick="showLogDetailModal({{ json_encode($log) }})" style="background: rgba(37,99,235,0.15); border: 1px solid rgba(37,99,235,0.35); color: #60A5FA; border-radius: 6px; padding: 0.35rem 0.65rem; font-size: 0.75rem; font-weight: 700; cursor: pointer;">
+                                                    🔍 JSON
                                                 </button>
                                             @else
-                                                <span style="font-size: 0.75rem; color: #64748B;">—</span>
+                                                <span style="color: #64748B;">—</span>
                                             @endif
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" style="padding: 3.5rem 1rem; text-align: center;">
-                                            <div style="width: 60px; height: 60px; border-radius: 20px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin: 0 auto 1rem auto; color: #64748B;">
-                                                🧾
-                                            </div>
-                                            <h4 style="color: #FFFFFF; font-size: 1.1rem; margin: 0 0 0.4rem 0; font-weight: 700;">No se encontraron registros de logs</h4>
-                                            <p style="color: #94A3B8; font-size: 0.85rem; max-width: 480px; margin: 0 auto;">
-                                                @if(!empty($search) || $levelFilter !== 'all' || $gatewayFilter !== 'all')
-                                                    No hay eventos que coincidan con los filtros de búsqueda aplicados. Intenta restablecer los filtros.
-                                                @else
-                                                    Aún no se han ejecutado operaciones de checkout o el archivo <code style="color:#FF7700">storage/logs/checkout.log</code> está vacío.
-                                                @endif
-                                            </p>
+                                        <td colspan="6" style="padding: 3.5rem 1rem; text-align: center; color: #94A3B8;">
+                                            No se encontraron registros de logs en este momento.
                                         </td>
                                     </tr>
                                 @endforelse
@@ -498,7 +586,7 @@
                         </table>
                     </div>
 
-                    <!-- FOOTER & PAGINACIÓN PERSONALIZADA -->
+                    <!-- PAGINADOR VISTA TABLA -->
                     @if($paginatedLogs->hasPages())
                         <div style="padding: 1.25rem 1.5rem; border-top: 1px solid rgba(255,255,255,0.06); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;">
                             <span style="font-size: 0.825rem; color: #94A3B8;">
@@ -506,14 +594,12 @@
                             </span>
 
                             <div style="display: flex; gap: 0.35rem; align-items: center;">
-                                {{-- Botón Anterior --}}
                                 @if($paginatedLogs->onFirstPage())
                                     <span class="dt-page-btn disabled">‹</span>
                                 @else
                                     <a href="{{ $paginatedLogs->previousPageUrl() }}" class="dt-page-btn">‹</a>
                                 @endif
 
-                                {{-- Números de Página con Ventana Deslizante --}}
                                 @php
                                     $cur = $paginatedLogs->currentPage();
                                     $last = $paginatedLogs->lastPage();
@@ -543,7 +629,6 @@
                                     <a href="{{ $paginatedLogs->url($last) }}" class="dt-page-btn">{{ $last }}</a>
                                 @endif
 
-                                {{-- Botón Siguiente --}}
                                 @if($paginatedLogs->hasMorePages())
                                     <a href="{{ $paginatedLogs->nextPageUrl() }}" class="dt-page-btn">›</a>
                                 @else
@@ -553,195 +638,335 @@
                         </div>
                     @endif
                 </div>
+
             </div>
         </main>
     </div>
 
-    <!-- MODAL PARA VER CONTEXTO / JSON DETALLADO -->
-    <div id="modalLogDetail" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 1.5rem;">
-        <div style="background: #0F0F18; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; width: 100%; max-width: 650px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7); animation: modalIn 0.2s ease;">
-            <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between;">
-                <div style="display: flex; align-items: center; gap: 0.65rem;">
-                    <div style="width: 34px; height: 34px; border-radius: 8px; background: rgba(37,99,235,0.15); color: #60A5FA; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
-                        🔍
+    <!-- MODAL VACIAR / REINICIAR LOGS -->
+    <div class="modal-backdrop-custom" id="clearLogModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(8px); padding: 1rem;">
+        <div style="background: #0F172A; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 20px; width: 100%; max-width: 480px; padding: 2rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #EF4444; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
+                        🗑️
                     </div>
                     <div>
-                        <h3 style="margin: 0; font-size: 1rem; color: #FFFFFF; font-weight: 800;" id="modalLogTitle">Detalle del Registro de Log</h3>
-                        <p style="margin: 0.15rem 0 0 0; font-size: 0.75rem; color: #94A3B8;" id="modalLogSubtitle">Información estructurada y contexto</p>
+                        <h3 style="font-size: 1.25rem; font-weight: 900; color: #FFF; margin: 0;">Vaciar Archivo de Logs</h3>
+                        <p style="color: #94A3B8; font-size: 0.8rem; margin: 0.2rem 0 0 0;">Esta acción borrará el historial de checkout.log</p>
                     </div>
                 </div>
-                <button type="button" onclick="closeLogDetailModal()" style="background: none; border: none; color: #94A3B8; font-size: 1.25rem; cursor: pointer; padding: 0.25rem 0.5rem; border-radius: 6px;">✕</button>
+                <button type="button" onclick="closeClearLogModal()" style="background: rgba(255,255,255,0.08); border: none; color: #FFF; width: 32px; height: 32px; border-radius: 8px; cursor: pointer;">✕</button>
             </div>
 
-            <div style="padding: 1.5rem; max-height: 70vh; overflow-y: auto;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
-                    <div style="background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
-                        <span style="font-size: 0.7rem; color: #94A3B8; display: block; text-transform: uppercase;">Fecha & Hora</span>
-                        <strong style="font-size: 0.85rem; color: #FFFFFF; font-family: monospace;" id="modalLogTime">-</strong>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
-                        <span style="font-size: 0.7rem; color: #94A3B8; display: block; text-transform: uppercase;">Pasarela / Nivel</span>
-                        <div style="display: flex; gap: 0.35rem; align-items: center; margin-top: 0.2rem;">
-                            <span id="modalLogGateway" class="badge-gw-culqi" style="padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.725rem; font-weight: 700;">-</span>
-                            <span id="modalLogLevel" class="badge-level-info" style="padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.725rem; font-weight: 700;">-</span>
-                        </div>
-                    </div>
-                </div>
+            <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;">
+                <p style="color: #E2E8F0; font-size: 0.9rem; margin: 0 0 0.5rem 0; line-height: 1.5;">
+                    ¿Confirmas que deseas reiniciar y truncar el archivo <code style="color:#FF7700">storage/logs/checkout.log</code>?
+                </p>
+                <small style="color: #94A3B8;">Los eventos nuevos que ocurran a partir de este momento se seguirán registrando normalmente.</small>
+            </div>
 
-                <div style="margin-bottom: 1rem;">
-                    <span style="font-size: 0.75rem; color: #94A3B8; display: block; margin-bottom: 0.35rem; font-weight: 600;">Mensaje:</span>
-                    <div id="modalLogMsg" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 0.75rem; border-radius: 8px; color: #FFFFFF; font-size: 0.85rem; line-height: 1.4;">-</div>
-                </div>
+            <form action="{{ route('web.checkout_logs.clear') }}" method="POST" style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                @csrf
+                <button type="button" onclick="closeClearLogModal()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: #E2E8F0; padding: 0.65rem 1.25rem; font-weight: 700; border-radius: 10px; cursor: pointer;">
+                    Cancelar
+                </button>
+                <button type="submit" style="background: linear-gradient(135deg, #EF4444, #DC2626); border: none; color: #FFF; padding: 0.65rem 1.5rem; font-weight: 800; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <span>🗑️</span> <span>Sí, Vaciar Logs</span>
+                </button>
+            </form>
+        </div>
+    </div>
 
+    <!-- MODAL DETALLE JSON CONTEXT -->
+    <div class="modal-backdrop-custom" id="logDetailModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(8px); padding: 1rem;">
+        <div style="background: #0F172A; border: 1px solid rgba(255,255,255,0.12); border-radius: 20px; width: 100%; max-width: 680px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6); overflow: hidden;">
+            <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                        <span style="font-size: 0.75rem; color: #94A3B8; font-weight: 600;">Contexto / Payload JSON:</span>
-                        <button type="button" onclick="copyModalJson()" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #CBD5E1; font-size: 0.725rem; padding: 0.2rem 0.55rem; border-radius: 6px; cursor: pointer;">
-                            📋 Copiar JSON
-                        </button>
-                    </div>
-                    <pre id="modalLogJson" class="json-pre-viewer">{}</pre>
+                    <h3 style="font-size: 1.2rem; font-weight: 800; color: #FFF; margin: 0;" id="logDetailModalTitle">Detalle de Transacción</h3>
+                    <p style="color: #94A3B8; font-size: 0.8rem; margin: 0.2rem 0 0 0;" id="logDetailModalTime">...</p>
                 </div>
+                <button type="button" onclick="closeLogDetailModal()" style="background: rgba(255,255,255,0.08); border: none; color: #FFF; width: 32px; height: 32px; border-radius: 8px; cursor: pointer;">✕</button>
+            </div>
+
+            <div style="padding: 1.25rem 1.5rem; overflow-y: auto; flex: 1;">
+                <pre id="logDetailModalJson" style="background: #05070A; border: 1px solid rgba(255,255,255,0.08); padding: 1rem; border-radius: 12px; color: #E2E8F0; font-family: monospace; font-size: 0.825rem; white-space: pre-wrap; word-break: break-word;"></pre>
             </div>
 
             <div style="padding: 1rem 1.5rem; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: flex-end;">
-                <button type="button" class="btn" onclick="closeLogDetailModal()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: #FFFFFF; border-radius: 8px; padding: 0.5rem 1.25rem; font-weight: 700; cursor: pointer;">
+                <button type="button" onclick="closeLogDetailModal()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: #E2E8F0; padding: 0.55rem 1.25rem; font-weight: 700; border-radius: 8px; cursor: pointer;">
                     Cerrar
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL DE CONFIRMACIÓN PARA VACIAR LOG -->
-    <div id="modalClearLog" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 1.5rem;">
-        <div style="background: #0F0F18; border: 1px solid rgba(239,68,68,0.3); border-radius: 16px; width: 100%; max-width: 480px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(239,68,68,0.25);">
-            <div style="padding: 1.5rem; text-align: center;">
-                <div style="width: 56px; height: 56px; border-radius: 16px; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.35); color: #F87171; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin: 0 auto 1.25rem auto;">
-                    🗑️
-                </div>
-                <h3 style="margin: 0 0 0.5rem 0; color: #FFFFFF; font-size: 1.2rem; font-weight: 800;">¿Vaciar Archivo de Logs?</h3>
-                <p style="margin: 0 0 1.5rem 0; color: #94A3B8; font-size: 0.875rem; line-height: 1.5;">
-                    Esta acción truncará por completo el archivo <code style="color: #F87171; background: rgba(239,68,68,0.1); padding: 0.15rem 0.35rem; border-radius: 4px;">checkout.log</code> y eliminará todos los registros históricos actuales de pasarelas de pago. Esta acción no se puede deshacer.
-                </p>
-
-                <form action="{{ route('web.checkout_logs.clear') }}" method="POST" style="display: flex; gap: 0.75rem; justify-content: center;">
-                    @csrf
-                    <button type="button" onclick="closeClearLogModal()" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #CBD5E1; border-radius: 8px; padding: 0.65rem 1.25rem; font-weight: 700; cursor: pointer;">
-                        Cancelar
-                    </button>
-                    <button type="submit" style="background: linear-gradient(135deg, #EF4444, #DC2626); border: none; color: #FFFFFF; border-radius: 8px; padding: 0.65rem 1.5rem; font-weight: 800; cursor: pointer; box-shadow: 0 2px 10px rgba(239,68,68,0.4);">
-                        Sí, Vaciar Logs
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-@endsection
-
-@push('scripts')
+    <!-- SCRIPTS JS PARA TERMINAL EN VIVO Y STREAMING AJAX -->
     <script>
-        // Modal de Visualización Detallada JSON
-        let currentModalJsonString = '';
+        let isStreamActive = true;
+        let isAutoScrollEnabled = true;
+        let streamInterval = null;
+        let currentTerminalCategory = 'ALL';
+        let currentTerminalSearch = '';
+        let seenLogTimestamps = new Set();
 
-        function showLogDetail(logData) {
-            document.getElementById('modalLogTitle').innerText = 'Log #' + logData.id + ' — ' + logData.category;
-            document.getElementById('modalLogSubtitle').innerText = logData.gateway + ' (' + logData.level + ')';
-            document.getElementById('modalLogTime').innerText = logData.timestamp;
-            
-            const gwEl = document.getElementById('modalLogGateway');
-            gwEl.innerText = logData.gateway;
-            gwEl.className = logData.gateway.includes('Culqi') ? 'badge-gw-culqi' : (logData.gateway.includes('Izipay') ? 'badge-gw-izipay' : 'badge-gw-sistema');
+        // Inicializar registro de marcas de tiempo existentes en la terminal
+        document.querySelectorAll('#terminalBody .terminal-line').forEach(line => {
+            const timeEl = line.querySelector('.t-time');
+            if (timeEl) seenLogTimestamps.add(timeEl.textContent.trim());
+        });
 
-            const lvlEl = document.getElementById('modalLogLevel');
-            lvlEl.innerText = logData.level;
-            lvlEl.className = logData.level === 'ERROR' ? 'badge-level-error' : (logData.level === 'WARNING' ? 'badge-level-warning' : 'badge-level-info');
+        // Auto-scroll inicial al final de la terminal
+        window.addEventListener('DOMContentLoaded', () => {
+            scrollTerminalToBottom();
+            startLiveStreamFeed();
+        });
 
-            document.getElementById('modalLogMsg').innerText = logData.message;
-
-            const contextData = logData.context || { raw: logData.raw };
-            currentModalJsonString = JSON.stringify(contextData, null, 2);
-            document.getElementById('modalLogJson').innerText = currentModalJsonString;
-
-            const modal = document.getElementById('modalLogDetail');
-            modal.style.display = 'flex';
-        }
-
-        function closeLogDetailModal() {
-            document.getElementById('modalLogDetail').style.display = 'none';
-        }
-
-        function copyModalJson() {
-            if (!currentModalJsonString) return;
-            navigator.clipboard.writeText(currentModalJsonString).then(() => {
-                alert('¡Contexto JSON copiado al portapapeles!');
-            }).catch(() => {
-                const ta = document.createElement('textarea');
-                ta.value = currentModalJsonString;
-                document.body.appendChild(ta);
-                ta.select();
-                document.execCommand('copy');
-                document.body.removeChild(ta);
-                alert('¡Contexto JSON copiado al portapapeles!');
-            });
-        }
-
-        // Modal Vaciar Log
-        function openClearLogModal() {
-            document.getElementById('modalClearLog').style.display = 'flex';
-        }
-
-        function closeClearLogModal() {
-            document.getElementById('modalClearLog').style.display = 'none';
-        }
-
-        // Auto Refresh en Vivo vía Feed API
-        let liveTimer = null;
-        let isLiveActive = false;
-
-        function toggleLiveFeed() {
-            isLiveActive = !isLiveActive;
-            const btn = document.getElementById('btnToggleLive');
-            const icon = document.getElementById('liveIcon');
-            const text = document.getElementById('liveText');
-
-            if (isLiveActive) {
-                btn.style.background = 'rgba(16, 185, 129, 0.2)';
-                btn.style.borderColor = 'rgba(16, 185, 129, 0.5)';
-                icon.innerText = '🟢';
-                text.innerText = 'Modo en Vivo (Activo: 5s)';
-                fetchLiveFeed();
-                liveTimer = setInterval(fetchLiveFeed, 5000);
-            } else {
-                btn.style.background = 'rgba(255, 255, 255, 0.06)';
-                btn.style.borderColor = 'rgba(255, 255, 255, 0.12)';
-                btn.style.color = '#94A3B8';
-                icon.innerText = '⏸️';
-                text.innerText = 'Modo en Vivo (Pausado)';
-                if (liveTimer) clearInterval(liveTimer);
+        function scrollTerminalToBottom() {
+            if (!isAutoScrollEnabled) return;
+            const term = document.getElementById('terminalBody');
+            if (term) {
+                term.scrollTop = term.scrollHeight;
             }
         }
 
-        function fetchLiveFeed() {
-            fetch('{{ route("web.checkout_logs.feed") }}')
+        function toggleAutoScroll() {
+            isAutoScrollEnabled = !isAutoScrollEnabled;
+            const btn = document.getElementById('btnToggleAutoScroll');
+            const txt = document.getElementById('autoScrollText');
+            if (isAutoScrollEnabled) {
+                btn.classList.add('active');
+                txt.textContent = 'Auto-Scroll: ON';
+                scrollTerminalToBottom();
+            } else {
+                btn.classList.remove('active');
+                txt.textContent = 'Auto-Scroll: OFF';
+            }
+        }
+
+        function toggleStreamFeed() {
+            isStreamActive = !isStreamActive;
+            const icon = document.getElementById('streamIcon');
+            const txt = document.getElementById('streamText');
+            const dot = document.getElementById('headerLiveDot');
+            const statusLabel = document.getElementById('headerLiveStatus');
+
+            if (isStreamActive) {
+                icon.textContent = '⏸️';
+                txt.textContent = 'Pausar Stream';
+                if (dot) dot.style.background = '#10B981';
+                if (statusLabel) statusLabel.textContent = 'Transmisión en Vivo';
+                startLiveStreamFeed();
+            } else {
+                icon.textContent = '▶️';
+                txt.textContent = 'Reanudar Stream';
+                if (dot) dot.style.background = '#EF4444';
+                if (statusLabel) statusLabel.textContent = 'Stream Pausado';
+                if (streamInterval) clearInterval(streamInterval);
+            }
+        }
+
+        function startLiveStreamFeed() {
+            if (streamInterval) clearInterval(streamInterval);
+            streamInterval = setInterval(() => {
+                if (!isStreamActive) return;
+                fetchLiveFeedLogs();
+            }, 2500);
+        }
+
+        function fetchLiveFeedLogs() {
+            fetch("{{ route('web.checkout_logs.feed') }}")
                 .then(res => res.json())
                 .then(data => {
-                    if (data.success && Array.isArray(data.logs)) {
-                        // Actualizar contador rápido
-                        const statTotalEl = document.getElementById('statTotal');
-                        if (statTotalEl && data.count) {
-                            statTotalEl.innerText = data.count.toLocaleString();
+                    if (data.success && data.logs && data.logs.length > 0) {
+                        const term = document.getElementById('terminalBody');
+                        if (!term) return;
+
+                        // Actualizar contadores
+                        if (data.stats) {
+                            if (document.getElementById('statTotal')) document.getElementById('statTotal').textContent = data.stats.total.toLocaleString();
+                            if (document.getElementById('statCulqi')) document.getElementById('statCulqi').textContent = data.stats.culqi.toLocaleString();
+                            if (document.getElementById('statIzipay')) document.getElementById('statIzipay').textContent = data.stats.izipay.toLocaleString();
+                            if (document.getElementById('statErrors')) document.getElementById('statErrors').textContent = data.stats.errors.toLocaleString();
+                        }
+
+                        // Las líneas llegan ordenadas por lo más reciente primero, revertir para imprimir en orden
+                        const newLogs = [...data.logs].reverse();
+                        let appended = false;
+
+                        newLogs.forEach(log => {
+                            const timeKey = `[${log.timestamp}]`;
+                            if (!seenLogTimestamps.has(timeKey)) {
+                                seenLogTimestamps.add(timeKey);
+                                const lineEl = createTerminalLineElement(log, true);
+                                term.appendChild(lineEl);
+                                appended = true;
+                            }
+                        });
+
+                        if (appended) {
+                            scrollTerminalToBottom();
                         }
                     }
                 })
-                .catch(err => console.debug('Live feed sync error:', err));
+                .catch(err => {
+                    // Fallback silencioso en caso de micro-corte de red
+                });
         }
 
-        // Cerrar modales con Escape
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeLogDetailModal();
-                closeClearLogModal();
+        function createTerminalLineElement(log, isNew = false) {
+            const div = document.createElement('div');
+            div.className = 'terminal-line' + (isNew ? ' log-new-flash' : '');
+            
+            const searchable = (log.timestamp + ' ' + log.level + ' ' + log.gateway + ' ' + log.category + ' ' + log.message + ' ' + JSON.stringify(log.context || '')).toLowerCase();
+            div.dataset.search = searchable;
+
+            let levelClass = 'level-success';
+            const lvl = (log.level || 'INFO').toUpperCase();
+            if (['ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY'].includes(lvl)) levelClass = 'level-error';
+            else if (lvl === 'WARNING') levelClass = 'level-warn';
+            else if (lvl === 'DEBUG') levelClass = 'level-info';
+
+            let gwClass = 'tag-system';
+            const gw = (log.gateway || '').toUpperCase();
+            if (gw.includes('CULQI')) gwClass = 'tag-culqi';
+            else if (gw.includes('IZIPAY')) gwClass = 'tag-izipay';
+            else if (gw.includes('CORTES')) gwClass = 'tag-cortesia';
+
+            const hasCtx = log.context && typeof log.context === 'object' && Object.keys(log.context).length > 0;
+            const jsonBtn = hasCtx ? `<button type="button" class="terminal-json-toggle" onclick="toggleInlineJson(this)"><span>▶</span> JSON</button><div class="terminal-json-block">${escapeHtml(JSON.stringify(log.context, null, 2))}</div>` : '';
+
+            div.innerHTML = `
+                <span class="t-time">[${escapeHtml(log.timestamp)}]</span>
+                <span class="t-tag ${gwClass}">${escapeHtml(log.gateway)}</span>
+                <span class="${levelClass}">[${escapeHtml(log.level)}]</span>
+                <div class="terminal-msg">
+                    <span>${escapeHtml(log.message)}</span>
+                    ${jsonBtn}
+                </div>
+            `;
+
+            return div;
+        }
+
+        function toggleInlineJson(btn) {
+            const block = btn.nextElementSibling;
+            if (!block) return;
+            if (block.style.display === 'block') {
+                block.style.display = 'none';
+                btn.querySelector('span').textContent = '▶';
+            } else {
+                block.style.display = 'block';
+                btn.querySelector('span').textContent = '▼';
             }
-        });
+        }
+
+        function filterTerminalLines(query) {
+            currentTerminalSearch = (query || '').toLowerCase().trim();
+            applyTerminalFilters();
+        }
+
+        function setTerminalCategoryFilter(cat) {
+            currentTerminalCategory = cat;
+            document.querySelectorAll('.term-filter-tag').forEach(b => {
+                b.classList.toggle('active', b.dataset.cat === cat);
+            });
+            applyTerminalFilters();
+        }
+
+        function applyTerminalFilters() {
+            const lines = document.querySelectorAll('#terminalBody .terminal-line');
+            lines.forEach(line => {
+                const searchData = line.dataset.search || '';
+                let matchesSearch = true;
+                let matchesCat = true;
+
+                if (currentTerminalSearch && !searchData.includes(currentTerminalSearch)) {
+                    matchesSearch = false;
+                }
+
+                if (currentTerminalCategory !== 'ALL') {
+                    if (currentTerminalCategory === 'ERROR' && !searchData.includes('error') && !searchData.includes('critical') && !searchData.includes('warn')) {
+                        matchesCat = false;
+                    } else if (currentTerminalCategory === 'PAGO' && !searchData.includes('pago') && !searchData.includes('culqi') && !searchData.includes('izipay') && !searchData.includes('cargo')) {
+                        matchesCat = false;
+                    } else if (currentTerminalCategory === 'BOLETOS' && !searchData.includes('boleto') && !searchData.includes('ticket') && !searchData.includes('entrega')) {
+                        matchesCat = false;
+                    } else if (currentTerminalCategory === 'CORREO' && !searchData.includes('correo') && !searchData.includes('email') && !searchData.includes('mail')) {
+                        matchesCat = false;
+                    }
+                }
+
+                line.style.display = (matchesSearch && matchesCat) ? 'flex' : 'none';
+            });
+        }
+
+        function copyTerminalLogs() {
+            const term = document.getElementById('terminalBody');
+            if (!term) return;
+            let text = '';
+            term.querySelectorAll('.terminal-line').forEach(l => {
+                if (l.style.display !== 'none') {
+                    text += l.innerText + '\n';
+                }
+            });
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✓ Salida de la terminal copiada al portapapeles.');
+            });
+        }
+
+        function clearTerminalScreen() {
+            const term = document.getElementById('terminalBody');
+            if (term) {
+                term.innerHTML = '<div style="color: #64748B; text-align: center; padding: 4rem 1rem;"><span>⚡ Pantalla de terminal limpiada. Esperando nuevos eventos...</span></div>';
+            }
+        }
+
+        function switchViewMode(mode) {
+            const termBox = document.getElementById('terminalViewContainer');
+            const tableBox = document.getElementById('tableViewContainer');
+            const btnTerm = document.getElementById('btnSwitchTerminal');
+            const btnTable = document.getElementById('btnSwitchTable');
+
+            if (mode === 'terminal') {
+                if (termBox) termBox.style.display = 'flex';
+                if (tableBox) tableBox.style.display = 'none';
+                if (btnTerm) btnTerm.classList.add('active');
+                if (btnTable) btnTable.classList.remove('active');
+                scrollTerminalToBottom();
+            } else {
+                if (termBox) termBox.style.display = 'none';
+                if (tableBox) tableBox.style.display = 'block';
+                if (btnTerm) btnTerm.classList.remove('active');
+                if (btnTable) btnTable.classList.add('active');
+            }
+        }
+
+        function openClearLogModal() {
+            document.getElementById('clearLogModal').style.display = 'flex';
+        }
+        function closeClearLogModal() {
+            document.getElementById('clearLogModal').style.display = 'none';
+        }
+
+        function showLogDetailModal(log) {
+            document.getElementById('logDetailModalTitle').textContent = `[${log.level}] ${log.gateway} - ${log.category}`;
+            document.getElementById('logDetailModalTime').textContent = `Timestamp: ${log.timestamp}`;
+            document.getElementById('logDetailModalJson').textContent = JSON.stringify(log.context, null, 2);
+            document.getElementById('logDetailModal').style.display = 'flex';
+        }
+        function closeLogDetailModal() {
+            document.getElementById('logDetailModal').style.display = 'none';
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
     </script>
-@endpush
+@endsection

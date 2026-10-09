@@ -29,7 +29,11 @@ class CheckoutController extends Controller
         try {
             Log::channel('checkout')->$level($message, $context);
         } catch (\Throwable $e) {
-            Log::$level("[Checkout] " . $message, $context);
+            try {
+                Log::$level("[Checkout] " . $message, $context);
+            } catch (\Throwable $ex) {
+                // Fallback silencioso
+            }
         }
     }
 
@@ -362,6 +366,23 @@ class CheckoutController extends Controller
                 'end_at_display' => $activeCampaign->end_at ? ($activeCampaign->end_at instanceof \DateTimeInterface ? $activeCampaign->end_at->format('d/m/Y h:i A') : (string)$activeCampaign->end_at) : '',
             ] : null,
         ];
+
+        // Registrar en log de auditoría el ingreso al checkout
+        $firstItem = $cartItems[0] ?? [];
+        $zoneLabel = $firstItem['name'] ?? ($firstItem['zone_name'] ?? 'Entrada General');
+        $totalQuantity = array_sum(array_column($cartItems, 'quantity'));
+        $this->logCheckout('info', "👤 [INGRESO_CHECKOUT] Cliente ingresó al checkout para '{$eventData['title']}' (Zona: {$zoneLabel}, Cantidad: " . max(1, $totalQuantity) . " entrada(s), Total: S/ " . number_format($grandTotal, 2) . ")", [
+            'ip' => $request->ip(),
+            'event_id' => $eventData['id'],
+            'event_title' => $eventData['title'],
+            'zone' => $zoneLabel,
+            'quantity' => max(1, $totalQuantity),
+            'total_amount' => $grandTotal,
+            'is_upgrade' => $isUpgrade,
+            'is_authenticated' => session('customer_logged_in') ? true : false,
+            'customer_email' => session('customer_email') ?: null,
+            'customer_dni' => session('customer_dni') ?: null,
+        ]);
 
         return view('web.checkout', compact(
             'eventData', 
@@ -2047,5 +2068,23 @@ class CheckoutController extends Controller
                 }
             }
         }
+
+        // Registrar en log de auditoría la entrega y verificación estricta de boletos emitidos
+        $assignedTickets = \App\Models\EventTicket::where('ticket_sale_id', $sale->id)->get();
+        $assignedCount = $assignedTickets->count();
+        $ticketCodes = $assignedTickets->pluck('ticket_code')->toArray();
+        $isExact = ($assignedCount === (int)$totalQty);
+
+        $this->logCheckout('info', "🎟️ [ENTREGA_BOLETOS] Venta #{$sale->id} ({$sale->receipt_number}): Solicitados: {$totalQty} | Emitidos: {$assignedCount} " . ($isExact ? '✓ [CANTIDAD EXACTA ENTREGADA]' : '⚠️ [DESAJUSTE DE CANTIDAD]'), [
+            'sale_id' => $sale->id,
+            'receipt' => $sale->receipt_number,
+            'event_id' => $event?->id,
+            'requested_quantity' => (int)$totalQty,
+            'assigned_quantity' => $assignedCount,
+            'is_exact_match' => $isExact,
+            'ticket_codes' => $ticketCodes,
+            'buyer_name' => $sale->buyer_name,
+            'buyer_dni' => $sale->buyer_dni,
+        ]);
     }
 }

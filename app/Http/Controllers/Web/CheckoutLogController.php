@@ -36,7 +36,7 @@ class CheckoutLogController extends Controller
     }
 
     /**
-     * Muestra la vista principal de logs de checkout y pasarelas de pago
+     * Muestra la vista principal de logs de checkout y pasarelas de pago con modo Terminal y Tabla
      */
     public function index(Request $request): View
     {
@@ -45,6 +45,7 @@ class CheckoutLogController extends Controller
         $gatewayFilter = strtolower(trim((string) $request->input('gateway', 'all')));
         $perPage = max(10, min(100, (int) $request->input('per_page', 30)));
         $page = max(1, (int) $request->input('page', 1));
+        $viewMode = $request->input('view_mode', 'terminal'); // 'terminal' o 'table'
 
         $logPath = $this->getLogFilePath();
         $fileSizeFormatted = '0 KB';
@@ -55,6 +56,8 @@ class CheckoutLogController extends Controller
         $culqiCount = 0;
         $izipayCount = 0;
         $warningErrorCount = 0;
+        $ticketEventsCount = 0;
+        $emailEventsCount = 0;
 
         if ($fileExists) {
             $bytes = File::size($logPath);
@@ -80,6 +83,8 @@ class CheckoutLogController extends Controller
                 if (str_contains(strtolower($parsed['gateway']), 'culqi')) $culqiCount++;
                 if (str_contains(strtolower($parsed['gateway']), 'izipay')) $izipayCount++;
                 if (in_array(strtolower($parsed['level']), ['warning', 'error', 'critical', 'alert', 'emergency'])) $warningErrorCount++;
+                if (str_contains($parsed['category'], 'ENTREGA_BOLETOS') || str_contains($parsed['message'], 'boletos')) $ticketEventsCount++;
+                if (str_contains($parsed['category'], 'CORREO') || str_contains($parsed['message'], 'correo')) $emailEventsCount++;
 
                 // Aplicar Filtros de Búsqueda
                 if (!empty($search)) {
@@ -109,7 +114,7 @@ class CheckoutLogController extends Controller
             }
         }
 
-        // Paginación manual de los registros filtrados
+        // Paginación manual de los registros filtrados para la vista de tabla
         $filteredTotal = count($parsedLogs);
         $offset = ($page - 1) * $perPage;
         $currentPageItems = array_slice($parsedLogs, $offset, $perPage);
@@ -122,33 +127,41 @@ class CheckoutLogController extends Controller
             ['path' => route('web.checkout_logs'), 'query' => $request->query()]
         );
 
+        // Logs recientes para la vista de terminal (hasta 150 eventos ordenados cronológicamente para streaming o reversos)
+        $terminalLogs = array_slice($parsedLogs, 0, 150);
+
         return view('web.checkout_logs', compact(
             'paginatedLogs',
+            'terminalLogs',
             'totalCount',
             'culqiCount',
             'izipayCount',
             'warningErrorCount',
+            'ticketEventsCount',
+            'emailEventsCount',
             'fileSizeFormatted',
             'fileExists',
             'logPath',
             'search',
             'levelFilter',
             'gatewayFilter',
-            'perPage'
+            'perPage',
+            'viewMode'
         ));
     }
 
     /**
      * Parsea una línea de texto del archivo de log en un objeto estructurado
      */
-    protected function parseLogLine(string $line, int $id): ?array
+    public function parseLogLine(string $line, int $id): ?array
     {
         // Formato estándar Monolog: [YYYY-MM-DD HH:MM:SS] env.LEVEL: Message {JSON context}
-        if (!preg_match('/^\[(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] (?P<env>\w+)\.(?P<level>[A-Z]+):\s*(?P<content>.*)$/s', $line, $matches)) {
+        if (!preg_match('/^\[(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?)\] (?P<env>[\w\-]+)\.(?P<level>[A-Z]+):\s*(?P<content>.*)$/s', $line, $matches)) {
             // Línea no estándar (ej. stack trace o texto plano)
             return [
                 'id' => $id,
                 'timestamp' => now()->format('Y-m-d H:i:s'),
+                'time_only' => now()->format('H:i:s'),
                 'date_formatted' => now()->format('d/m/Y H:i:s'),
                 'level' => 'INFO',
                 'gateway' => 'Sistema',
@@ -188,22 +201,36 @@ class CheckoutLogController extends Controller
         }
 
         // Determinar Categoría / Etiqueta de Acción
-        $category = 'Transacción';
+        $category = 'TRANSMISIÓN';
         if (preg_match('/\[(.*?)\]/', $message, $catMatches)) {
             $category = trim($catMatches[1]);
         } elseif (str_contains(strtolower($message), 'webhook')) {
-            $category = 'Webhook IPN';
-        } elseif (str_contains(strtolower($message), 'polling')) {
-            $category = 'Consulta en Vivo';
+            $category = 'WEBHOOK_IPN';
+        } elseif (str_contains(strtolower($message), 'polling') || str_contains(strtolower($message), 'consultando')) {
+            $category = 'POLLING_QR';
+        } elseif (str_contains(strtolower($message), 'ingresó') || str_contains(strtolower($message), 'ingreso')) {
+            $category = 'INGRESO_CHECKOUT';
         } elseif (str_contains(strtolower($message), 'orden')) {
-            $category = 'Orden de Pago';
+            $category = 'ORDEN_PAGO';
         } elseif (str_contains(strtolower($message), 'tarjeta')) {
-            $category = 'Cargo Tarjeta';
+            $category = 'CARGO_TARJETA';
+        } elseif (str_contains(strtolower($message), 'boleto') || str_contains(strtolower($message), 'entradas')) {
+            $category = 'ENTREGA_BOLETOS';
+        } elseif (str_contains(strtolower($message), 'correo')) {
+            $category = 'ENVIO_CORREO';
+        }
+
+        $timeOnly = '';
+        try {
+            $timeOnly = date('H:i:s', strtotime($datetime));
+        } catch (\Throwable $e) {
+            $timeOnly = substr($datetime, 11, 8);
         }
 
         return [
             'id' => $id,
             'timestamp' => $datetime,
+            'time_only' => $timeOnly,
             'date_formatted' => date('d/m/Y H:i:s', strtotime($datetime)),
             'level' => $level,
             'gateway' => $gateway,
@@ -239,7 +266,8 @@ class CheckoutLogController extends Controller
         $logPath = storage_path('logs/checkout.log');
 
         try {
-            $initMsg = "[" . date('Y-m-d H:i:s') . "] local.INFO: Archivo de logs de checkout reiniciado por el Administrador. {" . '"action":"log_cleared"' . "}\n";
+            $now = date('Y-m-d H:i:s');
+            $initMsg = "[{$now}] local.INFO: 🚀 [REINICIO_LOGS] Archivo de logs de checkout reiniciado por el Administrador. {" . '"action":"log_cleared","timestamp":"' . $now . '"' . "}\n";
             File::put($logPath, $initMsg);
 
             // Si existen logs diarios anteriores, también truncarlos
@@ -260,29 +288,55 @@ class CheckoutLogController extends Controller
     /**
      * Endpoint API para refrescar los logs en vivo vía AJAX sin recargar toda la página
      */
-    public function apiFeed(): JsonResponse
+    public function apiFeed(Request $request): JsonResponse
     {
         $logPath = $this->getLogFilePath();
         if (!File::exists($logPath)) {
-            return response()->json(['success' => true, 'logs' => [], 'count' => 0]);
+            return response()->json([
+                'success' => true,
+                'logs' => [],
+                'count' => 0,
+                'stats' => [
+                    'total' => 0,
+                    'culqi' => 0,
+                    'izipay' => 0,
+                    'errors' => 0,
+                ]
+            ]);
         }
 
         $rawContent = File::get($logPath);
         $lines = array_reverse(array_filter(explode("\n", $rawContent)));
-        $recentLines = array_slice($lines, 0, 30);
+        $limit = max(10, min(200, (int) $request->input('limit', 100)));
+        $recentLines = array_slice($lines, 0, $limit);
 
         $parsed = [];
         $id = 0;
+        $culqiCount = 0;
+        $izipayCount = 0;
+        $errorCount = 0;
+
         foreach ($recentLines as $line) {
             $item = $this->parseLogLine($line, ++$id);
-            if ($item) $parsed[] = $item;
+            if ($item) {
+                $parsed[] = $item;
+                if (str_contains(strtolower($item['gateway']), 'culqi')) $culqiCount++;
+                if (str_contains(strtolower($item['gateway']), 'izipay')) $izipayCount++;
+                if (in_array(strtolower($item['level']), ['warning', 'error', 'critical', 'alert', 'emergency'])) $errorCount++;
+            }
         }
 
         return response()->json([
             'success' => true,
             'logs' => $parsed,
             'count' => count($parsed),
-            'timestamp' => now()->toIso8601String(),
+            'stats' => [
+                'total' => count($lines),
+                'culqi' => $culqiCount,
+                'izipay' => $izipayCount,
+                'errors' => $errorCount,
+            ],
+            'timestamp' => now()->format('Y-m-d H:i:s.v'),
         ]);
     }
 }
