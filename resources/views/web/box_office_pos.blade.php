@@ -1375,8 +1375,8 @@
                             </div>
 
                             <div class="form-group-custom" style="margin-bottom: 0.65rem;">
-                                <label for="pos_buyer_email" class="form-label-custom" style="margin-bottom: 0.25rem; font-size: 0.775rem;">Correo Electrónico (Opcional - Enviar Entrada)</label>
-                                <input type="email" id="pos_buyer_email" class="form-input-custom" placeholder="Ej: cliente@correo.com" style="font-size: 0.8rem; height: 36px;">
+                                <label for="pos_buyer_email" class="form-label-custom" style="margin-bottom: 0.25rem; font-size: 0.775rem;">Correo Electrónico <span class="required-star" id="star_buyer_email" style="color: #EF4444;">*</span></label>
+                                <input type="email" id="pos_buyer_email" class="form-input-custom" placeholder="Ej: cliente@correo.com" required style="font-size: 0.8rem; height: 36px;">
                             </div>
 
                             <div class="form-group-custom" style="margin-bottom: 0;">
@@ -5431,7 +5431,32 @@
                 const found = window.posExistingClients.find(c => (c.dni && buyerDni && c.dni === buyerDni && c.email && c.email.includes('@')) || (c.name && buyerName && c.name.toLowerCase().trim() === buyerName.toLowerCase().trim() && c.email && c.email.includes('@')));
                 if (found && found.email) {
                     buyerEmail = found.email.trim();
+                    const emailInput = document.getElementById('pos_buyer_email');
+                    if (emailInput) emailInput.value = buyerEmail;
                 }
+            }
+
+            // Validar correo obligatorio para venta POS
+            if (!buyerEmail || !buyerEmail.includes('@') || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail)) {
+                Swal.fire({
+                    title: 'Correo Electrónico Obligatorio',
+                    text: 'Por favor ingresa un correo electrónico válido para registrar la venta y enviar los boletos al cliente.',
+                    icon: 'warning',
+                    confirmButtonColor: '#FF5500',
+                    background: '#14141E',
+                    color: '#FFFFFF'
+                });
+                const emailInput = document.getElementById('pos_buyer_email');
+                if (emailInput) {
+                    emailInput.focus();
+                    emailInput.style.borderColor = '#EF4444';
+                    emailInput.style.boxShadow = '0 0 12px rgba(239, 68, 68, 0.4)';
+                    setTimeout(() => {
+                        emailInput.style.borderColor = '';
+                        emailInput.style.boxShadow = '';
+                    }, 2000);
+                }
+                return;
             }
 
             const btnSubmit = document.getElementById('btnSubmitPosSale');

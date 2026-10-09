@@ -362,7 +362,7 @@ class BoxOfficeController extends Controller
             'buyer_name' => 'nullable|string|max:255',
             'buyer_dni' => 'nullable|string|max:20',
             'buyer_phone' => 'nullable|string|max:100',
-            'buyer_email' => 'nullable|string|email|max:255',
+            'buyer_email' => 'required|string|email|max:255',
             'zone_name' => 'required|string|max:100',
             'quantity' => 'required|integer|min:1',
             'payment_method' => 'required|string|in:Efectivo,Culqi,culqi,Yape,Plin,Tarjeta,Transferencia,Cortesía,cortesia',
@@ -373,6 +373,9 @@ class BoxOfficeController extends Controller
             'nominated_attendees' => 'nullable|array',
             'nominated_attendees.*.name' => 'nullable|string|max:255',
             'nominated_attendees.*.dni' => 'nullable|string|max:20',
+        ], [
+            'buyer_email.required' => 'El correo electrónico del cliente es obligatorio para registrar la venta en Taquilla.',
+            'buyer_email.email' => 'Debes ingresar un correo electrónico válido (ej: cliente@correo.com).',
         ]);
 
         $buyerName = !empty(trim($validated['buyer_name'] ?? '')) ? trim($validated['buyer_name']) : 'CLIENTE VARIOS';
