@@ -48,8 +48,28 @@ class CheckoutLogController extends Controller
         $viewMode = $request->input('view_mode', 'terminal'); // 'terminal' o 'table'
 
         $logPath = $this->getLogFilePath();
-        $fileSizeFormatted = '0 KB';
+        $logsDir = storage_path('logs');
+        $isLogsWritable = is_dir($logsDir) ? is_writable($logsDir) : false;
         $fileExists = File::exists($logPath);
+
+        // Auto-crear archivo de auditoría inicial si no existe en producción
+        if (!$fileExists && $isLogsWritable) {
+            try {
+                if (!File::isDirectory($logsDir)) {
+                    File::makeDirectory($logsDir, 0775, true, true);
+                }
+                $now = date('Y-m-d H:i:s');
+                $env = app()->environment();
+                $initMsg = "[{$now}] {$env}.INFO: 🚀 [SISTEMA] Archivo de auditoría checkout.log inicializado exitosamente en el servidor. {\"status\":\"ready\",\"auto_created\":true}\n";
+                File::put($logPath, $initMsg);
+                @chmod($logPath, 0664);
+                $fileExists = true;
+            } catch (\Throwable $e) {
+                // Silencioso ante excepciones
+            }
+        }
+
+        $fileSizeFormatted = '0 KB';
 
         $parsedLogs = [];
         $totalCount = 0;
@@ -141,6 +161,7 @@ class CheckoutLogController extends Controller
             'emailEventsCount',
             'fileSizeFormatted',
             'fileExists',
+            'isLogsWritable',
             'logPath',
             'search',
             'levelFilter',
@@ -264,24 +285,33 @@ class CheckoutLogController extends Controller
     public function clear(): RedirectResponse
     {
         $logPath = storage_path('logs/checkout.log');
+        $logsDir = storage_path('logs');
 
         try {
+            if (!File::isDirectory($logsDir)) {
+                File::makeDirectory($logsDir, 0775, true, true);
+            }
+
             $now = date('Y-m-d H:i:s');
-            $initMsg = "[{$now}] local.INFO: 🚀 [REINICIO_LOGS] Archivo de logs de checkout reiniciado por el Administrador. {" . '"action":"log_cleared","timestamp":"' . $now . '"' . "}\n";
+            $env = app()->environment();
+            $initMsg = "[{$now}] {$env}.INFO: 🚀 [REINICIO_LOGS] Archivo de logs de checkout reiniciado por el Administrador. " . json_encode(['action' => 'log_cleared', 'timestamp' => $now, 'environment' => $env]) . "\n";
             File::put($logPath, $initMsg);
+            @chmod($logPath, 0664);
 
             // Si existen logs diarios anteriores, también truncarlos
             $dailyFiles = glob(storage_path('logs/checkout-*.log'));
-            foreach ($dailyFiles as $df) {
-                if (File::exists($df) && $df !== $logPath) {
-                    @unlink($df);
+            if ($dailyFiles) {
+                foreach ($dailyFiles as $df) {
+                    if (File::exists($df) && $df !== $logPath) {
+                        @unlink($df);
+                    }
                 }
             }
 
-            return back()->with('success', '¡El archivo de logs de checkout ha sido vaciado exitosamente!');
+            return back()->with('success', '¡El archivo de logs de checkout ha sido reiniciado e inicializado exitosamente!');
         } catch (\Throwable $e) {
             Log::error('Error al vaciar checkout.log: ' . $e->getMessage());
-            return back()->with('error', 'No se pudo vaciar el archivo de logs: ' . $e->getMessage());
+            return back()->with('error', 'No se pudo vaciar o inicializar el archivo de logs: ' . $e->getMessage());
         }
     }
 

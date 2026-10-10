@@ -304,6 +304,43 @@
                     </div>
                 @endif
 
+                @if(isset($isLogsWritable) && !$isLogsWritable)
+                    <div class="alert-custom alert-danger" style="margin-bottom: 1.5rem; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); color: #FCA5A5; padding: 1.25rem; border-radius: 12px;">
+                        <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+                            <span style="font-size: 1.4rem;">⚠️</span>
+                            <div style="flex: 1;">
+                                <strong style="color: #EF4444; font-size: 0.95rem; display: block; margin-bottom: 0.25rem;">Permisos insuficientes en el servidor (storage/logs):</strong>
+                                <p style="margin: 0 0 0.65rem 0; font-size: 0.85rem; color: #E2E8F0; line-height: 1.5;">
+                                    El servidor web no tiene permisos para crear o escribir archivos en la carpeta <code style="color: #F87171;">storage/logs/</code>. Por este motivo no se registran las transacciones de checkout en producción. Ejecuta en tu servidor por SSH / consola:
+                                </p>
+                                <div style="background: rgba(0,0,0,0.5); padding: 0.65rem 0.85rem; border-radius: 8px; font-family: monospace; font-size: 0.85rem; color: #34D399; user-select: all; display: inline-block;">
+                                    sudo chown -R www-data:www-data storage && sudo chmod -R 775 storage
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @elseif(!$fileExists)
+                    <div class="alert-custom alert-warning" style="margin-bottom: 1.5rem; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.4); color: #FCD34D; padding: 1.25rem; border-radius: 12px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+                                <span style="font-size: 1.4rem;">ℹ️</span>
+                                <div>
+                                    <strong style="color: #F59E0B; font-size: 0.95rem;">El archivo checkout.log aún no se ha creado en producción</strong>
+                                    <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #E2E8F0; line-height: 1.5;">
+                                        Este archivo se genera automáticamente cuando un cliente entra al checkout o realiza un pago. También puedes inicializarlo ahora mismo con el botón a la derecha.
+                                    </p>
+                                </div>
+                            </div>
+                            <form action="{{ route('web.checkout_logs.clear') }}" method="POST" style="margin: 0;">
+                                @csrf
+                                <button type="submit" class="term-btn" style="background: rgba(255, 85, 0, 0.2); border-color: rgba(255, 85, 0, 0.5); color: #FF7700; font-weight: 700; white-space: nowrap;">
+                                    🚀 Inicializar Archivo Ahora
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                @endif
+
                 <!-- ENCABEZADO PRINCIPAL & ACCIONES GLOBALES -->
                 <div class="settings-header-banner" style="margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1.25rem;">
                     <div>

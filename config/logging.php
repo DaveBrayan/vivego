@@ -61,7 +61,7 @@ return [
         'checkout' => [
             'driver' => 'single',
             'path' => storage_path('logs/checkout.log'),
-            'level' => env('LOG_LEVEL', 'debug'),
+            'level' => env('LOG_CHECKOUT_LEVEL', 'debug'),
             'replace_placeholders' => true,
         ],
 
