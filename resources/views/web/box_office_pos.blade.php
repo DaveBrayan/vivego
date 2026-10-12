@@ -86,6 +86,29 @@
             user-select: none;
         }
 
+        #editSaleEmailModal {
+            position: fixed !important;
+            inset: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background: rgba(5, 5, 10, 0.85) !important;
+            backdrop-filter: blur(10px) !important;
+            z-index: 999999 !important;
+            display: none !important;
+            align-items: center !important;
+            justify-content: center !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+            transition: opacity 0.25s ease, visibility 0.25s ease !important;
+        }
+        #editSaleEmailModal.active {
+            display: flex !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            pointer-events: auto !important;
+        }
+
         .pos-header-card {
             background: linear-gradient(135deg, rgba(20, 20, 30, 0.95), rgba(30, 30, 45, 0.95));
             border: 1.5px solid rgba(255, 85, 0, 0.3);
@@ -1765,8 +1788,24 @@
     <div id="thermalReceiptContainer" style="display: none;"></div>
 
     <!-- MODAL CORRECCIÓN Y REENVÍO DE CORREO (POS / TAQUILLA) -->
-    <div class="admin-modal-overlay" id="editSaleEmailModal" style="display: none; position: fixed; inset: 0; background: rgba(5, 5, 10, 0.85); backdrop-filter: blur(8px); z-index: 99999; align-items: center; justify-content: center;">
-        <div class="admin-modal-card" style="max-width: 520px; width: 92%; background: #12131C; border: 1.5px solid rgba(255, 85, 0, 0.4); border-radius: 20px; padding: 1.5rem; box-shadow: 0 25px 70px rgba(0, 0, 0, 0.8), 0 0 35px rgba(255, 85, 0, 0.15); color: #FFFFFF;">
+    <style>
+        #editSaleEmailModal.active {
+            display: flex !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            z-index: 999999 !important;
+        }
+        #editSaleEmailModal.active .admin-modal-card {
+            transform: scale(1) translateY(0) !important;
+        }
+        #editSaleEmailModal:not(.active) {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+        }
+    </style>
+    <div class="admin-modal-overlay" id="editSaleEmailModal" style="display: none; z-index: 999999;" onclick="if(event.target === this) closeEditEmailModal()">
+        <div class="admin-modal-card" style="max-width: 520px; width: 92%; background: #12131C; border: 1.5px solid rgba(255, 85, 0, 0.4); border-radius: 20px; padding: 1.5rem; box-shadow: 0 25px 70px rgba(0, 0, 0, 0.8), 0 0 35px rgba(255, 85, 0, 0.15); color: #FFFFFF;" onclick="event.stopPropagation()">
             <!-- Header -->
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.75rem; margin-bottom: 1rem;">
                 <div style="display: flex; align-items: center; gap: 0.65rem;">
@@ -1994,8 +2033,62 @@
 
         function getSaleObject(saleOrId) {
             if (typeof saleOrId === 'object' && saleOrId !== null) return saleOrId;
-            if (window.posSalesMap && window.posSalesMap[saleOrId]) return window.posSalesMap[saleOrId];
-            return null;
+            if (!saleOrId) return null;
+
+            let sale = null;
+            if (window.posSalesMap) {
+                if (window.posSalesMap[saleOrId]) sale = window.posSalesMap[saleOrId];
+                else if (window.posSalesMap[String(saleOrId)]) sale = window.posSalesMap[String(saleOrId)];
+                else if (window.posSalesMap[Number(saleOrId)]) sale = window.posSalesMap[Number(saleOrId)];
+                else {
+                    const found = Object.values(window.posSalesMap).find(s => s && String(s.id) === String(saleOrId));
+                    if (found) sale = found;
+                }
+            }
+
+            // Fallback directo desde el DOM de la fila en la tabla si existe
+            const row = document.querySelector(`tr[data-sale-id="${saleOrId}"]`);
+            if (row) {
+                const buyerEmail = row.getAttribute('data-buyer-email') || '';
+                const buyerName = row.getAttribute('data-buyer-name') || '';
+                const buyerDni = row.getAttribute('data-buyer-dni') || '';
+                const receiptNum = row.getAttribute('data-receipt-number') || `REC-${saleOrId}`;
+                const emailFailed = row.getAttribute('data-email-failed') === '1' || row.querySelector('.badge-email-failed') !== null;
+                const emailSent = row.getAttribute('data-email-sent') === '1';
+                const emailError = row.getAttribute('data-email-error') || '';
+
+                if (!sale) {
+                    sale = {
+                        id: Number(saleOrId),
+                        event_id: (typeof eventId !== 'undefined') ? eventId : null,
+                        receipt_number: receiptNum,
+                        buyer_name: buyerName,
+                        buyer_dni: buyerDni,
+                        buyer_email: buyerEmail,
+                        email_failed: emailFailed,
+                        email_sent: emailSent,
+                        email_error: emailError,
+                        quantity: 1,
+                        tickets_data: {
+                            customer_email: buyerEmail,
+                            buyer_email: buyerEmail,
+                            customer_name: buyerName,
+                            buyer_name: buyerName,
+                            buyer_dni: buyerDni
+                        }
+                    };
+                    if (!window.posSalesMap) window.posSalesMap = {};
+                    window.posSalesMap[saleOrId] = sale;
+                } else {
+                    if (!sale.buyer_email && buyerEmail) sale.buyer_email = buyerEmail;
+                    if (!sale.buyer_name && buyerName) sale.buyer_name = buyerName;
+                    if (!sale.buyer_dni && buyerDni) sale.buyer_dni = buyerDni;
+                    if (emailFailed) sale.email_failed = true;
+                    if (emailError && !sale.email_error) sale.email_error = emailError;
+                }
+            }
+
+            return sale;
         }
 
         // ==========================================
@@ -5188,27 +5281,35 @@
 
         // Abrir modal de corrección de correo
         function openEditEmailModal(saleOrId) {
-            const sale = getSaleObject(saleOrId);
-            if (!sale) {
+            let sale = getSaleObject(saleOrId);
+            const targetSaleId = (typeof saleOrId === 'object' && saleOrId !== null) ? saleOrId.id : saleOrId;
+            const row = document.querySelector(`tr[data-sale-id="${targetSaleId}"]`);
+
+            if (!sale && !row) {
                 console.error('[POS Correo] Venta no encontrada:', saleOrId);
                 return;
             }
-            activeEditEmailSaleId = sale.id;
 
-            const row = document.querySelector(`tr[data-sale-id="${sale.id}"]`);
-            let buyerEmail = sale.buyer_email || '';
-            let buyerName = sale.buyer_name || '';
-            let receiptNum = sale.receipt_number || (sale.receipt ? sale.receipt.receipt_number : `REC-${sale.id}`);
-            let emailError = '';
+            const saleId = sale ? sale.id : targetSaleId;
+            activeEditEmailSaleId = saleId;
+
+            let buyerEmail = (sale && sale.buyer_email) ? sale.buyer_email : '';
+            let buyerName = (sale && sale.buyer_name) ? sale.buyer_name : '';
+            let receiptNum = (sale && sale.receipt_number) ? sale.receipt_number : (sale && sale.receipt ? sale.receipt.receipt_number : '');
+            let emailError = (sale && sale.email_error) ? sale.email_error : '';
 
             if (row) {
                 buyerEmail = row.getAttribute('data-buyer-email') || buyerEmail;
                 buyerName = row.getAttribute('data-buyer-name') || buyerName;
                 receiptNum = row.getAttribute('data-receipt-number') || receiptNum;
-                emailError = row.getAttribute('data-email-error') || '';
+                emailError = row.getAttribute('data-email-error') || emailError;
             }
 
-            if (!buyerEmail && sale.tickets_data) {
+            if (!receiptNum) {
+                receiptNum = `REC-${String(saleId).padStart(6, '0')}`;
+            }
+
+            if (!buyerEmail && sale && sale.tickets_data) {
                 const td = (typeof sale.tickets_data === 'string') ? JSON.parse(sale.tickets_data) : sale.tickets_data;
                 if (td) {
                     buyerEmail = td.customer_email || td.buyer_email || td.email || '';
@@ -5216,13 +5317,17 @@
             }
 
             if (!buyerEmail && window.posExistingClients && Array.isArray(window.posExistingClients)) {
-                const found = window.posExistingClients.find(c => (c.dni && sale.buyer_dni && c.dni === sale.buyer_dni && c.email && c.email.includes('@')) || (c.name && sale.buyer_name && c.name.toLowerCase().trim() === sale.buyer_name.toLowerCase().trim() && c.email && c.email.includes('@')));
+                const bDni = (sale && sale.buyer_dni) || (row ? row.getAttribute('data-buyer-dni') : '');
+                const found = window.posExistingClients.find(c => 
+                    (c.dni && bDni && c.dni === bDni && c.email && c.email.includes('@')) || 
+                    (c.name && buyerName && c.name.toLowerCase().trim() === buyerName.toLowerCase().trim() && c.email && c.email.includes('@'))
+                );
                 if (found && found.email) {
                     buyerEmail = found.email.trim();
                 }
             }
 
-            if (!emailError && sale.latest_email_log && sale.latest_email_log.status === 'failed') {
+            if (!emailError && sale && sale.latest_email_log && sale.latest_email_log.status === 'failed') {
                 emailError = sale.latest_email_log.error_message || 'Fallo de entrega reportado por el servidor de correo.';
             }
 
@@ -5255,6 +5360,7 @@
 
             const modal = document.getElementById('editSaleEmailModal');
             if (modal) {
+                modal.classList.add('active');
                 modal.style.display = 'flex';
                 setTimeout(() => { if (emailInput) emailInput.focus(); }, 150);
             }
@@ -5263,6 +5369,7 @@
         function closeEditEmailModal() {
             const modal = document.getElementById('editSaleEmailModal');
             if (modal) {
+                modal.classList.remove('active');
                 modal.style.display = 'none';
             }
             activeEditEmailSaleId = null;
@@ -5464,8 +5571,13 @@
             });
 
             try {
-                const { pdf } = await generatePosTicketPdfDoc(sale);
-                const pdfBase64 = pdf ? pdf.output('datauristring') : '';
+                let pdfBase64 = '';
+                try {
+                    const { pdf } = await generatePosTicketPdfDoc(sale);
+                    pdfBase64 = pdf ? pdf.output('datauristring') : '';
+                } catch (pdfErr) {
+                    console.warn('[POS Email] Advertencia al generar PDF en cliente, el servidor procesará el adjunto estándar:', pdfErr);
+                }
 
                 const res = await fetch(`/admin/taquilla/venta/${sale.id}/enviar-correo`, {
                     method: 'POST',
@@ -5550,18 +5662,25 @@
             }
 
             const sale = getSaleObject(saleOrId);
-            if (!sale) {
+            const targetSaleId = (typeof saleOrId === 'object' && saleOrId !== null) ? saleOrId.id : saleOrId;
+            const row = document.querySelector(`tr[data-sale-id="${targetSaleId}"]`);
+
+            if (!sale && !row) {
                 console.error('[CanvaStudio POS Email] Venta no encontrada:', saleOrId);
                 return;
             }
 
-            const saleId = sale.id;
-            const row = document.querySelector(`tr[data-sale-id="${saleId}"]`);
-            const isEmailFailed = (row && row.getAttribute('data-email-failed') === '1') || (sale.latest_email_log && sale.latest_email_log.status === 'failed');
+            const saleId = sale ? sale.id : targetSaleId;
+
+            // Detección precisa de fallo de entrega previa de correo
+            const isEmailFailed = (row && (row.getAttribute('data-email-failed') === '1' || row.querySelector('.badge-email-failed') !== null))
+                || (sale && sale.email_failed === true)
+                || (sale && sale.latest_email_log && sale.latest_email_log.status === 'failed')
+                || (sale && sale.email_error && String(sale.email_error).trim().length > 0);
 
             // 1. Buscar si el comprador ya tiene un correo registrado
             let buyerEmail = '';
-            if (sale.buyer_email && sale.buyer_email.includes('@')) {
+            if (sale && sale.buyer_email && sale.buyer_email.includes('@')) {
                 buyerEmail = sale.buyer_email.trim();
             }
 
@@ -5570,7 +5689,7 @@
                 if (rEmail && rEmail.includes('@')) buyerEmail = rEmail.trim();
             }
 
-            if (!buyerEmail && sale.tickets_data) {
+            if (!buyerEmail && sale && sale.tickets_data) {
                 const td = (typeof sale.tickets_data === 'string') ? JSON.parse(sale.tickets_data) : sale.tickets_data;
                 if (td) {
                     const candidate = td.customer_email || td.buyer_email || td.email;
@@ -5582,17 +5701,24 @@
 
             // Buscar en lista de clientes existentes por DNI o Nombre
             if (!buyerEmail && window.posExistingClients && Array.isArray(window.posExistingClients)) {
-                const found = window.posExistingClients.find(c => (c.dni && sale.buyer_dni && c.dni === sale.buyer_dni && c.email && c.email.includes('@')) || (c.name && sale.buyer_name && c.name.toLowerCase().trim() === sale.buyer_name.toLowerCase().trim() && c.email && c.email.includes('@')));
+                const bDni = (sale && sale.buyer_dni) || (row ? row.getAttribute('data-buyer-dni') : '');
+                const bName = (sale && sale.buyer_name) || (row ? row.getAttribute('data-buyer-name') : '');
+                const found = window.posExistingClients.find(c => 
+                    (c.dni && bDni && c.dni === bDni && c.email && c.email.includes('@')) || 
+                    (c.name && bName && c.name.toLowerCase().trim() === bName.toLowerCase().trim() && c.email && c.email.includes('@'))
+                );
                 if (found && found.email) {
                     buyerEmail = found.email.trim();
                 }
             }
 
             // CONDICIÓN REQUERIDA POR EL USUARIO:
-            // Si la venta tiene error de entrega o no tiene correo: mostrar el modal para corregir.
-            // Si NO tiene error de entrega y tiene su correo: enviar directo SIN abrir el modal.
+            // Si la venta tiene error de entrega ("Correo no entregado") o no tiene correo:
+            // Abrir inmediatamente el modal para corregir y enviar.
+            // Si NO tiene error de entrega y ya tiene su correo:
+            // Enviar directo SIN abrir el modal.
             if (isEmailFailed || !buyerEmail) {
-                openEditEmailModal(sale);
+                openEditEmailModal(sale || saleId);
                 return;
             }
 
