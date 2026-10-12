@@ -1457,6 +1457,26 @@
     <script src="https://checkout.culqi.com/js/v4"></script>
 
     <script>
+        // Prevención estricta: No permitir volver al formulario de checkout tras un pago completado (Botón Atrás / Historial / BFCache)
+        (function () {
+            try {
+                const lastPaidUrl = sessionStorage.getItem('vivego_last_sale_redirect');
+                if (lastPaidUrl) {
+                    window.location.replace(lastPaidUrl);
+                    return;
+                }
+            } catch (e) {}
+
+            window.addEventListener('pageshow', function (event) {
+                try {
+                    const lastPaidUrl = sessionStorage.getItem('vivego_last_sale_redirect');
+                    if (lastPaidUrl && (event.persisted || (window.performance && window.performance.navigation && window.performance.navigation.type === 2))) {
+                        window.location.replace(lastPaidUrl);
+                    }
+                } catch (e) {}
+            });
+        })();
+
         function getCsrfToken() {
             return window.activeCsrfToken || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
         }
@@ -1914,7 +1934,10 @@
                 const data = await response.json();
 
                 if (data.success && data.redirect_url) {
-                    window.location.href = data.redirect_url;
+                    try {
+                        sessionStorage.setItem('vivego_last_sale_redirect', data.redirect_url);
+                    } catch (e) {}
+                    window.location.replace(data.redirect_url);
                 } else {
                     btn.disabled = false;
                     btn.innerHTML = `<span>🎁 Confirmar Entradas de Cortesía Gratis</span>`;
@@ -2097,7 +2120,10 @@
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.redirect_url) {
-                    window.location.href = data.redirect_url;
+                    try {
+                        sessionStorage.setItem('vivego_last_sale_redirect', data.redirect_url);
+                    } catch (e) {}
+                    window.location.replace(data.redirect_url);
                 } else {
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({
@@ -2113,7 +2139,7 @@
             })
             .catch(err => {
                 console.error('Error completando pago:', err);
-                window.location.href = "{{ route('customer.my_tickets') }}";
+                window.location.replace("{{ route('customer.my_tickets') }}");
             });
 
             return false;
@@ -2328,7 +2354,10 @@
                 if (data.success && data.is_paid) {
                     if (culqiPollingInterval) clearInterval(culqiPollingInterval);
                     if (data.redirect_url) {
-                        window.location.href = data.redirect_url;
+                        try {
+                            sessionStorage.setItem('vivego_last_sale_redirect', data.redirect_url);
+                        } catch (e) {}
+                        window.location.replace(data.redirect_url);
                     } else {
                         processCulqiComplete({ order_id: currentCulqiOrderId });
                     }
@@ -2430,7 +2459,10 @@
                         clearInterval(culqiPollingInterval);
                         if (typeof Culqi !== 'undefined' && Culqi.close) Culqi.close();
                         if (data.redirect_url) {
-                            window.location.href = data.redirect_url;
+                            try {
+                                sessionStorage.setItem('vivego_last_sale_redirect', data.redirect_url);
+                            } catch (e) {}
+                            window.location.replace(data.redirect_url);
                         } else {
                             processCulqiComplete({ order_id: orderId });
                         }
@@ -2513,7 +2545,10 @@
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.redirect_url) {
-                    window.location.href = data.redirect_url;
+                    try {
+                        sessionStorage.setItem('vivego_last_sale_redirect', data.redirect_url);
+                    } catch (e) {}
+                    window.location.replace(data.redirect_url);
                 } else {
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({
@@ -2529,7 +2564,7 @@
             })
             .catch(err => {
                 console.error('Error completando pago Culqi:', err);
-                window.location.href = "{{ route('customer.my_tickets') }}";
+                window.location.replace("{{ route('customer.my_tickets') }}");
             });
         }
 

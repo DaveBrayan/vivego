@@ -781,6 +781,9 @@
             const zoneName = selectedUpgradeZone.name;
             const checkoutUrl = `{{ route('web.checkout') }}?upgrade_sale_id=${saleId}&upgrade_zone=${encodeURIComponent(zoneName)}`;
 
+            try {
+                sessionStorage.removeItem('vivego_last_sale_redirect');
+            } catch (e) {}
             window.location.href = checkoutUrl;
         }
     </script>

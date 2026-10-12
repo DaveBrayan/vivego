@@ -243,10 +243,10 @@
 
             <!-- Botones de Acción -->
             <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                <a href="{{ route('web.customer.tickets') }}" style="background: linear-gradient(135deg, #FF5500, #E64A00); color: #FFF; text-decoration: none; padding: 0.9rem 2rem; font-weight: 800; border-radius: 12px; font-size: 1rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 14px rgba(255,85,0,0.3);">
+                <a href="{{ route('web.customer.tickets') }}" onclick="clearCheckoutHistoryRedirect();" style="background: linear-gradient(135deg, #FF5500, #E64A00); color: #FFF; text-decoration: none; padding: 0.9rem 2rem; font-weight: 800; border-radius: 12px; font-size: 1rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 14px rgba(255,85,0,0.3);">
                     🎟️ Ver Mis Boletos en Línea
                 </a>
-                <a href="{{ route('web.home') }}" style="background: #FFFFFF; color: #334155; border: 1.5px solid #CBD5E1; text-decoration: none; padding: 0.9rem 1.85rem; font-weight: 700; border-radius: 12px; font-size: 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <a href="{{ route('web.home') }}" onclick="clearCheckoutHistoryRedirect();" style="background: #FFFFFF; color: #334155; border: 1.5px solid #CBD5E1; text-decoration: none; padding: 0.9rem 1.85rem; font-weight: 700; border-radius: 12px; font-size: 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
                     🏠 Volver a la Cartelera
                 </a>
                 <button type="button" onclick="window.print();" style="background: #F1F5F9; color: #334155; border: 1.5px solid #CBD5E1; padding: 0.9rem 1.5rem; font-weight: 700; border-radius: 12px; font-size: 1rem; cursor: pointer;">
@@ -257,4 +257,19 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Proteger el historial: Evitar que el botón Atrás regrese a la pantalla de checkout procesada
+    (function () {
+        if (window.history && window.history.replaceState) {
+            window.history.replaceState(null, document.title, window.location.href);
+        }
+    })();
+
+    function clearCheckoutHistoryRedirect() {
+        try {
+            sessionStorage.removeItem('vivego_last_sale_redirect');
+        } catch (e) {}
+    }
+</script>
 @endsection

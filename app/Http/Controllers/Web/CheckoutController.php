@@ -89,8 +89,23 @@ class CheckoutController extends Controller
     /**
      * Muestra la página completa de Carrito & Checkout
      */
-    public function show(Request $request): View
+    public function show(Request $request): View|\Illuminate\Http\RedirectResponse
     {
+        // 0. Si el usuario intenta volver al checkout tras completar un pago (ej. botón Atrás en el navegador)
+        // y no está enviando un nuevo carrito ni una solicitud de mejora, redirigirlo a su confirmación de compra
+        if ($request->isMethod('get') && !$request->has('tickets') && !$request->has('upgrade_sale_id')) {
+            $lastSaleId = session('last_completed_sale_id');
+            if ($lastSaleId) {
+                $recentSale = TicketSale::find($lastSaleId);
+                if ($recentSale) {
+                    return redirect()->route('web.checkout.confirmation', $recentSale->id);
+                }
+            }
+        } else {
+            // Si inicia una compra nueva deliberada o mejora de entrada, limpiar la venta anterior
+            session()->forget('last_completed_sale_id');
+        }
+
         $izipay = PaymentGateway::getIzipay();
         $culqi = PaymentGateway::getCulqi();
 
@@ -735,7 +750,10 @@ class CheckoutController extends Controller
                 'customer_email' => $customerUser->email,
                 'customer_dni' => $customerUser->dni,
                 'customer_phone' => $customerUser->phone,
+                'last_completed_sale_id' => $sale->id,
             ]);
+        } else {
+            session(['last_completed_sale_id' => $sale->id]);
         }
 
         // 2. Enviar Correo Electrónico Automático con Recibo, Boletos y Credenciales y registrar en EmailLog
@@ -1138,6 +1156,18 @@ class CheckoutController extends Controller
             }
         }
 
+        if (session()) {
+            session(['last_completed_sale_id' => $sale->id]);
+            if ($event) {
+                session()->forget([
+                    'checkout_cart_' . $event->id,
+                    'checkout_event_id',
+                    'checkout_event_slug',
+                    'active_culqi_order_id',
+                ]);
+            }
+        }
+
         // 13. Enviar Correo Electrónico Automático
         if (!empty($buyerEmail) && filter_var($buyerEmail, FILTER_VALIDATE_EMAIL)) {
             \App\Services\EmailLogService::sendTicketPurchaseMail($sale, $tempPassword, $isNewUser, $clientOverrideData['ticket_pdf_base64'] ?? null);
@@ -1177,6 +1207,7 @@ class CheckoutController extends Controller
                 ], 422);
             }
 
+            session(['last_completed_sale_id' => $sale->id]);
             return response()->json([
                 'success' => true,
                 'message' => '¡Pago procesado exitosamente con Culqi!',
@@ -1193,6 +1224,7 @@ class CheckoutController extends Controller
             $existingSaleToken = TicketSale::where('tickets_data', 'LIKE', '%' . $tokenId . '%')->first();
             if ($existingSaleToken) {
                 $this->logCheckout('info', "Culqi [Idempotencia Tarjeta]: Token {$tokenId} ya procesado con Venta #{$existingSaleToken->id}");
+                session(['last_completed_sale_id' => $existingSaleToken->id]);
                 return response()->json([
                     'success' => true,
                     'message' => '¡Pago ya registrado previamente!',
@@ -1456,6 +1488,7 @@ class CheckoutController extends Controller
                 'brand' => $brand,
             ]);
 
+            session(['last_completed_sale_id' => $sale->id]);
             return response()->json([
                 'success' => true,
                 'message' => '¡Pago procesado exitosamente con Culqi!',
@@ -1485,6 +1518,9 @@ class CheckoutController extends Controller
         // 1. Verificación rápida: si ya fue procesada y registrada en BD (ej. por Webhook), retornar éxito directo
         $existingSale = TicketSale::where('tickets_data', 'LIKE', '%' . $orderId . '%')->first();
         if ($existingSale) {
+            if (session()) {
+                session(['last_completed_sale_id' => $existingSale->id]);
+            }
             if (Cache::add("culqi_polling_completed_{$orderId}", true, now()->addMinutes(30))) {
                 $this->logCheckout('info', "Culqi [Pago Confirmado]: Orden {$orderId} ya confirmada previamente en BD con Venta #{$existingSale->id}");
             }
@@ -1520,6 +1556,9 @@ class CheckoutController extends Controller
         if ($isPaid) {
             $sale = $this->processCulqiPaidOrder($orderId, $culqiService, $request->all());
             if ($sale) {
+                if (session()) {
+                    session(['last_completed_sale_id' => $sale->id]);
+                }
                 $saleId = $sale->id;
                 $redirectUrl = route('web.checkout.confirmation', $sale->id);
             }
@@ -1748,7 +1787,10 @@ class CheckoutController extends Controller
                 'customer_email' => $customerUser->email,
                 'customer_dni' => $customerUser->dni,
                 'customer_phone' => $customerUser->phone,
+                'last_completed_sale_id' => $sale->id,
             ]);
+        } else {
+            session(['last_completed_sale_id' => $sale->id]);
         }
 
         // Enviar Correo Electrónico Automático con Boletos y Recibo y registrar en EmailLog
@@ -1782,6 +1824,32 @@ class CheckoutController extends Controller
      */
     public function confirmation(TicketSale $sale): View
     {
+        // 1. Limpiar variables temporales de carrito de la sesión
+        session()->forget([
+            'checkout_cart_' . $sale->event_id,
+            'checkout_event_id',
+            'checkout_event_slug',
+            'active_culqi_order_id',
+        ]);
+
+        // 2. Registrar la venta reciente completada para evitar volver al formulario de pago
+        session(['last_completed_sale_id' => $sale->id]);
+
+        // 3. Autologuear al cliente si no está logueado
+        if ($sale->buyer_email && !session('customer_logged_in')) {
+            $customerUser = User::where('email', strtolower($sale->buyer_email))->first();
+            if ($customerUser) {
+                session([
+                    'customer_logged_in' => true,
+                    'customer_id' => $customerUser->id,
+                    'customer_name' => $customerUser->name,
+                    'customer_email' => $customerUser->email,
+                    'customer_dni' => $customerUser->dni,
+                    'customer_phone' => $customerUser->phone,
+                ]);
+            }
+        }
+
         return view('web.checkout_confirmation', compact('sale'));
     }
 

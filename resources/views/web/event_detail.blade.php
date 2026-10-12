@@ -995,6 +995,9 @@
 
                         document.getElementById('hiddenCheckoutDate').value = currentSelectedDate || "Fecha Oficial";
                         document.getElementById('hiddenCheckoutTickets').value = JSON.stringify(selectedTicketsArray);
+                        try {
+                            sessionStorage.removeItem('vivego_last_sale_redirect');
+                        } catch (e) {}
                         formGoToCheckout.submit();
                     });
                 });
