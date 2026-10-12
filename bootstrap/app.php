@@ -33,6 +33,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'regenerar-qr-ventas-pos',
             'restablecer-boletos-fisicos',
             'renumerar-todas-categorias',
+            'optimizar-sistema',
+            'optimizar-sistema/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

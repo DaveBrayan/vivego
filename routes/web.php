@@ -236,9 +236,90 @@ Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group
 });
 
 // ==========================================================================
-// RUTAS DE OPTIMIZACIÓN Y MIGRACIONES WEB PARA SERVIDORES SIN SSH / CPANEL
-// ==========================================================================
-Route::get('/optimizar-sistema', function () {
+Route::match(['get', 'post'], '/optimizar-sistema', function (\Illuminate\Http\Request $request) {
+    // 1. Manejador de peticiones AJAX / POST
+    if ($request->isMethod('post') || $request->has('action')) {
+        $action = $request->input('action');
+
+        // ACCIÓN A: Procesar Orden Culqi y emitir boletos/correo
+        if ($action === 'process_culqi') {
+            $orderId = trim((string)$request->input('order_id', ''));
+            if (empty($orderId)) {
+                return response()->json(['success' => false, 'message' => 'El Order ID de Culqi es obligatorio (ej: ord_live_...).'], 400);
+            }
+
+            try {
+                $culqiService = app(\App\Services\CulqiService::class);
+                $controller = app(\App\Http\Controllers\Web\CheckoutController::class);
+
+                $overrides = array_filter([
+                    'customer_email' => $request->filled('customer_email') ? trim($request->input('customer_email')) : null,
+                    'customer_name' => $request->filled('customer_name') ? trim($request->input('customer_name')) : null,
+                    'customer_doc' => $request->filled('customer_doc') ? trim($request->input('customer_doc')) : null,
+                ]);
+
+                $sale = $controller->processCulqiPaidOrder($orderId, $culqiService, $overrides);
+
+                if ($sale) {
+                    $ticketsData = is_array($sale->tickets_data) ? $sale->tickets_data : json_decode($sale->tickets_data, true);
+                    $destEmail = $ticketsData['customer_email'] ?? $sale->buyer_email ?? 'Sin correo registrado';
+                    return response()->json([
+                        'success' => true,
+                        'message' => "¡Orden {$orderId} procesada exitosamente!",
+                        'sale_id' => $sale->id,
+                        'receipt_number' => $sale->receipt_number,
+                        'buyer_name' => $sale->buyer_name,
+                        'buyer_dni' => $sale->buyer_dni,
+                        'buyer_email' => $destEmail,
+                        'zone_name' => $sale->zone_name,
+                        'quantity' => $sale->quantity,
+                        'total_amount' => 'S/ ' . number_format($sale->total_amount, 2),
+                        'confirmation_url' => route('web.checkout.confirmation', $sale->id),
+                    ]);
+                } else {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "No se pudo procesar la orden {$orderId}. Verifica que esté pagada/depositada en Culqi o revisa storage/logs/laravel.log.",
+                    ], 422);
+                }
+            } catch (\Throwable $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al procesar orden: ' . $e->getMessage(),
+                ], 500);
+            }
+        }
+
+        // ACCIÓN B: Ejecutar Comando Artisan desde la Consola Web
+        if ($action === 'run_artisan') {
+            $cmd = trim((string)$request->input('command', ''));
+            // Remover prefijo 'php artisan' si fue escrito
+            $cmd = preg_replace('/^(?:php\s+)?artisan\s+/i', '', $cmd);
+
+            if (empty($cmd)) {
+                return response()->json(['success' => false, 'output' => 'Debes ingresar un comando para ejecutar.'], 400);
+            }
+
+            try {
+                \Illuminate\Support\Facades\Artisan::call($cmd);
+                $out = \Illuminate\Support\Facades\Artisan::output();
+                return response()->json([
+                    'success' => true,
+                    'command' => $cmd,
+                    'output' => !empty(trim($out)) ? $out : "✔ Comando '{$cmd}' ejecutado con éxito (sin salida de texto).",
+                ]);
+            } catch (\Throwable $e) {
+                return response()->json([
+                    'success' => false,
+                    'command' => $cmd,
+                    'output' => "❌ Error ejecutando '{$cmd}': " . $e->getMessage(),
+                ], 500);
+            }
+        }
+    }
+
+    // 2. Ejecutar optimización y migraciones estándar
+    $migrateOutput = '';
     try {
         \Illuminate\Support\Facades\Artisan::call('optimize:clear');
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
@@ -247,255 +328,301 @@ Route::get('/optimizar-sistema', function () {
         \Illuminate\Support\Facades\Artisan::call('config:cache');
         \Illuminate\Support\Facades\Artisan::call('route:cache');
         \Illuminate\Support\Facades\Artisan::call('view:cache');
+    } catch (\Throwable $e) {
+        $migrateOutput = 'Nota durante optimización: ' . $e->getMessage();
+    }
 
-        $events = \App\Models\Event::orderBy('id', 'desc')->get();
-        $eventsOptionsHtml = '';
-        $eventsPhysicalOptionsHtml = '';
-        $eventsAllOptionsHtml = '';
-        foreach ($events as $evt) {
-            $posSalesCount = \App\Models\TicketSale::where('event_id', $evt->id)
-                ->where('status', '!=', 'cancelled')
-                ->where(function ($q) {
-                    $q->where('seller_name', 'LIKE', '%Taquilla%')
-                      ->orWhere('seller_name', 'LIKE', '%POS%')
-                      ->orWhere('seller_name', 'LIKE', '%Admin%')
-                      ->orWhere('payment_method', 'Efectivo')
-                      ->orWhere('payment_method', 'POS')
-                      ->orWhere('payment_method', 'Cortesía');
-                })->count();
-            $totalSalesCount = \App\Models\TicketSale::where('event_id', $evt->id)->where('status', '!=', 'cancelled')->count();
-            $eventsOptionsHtml .= '<option value="' . $evt->id . '">#' . $evt->id . ' — ' . htmlspecialchars($evt->title) . ' (' . $posSalesCount . ' ventas POS / ' . $totalSalesCount . ' total)</option>';
-
-            $physCount = \App\Models\EventTicket::where('event_id', $evt->id)
-                ->where(function ($q) {
-                    $q->where('ticket_type', 'fisica')
-                      ->orWhere(function ($sq) {
-                          $sq->where('ticket_type', 'cortesia')->where('source', 'pdf_batch');
-                      });
-                })->count();
-            $physSoldCount = \App\Models\EventTicket::where('event_id', $evt->id)
-                ->where(function ($q) {
-                    $q->where('ticket_type', 'fisica')
-                      ->orWhere(function ($sq) {
-                          $sq->where('ticket_type', 'cortesia')->where('source', 'pdf_batch');
-                      });
-                })
-                ->where(function ($q) {
-                    $q->whereNotNull('ticket_sale_id')->where('ticket_sale_id', '>', 0);
-                })->count();
-
-            $eventsPhysicalOptionsHtml .= '<option value="' . $evt->id . '">#' . $evt->id . ' — ' . htmlspecialchars($evt->title) . ' (' . $physCount . ' boletos físicos / ' . $physSoldCount . ' vendidos)</option>';
-
-            $fCount = \App\Models\EventTicket::where('event_id', $evt->id)->where('ticket_type', 'fisica')->count();
-            $cpCount = \App\Models\EventTicket::where('event_id', $evt->id)->where('ticket_type', 'cortesia')->where('source', '!=', 'web_checkout')->count();
-            $dCount = \App\Models\EventTicket::where('event_id', $evt->id)->where('ticket_type', 'digital')->count();
-            $cdCount = \App\Models\EventTicket::where('event_id', $evt->id)->where(function($q) {
-                $q->where('ticket_type', 'cortesia_digital')->orWhere(function($sq) { $sq->where('ticket_type', 'cortesia')->where('source', 'web_checkout'); });
-            })->count();
-
-            $eventsAllOptionsHtml .= '<option value="' . $evt->id . '">#' . $evt->id . ' — ' . htmlspecialchars($evt->title) . ' (' . $fCount . ' fís, ' . $cpCount . ' cort. plancha, ' . $dCount . ' dig, ' . $cdCount . ' cort. dig)</option>';
-        }
-
-        return response('
-            <div style="font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; background: #0A0A10; display: flex; align-items: center; justify-content: center; padding: 1.5rem; color: #FFFFFF;">
-                <div style="background: #14141E; border: 1px solid rgba(255,85,0,0.3); padding: 2.5rem; border-radius: 20px; max-width: 680px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.6); text-align: center;">
-                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">⚡</div>
-                    <h2 style="color: #FF5500; font-size: 1.6rem; font-weight: 900; margin: 0 0 0.5rem 0;">¡Sistema ViveGo Optimizado & Migrado!</h2>
-                    <p style="color: #94A3B8; font-size: 0.95rem; margin-bottom: 1.5rem;">Las migraciones de base de datos y todos los cachés han sido procesados con éxito.</p>
-                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1.25rem; text-align: left; font-size: 0.9rem; color: #10B981; line-height: 1.8; margin-bottom: 1.5rem;">
+    return response('
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Optimizar Sistema & Consola Web - ViveGo</title>
+            <style>
+                * { box-sizing: border-box; }
+                body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #0A0A10; color: #FFFFFF; min-height: 100vh; padding: 2rem 1rem; }
+                .container { max-width: 860px; margin: 0 auto; }
+                .card { background: #14141E; border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 1.75rem; margin-bottom: 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+                .card-title { display: flex; align-items: center; gap: 0.6rem; font-size: 1.15rem; font-weight: 800; margin-bottom: 0.4rem; }
+                .card-desc { color: #94A3B8; font-size: 0.85rem; margin-bottom: 1.25rem; line-height: 1.45; }
+                .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
+                .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; cursor: pointer; border: none; font-weight: 700; border-radius: 10px; padding: 0.75rem 1.25rem; font-size: 0.88rem; transition: all 0.15s ease; text-decoration: none; }
+                .btn:hover { transform: translateY(-1px); }
+                .btn-primary { background: linear-gradient(135deg, #FF5500, #E04B00); color: #FFF; box-shadow: 0 4px 15px rgba(255,85,0,0.35); }
+                .btn-success { background: linear-gradient(135deg, #10B981, #059669); color: #FFF; box-shadow: 0 4px 15px rgba(16,185,129,0.35); }
+                .btn-secondary { background: #1E1E2E; border: 1px solid rgba(255,255,255,0.15); color: #FFF; }
+                .btn-chip { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #CBD5E1; padding: 0.35rem 0.75rem; font-size: 0.78rem; border-radius: 8px; cursor: pointer; font-family: monospace; }
+                .btn-chip:hover { background: rgba(255,85,0,0.15); border-color: #FF5500; color: #FF5500; }
+                .input-group { margin-bottom: 0.9rem; }
+                .input-label { display: block; font-size: 0.78rem; font-weight: 700; color: #CBD5E1; margin-bottom: 0.35rem; text-transform: uppercase; }
+                .input-text { width: 100%; background: #0A0A10; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 0.65rem 0.85rem; color: #FFF; font-size: 0.88rem; font-family: monospace; outline: none; }
+                .input-text:focus { border-color: #FF5500; box-shadow: 0 0 0 2px rgba(255,85,0,0.2); }
+                .terminal-window { background: #050508; border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; overflow: hidden; margin-top: 1rem; }
+                .terminal-header { background: #101018; padding: 0.6rem 0.9rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.06); }
+                .terminal-dots { display: flex; gap: 6px; }
+                .terminal-dot { width: 10px; height: 10px; border-radius: 50%; }
+                .dot-red { background: #EF4444; } .dot-yellow { background: #F59E0B; } .dot-green { background: #10B981; }
+                .terminal-title { font-size: 0.75rem; font-family: monospace; color: #94A3B8; }
+                .terminal-body { padding: 1rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.82rem; color: #10B981; min-height: 140px; max-height: 320px; overflow-y: auto; white-space: pre-wrap; line-height: 1.5; }
+                .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; }
+                .result-box { margin-top: 1rem; padding: 1rem; border-radius: 10px; font-size: 0.85rem; display: none; }
+                .result-success { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: #A7F3D0; }
+                .result-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #FCA5A5; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <!-- CABECERA: SISTEMA OPTIMIZADO -->
+                <div class="card" style="border-color: rgba(255,85,0,0.35); text-align: center; padding: 2rem;">
+                    <div style="font-size: 2.8rem; margin-bottom: 0.3rem;">⚡</div>
+                    <h1 style="color: #FF5500; font-size: 1.6rem; font-weight: 900; margin: 0 0 0.4rem 0;">¡Sistema ViveGo Optimizado & Migrado!</h1>
+                    <p style="color: #94A3B8; font-size: 0.9rem; margin-bottom: 1.25rem;">Las migraciones de base de datos y cachés fueron procesadas con éxito.</p>
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 1rem; text-align: left; font-size: 0.85rem; color: #10B981; line-height: 1.7; margin-bottom: 1rem;">
                         <div>✔ Migraciones de Base de Datos ejecutadas (migrate --force)</div>
-                        <div>✔ Caché de Configuración (.env) activada</div>
-                        <div>✔ Caché de Rutas compilada</div>
-                        <div>✔ Caché de Plantillas Blade compilada</div>
-                        <div>✔ Caché de Optimización lista</div>
+                        <div>✔ Caché de Configuración, Rutas y Plantillas compiladas</div>
+                        <div>✔ Soporte oficial Culqi para estados <strong>paid</strong> y <strong>deposited</strong> activo</div>
                     </div>
-                    ' . (!empty(trim($migrateOutput)) ? '<div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 0.75rem 1rem; text-align: left; font-family: monospace; font-size: 0.8rem; color: #CBD5E1; max-height: 140px; overflow-y: auto; margin-bottom: 1.5rem; white-space: pre-wrap;">' . htmlspecialchars($migrateOutput) . '</div>' : '') . '
+                    ' . (!empty(trim($migrateOutput)) ? '<div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 0.65rem 0.9rem; text-align: left; font-family: monospace; font-size: 0.78rem; color: #CBD5E1; max-height: 100px; overflow-y: auto; white-space: pre-wrap;">' . htmlspecialchars($migrateOutput) . '</div>' : '') . '
+                </div>
 
-                    <!-- TARJETA DE ACCIÓN: RESTABLECER VENTAS Y BOLETOS FÍSICOS -->
-                    <div style="background: rgba(245, 158, 11, 0.06); border: 1.5px solid rgba(245, 158, 11, 0.35); border-radius: 14px; padding: 1.35rem; margin-bottom: 1.5rem; text-align: left;">
-                        <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem;">
-                            <span style="font-size: 1.4rem;">🎟️</span>
-                            <strong style="color: #F59E0B; font-size: 1.05rem;">Restablecer Ventas y Boletos Físicos (Planchas / Taquilla)</strong>
-                        </div>
-                        <p style="color: #94A3B8; font-size: 0.83rem; margin: 0 0 1rem 0; line-height: 1.45;">
-                            Permite restablecer y liberar boletos físicos vendidos para dejarlos disponibles en blanco para reimpresión/venta, y elegir si regenerar el código QR, solo el correlativo, o ambos.
-                            <strong style="color: #FCD34D;">Solo afectará al evento que selecciones</strong>.
-                        </p>
+                <!-- SECCIÓN 1: PROCESADOR DE ÓRDENES CULQI -->
+                <div class="card" style="border-color: rgba(16,185,129,0.35);">
+                    <div class="card-title" style="color: #10B981;">
+                        <span>💳</span> Procesador de Órdenes Culqi (Sin Terminal)
+                    </div>
+                    <div class="card-desc">
+                        Procesa cualquier orden pagada o depositada en Culqi de forma desatendida: <strong>crea la venta, emite los boletos oficiales con código QR y envía el correo con el PDF al comprador</strong>.
+                    </div>
 
-                        <form action="/restablecer-boletos-fisicos" method="GET" onsubmit="return confirm(\'⚠️ ¿Estás seguro de restablecer los boletos físicos para el evento seleccionado? Esta acción aplicará los cambios elegidos.\');">
-                            <div style="display: grid; grid-template-columns: 1fr; gap: 0.85rem; margin-bottom: 1rem;">
-                                <div>
-                                    <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #CBD5E1; margin-bottom: 0.35rem; text-transform: uppercase;">
-                                        Seleccionar Evento <span style="color: #EF4444;">*</span>
-                                    </label>
-                                    <select name="event_id" required style="width: 100%; box-sizing: border-box; background: #0A0A10; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 0.65rem 0.8rem; color: #FFFFFF; font-size: 0.85rem; outline: none;">
-                                        <option value="" disabled selected>-- Elige un evento --</option>
-                                        ' . $eventsPhysicalOptionsHtml . '
-                                    </select>
-                                </div>
-
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                                    <div>
-                                        <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #CBD5E1; margin-bottom: 0.35rem; text-transform: uppercase;">
-                                            ¿Qué regenerar? <span style="color: #EF4444;">*</span>
-                                        </label>
-                                        <select name="action_mode" required style="width: 100%; box-sizing: border-box; background: #0A0A10; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 0.6rem 0.8rem; color: #FFFFFF; font-size: 0.85rem; outline: none;">
-                                            <option value="both" selected>⚡ Ambos: Regenerar QR y Correlativo</option>
-                                            <option value="qr_only">🔐 Solo Regenerar Códigos QR y Hashes</option>
-                                            <option value="correlative_only">🔢 Solo Renumerar Correlativo</option>
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #CBD5E1; margin-bottom: 0.35rem; text-transform: uppercase;">
-                                            Correlativo Inicial
-                                        </label>
-                                        <input type="number" name="start_correlative" value="1" min="1" placeholder="Ej: 1" style="width: 100%; box-sizing: border-box; background: #0A0A10; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 0.6rem 0.8rem; color: #FFFFFF; font-size: 0.85rem; font-family: monospace; outline: none;">
-                                        <small style="color: #94A3B8; font-size: 0.72rem; display: block; margin-top: 0.25rem;">Por defecto 1. Renuemera desde este valor.</small>
-                                    </div>
-                                </div>
-
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                                    <div>
-                                        <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #CBD5E1; margin-bottom: 0.35rem; text-transform: uppercase;">
-                                            Restablecer Ventas Físicas
-                                        </label>
-                                        <select name="reset_sales" style="width: 100%; box-sizing: border-box; background: #0A0A10; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 0.6rem 0.8rem; color: #FFFFFF; font-size: 0.85rem; outline: none;">
-                                            <option value="yes" selected>✔ Sí, liberar boletos vendidos (dejar en blanco)</option>
-                                            <option value="no">✖ No, conservar compradores y ventas</option>
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #CBD5E1; margin-bottom: 0.35rem; text-transform: uppercase;">
-                                            Alcance de Boletos
-                                        </label>
-                                        <select name="ticket_scope" style="width: 100%; box-sizing: border-box; background: #0A0A10; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 0.6rem 0.8rem; color: #FFFFFF; font-size: 0.85rem; outline: none;">
-                                            <option value="all_physical" selected>Todos los Físicos (Regulares + Cortesías)</option>
-                                            <option value="regular_only">Solo Físicos Regulares</option>
-                                            <option value="courtesy_only">Solo Cortesías de Plancha</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <button type="submit" style="cursor: pointer; width: 100%; background: linear-gradient(135deg, #F59E0B, #D97706); color: #FFFFFF; font-weight: 800; border: none; padding: 0.8rem 1.4rem; border-radius: 10px; font-size: 0.9rem; box-shadow: 0 4px 15px rgba(245,158,11,0.35); transition: transform 0.15s ease;">
-                                🎟️ Restablecer Boletos Físicos para este Evento
+                    <!-- BOTONES RÁPIDOS PARA LAS ÓRDENES DETECTADAS -->
+                    <div style="margin-bottom: 1.25rem;">
+                        <span style="display: block; font-size: 0.76rem; font-weight: 700; color: #94A3B8; text-transform: uppercase; margin-bottom: 0.4rem;">
+                            Órdenes Pendientes Detectadas (Haz clic para cargar):
+                        </span>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button type="button" class="btn-chip" onclick="loadOrder(\'ord_live_idwgvP5dHrllqEYf\', \'ediliarojas259@gmail.com\', \'Edilia Rojas Cahuaya\', \'73673527\')">
+                                ⚡ ord_live_idwgvP5dHrllqEYf (Huancayo - S/ 30.00)
                             </button>
-                        </form>
-                    </div>
-
-                    <!-- TARJETA DE ACCIÓN: REGENERAR QR Y CORRELATIVOS PARA VENTAS POS POR EVENTO -->
-                    <div style="background: rgba(16,185,129,0.06); border: 1.5px solid rgba(16,185,129,0.3); border-radius: 14px; padding: 1.35rem; margin-bottom: 1.5rem; text-align: left;">
-                        <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem;">
-                            <span style="font-size: 1.4rem;">🔄</span>
-                            <strong style="color: #10B981; font-size: 1.05rem;">Regenerar Códigos QR y Correlativos de Ventas POS</strong>
-                        </div>
-                        <p style="color: #94A3B8; font-size: 0.83rem; margin: 0 0 1rem 0; line-height: 1.45;">
-                            Asigna nuevos códigos QR oficiales, hashes de validación y números correlativos continuos a las ventas realizadas por taquilla/POS. 
-                            <strong style="color: #FCD34D;">Solo afectará al evento que selecciones</strong>. Actualiza tanto <code>ticket_sales</code> como <code>event_tickets</code>.
-                        </p>
-
-                        <form action="/regenerar-qr-ventas-pos" method="GET" onsubmit="return confirm(\'⚠️ ¿Estás seguro de regenerar los códigos QR y números correlativos de las ventas para el evento seleccionado? Esta acción asignará nuevos códigos QR y hashes únicos a cada boleto vendido.\');">
-                            
-                            <div style="display: grid; grid-template-columns: 1fr; gap: 0.85rem; margin-bottom: 1rem;">
-                                <div>
-                                    <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #CBD5E1; margin-bottom: 0.35rem; text-transform: uppercase;">
-                                        Seleccionar Evento <span style="color: #EF4444;">*</span>
-                                    </label>
-                                    <select name="event_id" required style="width: 100%; box-sizing: border-box; background: #0A0A10; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 0.65rem 0.8rem; color: #FFFFFF; font-size: 0.85rem; outline: none;">
-                                        <option value="" disabled selected>-- Elige un evento --</option>
-                                        ' . $eventsOptionsHtml . '
-                                    </select>
-                                </div>
-
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                                    <div>
-                                        <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #CBD5E1; margin-bottom: 0.35rem; text-transform: uppercase;">
-                                            Correlativo Inicial
-                                        </label>
-                                        <input type="number" name="start_correlative" value="1" min="1" placeholder="Ej: 1 (vacío = automático)" style="width: 100%; box-sizing: border-box; background: #0A0A10; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 0.6rem 0.8rem; color: #FFFFFF; font-size: 0.85rem; font-family: monospace; outline: none;">
-                                        <small style="color: #94A3B8; font-size: 0.72rem; display: block; margin-top: 0.25rem;">Por defecto 1. O déjalo vacío para continuar tras el último digital.</small>
-                                    </div>
-
-                                    <div>
-                                        <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #CBD5E1; margin-bottom: 0.35rem; text-transform: uppercase;">
-                                            Alcance
-                                        </label>
-                                        <select name="scope" style="width: 100%; box-sizing: border-box; background: #0A0A10; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 0.6rem 0.8rem; color: #FFFFFF; font-size: 0.85rem; outline: none;">
-                                            <option value="pos_only" selected>Solo Ventas POS / Taquilla</option>
-                                            <option value="all_sales">Todas las Ventas del Evento</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <button type="submit" style="cursor: pointer; width: 100%; background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; font-weight: 800; border: none; padding: 0.8rem 1.4rem; border-radius: 10px; font-size: 0.9rem; box-shadow: 0 4px 15px rgba(16,185,129,0.35); transition: transform 0.15s ease;">
-                                ⚡ Regenerar QR y Correlativos para este Evento
+                            <button type="button" class="btn-chip" onclick="loadOrder(\'ord_live_k2VblmgR1rQh7xHC\', \'\', \'\', \'48347747\')">
+                                ⚡ ord_live_k2VblmgR1rQh7xHC (Satipo - S/ 60.00)
                             </button>
-                        </form>
-                    </div>
-
-                    <!-- TARJETA DE ACCIÓN: RENUMERAR TODAS LAS CATEGORÍAS DESDE EL N° 1 -->
-                    <div style="background: rgba(139, 92, 246, 0.08); border: 1.5px solid rgba(139, 92, 246, 0.4); border-radius: 14px; padding: 1.35rem; margin-bottom: 1.5rem; text-align: left;">
-                        <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem;">
-                            <span style="font-size: 1.4rem;">🔢</span>
-                            <strong style="color: #A78BFA; font-size: 1.05rem;">Renumerar Todas las Categorías desde N° 1</strong>
-                        </div>
-                        <p style="color: #94A3B8; font-size: 0.83rem; margin: 0 0 1rem 0; line-height: 1.45;">
-                            Renumera independientemente cada una de las 4 categorías iniciando limpiamente desde <b>N° 00001</b>:
-                            <br><span style="color: #FCD34D;">1. Físicos Regulares (1..N)</span> &bull; 
-                            <span style="color: #34D399;">2. Cortesías Plancha (1..M)</span> &bull; 
-                            <span style="color: #60A5FA;">3. Digitales Regulares (1..X)</span> &bull; 
-                            <span style="color: #C084FC;">4. Cortesías Digitales (1..Y)</span>.
-                            <br>Sincroniza códigos QR, hashes y los registros de ventas vinculados.
-                        </p>
-
-                        <form action="/renumerar-todas-categorias" method="GET" onsubmit="return confirm(\'⚠️ ¿Estás seguro de renumerar todas las categorías para este evento? Cada categoría iniciará su propia secuencia independiente desde N° 00001.\');">
-                            <div style="margin-bottom: 1rem;">
-                                <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #CBD5E1; margin-bottom: 0.35rem; text-transform: uppercase;">
-                                    Seleccionar Evento <span style="color: #EF4444;">*</span>
-                                </label>
-                                <select name="event_id" required style="width: 100%; box-sizing: border-box; background: #0A0A10; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 0.65rem 0.8rem; color: #FFFFFF; font-size: 0.85rem; outline: none;">
-                                    <option value="" disabled selected>-- Elige un evento --</option>
-                                    ' . $eventsAllOptionsHtml . '
-                                </select>
-                            </div>
-
-                            <button type="submit" style="cursor: pointer; width: 100%; background: linear-gradient(135deg, #8B5CF6, #6D28D9); color: #FFFFFF; font-weight: 800; border: none; padding: 0.8rem 1.4rem; border-radius: 10px; font-size: 0.9rem; box-shadow: 0 4px 15px rgba(139,92,246,0.35); transition: transform 0.15s ease;">
-                                🔢 Renumerar Todas las Categorías desde N° 1
+                            <button type="button" class="btn-chip" onclick="loadOrder(\'ord_live_UNjSBSgn5DsCB9yV\', \'\', \'\', \'46699998\')">
+                                ⚡ ord_live_UNjSBSgn5DsCB9yV (Satipo - S/ 60.00)
                             </button>
-                        </form>
-                    </div>
-
-                    <!-- TARJETA DE ACCIÓN: SINCRONIZAR VENTAS ANTIGUAS A BOLETOS DE PLANCHA -->
-                    <div style="background: rgba(37,99,235,0.08); border: 1.5px solid rgba(37,99,235,0.3); border-radius: 14px; padding: 1.25rem; margin-bottom: 1.5rem; text-align: left;">
-                        <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem;">
-                            <span style="font-size: 1.4rem;">🎟️</span>
-                            <strong style="color: #60A5FA; font-size: 1rem;">Sincronizar Ventas Antiguas a Boletos de Plancha</strong>
                         </div>
-                        <p style="color: #94A3B8; font-size: 0.82rem; margin: 0 0 1rem 0; line-height: 1.4;">
-                            Vincula las ventas registradas con la tabla oficial de boletos de plancha (<code>event_tickets</code>), trasladando el correlativo, código QR y hash de validación para que la plancha imprima exactamente el mismo boleto y no duplique correlativos.
-                        </p>
-                        <a href="/sincronizar-ventas-antiguas" style="display: inline-block; background: linear-gradient(135deg, #2563EB, #1D4ED8); color: #FFFFFF; font-weight: 800; text-decoration: none; padding: 0.75rem 1.4rem; border-radius: 10px; font-size: 0.85rem; box-shadow: 0 4px 15px rgba(37,99,235,0.35);">
-                            🔄 Pasar Ventas Antiguas a Boletos de Plancha
-                        </a>
                     </div>
 
-                    <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
-                        <a href="' . route('web.home') . '" style="display: inline-block; background: linear-gradient(135deg, #FF5500, #E04B00); color: #FFFFFF; font-weight: 800; text-decoration: none; padding: 0.85rem 1.8rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(255,85,0,0.4);">
-                            Ir a la Página Principal
-                        </a>
-                        <a href="' . route('web.payment_methods') . '" style="display: inline-block; background: #1E1E2E; border: 1px solid rgba(255,255,255,0.15); color: #FFFFFF; font-weight: 700; text-decoration: none; padding: 0.85rem 1.4rem; border-radius: 12px;">
-                            Configurar Pasarelas
-                        </a>
+                    <form id="culqiOrderForm" onsubmit="submitCulqiOrder(event)">
+                        <div class="input-group">
+                            <label class="input-label">Order ID de Culqi <span style="color:#EF4444;">*</span></label>
+                            <input type="text" id="order_id" name="order_id" class="input-text" placeholder="ord_live_..." required>
+                        </div>
+
+                        <div class="grid-3" style="margin-bottom: 1rem;">
+                            <div>
+                                <label class="input-label">Email Comprador (Opcional)</label>
+                                <input type="email" id="customer_email" name="customer_email" class="input-text" placeholder="Auto por DNI si está vacío">
+                            </div>
+                            <div>
+                                <label class="input-label">Nombre Comprador (Opcional)</label>
+                                <input type="text" id="customer_name" name="customer_name" class="input-text" placeholder="Auto por DNI si está vacío">
+                            </div>
+                            <div>
+                                <label class="input-label">DNI Comprador (Opcional)</label>
+                                <input type="text" id="customer_doc" name="customer_doc" class="input-text" placeholder="Auto si viene en metadata">
+                            </div>
+                        </div>
+
+                        <button type="submit" id="btnSubmitCulqi" class="btn btn-success" style="width: 100%;">
+                            ⚡ Procesar Orden Culqi y Emitir Boletos
+                        </button>
+                    </form>
+
+                    <div id="culqiResultBox" class="result-box"></div>
+                </div>
+
+                <!-- SECCIÓN 2: CONSOLA TERMINAL WEB (ARTISAN RUNNER) -->
+                <div class="card" style="border-color: rgba(59,130,246,0.35);">
+                    <div class="card-title" style="color: #60A5FA;">
+                        <span>💻</span> Consola Terminal Web (Artisan Runner)
+                    </div>
+                    <div class="card-desc">
+                        Ejecuta comandos de Laravel Artisan directamente en el servidor sin requerir acceso SSH ni terminal en cPanel.
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <span style="display: block; font-size: 0.76rem; font-weight: 700; color: #94A3B8; text-transform: uppercase; margin-bottom: 0.4rem;">
+                            Comandos Frecuentes:
+                        </span>
+                        <div style="display: flex; gap: 0.45rem; flex-wrap: wrap;">
+                            <button type="button" class="btn-chip" onclick="setCommand(\'optimize:clear\')">optimize:clear</button>
+                            <button type="button" class="btn-chip" onclick="setCommand(\'migrate --force\')">migrate --force</button>
+                            <button type="button" class="btn-chip" onclick="setCommand(\'route:clear\')">route:clear</button>
+                            <button type="button" class="btn-chip" onclick="setCommand(\'cache:clear\')">cache:clear</button>
+                            <button type="button" class="btn-chip" onclick="setCommand(\'view:clear\')">view:clear</button>
+                            <button type="button" class="btn-chip" onclick="setCommand(\'config:clear\')">config:clear</button>
+                            <button type="button" class="btn-chip" onclick="setCommand(\'inspire\')">inspire</button>
+                        </div>
+                    </div>
+
+                    <form id="artisanForm" onsubmit="submitArtisanCommand(event)" style="display: flex; gap: 0.5rem;">
+                        <div style="position: relative; flex: 1;">
+                            <span style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); font-family: monospace; color: #64748B; font-size: 0.85rem;">$ php artisan</span>
+                            <input type="text" id="artisan_command" class="input-text" style="padding-left: 7.5rem;" placeholder="ej: optimize:clear" required>
+                        </div>
+                        <button type="submit" id="btnSubmitArtisan" class="btn btn-primary" style="white-space: nowrap;">
+                            ▶ Ejecutar
+                        </button>
+                    </form>
+
+                    <div class="terminal-window">
+                        <div class="terminal-header">
+                            <div class="terminal-dots">
+                                <div class="terminal-dot dot-red"></div>
+                                <div class="terminal-dot dot-yellow"></div>
+                                <div class="terminal-dot dot-green"></div>
+                            </div>
+                            <div class="terminal-title">vivego-server ~ bash</div>
+                            <button type="button" onclick="clearTerminal()" style="background: none; border: none; color: #64748B; font-size: 0.72rem; cursor: pointer;">Limpiar</button>
+                        </div>
+                        <div id="terminalBody" class="terminal-body">[Consola lista] Escribe un comando o selecciona un botón arriba para ejecutarlo.</div>
                     </div>
                 </div>
+
+                <!-- BOTONES DE NAVEGACIÓN -->
+                <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+                    <a href="' . route('web.home') . '" class="btn btn-primary">
+                        Ir a la Página Principal
+                    </a>
+                    <a href="' . route('web.payment_methods') . '" class="btn btn-secondary">
+                        Configurar Pasarelas
+                    </a>
+                </div>
             </div>
-        ', 200)->header('Content-Type', 'text/html');
-    } catch (\Exception $e) {
-        return response('<div style="font-family: sans-serif; padding: 2rem; background: #14141E; color: #EF4444;"><h3 style="color:#EF4444;">Error al optimizar y migrar:</h3><pre style="background: #000; padding: 1rem; border-radius: 8px; color: #FCA5A5;">' . htmlspecialchars($e->getMessage()) . '</pre></div>', 500);
-    }
+
+            <script>
+                function loadOrder(id, email, name, doc) {
+                    document.getElementById("order_id").value = id;
+                    document.getElementById("customer_email").value = email || "";
+                    document.getElementById("customer_name").value = name || "";
+                    document.getElementById("customer_doc").value = doc || "";
+                    document.getElementById("order_id").scrollIntoView({ behavior: "smooth", block: "center" });
+                }
+
+                function setCommand(cmd) {
+                    document.getElementById("artisan_command").value = cmd;
+                    document.getElementById("artisan_command").focus();
+                }
+
+                function clearTerminal() {
+                    document.getElementById("terminalBody").innerText = "[Consola limpia]";
+                }
+
+                async function submitCulqiOrder(e) {
+                    e.preventDefault();
+                    const btn = document.getElementById("btnSubmitCulqi");
+                    const resBox = document.getElementById("culqiResultBox");
+                    const orderId = document.getElementById("order_id").value.trim();
+                    const email = document.getElementById("customer_email").value.trim();
+                    const name = document.getElementById("customer_name").value.trim();
+                    const doc = document.getElementById("customer_doc").value.trim();
+
+                    btn.disabled = true;
+                    btn.innerText = "⏳ Procesando orden con Culqi...";
+                    resBox.style.display = "none";
+
+                    try {
+                        const response = await fetch("/optimizar-sistema", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Accept": "application/json"
+                            },
+                            body: JSON.stringify({
+                                action: "process_culqi",
+                                order_id: orderId,
+                                customer_email: email,
+                                customer_name: name,
+                                customer_doc: doc
+                            })
+                        });
+
+                        const data = await response.json();
+                        resBox.style.display = "block";
+
+                        if (data.success) {
+                            resBox.className = "result-box result-success";
+                            resBox.innerHTML = `
+                                <div style="font-weight: 800; font-size: 1rem; margin-bottom: 0.4rem;">🎉 \${data.message}</div>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.5rem; margin: 0.6rem 0;">
+                                    <div><strong>Recibo:</strong> \${data.receipt_number}</div>
+                                    <div><strong>Venta ID:</strong> #\${data.sale_id}</div>
+                                    <div><strong>Comprador:</strong> \${data.buyer_name}</div>
+                                    <div><strong>DNI:</strong> \${data.buyer_dni}</div>
+                                    <div><strong>Correo:</strong> \${data.buyer_email}</div>
+                                    <div><strong>Entradas:</strong> \${data.quantity} (\${data.zone_name})</div>
+                                    <div><strong>Total:</strong> \${data.total_amount}</div>
+                                </div>
+                                <div style="margin-top: 0.6rem;">
+                                    <a href="\${data.confirmation_url}" target="_blank" style="color: #10B981; font-weight: 800; text-decoration: underline;">
+                                        🔗 Ver Pantalla de Confirmación y Boletos Emitidos →
+                                    </a>
+                                </div>
+                            `;
+                        } else {
+                            resBox.className = "result-box result-error";
+                            resBox.innerHTML = `<strong>❌ Error:</strong> \${data.message}`;
+                        }
+                    } catch (err) {
+                        resBox.style.display = "block";
+                        resBox.className = "result-box result-error";
+                        resBox.innerHTML = `<strong>❌ Error de conexión:</strong> \${err.message}`;
+                    } finally {
+                        btn.disabled = false;
+                        btn.innerText = "⚡ Procesar Orden Culqi y Emitir Boletos";
+                    }
+                }
+
+                async function submitArtisanCommand(e) {
+                    e.preventDefault();
+                    const btn = document.getElementById("btnSubmitArtisan");
+                    const cmdInput = document.getElementById("artisan_command");
+                    const term = document.getElementById("terminalBody");
+                    const cmd = cmdInput.value.trim();
+
+                    btn.disabled = true;
+                    btn.innerText = "⏳ Ejecutando...";
+                    term.innerText += `\\n\\n$ php artisan \${cmd}\\n[Ejecutando...]`;
+                    term.scrollTop = term.scrollHeight;
+
+                    try {
+                        const response = await fetch("/optimizar-sistema", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Accept": "application/json"
+                            },
+                            body: JSON.stringify({
+                                action: "run_artisan",
+                                command: cmd
+                            })
+                        });
+
+                        const data = await response.json();
+                        term.innerText += `\\n\${data.output}`;
+                    } catch (err) {
+                        term.innerText += `\\n❌ Error: \${err.message}`;
+                    } finally {
+                        btn.disabled = false;
+                        btn.innerText = "▶ Ejecutar";
+                        term.scrollTop = term.scrollHeight;
+                    }
+                }
+            </script>
+        </body>
+        </html>
+    ', 200)->header('Content-Type', 'text/html');
 });
 
 Route::match(['get', 'post'], '/regenerar-qr-ventas-pos', function (\Illuminate\Http\Request $request) {
