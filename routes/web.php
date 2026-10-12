@@ -92,7 +92,8 @@ Route::post('/checkout/culqi/iniciar', [CheckoutController::class, 'initiateCulq
 Route::post('/checkout/culqi/completar', [CheckoutController::class, 'completeCulqiPayment'])->name('web.checkout.culqi_complete');
 Route::post('/checkout/culqi/consultar-orden', [CheckoutController::class, 'checkCulqiOrderStatus'])->name('web.checkout.culqi_order_status');
 Route::post('/checkout/cortesia/completar', [CheckoutController::class, 'completeCourtesyOrder'])->name('web.checkout.courtesy_complete');
-Route::post('/api/culqi/webhook', [CheckoutController::class, 'culqiWebhook'])->name('api.culqi.webhook');
+Route::match(['get', 'post'], '/api/culqi/webhook', [CheckoutController::class, 'culqiWebhook'])->name('api.culqi.webhook');
+Route::match(['get', 'post'], '/api/culqi/webhook/', [CheckoutController::class, 'culqiWebhook']);
 
 // Rutas Protegidas de Administración y Panel de Control
 Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group(function () {
