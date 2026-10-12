@@ -367,22 +367,8 @@ class CheckoutController extends Controller
             ] : null,
         ];
 
-        // Registrar en log de auditoría el ingreso al checkout
-        $firstItem = $cartItems[0] ?? [];
-        $zoneLabel = $firstItem['name'] ?? ($firstItem['zone_name'] ?? 'Entrada General');
-        $totalQuantity = array_sum(array_column($cartItems, 'quantity'));
-        $this->logCheckout('info', "👤 [INGRESO_CHECKOUT] Cliente ingresó al checkout para '{$eventData['title']}' (Zona: {$zoneLabel}, Cantidad: " . max(1, $totalQuantity) . " entrada(s), Total: S/ " . number_format($grandTotal, 2) . ")", [
-            'ip' => $request->ip(),
-            'event_id' => $eventData['id'],
-            'event_title' => $eventData['title'],
-            'zone' => $zoneLabel,
-            'quantity' => max(1, $totalQuantity),
-            'total_amount' => $grandTotal,
-            'is_upgrade' => $isUpgrade,
-            'is_authenticated' => session('customer_logged_in') ? true : false,
-            'customer_email' => session('customer_email') ?: null,
-            'customer_dni' => session('customer_dni') ?: null,
-        ]);
+        // Ingreso al checkout (silenciado para mantener la auditoría limpia y sin registros vacíos)
+
 
         return view('web.checkout', compact(
             'eventData', 
@@ -864,7 +850,7 @@ class CheckoutController extends Controller
             Cache::put('culqi_order_ctx_' . $response['id'], $orderContext, now()->addHours(48));
             Cache::put('culqi_order_ctx_' . $orderNumber, $orderContext, now()->addHours(48));
 
-            $this->logCheckout('info', "Culqi [Orden QR Generada]: {$response['id']} (#{$orderNumber}) para {$validated['customer_email']} - Total: S/ " . number_format($validated['amount'], 2), [
+            $this->logCheckout('info', "Culqi [Orden Creada]: {$response['id']} (#{$orderNumber}) para {$validated['customer_email']} - Total: S/ " . number_format($validated['amount'], 2), [
                 'order_id' => $response['id'],
                 'order_number' => $orderNumber,
                 'customer_name' => $validated['customer_name'],
@@ -1499,7 +1485,9 @@ class CheckoutController extends Controller
         // 1. Verificación rápida: si ya fue procesada y registrada en BD (ej. por Webhook), retornar éxito directo
         $existingSale = TicketSale::where('tickets_data', 'LIKE', '%' . $orderId . '%')->first();
         if ($existingSale) {
-            $this->logCheckout('debug', "Culqi [Polling]: Orden {$orderId} ya existe en BD con Sale #{$existingSale->id}");
+            if (Cache::add("culqi_polling_completed_{$orderId}", true, now()->addMinutes(30))) {
+                $this->logCheckout('info', "Culqi [Pago Confirmado]: Orden {$orderId} ya confirmada previamente en BD con Venta #{$existingSale->id}");
+            }
 
             return response()->json([
                 'success' => true,
@@ -1519,7 +1507,14 @@ class CheckoutController extends Controller
         $saleId = null;
         $redirectUrl = null;
 
-        $this->logCheckout('debug', "Culqi [Polling]: Consultando estado orden {$orderId} -> '{$state}' (Pagado: " . ($isPaid ? 'SÍ' : 'NO') . ")");
+        // Registrar "Esperando Pago" UNA SOLA VEZ mientras el cliente escanea y paga (elimina el spam de polling repetitivo cada 3s)
+        if (!$isPaid) {
+            if (Cache::add("culqi_waiting_logged_{$orderId}", true, now()->addMinutes(30))) {
+                $this->logCheckout('info', "Culqi [Esperando Pago]: Esperando que el cliente complete el pago para la orden {$orderId}...");
+            }
+        } else {
+            $this->logCheckout('info', "Culqi [Pago Confirmado]: ¡Orden {$orderId} pagada exitosamente! Registrando venta...");
+        }
 
         // 3. Si Culqi confirma que está pagada, materializar de inmediato la venta y los boletos
         if ($isPaid) {

@@ -124,6 +124,102 @@
         .level-warn { color: #FBBF24; font-weight: 800; }
         .level-error { color: #F87171; font-weight: 900; }
 
+        /* Badges de Operación en Terminal y Tabla */
+        .t-badge {
+            font-size: 0.68rem;
+            font-weight: 800;
+            padding: 0.12rem 0.5rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.35px;
+            flex-shrink: 0;
+            user-select: none;
+            display: inline-flex;
+            align-items: center;
+            line-height: 1.35;
+            white-space: nowrap;
+        }
+
+        .badge-orden-creada {
+            background: rgba(14, 165, 233, 0.2);
+            color: #38BDF8;
+            border: 1px solid rgba(14, 165, 233, 0.45);
+        }
+
+        .badge-esperando-pago {
+            background: rgba(245, 158, 11, 0.2);
+            color: #FBBF24;
+            border: 1px solid rgba(245, 158, 11, 0.45);
+        }
+
+        .badge-verificacion-api {
+            background: rgba(168, 85, 247, 0.22);
+            color: #C084FC;
+            border: 1px solid rgba(168, 85, 247, 0.5);
+        }
+
+        .badge-pago-confirmado {
+            background: rgba(16, 185, 129, 0.25);
+            color: #34D399;
+            border: 1px solid rgba(16, 185, 129, 0.5);
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.25);
+        }
+
+        .badge-venta-generada {
+            background: rgba(20, 184, 166, 0.22);
+            color: #2DD4BF;
+            border: 1px solid rgba(20, 184, 166, 0.45);
+        }
+
+        .badge-webhook {
+            background: rgba(249, 115, 22, 0.22);
+            color: #FB923C;
+            border: 1px solid rgba(249, 115, 22, 0.45);
+        }
+
+        .badge-idempotencia {
+            background: rgba(99, 102, 241, 0.2);
+            color: #A5B4FC;
+            border: 1px solid rgba(99, 102, 241, 0.45);
+        }
+
+        .badge-entrega-boletos {
+            background: rgba(236, 72, 153, 0.2);
+            color: #F472B6;
+            border: 1px solid rgba(236, 72, 153, 0.45);
+        }
+
+        .badge-envio-correo {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60A5FA;
+            border: 1px solid rgba(59, 130, 246, 0.45);
+        }
+
+        .badge-error-alerta {
+            background: rgba(239, 68, 68, 0.25);
+            color: #F87171;
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            font-weight: 900;
+        }
+
+        .badge-ingreso {
+            background: rgba(100, 116, 139, 0.15);
+            color: #94A3B8;
+            border: 1px solid rgba(100, 116, 139, 0.35);
+        }
+
+        .badge-polling {
+            background: rgba(71, 85, 105, 0.2);
+            color: #CBD5E1;
+            border: 1px solid rgba(71, 85, 105, 0.35);
+        }
+
+        .badge-system {
+            background: rgba(255, 255, 255, 0.08);
+            color: #CBD5E1;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
         .terminal-msg {
             flex: 1;
             color: #F1F5F9;
@@ -155,7 +251,7 @@
         .terminal-json-block {
             background: #030508;
             border: 1px solid rgba(255, 255, 255, 0.08);
-            border-left: 3px solid var(--color-primary-orange);
+            border-left: 3px solid var(--color-primary-orange, #FF5500);
             border-radius: 6px;
             padding: 0.65rem 0.85rem;
             margin-top: 0.4rem;
@@ -212,6 +308,36 @@
             border-color: #FF5500;
             color: #FFFFFF;
             box-shadow: 0 2px 10px rgba(255, 85, 0, 0.35);
+        }
+
+        /* Toggle Pills para Filtro de Fecha: Hoy vs Ver Todo */
+        .date-pill-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #CBD5E1;
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 0.45rem 0.95rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .date-pill-btn:hover {
+            background: rgba(255, 85, 0, 0.15);
+            border-color: rgba(255, 85, 0, 0.4);
+            color: #FF5500;
+        }
+
+        .date-pill-btn.active {
+            background: linear-gradient(135deg, #FF5500, #FF7700);
+            border-color: #FF5500;
+            color: #FFFFFF;
+            box-shadow: 0 4px 14px rgba(255, 85, 0, 0.35);
         }
 
         /* Paginador Tabla */
@@ -272,12 +398,21 @@
             <header class="dash-top-navbar">
                 <form action="{{ route('web.checkout_logs') }}" method="GET" class="dash-search-container" style="flex: 1; max-width: 450px;">
                     <span class="dash-search-icon">🔍</span>
-                    <input type="text" name="q" value="{{ $search }}" class="dash-search-input" placeholder="Buscar por DNI, correo, recibo, token o error...">
+                    <input type="text" name="q" value="{{ $search }}" class="dash-search-input" placeholder="Buscar por DNI, correo, recibo, ord_live, token...">
+                    @if($dateFilter !== 'today')
+                        <input type="hidden" name="date" value="{{ $dateFilter }}">
+                    @endif
+                    @if($limitFilter !== '500')
+                        <input type="hidden" name="limit" value="{{ $limitFilter }}">
+                    @endif
                     @if($levelFilter !== 'all')
                         <input type="hidden" name="level" value="{{ $levelFilter }}">
                     @endif
                     @if($gatewayFilter !== 'all')
                         <input type="hidden" name="gateway" value="{{ $gatewayFilter }}">
+                    @endif
+                    @if($actionFilter !== 'all')
+                        <input type="hidden" name="action" value="{{ $actionFilter }}">
                     @endif
                 </form>
 
@@ -311,7 +446,7 @@
                             <div style="flex: 1;">
                                 <strong style="color: #EF4444; font-size: 0.95rem; display: block; margin-bottom: 0.25rem;">Permisos insuficientes en el servidor (storage/logs):</strong>
                                 <p style="margin: 0 0 0.65rem 0; font-size: 0.85rem; color: #E2E8F0; line-height: 1.5;">
-                                    El servidor web no tiene permisos para crear o escribir archivos en la carpeta <code style="color: #F87171;">storage/logs/</code>. Por este motivo no se registran las transacciones de checkout en producción. Ejecuta en tu servidor por SSH / consola:
+                                    El servidor web no tiene permisos para crear o escribir archivos en la carpeta <code style="color: #F87171;">storage/logs/</code>. Ejecuta en tu servidor por SSH / consola:
                                 </p>
                                 <div style="background: rgba(0,0,0,0.5); padding: 0.65rem 0.85rem; border-radius: 8px; font-family: monospace; font-size: 0.85rem; color: #34D399; user-select: all; display: inline-block;">
                                     sudo chown -R www-data:www-data storage && sudo chmod -R 775 storage
@@ -327,7 +462,7 @@
                                 <div>
                                     <strong style="color: #F59E0B; font-size: 0.95rem;">El archivo checkout.log aún no se ha creado en producción</strong>
                                     <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #E2E8F0; line-height: 1.5;">
-                                        Este archivo se genera automáticamente cuando un cliente entra al checkout o realiza un pago. También puedes inicializarlo ahora mismo con el botón a la derecha.
+                                        Este archivo se genera automáticamente cuando un cliente crea una orden o realiza un pago.
                                     </p>
                                 </div>
                             </div>
@@ -354,16 +489,16 @@
                             </div>
                         </div>
                         <h1 class="settings-page-title" style="margin-top: 0.4rem;">Logs de Pagos & Checkout Live Terminal</h1>
-                        <p class="settings-page-subtitle">Monitoreo paso a paso del ciclo de compra: ingreso al checkout, datos del comprador, pasarela seleccionada (Culqi QR/Tarjeta, Izipay), aprobación de pago, entrega de boletos, despacho de correo y trazabilidad de errores.</p>
+                        <p class="settings-page-subtitle">Monitoreo paso a paso del ciclo de compra: orden creada, espera de pago, verificación Culqi API, pago aprobado, emisión de boletos y trazabilidad de webhooks.</p>
                     </div>
 
                     <!-- SELECTOR DE VISTA (TERMINAL VS TABLA) & BOTONERA -->
                     <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
                         <div style="background: rgba(0,0,0,0.4); padding: 0.25rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); display: flex; gap: 0.25rem;">
-                            <button type="button" class="term-btn active" id="btnSwitchTerminal" onclick="switchViewMode('terminal')">
+                            <button type="button" class="term-btn {{ $viewMode === 'terminal' ? 'active' : '' }}" id="btnSwitchTerminal" onclick="switchViewMode('terminal')">
                                 <span>🖥️</span> <span>Modo Terminal</span>
                             </button>
-                            <button type="button" class="term-btn" id="btnSwitchTable" onclick="switchViewMode('table')">
+                            <button type="button" class="term-btn {{ $viewMode === 'table' ? 'active' : '' }}" id="btnSwitchTable" onclick="switchViewMode('table')">
                                 <span>📊</span> <span>Modo Tabla</span>
                             </button>
                         </div>
@@ -380,6 +515,44 @@
                     </div>
                 </div>
 
+                <!-- FILTRO PRINCIPAL: VER HOY VS VER TODO & LÍMITE DE BUFFER -->
+                <div style="background: #080C14; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 0.85rem 1.25rem; margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;">
+                    <!-- FILTRO FECHA -->
+                    <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+                        <span style="font-size: 0.775rem; color: #94A3B8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px;">
+                            📅 Vista por Fecha:
+                        </span>
+                        <a href="{{ request()->fullUrlWithQuery(['date' => 'today', 'page' => 1]) }}" class="date-pill-btn {{ $dateFilter === 'today' ? 'active' : '' }}">
+                            <span>☀️</span>
+                            <span>Ver Hoy</span>
+                            <span style="background: rgba(0,0,0,0.35); padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.725rem; font-weight: 800;">
+                                {{ number_format($todayCount) }}
+                            </span>
+                        </a>
+                        <a href="{{ request()->fullUrlWithQuery(['date' => 'all', 'page' => 1]) }}" class="date-pill-btn {{ $dateFilter === 'all' ? 'active' : '' }}">
+                            <span>🌐</span>
+                            <span>Ver Todo el Historial</span>
+                            <span style="background: rgba(0,0,0,0.35); padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.725rem; font-weight: 800;">
+                                {{ number_format($totalCount) }}
+                            </span>
+                        </a>
+                    </div>
+
+                    <!-- SELECTOR DE LÍMITE DE EVENTOS (MÁS DE 150) -->
+                    <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+                        <span style="font-size: 0.775rem; color: #94A3B8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px;">
+                            ⚡ Límite Buffer:
+                        </span>
+                        <div style="display: inline-flex; background: rgba(0,0,0,0.4); padding: 0.2rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); gap: 0.2rem;">
+                            <a href="{{ request()->fullUrlWithQuery(['limit' => '150']) }}" class="term-btn {{ $limitFilter === '150' ? 'active' : '' }}" style="font-size: 0.725rem; padding: 0.25rem 0.6rem;">150</a>
+                            <a href="{{ request()->fullUrlWithQuery(['limit' => '300']) }}" class="term-btn {{ $limitFilter === '300' ? 'active' : '' }}" style="font-size: 0.725rem; padding: 0.25rem 0.6rem;">300</a>
+                            <a href="{{ request()->fullUrlWithQuery(['limit' => '500']) }}" class="term-btn {{ ($limitFilter === '500' || empty($limitFilter)) ? 'active' : '' }}" style="font-size: 0.725rem; padding: 0.25rem 0.6rem;">500</a>
+                            <a href="{{ request()->fullUrlWithQuery(['limit' => '1000']) }}" class="term-btn {{ $limitFilter === '1000' ? 'active' : '' }}" style="font-size: 0.725rem; padding: 0.25rem 0.6rem;">1,000</a>
+                            <a href="{{ request()->fullUrlWithQuery(['limit' => 'all']) }}" class="term-btn {{ $limitFilter === 'all' ? 'active' : '' }}" style="font-size: 0.725rem; padding: 0.25rem 0.6rem;">Todos</a>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- STATS CARDS -->
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
                     <!-- Total Registros -->
@@ -388,8 +561,12 @@
                             🧾
                         </div>
                         <div>
-                            <span style="font-size: 0.725rem; color: #94A3B8; display: block; font-weight: 700; text-transform: uppercase;">Total Registros</span>
-                            <strong style="font-size: 1.4rem; color: #FFFFFF; font-weight: 900;" id="statTotal">{{ number_format($totalCount) }}</strong>
+                            <span style="font-size: 0.725rem; color: #94A3B8; display: block; font-weight: 700; text-transform: uppercase;">
+                                {{ $dateFilter === 'today' ? 'Eventos Hoy' : 'Total Histórico' }}
+                            </span>
+                            <strong style="font-size: 1.4rem; color: #FFFFFF; font-weight: 900;" id="statTotal">
+                                {{ number_format($dateFilter === 'today' ? $todayCount : $totalCount) }}
+                            </strong>
                         </div>
                     </div>
 
@@ -439,7 +616,7 @@
                 </div>
 
                 <!-- CONTENEDOR VISTA TERMINAL (MODO TERMINAL) -->
-                <div id="terminalViewContainer" class="terminal-window">
+                <div id="terminalViewContainer" class="terminal-window" style="{{ $viewMode === 'table' ? 'display: none;' : '' }}">
                     <!-- BARRA SUPERIOR DE LA TERMINAL -->
                     <div class="terminal-header">
                         <div style="display: flex; align-items: center; gap: 0.85rem;">
@@ -449,7 +626,7 @@
                                 <span class="terminal-dot dot-green"></span>
                             </div>
                             <span style="font-family: monospace; font-size: 0.85rem; font-weight: 800; color: #94A3B8;">
-                                <strong style="color: #FF5500;">vivego@checkout</strong>:<span style="color: #60A5FA;">/storage/logs</span>$ <span style="color: #34D399;">tail -f checkout.log</span>
+                                <strong style="color: #FF5500;">vivego@checkout</strong>:<span style="color: #60A5FA;">/storage/logs</span>$ <span style="color: #34D399;">tail -f checkout.log [{{ $dateFilter === 'today' ? 'HOY' : 'TODO' }}]</span>
                             </span>
                         </div>
 
@@ -477,19 +654,23 @@
                         </div>
                     </div>
 
-                    <!-- BARRA DE FILTRADO RÁPIDO EN TERMINAL -->
+                    <!-- BARRA DE FILTRADO RÁPIDO Y BADGES EN TERMINAL -->
                     <div style="background: #080C14; border-bottom: 1px solid rgba(255,255,255,0.06); padding: 0.65rem 1.25rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem;">
                         <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; max-width: 480px;">
                             <span style="color: #64748B; font-size: 0.85rem;">🔎</span>
-                            <input type="text" id="terminalFilterInput" oninput="filterTerminalLines(this.value)" placeholder="Filtrar consola (ej: DNI, correo, 'culqi', 'izipay', 'REC-', 'ERROR', 'boletos')..." style="width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: #FFF; font-family: monospace; font-size: 0.8rem; padding: 0.4rem 0.75rem; border-radius: 6px;">
+                            <input type="text" id="terminalFilterInput" oninput="filterTerminalLines(this.value)" placeholder="Filtrar por orden, DNI, correo, 'culqi', 'paid', 'boletos'..." style="width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: #FFF; font-family: monospace; font-size: 0.8rem; padding: 0.4rem 0.75rem; border-radius: 6px;">
                         </div>
 
+                        <!-- FILTROS POR BADGE / ESTADO DE PAGO -->
                         <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
                             <button type="button" onclick="setTerminalCategoryFilter('ALL')" class="term-btn active term-filter-tag" data-cat="ALL" style="font-size: 0.7rem; padding: 0.25rem 0.55rem;">Todos</button>
+                            <button type="button" onclick="setTerminalCategoryFilter('ORDEN')" class="term-btn term-filter-tag" data-cat="ORDEN" style="font-size: 0.7rem; padding: 0.25rem 0.55rem; color: #38BDF8;">⚡ Orden Creada</button>
+                            <button type="button" onclick="setTerminalCategoryFilter('ESPERANDO')" class="term-btn term-filter-tag" data-cat="ESPERANDO" style="font-size: 0.7rem; padding: 0.25rem 0.55rem; color: #FBBF24;">⏳ Esperando Pago</button>
+                            <button type="button" onclick="setTerminalCategoryFilter('API')" class="term-btn term-filter-tag" data-cat="API" style="font-size: 0.7rem; padding: 0.25rem 0.55rem; color: #C084FC;">🔍 Verificación API</button>
+                            <button type="button" onclick="setTerminalCategoryFilter('PAGO')" class="term-btn term-filter-tag" data-cat="PAGO" style="font-size: 0.7rem; padding: 0.25rem 0.55rem; color: #34D399;">✅ Pagos Confirmados</button>
+                            <button type="button" onclick="setTerminalCategoryFilter('WEBHOOK')" class="term-btn term-filter-tag" data-cat="WEBHOOK" style="font-size: 0.7rem; padding: 0.25rem 0.55rem; color: #FB923C;">📡 Webhook</button>
+                            <button type="button" onclick="setTerminalCategoryFilter('BOLETOS')" class="term-btn term-filter-tag" data-cat="BOLETOS" style="font-size: 0.7rem; padding: 0.25rem 0.55rem; color: #F472B6;">🎟️ Boletos</button>
                             <button type="button" onclick="setTerminalCategoryFilter('ERROR')" class="term-btn term-filter-tag" data-cat="ERROR" style="font-size: 0.7rem; padding: 0.25rem 0.55rem; color: #F87171;">🚨 Errores</button>
-                            <button type="button" onclick="setTerminalCategoryFilter('PAGO')" class="term-btn term-filter-tag" data-cat="PAGO" style="font-size: 0.7rem; padding: 0.25rem 0.55rem; color: #34D399;">💳 Pagos</button>
-                            <button type="button" onclick="setTerminalCategoryFilter('BOLETOS')" class="term-btn term-filter-tag" data-cat="BOLETOS" style="font-size: 0.7rem; padding: 0.25rem 0.55rem; color: #60A5FA;">🎟️ Boletos</button>
-                            <button type="button" onclick="setTerminalCategoryFilter('CORREO')" class="term-btn term-filter-tag" data-cat="CORREO" style="font-size: 0.7rem; padding: 0.25rem 0.55rem; color: #A78BFA;">📧 Correos</button>
                         </div>
                     </div>
 
@@ -515,14 +696,21 @@
                                     default => 'tag-system',
                                 };
 
+                                $badge = $log['action_badge'] ?? [
+                                    'text' => 'EVENTO',
+                                    'class' => 'badge-system',
+                                    'key' => 'evento',
+                                ];
+
                                 $hasCtx = !empty($log['context']) && is_array($log['context']);
                             @endphp
-                            <div class="terminal-line" data-search="{{ strtolower($log['timestamp'] . ' ' . $log['level'] . ' ' . $log['gateway'] . ' ' . $log['category'] . ' ' . $log['message'] . ' ' . json_encode($log['context'])) }}">
+                            <div class="terminal-line" data-search="{{ strtolower($log['timestamp'] . ' ' . $log['level'] . ' ' . $log['gateway'] . ' ' . $badge['text'] . ' ' . ($badge['key'] ?? '') . ' ' . $log['clean_message'] . ' ' . $log['message'] . ' ' . json_encode($log['context'])) }}">
                                 <span class="t-time">[{{ $log['timestamp'] }}]</span>
                                 <span class="t-tag {{ $gwClass }}">{{ $log['gateway'] }}</span>
+                                <span class="t-badge {{ $badge['class'] }}">{{ $badge['text'] }}</span>
                                 <span class="{{ $levelClass }}">[{{ $log['level'] }}]</span>
                                 <div class="terminal-msg">
-                                    <span>{{ $log['message'] }}</span>
+                                    <span>{{ $log['clean_message'] ?: $log['message'] }}</span>
                                     @if($hasCtx)
                                         <button type="button" class="terminal-json-toggle" onclick="toggleInlineJson(this)">
                                             <span>▶</span> JSON
@@ -533,28 +721,42 @@
                             </div>
                         @empty
                             <div style="color: #64748B; text-align: center; padding: 4rem 1rem;">
-                                <span>⚡ No se registran eventos de checkout en el archivo de log aún.</span>
+                                @if($dateFilter === 'today')
+                                    <span>⚡ No se registran eventos de checkout en el día de hoy.</span>
+                                    <div style="margin-top: 1rem;">
+                                        <a href="{{ request()->fullUrlWithQuery(['date' => 'all']) }}" class="date-pill-btn active" style="display: inline-flex;">
+                                            <span>🌐</span> <span>Ver Todo el Historial ({{ number_format($totalCount) }} registros)</span>
+                                        </a>
+                                    </div>
+                                @else
+                                    <span>⚡ No se registran eventos de checkout en el archivo de log aún.</span>
+                                @endif
                             </div>
                         @endforelse
                     </div>
 
                     <!-- FOOTER DE LA TERMINAL -->
-                    <div style="background: #0D1117; border-top: 1px solid rgba(255,255,255,0.08); padding: 0.65rem 1.25rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.775rem; color: #94A3B8;">
-                        <span id="termLineCountLabel">Mostrando {{ count($terminalLogs) }} eventos recientes en buffer</span>
+                    <div style="background: #0D1117; border-top: 1px solid rgba(255,255,255,0.08); padding: 0.65rem 1.25rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; font-size: 0.775rem; color: #94A3B8; gap: 0.5rem;">
+                        <span id="termLineCountLabel">
+                            Mostrando <strong style="color: #FFFFFF;">{{ count($terminalLogs) }}</strong> eventos en buffer 
+                            ({{ $dateFilter === 'today' ? 'Filtro: Hoy' : 'Historial Completo' }} | Límite: {{ $limitFilter === 'all' ? 'Ilimitado' : $limitFilter }})
+                        </span>
                         <span>Tamaño de Archivo: <strong style="color: #FFFFFF;">{{ $fileSizeFormatted }}</strong></span>
                     </div>
                 </div>
 
                 <!-- CONTENEDOR VISTA TABLA CLÁSICA (MODO TABLA) -->
-                <div id="tableViewContainer" class="settings-card-box" style="display: none; padding: 0; overflow: hidden; margin-top: 1.5rem;">
-                    <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: space-between;">
+                <div id="tableViewContainer" class="settings-card-box" style="{{ $viewMode === 'table' ? 'display: block;' : 'display: none;' }} padding: 0; overflow: hidden; margin-top: 1.5rem;">
+                    <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
                         <div style="display: flex; align-items: center; gap: 0.75rem;">
                             <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(255,85,0,0.12); border: 1px solid rgba(255,85,0,0.3); color: #FF5500; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
                                 📜
                             </div>
                             <div>
                                 <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #FFFFFF;">Tabla de Auditoría Paginada</h3>
-                                <p style="margin: 0.2rem 0 0 0; font-size: 0.8rem; color: #94A3B8;">Registros extraídos de <code style="color: #60A5FA;">storage/logs/checkout.log</code></p>
+                                <p style="margin: 0.2rem 0 0 0; font-size: 0.8rem; color: #94A3B8;">
+                                    {{ $dateFilter === 'today' ? 'Mostrando eventos del día de hoy' : 'Mostrando eventos de todo el historial' }}
+                                </p>
                             </div>
                         </div>
 
@@ -571,21 +773,21 @@
                                 <tr style="background: rgba(255,255,255,0.02); font-size: 0.75rem; color: #94A3B8; text-transform: uppercase;">
                                     <th style="padding: 0.85rem 1rem; width: 60px;">#</th>
                                     <th style="padding: 0.85rem 1rem; width: 175px;">Fecha & Hora (Precisa)</th>
-                                    <th style="padding: 0.85rem 1rem; width: 95px;">Nivel</th>
-                                    <th style="padding: 0.85rem 1rem; width: 125px;">Pasarela</th>
-                                    <th style="padding: 0.85rem 1rem;">Mensaje / Operación</th>
-                                    <th style="padding: 0.85rem 1rem; width: 100px; text-align: right;">Detalle</th>
+                                    <th style="padding: 0.85rem 1rem; width: 120px;">Pasarela</th>
+                                    <th style="padding: 0.85rem 1rem; width: 160px;">Operación / Evento</th>
+                                    <th style="padding: 0.85rem 1rem; width: 90px;">Nivel</th>
+                                    <th style="padding: 0.85rem 1rem;">Mensaje / Detalle</th>
+                                    <th style="padding: 0.85rem 1rem; width: 90px; text-align: right;">Detalle</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse($paginatedLogs as $log)
                                     @php
                                         $levelUpper = strtoupper($log['level'] ?? 'INFO');
-                                        $levelBadgeClass = match($levelUpper) {
-                                            'ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY' => 'badge-level-error',
-                                            'WARNING' => 'badge-level-warning',
-                                            default => 'badge-level-info',
-                                        };
+                                        $badge = $log['action_badge'] ?? [
+                                            'text' => 'EVENTO',
+                                            'class' => 'badge-system',
+                                        ];
                                         $hasContext = !empty($log['context']) && is_array($log['context']);
                                     @endphp
                                     <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
@@ -594,13 +796,16 @@
                                             <span style="font-family: monospace; font-size: 0.8rem; font-weight: 700; color: #67E8F9;">{{ $log['timestamp'] }}</span>
                                         </td>
                                         <td style="padding: 0.85rem 1rem;">
-                                            <span class="t-tag" style="background: rgba(255,255,255,0.08); color: #FFF;">{{ $log['level'] }}</span>
-                                        </td>
-                                        <td style="padding: 0.85rem 1rem;">
                                             <strong style="color: #FFA500; font-size: 0.85rem;">{{ $log['gateway'] }}</strong>
                                         </td>
                                         <td style="padding: 0.85rem 1rem;">
-                                            <span style="color: #E2E8F0; font-size: 0.85rem;">{{ $log['message'] }}</span>
+                                            <span class="t-badge {{ $badge['class'] }}">{{ $badge['text'] }}</span>
+                                        </td>
+                                        <td style="padding: 0.85rem 1rem;">
+                                            <span class="t-tag" style="background: rgba(255,255,255,0.08); color: #FFF;">{{ $log['level'] }}</span>
+                                        </td>
+                                        <td style="padding: 0.85rem 1rem;">
+                                            <span style="color: #E2E8F0; font-size: 0.85rem;">{{ $log['clean_message'] ?: $log['message'] }}</span>
                                         </td>
                                         <td style="padding: 0.85rem 1rem; text-align: right;">
                                             @if($hasContext)
@@ -614,8 +819,8 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" style="padding: 3.5rem 1rem; text-align: center; color: #94A3B8;">
-                                            No se encontraron registros de logs en este momento.
+                                        <td colspan="7" style="padding: 3.5rem 1rem; text-align: center; color: #94A3B8;">
+                                            No se encontraron registros de logs para los filtros seleccionados.
                                         </td>
                                     </tr>
                                 @endforelse
@@ -708,7 +913,7 @@
                 <button type="button" onclick="closeClearLogModal()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: #E2E8F0; padding: 0.65rem 1.25rem; font-weight: 700; border-radius: 10px; cursor: pointer;">
                     Cancelar
                 </button>
-                <button type="submit" style="background: linear-gradient(135deg, #EF4444, #DC2626); border: none; color: #FFF; padding: 0.65rem 1.5rem; font-weight: 800; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem;">
+                <button type="submit" style="background: linear-gradient(135deg, #EF4444, #DC2626); border: none; color: #FFF; padding: 0.65rem 1.5rem; font-weight: 800; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: gap: 0.4rem;">
                     <span>🗑️</span> <span>Sí, Vaciar Logs</span>
                 </button>
             </form>
@@ -746,6 +951,8 @@
         let currentTerminalCategory = 'ALL';
         let currentTerminalSearch = '';
         let seenLogTimestamps = new Set();
+        const activeDateFilter = @json($dateFilter);
+        const activeLimitFilter = @json($limitFilter);
 
         // Inicializar registro de marcas de tiempo existentes en la terminal
         document.querySelectorAll('#terminalBody .terminal-line').forEach(line => {
@@ -812,7 +1019,8 @@
         }
 
         function fetchLiveFeedLogs() {
-            fetch("{{ route('web.checkout_logs.feed') }}")
+            const url = `{{ route('web.checkout_logs.feed') }}?date=${encodeURIComponent(activeDateFilter)}&limit=${encodeURIComponent(activeLimitFilter === 'all' ? 1000 : activeLimitFilter)}`;
+            fetch(url)
                 .then(res => res.json())
                 .then(data => {
                     if (data.success && data.logs && data.logs.length > 0) {
@@ -821,13 +1029,14 @@
 
                         // Actualizar contadores
                         if (data.stats) {
-                            if (document.getElementById('statTotal')) document.getElementById('statTotal').textContent = data.stats.total.toLocaleString();
+                            const totalVal = (activeDateFilter === 'today' ? (data.stats.today || 0) : (data.stats.total || 0));
+                            if (document.getElementById('statTotal')) document.getElementById('statTotal').textContent = totalVal.toLocaleString();
                             if (document.getElementById('statCulqi')) document.getElementById('statCulqi').textContent = data.stats.culqi.toLocaleString();
                             if (document.getElementById('statIzipay')) document.getElementById('statIzipay').textContent = data.stats.izipay.toLocaleString();
                             if (document.getElementById('statErrors')) document.getElementById('statErrors').textContent = data.stats.errors.toLocaleString();
                         }
 
-                        // Las líneas llegan ordenadas por lo más reciente primero, revertir para imprimir en orden
+                        // Las líneas llegan ordenadas por lo más reciente primero, revertir para imprimir en orden cronológico
                         const newLogs = [...data.logs].reverse();
                         let appended = false;
 
@@ -842,6 +1051,7 @@
                         });
 
                         if (appended) {
+                            applyTerminalFilters();
                             scrollTerminalToBottom();
                         }
                     }
@@ -855,7 +1065,19 @@
             const div = document.createElement('div');
             div.className = 'terminal-line' + (isNew ? ' log-new-flash' : '');
             
-            const searchable = (log.timestamp + ' ' + log.level + ' ' + log.gateway + ' ' + log.category + ' ' + log.message + ' ' + JSON.stringify(log.context || '')).toLowerCase();
+            const actionBadge = log.action_badge || { text: 'EVENTO', class: 'badge-system', key: 'evento' };
+            const cleanMsg = log.clean_message || log.message || '';
+
+            const searchable = (
+                log.timestamp + ' ' + 
+                log.level + ' ' + 
+                log.gateway + ' ' + 
+                actionBadge.text + ' ' + 
+                (actionBadge.key || '') + ' ' + 
+                cleanMsg + ' ' + 
+                log.message + ' ' + 
+                JSON.stringify(log.context || '')
+            ).toLowerCase();
             div.dataset.search = searchable;
 
             let levelClass = 'level-success';
@@ -876,9 +1098,10 @@
             div.innerHTML = `
                 <span class="t-time">[${escapeHtml(log.timestamp)}]</span>
                 <span class="t-tag ${gwClass}">${escapeHtml(log.gateway)}</span>
+                <span class="t-badge ${actionBadge.class}">${escapeHtml(actionBadge.text)}</span>
                 <span class="${levelClass}">[${escapeHtml(log.level)}]</span>
                 <div class="terminal-msg">
-                    <span>${escapeHtml(log.message)}</span>
+                    <span>${escapeHtml(cleanMsg)}</span>
                     ${jsonBtn}
                 </div>
             `;
@@ -923,13 +1146,19 @@
                 }
 
                 if (currentTerminalCategory !== 'ALL') {
-                    if (currentTerminalCategory === 'ERROR' && !searchData.includes('error') && !searchData.includes('critical') && !searchData.includes('warn')) {
+                    if (currentTerminalCategory === 'ERROR' && !searchData.includes('error') && !searchData.includes('critical') && !searchData.includes('rechazado')) {
                         matchesCat = false;
-                    } else if (currentTerminalCategory === 'PAGO' && !searchData.includes('pago') && !searchData.includes('culqi') && !searchData.includes('izipay') && !searchData.includes('cargo')) {
+                    } else if (currentTerminalCategory === 'ORDEN' && !searchData.includes('orden creada') && !searchData.includes('orden qr') && !searchData.includes('sesión token')) {
                         matchesCat = false;
-                    } else if (currentTerminalCategory === 'BOLETOS' && !searchData.includes('boleto') && !searchData.includes('ticket') && !searchData.includes('entrega')) {
+                    } else if (currentTerminalCategory === 'ESPERANDO' && !searchData.includes('esperando pago') && !searchData.includes('esperando')) {
                         matchesCat = false;
-                    } else if (currentTerminalCategory === 'CORREO' && !searchData.includes('correo') && !searchData.includes('email') && !searchData.includes('mail')) {
+                    } else if (currentTerminalCategory === 'API' && !searchData.includes('verificación api') && !searchData.includes('verificacion')) {
+                        matchesCat = false;
+                    } else if (currentTerminalCategory === 'PAGO' && !searchData.includes('pago confirmado') && !searchData.includes('pagada') && !searchData.includes('paid')) {
+                        matchesCat = false;
+                    } else if (currentTerminalCategory === 'WEBHOOK' && !searchData.includes('webhook')) {
+                        matchesCat = false;
+                    } else if (currentTerminalCategory === 'BOLETOS' && !searchData.includes('boleto') && !searchData.includes('entrega boletos')) {
                         matchesCat = false;
                     }
                 }
@@ -987,7 +1216,8 @@
         }
 
         function showLogDetailModal(log) {
-            document.getElementById('logDetailModalTitle').textContent = `[${log.level}] ${log.gateway} - ${log.category}`;
+            const badge = log.action_badge || {};
+            document.getElementById('logDetailModalTitle').textContent = `[${log.level}] ${log.gateway} - ${badge.text || log.category}`;
             document.getElementById('logDetailModalTime').textContent = `Timestamp: ${log.timestamp}`;
             document.getElementById('logDetailModalJson').textContent = JSON.stringify(log.context, null, 2);
             document.getElementById('logDetailModal').style.display = 'flex';
