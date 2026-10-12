@@ -836,6 +836,10 @@ class CheckoutController extends Controller
                 'date_selected' => $validated['date_selected'] ?? '',
                 'tickets_count' => count($validated['tickets']),
                 'buyer_doc' => $validated['customer_doc'] ?? '',
+                'buyer_name' => substr($validated['customer_name'] ?? '', 0, 80),
+                'buyer_email' => substr($validated['customer_email'] ?? '', 0, 80),
+                'buyer_phone' => substr($phone, 0, 20),
+                'zone_name' => substr($validated['tickets'][0]['zone_name'] ?? $validated['tickets'][0]['name'] ?? '', 0, 80),
             ],
         ];
 
@@ -865,8 +869,8 @@ class CheckoutController extends Controller
         ];
 
         if (isset($response['id']) && str_starts_with($response['id'], 'ord_')) {
-            Cache::put('culqi_order_ctx_' . $response['id'], $orderContext, now()->addHours(48));
-            Cache::put('culqi_order_ctx_' . $orderNumber, $orderContext, now()->addHours(48));
+            Cache::put('culqi_order_ctx_' . $response['id'], $orderContext, now()->addDays(7));
+            Cache::put('culqi_order_ctx_' . $orderNumber, $orderContext, now()->addDays(7));
 
             $this->logCheckout('info', "Culqi [Orden Creada]: {$response['id']} (#{$orderNumber}) para {$validated['customer_email']} - Total: S/ " . number_format($validated['amount'], 2), [
                 'order_id' => $response['id'],
@@ -928,7 +932,7 @@ class CheckoutController extends Controller
             'amount' => $orderResponse['amount'] ?? null,
         ]);
 
-        if (!in_array($orderState, ['paid', 'pagado'])) {
+        if (!in_array($orderState, ['paid', 'pagado', 'deposited', 'depositado'])) {
             $this->logCheckout('warning', "Culqi [Orden no pagada]: Intento de procesar Orden {$orderId} con estado no pagado: '{$orderState}'");
             return null;
         }
@@ -947,24 +951,57 @@ class CheckoutController extends Controller
 
         // 4. Extraer datos del comprador con fallbacks en cascada
         $clientDetails = $orderResponse['client_details'] ?? [];
+        $metadata = $orderResponse['metadata'] ?? [];
+
         $firstName = $clientOverrideData['customer_name'] 
             ?? ($cachedContext['customer_name'] 
-            ?? trim(($clientDetails['first_name'] ?? '') . ' ' . ($clientDetails['last_name'] ?? '')));
+            ?? (!empty($metadata['buyer_name']) ? $metadata['buyer_name'] : trim(($clientDetails['first_name'] ?? '') . ' ' . ($clientDetails['last_name'] ?? ''))));
         $buyerName = !empty($firstName) ? $firstName : 'Cliente ViveGo';
 
         $buyerEmail = $clientOverrideData['customer_email'] 
             ?? ($cachedContext['customer_email'] 
-            ?? ($clientDetails['email'] ?? ''));
+            ?? (!empty($metadata['buyer_email']) ? $metadata['buyer_email'] : ($clientDetails['email'] ?? '')));
         $buyerEmail = strtolower(trim($buyerEmail));
 
         $buyerPhone = $clientOverrideData['customer_phone'] 
             ?? ($cachedContext['customer_phone'] 
-            ?? ($clientDetails['phone_number'] ?? '999999999'));
+            ?? (!empty($metadata['buyer_phone']) ? $metadata['buyer_phone'] : ($clientDetails['phone_number'] ?? '999999999')));
 
-        $metadata = $orderResponse['metadata'] ?? [];
         $buyerDni = $clientOverrideData['customer_doc'] 
             ?? ($cachedContext['customer_doc'] 
             ?? ($metadata['buyer_doc'] ?? '00000000'));
+
+        // Si aún no tenemos email o el nombre es el fallback genérico (por expiración de caché), buscar por DNI en BD
+        if (($buyerName === 'Cliente ViveGo' || empty($buyerEmail)) && !empty($buyerDni) && $buyerDni !== '00000000') {
+            $userByDni = User::where('dni', $buyerDni)->first();
+            if ($userByDni) {
+                if ($buyerName === 'Cliente ViveGo' && !empty($userByDni->name)) {
+                    $buyerName = $userByDni->name;
+                }
+                if (empty($buyerEmail) && !empty($userByDni->email)) {
+                    $buyerEmail = strtolower(trim($userByDni->email));
+                }
+                if (($buyerPhone === '999999999' || empty($buyerPhone)) && !empty($userByDni->phone)) {
+                    $buyerPhone = $userByDni->phone;
+                }
+            } else {
+                $saleByDni = TicketSale::where('buyer_dni', $buyerDni)->latest()->first();
+                if ($saleByDni) {
+                    if ($buyerName === 'Cliente ViveGo' && !empty($saleByDni->buyer_name)) {
+                        $buyerName = $saleByDni->buyer_name;
+                    }
+                    if (empty($buyerEmail)) {
+                        $sData = is_array($saleByDni->tickets_data) ? $saleByDni->tickets_data : json_decode($saleByDni->tickets_data, true);
+                        if (!empty($sData['customer_email'])) {
+                            $buyerEmail = strtolower(trim($sData['customer_email']));
+                        }
+                    }
+                    if (($buyerPhone === '999999999' || empty($buyerPhone)) && !empty($saleByDni->buyer_phone)) {
+                        $buyerPhone = $saleByDni->buyer_phone;
+                    }
+                }
+            }
+        }
 
         $orderTotal = isset($orderResponse['amount']) ? ((float)$orderResponse['amount'] / 100) : (float)($clientOverrideData['amount'] ?? ($cachedContext['amount'] ?? 0));
 
@@ -1045,6 +1082,19 @@ class CheckoutController extends Controller
                 }
                 if ($buyerName === 'Cliente ViveGo' && !empty($origSale->buyer_name)) {
                     $buyerName = $origSale->buyer_name;
+                }
+            }
+        }
+
+        // Si no hay zona definida o cayó en fallback genérico por expiración de caché, buscar la zona del evento por precio
+        if ($event && !empty($event->zones) && (!isset($ticketsData[0]['zone_name']) || ($ticketsData[0]['name'] ?? '') === 'Entrada General' || empty($cachedContext))) {
+            $unitPriceTarget = $orderTotal / max(1, $totalQty);
+            foreach ($event->zones as $z) {
+                $zPrice = (float)($z['price'] ?? 0);
+                if (abs($zPrice - $unitPriceTarget) < 0.01) {
+                    $ticketsData[0]['name'] = $z['name'];
+                    $ticketsData[0]['zone_name'] = $z['name'];
+                    break;
                 }
             }
         }
@@ -1538,7 +1588,7 @@ class CheckoutController extends Controller
         // 2. Consultar directamente a la API de Culqi
         $order = $culqiService->getOrder($orderId);
         $state = strtolower($order['state'] ?? 'pending');
-        $isPaid = in_array($state, ['paid', 'pagado']);
+        $isPaid = in_array($state, ['paid', 'pagado', 'deposited', 'depositado']);
 
         $saleId = null;
         $redirectUrl = null;
