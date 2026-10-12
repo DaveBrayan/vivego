@@ -76,4 +76,26 @@ class TicketSale extends Model
     {
         return $this->status === 'upgraded' || !empty($this->upgraded_to_sale_id) || (!empty($this->tickets_data['is_upgraded']));
     }
+
+    public function emailLogs()
+    {
+        return $this->hasMany(EmailLog::class, 'ticket_sale_id');
+    }
+
+    public function latestEmailLog()
+    {
+        return $this->hasOne(EmailLog::class, 'ticket_sale_id')->latestOfMany();
+    }
+
+    public function getCustomerEmailAttribute(): ?string
+    {
+        if (is_array($this->tickets_data)) {
+            return $this->tickets_data['customer_email'] ?? ($this->tickets_data['buyer_email'] ?? ($this->tickets_data['email'] ?? null));
+        }
+        if (is_string($this->tickets_data)) {
+            $td = json_decode($this->tickets_data, true);
+            return $td['customer_email'] ?? ($td['buyer_email'] ?? ($td['email'] ?? null));
+        }
+        return null;
+    }
 }

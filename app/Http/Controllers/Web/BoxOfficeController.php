@@ -243,7 +243,7 @@ class BoxOfficeController extends Controller
         ];
 
         $event = Event::with(['template', 'sales' => function($q) {
-            $q->orderBy('id', 'desc');
+            $q->with('latestEmailLog')->orderBy('id', 'desc');
         }])->find($id);
 
         if (!$event) {
@@ -270,7 +270,7 @@ class BoxOfficeController extends Controller
             ];
         }
 
-        $sales = $event->sales()->with('eventTickets')->latest()->get();
+        $sales = $event->sales()->with(['eventTickets', 'latestEmailLog'])->latest()->get();
         $totalRevenue = $sales->sum('total_amount');
         $cashRevenue = $sales->where('payment_method', 'Efectivo')->sum('total_amount');
         $digitalRevenue = $totalRevenue - $cashRevenue;
@@ -902,10 +902,11 @@ class BoxOfficeController extends Controller
                 $isCourtesy ? 'courtesy' : 'pos_sale'
             );
             $emailSent = $mailResult['success'];
+            $emailError = !$emailSent ? ($mailResult['message'] ?? 'Error desconocido al entregar correo.') : null;
         }
 
         // Cargar boletos físicos y relación de evento para el frontend
-        $sale->loadMissing(['eventTickets', 'event']);
+        $sale->loadMissing(['eventTickets', 'event', 'latestEmailLog']);
 
         return response()->json([
             'success' => true,
@@ -913,6 +914,7 @@ class BoxOfficeController extends Controller
             'sale' => $sale,
             'sale_mode' => $saleMode,
             'email_sent' => $emailSent,
+            'email_error' => $emailError ?? null,
             'recipient' => $effectiveEmail,
             'metrics' => [
                 'total_revenue' => 'S/ ' . number_format($totalRevenue, 2),
@@ -1231,12 +1233,27 @@ class BoxOfficeController extends Controller
             ], 422);
         }
 
-        // Guardar en tickets_data si no estaba registrado
+        // Guardar en tickets_data si no estaba registrado o si fue corregido
         $tData = is_array($sale->tickets_data) ? $sale->tickets_data : (json_decode($sale->tickets_data ?? '[]', true) ?: []);
-        if (empty($tData['customer_email']) || $tData['customer_email'] !== $recipient) {
-            $tData['customer_email'] = $recipient;
-            $sale->tickets_data = $tData;
-            $sale->save();
+        $oldEmail = $tData['customer_email'] ?? ($tData['buyer_email'] ?? null);
+        $tData['customer_email'] = $recipient;
+        $tData['buyer_email'] = $recipient;
+        $sale->tickets_data = $tData;
+        $sale->save();
+
+        // Actualizar también la cuenta de usuario del cliente si existe
+        if (!empty($sale->buyer_dni) && $sale->buyer_dni !== '00000000') {
+            $userFound = \App\Models\User::where('dni', $sale->buyer_dni)->first();
+            if ($userFound && $userFound->email !== $recipient) {
+                $userFound->email = $recipient;
+                $userFound->save();
+            }
+        } elseif (!empty($oldEmail)) {
+            $userFound = \App\Models\User::where('email', $oldEmail)->first();
+            if ($userFound && $userFound->email !== $recipient) {
+                $userFound->email = $recipient;
+                $userFound->save();
+            }
         }
 
         $pdfBase64 = $request->input('ticket_pdf_base64');
@@ -1254,14 +1271,67 @@ class BoxOfficeController extends Controller
         if ($mailResult['success']) {
             return response()->json([
                 'success' => true,
-                'message' => "¡Boleto oficial enviado exitosamente a {$recipient}!"
+                'message' => "¡Boleto oficial enviado exitosamente a {$recipient}!",
+                'email' => $recipient,
             ]);
         } else {
             return response()->json([
                 'success' => false,
-                'message' => $mailResult['message']
+                'message' => $mailResult['message'],
+                'email' => $recipient,
             ], 500);
         }
+    }
+
+    /**
+     * Actualiza el correo electrónico del cliente tanto en la venta como en la cuenta de usuario
+     */
+    public function updateSaleEmail(Request $request, TicketSale $sale): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => 'required|email|max:255',
+        ], [
+            'email.required' => 'El correo electrónico es obligatorio.',
+            'email.email' => 'Por favor ingresa un correo electrónico válido (ej: cliente@gmail.com).',
+        ]);
+
+        $newEmail = strtolower(trim($validated['email']));
+
+        // 1. Actualizar tickets_data de la venta
+        $tData = is_array($sale->tickets_data) ? $sale->tickets_data : (json_decode($sale->tickets_data ?? '[]', true) ?: []);
+        $oldEmail = $tData['customer_email'] ?? ($tData['buyer_email'] ?? null);
+        $tData['customer_email'] = $newEmail;
+        $tData['buyer_email'] = $newEmail;
+        $sale->tickets_data = $tData;
+        $sale->save();
+
+        // 2. Actualizar cuenta del cliente (User)
+        if (!empty($sale->buyer_dni) && $sale->buyer_dni !== '00000000') {
+            $user = \App\Models\User::where('dni', $sale->buyer_dni)->first();
+            if ($user) {
+                $user->email = $newEmail;
+                $user->save();
+            }
+        } elseif (!empty($oldEmail)) {
+            $user = \App\Models\User::where('email', $oldEmail)->first();
+            if ($user) {
+                $user->email = $newEmail;
+                $user->save();
+            }
+        }
+
+        // 3. Actualizar último registro en email_logs si existe
+        $latestLog = $sale->latestEmailLog;
+        if ($latestLog) {
+            $latestLog->recipient_email = $newEmail;
+            $latestLog->save();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "¡Correo guardado y actualizado exitosamente a {$newEmail}!",
+            'email' => $newEmail,
+        ]);
     }
 
     /**

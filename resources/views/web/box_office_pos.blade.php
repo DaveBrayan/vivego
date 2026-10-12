@@ -50,6 +50,42 @@
             box-sizing: border-box !important;
         }
 
+        .badge-email-failed {
+            background: rgba(239, 68, 68, 0.2);
+            color: #F87171;
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 0.15rem 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+        }
+        .badge-email-failed:hover {
+            background: rgba(239, 68, 68, 0.35) !important;
+            border-color: #EF4444 !important;
+            color: #FFFFFF !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+        }
+        .badge-email-sent {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34D399;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.12rem 0.45rem;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            user-select: none;
+        }
+
         .pos-header-card {
             background: linear-gradient(135deg, rgba(20, 20, 30, 0.95), rgba(30, 30, 45, 0.95));
             border: 1.5px solid rgba(255, 85, 0, 0.3);
@@ -971,7 +1007,28 @@
                             </thead>
                             <tbody id="salesTableBody">
                                 @forelse($sales as $sale)
-                                    <tr class="sale-row-item" data-sale-id="{{ $sale->id }}">
+                                    @php
+                                        $tData = is_array($sale->tickets_data) ? $sale->tickets_data : json_decode($sale->tickets_data ?? '[]', true);
+                                        $buyerName = $sale->buyer_name ?: ($tData['buyer_name'] ?? ($tData['customer_name'] ?? ($sale->customer_name ?? 'Público General')));
+                                        $buyerDni = $sale->buyer_dni ?: ($tData['buyer_dni'] ?? ($tData['dni'] ?? null));
+                                        $buyerEmail = $sale->buyer_email ?? ($tData['buyer_email'] ?? ($tData['customer_email'] ?? ($tData['email'] ?? ($sale->customer_email ?? null))));
+                                        $buyerPhone = $sale->buyer_phone ?? ($tData['buyer_phone'] ?? ($tData['customer_phone'] ?? ($tData['phone'] ?? ($sale->customer_phone ?? null))));
+                                        $firstLetter = strtoupper(mb_substr(trim($buyerName ?: 'P'), 0, 1, 'UTF-8'));
+                                        
+                                        $latestLog = $sale->latestEmailLog;
+                                        $hasEmailFailure = $latestLog && $latestLog->status === 'failed';
+                                        $hasEmailSent = $latestLog && $latestLog->status === 'sent';
+                                        $emailErrorMsg = $hasEmailFailure ? ($latestLog->error_message ?? 'Error de entrega al servidor de correo') : '';
+                                    @endphp
+                                    <tr class="sale-row-item" 
+                                        data-sale-id="{{ $sale->id }}"
+                                        data-receipt-number="{{ $sale->receipt_number }}"
+                                        data-buyer-name="{{ $buyerName }}"
+                                        data-buyer-dni="{{ $buyerDni }}"
+                                        data-buyer-email="{{ $buyerEmail }}"
+                                        data-email-failed="{{ $hasEmailFailure ? '1' : '0' }}"
+                                        data-email-sent="{{ $hasEmailSent ? '1' : '0' }}"
+                                        data-email-error="{{ $emailErrorMsg }}">
                                         <td>
                                             <div>
                                                 <span style="font-weight: 800; color: var(--color-primary-orange); font-family: monospace; font-size: 0.95rem; display: block;">
@@ -983,14 +1040,6 @@
                                             </div>
                                         </td>
                                         <td>
-                                            @php
-                                                $tData = is_array($sale->tickets_data) ? $sale->tickets_data : json_decode($sale->tickets_data ?? '[]', true);
-                                                $buyerName = $sale->buyer_name ?: ($tData['buyer_name'] ?? ($tData['customer_name'] ?? ($sale->customer_name ?? 'Público General')));
-                                                $buyerDni = $sale->buyer_dni ?: ($tData['buyer_dni'] ?? ($tData['dni'] ?? null));
-                                                $buyerEmail = $sale->buyer_email ?? ($tData['buyer_email'] ?? ($tData['customer_email'] ?? ($tData['email'] ?? ($sale->customer_email ?? null))));
-                                                $buyerPhone = $sale->buyer_phone ?? ($tData['buyer_phone'] ?? ($tData['customer_phone'] ?? ($tData['phone'] ?? ($sale->customer_phone ?? null))));
-                                                $firstLetter = strtoupper(mb_substr(trim($buyerName ?: 'P'), 0, 1, 'UTF-8'));
-                                            @endphp
                                             <div style="display: flex; align-items: center; gap: 0.6rem;">
                                                 <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255, 85, 0, 0.15); color: var(--color-primary-orange); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.85rem; border: 1px solid rgba(255,85,0,0.3); flex-shrink: 0;">
                                                     {{ $firstLetter }}
@@ -1011,6 +1060,15 @@
                                                         @endif
                                                         @if(empty($buyerDni) && empty($buyerEmail) && empty($buyerPhone))
                                                             <span style="color: #64748B;">Taquilla Directa</span>
+                                                        @endif
+                                                        @if($hasEmailFailure)
+                                                            <span class="badge-email-failed" onclick="openEditEmailModal({{ $sale->id }})" title="Clic para corregir correo: {{ $emailErrorMsg }}" style="background: rgba(239, 68, 68, 0.2); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.5); font-size: 0.72rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.2rem; transition: all 0.2s ease;">
+                                                                <span>⚠️</span> <span>Correo no entregado</span>
+                                                            </span>
+                                                        @elseif($hasEmailSent)
+                                                            <span class="badge-email-sent" style="background: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.35); font-size: 0.72rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.2rem;">
+                                                                <span>✓</span> <span>Entregado</span>
+                                                            </span>
                                                         @endif
                                                     </div>
                                                 </div>
@@ -1705,6 +1763,86 @@
 
     <!-- CONTENEDOR OCULTO PARA IMPRESIÓN DEL RECIBO TÉRMICO (80MM POS) -->
     <div id="thermalReceiptContainer" style="display: none;"></div>
+
+    <!-- MODAL CORRECCIÓN Y REENVÍO DE CORREO (POS / TAQUILLA) -->
+    <div class="admin-modal-overlay" id="editSaleEmailModal" style="display: none; position: fixed; inset: 0; background: rgba(5, 5, 10, 0.85); backdrop-filter: blur(8px); z-index: 99999; align-items: center; justify-content: center;">
+        <div class="admin-modal-card" style="max-width: 520px; width: 92%; background: #12131C; border: 1.5px solid rgba(255, 85, 0, 0.4); border-radius: 20px; padding: 1.5rem; box-shadow: 0 25px 70px rgba(0, 0, 0, 0.8), 0 0 35px rgba(255, 85, 0, 0.15); color: #FFFFFF;">
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                    <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #EF4444; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                        ✉️
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.05rem; font-weight: 900; color: #FFFFFF;">Corregir Correo del Cliente</h3>
+                        <p style="margin: 0; font-size: 0.775rem; color: #94A3B8;">Actualiza el correo en la venta y en la cuenta del cliente</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeEditEmailModal()" style="background: transparent; border: none; color: #94A3B8; font-size: 1.25rem; cursor: pointer; padding: 0.2rem 0.5rem;" aria-label="Cerrar">✕</button>
+            </div>
+
+            <!-- Info Card: Recibo & Cliente -->
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.85rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                    <span style="color: #94A3B8;">Comprobante:</span>
+                    <span id="modalSaleReceipt" style="font-weight: 800; color: var(--color-primary-orange); font-family: monospace;">REC-000000</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #94A3B8;">Cliente:</span>
+                    <span id="modalSaleBuyer" style="font-weight: 700; color: #FFFFFF; text-align: right; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">-</span>
+                </div>
+            </div>
+
+            <!-- Alerta de Error de Entrega Previo -->
+            <div id="modalEmailErrorBanner" style="display: none; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 12px; padding: 0.75rem 0.9rem; margin-bottom: 1rem; font-size: 0.8rem; color: #FCA5A5; line-height: 1.4;">
+                <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+                    <span style="font-size: 1.1rem; flex-shrink: 0;">⚠️</span>
+                    <div style="min-width: 0;">
+                        <strong style="color: #EF4444; display: block; margin-bottom: 0.2rem;">Fallo de entrega reportado:</strong>
+                        <div id="modalEmailErrorText" style="word-break: break-word; font-family: monospace; font-size: 0.75rem;">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulario: Campo de Correo Editable -->
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #F1F5F9; margin-bottom: 0.4rem;">
+                    Correo Electrónico Oficial: <span style="color: #EF4444;">*</span>
+                </label>
+                <div style="position: relative;">
+                    <input type="email" id="modalSaleEmailInput" placeholder="cliente@gmail.com" 
+                           style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.35); border: 1.5px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 0.65rem 0.85rem 0.65rem 2.4rem; color: #FFFFFF; font-size: 0.95rem; font-weight: 600; outline: none; transition: border-color 0.2s;"
+                           oninput="validateModalEmailTypo(this.value)">
+                    <span style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); font-size: 1rem; color: #94A3B8;">✉️</span>
+                </div>
+                <!-- Sugerencia si se detecta .con o error común -->
+                <div id="modalEmailTypoWarning" style="display: none; margin-top: 0.4rem; font-size: 0.75rem; color: #FBBF24; align-items: center; gap: 0.35rem;">
+                    <span>💡</span> <span id="modalEmailTypoText">¿Quisiste escribir @gmail.com?</span>
+                </div>
+                <small style="display: block; margin-top: 0.4rem; color: #64748B; font-size: 0.75rem;">
+                    Se actualizará en esta venta y en la cuenta de usuario del cliente automáticamente.
+                </small>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div style="display: flex; gap: 0.65rem; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeEditEmailModal()" 
+                        style="padding: 0.6rem 1.1rem; font-size: 0.85rem; font-weight: 700; border-radius: 10px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #CBD5E1; cursor: pointer;">
+                    Cancelar
+                </button>
+                <button type="button" id="btnSaveOnlyEmail" onclick="saveEmailOnlyFromModal()" 
+                        style="background: linear-gradient(135deg, #475569, #334155); border: 1px solid rgba(148, 163, 184, 0.4); color: #FFFFFF; padding: 0.6rem 1.15rem; font-size: 0.85rem; font-weight: 800; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: transform 0.15s ease;">
+                    <span>💾</span>
+                    <span>Solo Guardar</span>
+                </button>
+                <button type="button" id="btnSaveAndSendEmail" onclick="saveAndSendEmailFromModal()" 
+                        style="background: linear-gradient(135deg, #6366F1, #4F46E5); border: 1px solid rgba(99, 102, 241, 0.6); color: #FFFFFF; padding: 0.6rem 1.35rem; font-size: 0.85rem; font-weight: 900; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4); transition: transform 0.15s ease;">
+                    <span>📨</span>
+                    <span>Enviar Ahora</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- MODAL DE GENERACIÓN DE PLANCHA DE IMPRENTA -->
     @include('web.partials.plancha_ticket_modal')
@@ -5043,6 +5181,367 @@
             }
         }
 
+        // ==========================================
+        // GESTIÓN Y CORRECCIÓN DE CORREO DE CLIENTE / VENTAS (POS)
+        // ==========================================
+        let activeEditEmailSaleId = null;
+
+        // Abrir modal de corrección de correo
+        function openEditEmailModal(saleOrId) {
+            const sale = getSaleObject(saleOrId);
+            if (!sale) {
+                console.error('[POS Correo] Venta no encontrada:', saleOrId);
+                return;
+            }
+            activeEditEmailSaleId = sale.id;
+
+            const row = document.querySelector(`tr[data-sale-id="${sale.id}"]`);
+            let buyerEmail = sale.buyer_email || '';
+            let buyerName = sale.buyer_name || '';
+            let receiptNum = sale.receipt_number || (sale.receipt ? sale.receipt.receipt_number : `REC-${sale.id}`);
+            let emailError = '';
+
+            if (row) {
+                buyerEmail = row.getAttribute('data-buyer-email') || buyerEmail;
+                buyerName = row.getAttribute('data-buyer-name') || buyerName;
+                receiptNum = row.getAttribute('data-receipt-number') || receiptNum;
+                emailError = row.getAttribute('data-email-error') || '';
+            }
+
+            if (!buyerEmail && sale.tickets_data) {
+                const td = (typeof sale.tickets_data === 'string') ? JSON.parse(sale.tickets_data) : sale.tickets_data;
+                if (td) {
+                    buyerEmail = td.customer_email || td.buyer_email || td.email || '';
+                }
+            }
+
+            if (!buyerEmail && window.posExistingClients && Array.isArray(window.posExistingClients)) {
+                const found = window.posExistingClients.find(c => (c.dni && sale.buyer_dni && c.dni === sale.buyer_dni && c.email && c.email.includes('@')) || (c.name && sale.buyer_name && c.name.toLowerCase().trim() === sale.buyer_name.toLowerCase().trim() && c.email && c.email.includes('@')));
+                if (found && found.email) {
+                    buyerEmail = found.email.trim();
+                }
+            }
+
+            if (!emailError && sale.latest_email_log && sale.latest_email_log.status === 'failed') {
+                emailError = sale.latest_email_log.error_message || 'Fallo de entrega reportado por el servidor de correo.';
+            }
+
+            // Llenar campos del modal
+            const recEl = document.getElementById('modalSaleReceipt');
+            if (recEl) recEl.textContent = receiptNum;
+
+            const buyEl = document.getElementById('modalSaleBuyer');
+            if (buyEl) buyEl.textContent = buyerName || 'Público General';
+
+            const emailInput = document.getElementById('modalSaleEmailInput');
+            if (emailInput) {
+                emailInput.value = buyerEmail || '';
+                emailInput.style.borderColor = 'rgba(255,255,255,0.15)';
+            }
+
+            // Alerta de error previo
+            const errorBanner = document.getElementById('modalEmailErrorBanner');
+            const errorText = document.getElementById('modalEmailErrorText');
+            if (errorBanner && errorText) {
+                if (emailError) {
+                    errorText.textContent = emailError;
+                    errorBanner.style.display = 'block';
+                } else {
+                    errorBanner.style.display = 'none';
+                }
+            }
+
+            validateModalEmailTypo(emailInput ? emailInput.value : '');
+
+            const modal = document.getElementById('editSaleEmailModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                setTimeout(() => { if (emailInput) emailInput.focus(); }, 150);
+            }
+        }
+
+        function closeEditEmailModal() {
+            const modal = document.getElementById('editSaleEmailModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            activeEditEmailSaleId = null;
+        }
+
+        // Validación en tiempo real de typos comunes como @gmail.con
+        function validateModalEmailTypo(val) {
+            const warningEl = document.getElementById('modalEmailTypoWarning');
+            const warningText = document.getElementById('modalEmailTypoText');
+            const input = document.getElementById('modalSaleEmailInput');
+            if (!warningEl || !warningText) return;
+
+            const trimmed = (val || '').trim().toLowerCase();
+            if (trimmed.endsWith('.con') || trimmed.endsWith('.cmo') || trimmed.endsWith('.col') || trimmed.endsWith('.coom')) {
+                const corrected = trimmed.replace(/\.(con|cmo|col|coom)$/, '.com');
+                warningText.innerHTML = `Detectamos un posible error: ¿Quisiste escribir <strong>${corrected}</strong>? <a href="javascript:void(0)" onclick="applyTypoSuggestion('${corrected}')" style="color: #60A5FA; text-decoration: underline; margin-left: 0.3rem;">Corregir a .com</a>`;
+                warningEl.style.display = 'flex';
+                if (input) input.style.borderColor = '#F59E0B';
+            } else {
+                warningEl.style.display = 'none';
+                if (input) input.style.borderColor = 'rgba(255,255,255,0.15)';
+            }
+        }
+
+        function applyTypoSuggestion(fixedVal) {
+            const input = document.getElementById('modalSaleEmailInput');
+            if (input) {
+                input.value = fixedVal;
+                validateModalEmailTypo(fixedVal);
+                input.focus();
+            }
+        }
+
+        // 1. [💾 Solo Guardar]: Actualiza el correo en la venta y cliente sin enviar
+        async function saveEmailOnlyFromModal() {
+            if (!activeEditEmailSaleId) return;
+            const emailInput = document.getElementById('modalSaleEmailInput');
+            const newEmail = emailInput ? emailInput.value.trim().toLowerCase() : '';
+
+            if (!newEmail || !newEmail.includes('@') || !newEmail.includes('.')) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Correo inválido',
+                    text: 'Por favor ingresa un correo electrónico válido (ej: cliente@gmail.com).',
+                    background: '#14141E',
+                    color: '#FFFFFF'
+                });
+                return;
+            }
+
+            const btnSave = document.getElementById('btnSaveOnlyEmail');
+            if (btnSave) {
+                btnSave.disabled = true;
+                btnSave.innerHTML = `<span>⏳</span> Guardando...`;
+            }
+
+            try {
+                const res = await fetch(`/admin/taquilla/venta/${activeEditEmailSaleId}/actualizar-correo`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ email: newEmail })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    updateSaleEmailInDomAndMemory(activeEditEmailSaleId, newEmail, false);
+                    closeEditEmailModal();
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Correo Guardado',
+                        text: `Se actualizó el correo a "${newEmail}" en la venta y en la cuenta del cliente.`,
+                        background: '#14141E',
+                        color: '#FFFFFF',
+                        timer: 2500,
+                        showConfirmButton: false
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message || 'No se pudo guardar el correo.',
+                        background: '#14141E',
+                        color: '#FFFFFF'
+                    });
+                }
+            } catch (err) {
+                console.error('Error guardando correo:', err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de conexión',
+                    text: 'Ocurrió un error al contactar al servidor.',
+                    background: '#14141E',
+                    color: '#FFFFFF'
+                });
+            } finally {
+                if (btnSave) {
+                    btnSave.disabled = false;
+                    btnSave.innerHTML = `<span>💾</span> Solo Guardar`;
+                }
+            }
+        }
+
+        // 2. [📨 Enviar Ahora]: Actualiza el correo y lo envía de inmediato
+        async function saveAndSendEmailFromModal() {
+            if (!activeEditEmailSaleId) return;
+            const saleId = activeEditEmailSaleId;
+            const emailInput = document.getElementById('modalSaleEmailInput');
+            const newEmail = emailInput ? emailInput.value.trim().toLowerCase() : '';
+
+            if (!newEmail || !newEmail.includes('@') || !newEmail.includes('.')) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Correo inválido',
+                    text: 'Por favor ingresa un correo electrónico válido (ej: cliente@gmail.com).',
+                    background: '#14141E',
+                    color: '#FFFFFF'
+                });
+                return;
+            }
+
+            const sale = getSaleObject(saleId);
+            if (!sale) return;
+
+            closeEditEmailModal();
+
+            // Ejecutar envío directo con el correo corregido
+            await executePosEmailSend(sale, newEmail);
+        }
+
+        // Helper reactivo para actualizar DOM y memoria tras cambiar correo
+        function updateSaleEmailInDomAndMemory(saleId, newEmail, isDelivered = false, errorMessage = '') {
+            const sale = getSaleObject(saleId);
+            if (sale) {
+                sale.buyer_email = newEmail;
+                if (typeof sale.tickets_data === 'object' && sale.tickets_data) {
+                    sale.tickets_data.customer_email = newEmail;
+                    sale.tickets_data.buyer_email = newEmail;
+                }
+                if (isDelivered) {
+                    sale.email_sent = true;
+                    sale.email_failed = false;
+                    sale.email_error = null;
+                }
+            }
+
+            const row = document.querySelector(`tr[data-sale-id="${saleId}"]`);
+            if (row) {
+                row.setAttribute('data-buyer-email', newEmail);
+                if (isDelivered) {
+                    row.setAttribute('data-email-failed', '0');
+                    row.setAttribute('data-email-sent', '1');
+                    row.setAttribute('data-email-error', '');
+
+                    const failedBadge = row.querySelector('.badge-email-failed');
+                    if (failedBadge) {
+                        failedBadge.outerHTML = `<span class="badge-email-sent" style="background: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.35); font-size: 0.72rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.2rem;"><span>✓</span> <span>Entregado</span></span>`;
+                    }
+                } else if (errorMessage) {
+                    row.setAttribute('data-email-failed', '1');
+                    row.setAttribute('data-email-sent', '0');
+                    row.setAttribute('data-email-error', errorMessage);
+
+                    let badge = row.querySelector('.badge-email-failed');
+                    if (!badge) {
+                        const sentBadge = row.querySelector('.badge-email-sent');
+                        if (sentBadge) sentBadge.remove();
+                        const clientContainer = row.querySelector('td:nth-child(2) div[style*="flex-wrap"]');
+                        if (clientContainer) {
+                            clientContainer.insertAdjacentHTML('beforeend', `<span class="badge-email-failed" onclick="openEditEmailModal(${saleId})" title="Clic para corregir correo: ${escapePosHtml(errorMessage)}" style="background: rgba(239, 68, 68, 0.2); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.5); font-size: 0.72rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.2rem; transition: all 0.2s ease;"><span>⚠️</span> <span>Correo no entregado</span></span>`);
+                        }
+                    } else {
+                        badge.setAttribute('title', `Clic para corregir correo: ${errorMessage}`);
+                    }
+                }
+
+                // Actualizar texto de email en la fila si existe
+                const emailSpan = row.querySelector('span[title*="@"]');
+                if (emailSpan) {
+                    emailSpan.title = newEmail;
+                    emailSpan.innerHTML = `✉️ ${newEmail}`;
+                }
+            }
+        }
+
+        // Compila y ejecuta la petición de envío al correo
+        async function executePosEmailSend(sale, buyerEmail) {
+            Swal.fire({
+                title: '📧 Enviando Entrada al Correo...',
+                html: `Compilando diseño oficial del boleto y enviándolo a <strong>${escapePosHtml(buyerEmail)}</strong>...`,
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); },
+                background: '#14141E',
+                color: '#FFFFFF'
+            });
+
+            try {
+                const { pdf } = await generatePosTicketPdfDoc(sale);
+                const pdfBase64 = pdf ? pdf.output('datauristring') : '';
+
+                const res = await fetch(`/admin/taquilla/venta/${sale.id}/enviar-correo`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: buyerEmail,
+                        ticket_pdf_base64: pdfBase64
+                    })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    updateSaleEmailInDomAndMemory(sale.id, buyerEmail, true);
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: '✉️ ¡Entrada Enviada con Éxito!',
+                        html: `Se ha entregado el boleto oficial en PDF adjunto a <strong>${escapePosHtml(buyerEmail)}</strong>.`,
+                        confirmButtonColor: '#10B981',
+                        background: '#14141E',
+                        color: '#FFFFFF'
+                    });
+                } else {
+                    const errorMsg = data.message || 'Ocurrió un error al intentar enviar el correo.';
+                    updateSaleEmailInDomAndMemory(sale.id, buyerEmail, false, errorMsg);
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'No se pudo entregar el correo',
+                        html: `
+                            <div style="text-align: left; font-size: 0.85rem; color: #CBD5E1;">
+                                <p style="color: #F87171; font-weight: 700; margin-bottom: 0.5rem;">El servidor de correo reportó el siguiente error:</p>
+                                <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); padding: 0.6rem; border-radius: 8px; font-family: monospace; font-size: 0.78rem; color: #FCA5A5; word-break: break-word;">
+                                    ${escapePosHtml(errorMsg)}
+                                </div>
+                                <p style="margin-top: 0.75rem; font-size: 0.8rem; color: #94A3B8;">
+                                    Puedes corregir la dirección de correo y reintentar el envío inmediatamente.
+                                </p>
+                            </div>
+                        `,
+                        showCancelButton: true,
+                        confirmButtonText: '✏️ Corregir Correo Ahora',
+                        cancelButtonText: 'Cerrar',
+                        confirmButtonColor: '#FF5500',
+                        cancelButtonColor: '#475569',
+                        background: '#14141E',
+                        color: '#FFFFFF'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            openEditEmailModal(sale);
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error('Error enviando PDF de entrada por correo:', err);
+                const el = document.querySelector('.posPdfSingleCanvas');
+                if (el) el.remove();
+
+                const errMsg = err.message || 'Error de conexión';
+                updateSaleEmailInDomAndMemory(sale.id, buyerEmail, false, errMsg);
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de conexión',
+                    text: 'No se pudo contactar al servicio de correo. Verifica la conexión o el servidor SMTP.',
+                    confirmButtonColor: '#FF5500',
+                    background: '#14141E',
+                    color: '#FFFFFF'
+                });
+            }
+        }
+
         // Enviar Entrada PDF oficial por correo desde Taquilla (POS)
         async function emailPosSalePdf(saleOrId) {
             if (window.isEventPast) {
@@ -5056,10 +5555,19 @@
                 return;
             }
 
+            const saleId = sale.id;
+            const row = document.querySelector(`tr[data-sale-id="${saleId}"]`);
+            const isEmailFailed = (row && row.getAttribute('data-email-failed') === '1') || (sale.latest_email_log && sale.latest_email_log.status === 'failed');
+
             // 1. Buscar si el comprador ya tiene un correo registrado
             let buyerEmail = '';
             if (sale.buyer_email && sale.buyer_email.includes('@')) {
                 buyerEmail = sale.buyer_email.trim();
+            }
+
+            if (!buyerEmail && row) {
+                const rEmail = row.getAttribute('data-buyer-email');
+                if (rEmail && rEmail.includes('@')) buyerEmail = rEmail.trim();
             }
 
             if (!buyerEmail && sale.tickets_data) {
@@ -5080,92 +5588,16 @@
                 }
             }
 
-            // 2. Si NO tiene correo registrado, preguntar por SweetAlert (solo en caso de no existir)
-            if (!buyerEmail) {
-                const { value: emailInput } = await Swal.fire({
-                    title: '✉️ Enviar Entrada por Correo',
-                    text: `El cliente "${sale.buyer_name || 'Comprador'}" no tiene correo registrado. Ingresa el correo para enviar la entrada:`,
-                    input: 'email',
-                    inputPlaceholder: 'ejemplo@correo.com',
-                    showCancelButton: true,
-                    confirmButtonText: '📧 Enviar Boleto PDF',
-                    cancelButtonText: 'Cancelar',
-                    confirmButtonColor: '#6366F1',
-                    background: '#14141E',
-                    color: '#FFFFFF',
-                    inputValidator: (value) => {
-                        if (!value || !value.includes('@') || !value.includes('.')) {
-                            return 'Por favor ingresa un correo electrónico válido';
-                        }
-                    }
-                });
-
-                if (!emailInput) return;
-                buyerEmail = emailInput.trim();
+            // CONDICIÓN REQUERIDA POR EL USUARIO:
+            // Si la venta tiene error de entrega o no tiene correo: mostrar el modal para corregir.
+            // Si NO tiene error de entrega y tiene su correo: enviar directo SIN abrir el modal.
+            if (isEmailFailed || !buyerEmail) {
+                openEditEmailModal(sale);
+                return;
             }
 
-            // 3. Compilar y enviar directamente sin preguntar si ya tenía correo
-            Swal.fire({
-                title: '📧 Enviando Entrada al Correo...',
-                html: `Compilando diseño oficial del boleto y enviándolo a <strong>${buyerEmail}</strong>...`,
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading(); },
-                background: '#14141E',
-                color: '#FFFFFF'
-            });
-
-            try {
-                const { pdf } = await generatePosTicketPdfDoc(sale);
-                const pdfBase64 = pdf ? pdf.output('datauristring') : '';
-
-                const res = await fetch(`/admin/taquilla/venta/${sale.id}/enviar-correo`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify({
-                        email: buyerEmail,
-                        ticket_pdf_base64: pdfBase64
-                    })
-                });
-
-                const data = await res.json();
-                if (data.success) {
-                    sale.buyer_email = buyerEmail;
-
-                    Swal.fire({
-                        icon: 'success',
-                        title: '✉️ ¡Entrada Enviada con Éxito!',
-                        html: `Se ha enviado el boleto oficial en PDF adjunto a <strong>${buyerEmail}</strong>.`,
-                        confirmButtonColor: '#10B981',
-                        background: '#14141E',
-                        color: '#FFFFFF'
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'No se pudo enviar',
-                        text: data.message || 'Ocurrió un error al intentar enviar el correo.',
-                        confirmButtonColor: '#FF5500',
-                        background: '#14141E',
-                        color: '#FFFFFF'
-                    });
-                }
-            } catch (err) {
-                console.error('Error enviando PDF de entrada por correo:', err);
-                const el = document.querySelector('.posPdfSingleCanvas');
-                if (el) el.remove();
-
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error de Envío',
-                    text: 'Inconveniente al procesar o enviar el PDF: ' + (err.message || 'Error de red'),
-                    confirmButtonColor: '#FF5500',
-                    background: '#14141E',
-                    color: '#FFFFFF'
-                });
-            }
+            // Envío directo sin modal
+            await executePosEmailSend(sale, buyerEmail);
         }
 
         // ==========================================
@@ -5527,12 +5959,26 @@
 
                     const tableBody = document.getElementById('salesTableBody');
                     if (tableBody) {
+                        const isPhys = (data.sale.sale_type === 'fisica' || data.sale_mode === 'fisica' || data.sale.source === 'pos_physical' || data.sale.source === 'courtesy_physical');
+                        const isCourtesy = (data.sale.payment_method === 'Cortesía' || data.sale.payment_method === 'cortesia');
+
+                        const bName = data.sale.buyer_name || 'Público General';
+                        const bDni = data.sale.buyer_dni || '';
+                        const bEmail = data.sale.buyer_email || data.recipient || '';
+                        const bPhone = data.sale.buyer_phone || '';
+                        const firstL = (bName.trim()[0] || 'P').toUpperCase();
+                        const isEmailFailed = !isPhys && !data.email_sent && bEmail;
+
                         const newRow = document.createElement('tr');
                         newRow.className = 'sale-row-item';
                         newRow.setAttribute('data-sale-id', data.sale.id);
-                        
-                        const isPhys = (data.sale.sale_type === 'fisica' || data.sale_mode === 'fisica' || data.sale.source === 'pos_physical' || data.sale.source === 'courtesy_physical');
-                        const isCourtesy = (data.sale.payment_method === 'Cortesía' || data.sale.payment_method === 'cortesia');
+                        newRow.setAttribute('data-receipt-number', data.receipt.receipt_number);
+                        newRow.setAttribute('data-buyer-name', bName);
+                        newRow.setAttribute('data-buyer-dni', bDni);
+                        newRow.setAttribute('data-buyer-email', bEmail);
+                        newRow.setAttribute('data-email-failed', isEmailFailed ? '1' : '0');
+                        newRow.setAttribute('data-email-sent', data.email_sent ? '1' : '0');
+                        newRow.setAttribute('data-email-error', data.email_error || '');
 
                         let typeBadge = '';
                         if (isPhys) {
@@ -5588,15 +6034,15 @@
                             </button>
                         `;
 
-                        const bName = data.sale.buyer_name || 'Público General';
-                        const bDni = data.sale.buyer_dni || '';
-                        const bEmail = data.sale.buyer_email || '';
-                        const bPhone = data.sale.buyer_phone || '';
-                        const firstL = (bName.trim()[0] || 'P').toUpperCase();
                         let subInfo = '';
                         if (bDni) subInfo += `<span style="background: rgba(255, 255, 255, 0.06); padding: 0.1rem 0.35rem; border-radius: 4px; font-family: monospace;">DNI: ${bDni}</span> `;
                         if (bEmail) subInfo += `<span>✉️ ${bEmail}</span> `;
-                        if (bPhone) subInfo += `<span>📱 ${bPhone}</span>`;
+                        if (bPhone) subInfo += `<span>📱 ${bPhone}</span> `;
+                        if (isEmailFailed) {
+                            subInfo += `<span class="badge-email-failed" onclick="openEditEmailModal(${data.sale.id})" title="Clic para corregir correo: ${escapePosHtml(data.email_error || 'Error al entregar correo')}" style="background: rgba(239, 68, 68, 0.2); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.5); font-size: 0.72rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.2rem; transition: all 0.2s ease;"><span>⚠️</span> <span>Correo no entregado</span></span>`;
+                        } else if (data.email_sent) {
+                            subInfo += `<span class="badge-email-sent" style="background: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.35); font-size: 0.72rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.2rem;"><span>✓</span> <span>Entregado</span></span>`;
+                        }
                         if (!subInfo) subInfo = '<span style="color: #64748B;">Taquilla Directa</span>';
 
                         newRow.innerHTML = `
@@ -5851,9 +6297,30 @@
                         });
                     } else {
                         // MODO POS / DIGITAL: Recibo + Descargar Entrada PDF + Enviar al Correo
-                        const emailSentMsg = targetEmail 
-                            ? `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #10B981; font-weight: 700; background: rgba(16,185,129,0.12); padding: 0.4rem 0.75rem; border-radius: 10px; border: 1px solid rgba(16,185,129,0.3);">✉️ Boleto oficial idéntico enviado a <strong>${escapePosHtml(targetEmail)}</strong></div>` 
-                            : '';
+                        let emailSentMsg = '';
+                        const isDeliveryFailed = targetEmail && !data.email_sent;
+                        if (targetEmail) {
+                            if (data.email_sent) {
+                                emailSentMsg = `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #10B981; font-weight: 700; background: rgba(16,185,129,0.12); padding: 0.45rem 0.75rem; border-radius: 10px; border: 1px solid rgba(16,185,129,0.3);">✉️ Boleto oficial idéntico enviado a <strong>${escapePosHtml(targetEmail)}</strong></div>`;
+                            } else {
+                                const errDetail = data.email_error ? `<br><small style="font-weight: normal; opacity: 0.9; font-size: 0.78rem;">${escapePosHtml(data.email_error)}</small>` : '';
+                                emailSentMsg = `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #F87171; font-weight: 700; background: rgba(239,68,68,0.12); padding: 0.5rem 0.75rem; border-radius: 10px; border: 1px solid rgba(239,68,68,0.35); text-align: left;">
+                                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                        <span>⚠️</span> <span><strong>No se pudo entregar el correo</strong> a <u>${escapePosHtml(targetEmail)}</u></span>
+                                    </div>
+                                    ${errDetail}
+                                    <div style="margin-top: 0.35rem; font-size: 0.75rem; color: #FCA5A5;">Puedes corregir el correo o reintentar el envío ahora mismo.</div>
+                                </div>`;
+                            }
+                        }
+
+                        const emailBtnMarkup = isDeliveryFailed
+                            ? `<button type="button" id="btnAlertEmailPdf" class="btn btn-warning btn-sm" style="background: linear-gradient(135deg, #EF4444, #DC2626); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(239,68,68,0.4);">
+                                   <span>✏️</span> Corregir Correo
+                               </button>`
+                            : `<button type="button" id="btnAlertEmailPdf" class="btn btn-info btn-sm" style="background: linear-gradient(135deg, #6366F1, #4F46E5); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(99,102,241,0.3);">
+                                   <span>✉️</span> Enviar al Correo
+                               </button>`;
 
                         Swal.fire({
                             title: `🎉 ¡Venta Registrada Exitosamente!`,
@@ -5869,9 +6336,7 @@
                                     <button type="button" id="btnAlertDownloadPdf" class="btn btn-secondary btn-sm" style="background: linear-gradient(135deg, #06B6D4, #0284C7); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(6,182,212,0.3);">
                                         <span>🎟️</span> Descargar Entrada PDF
                                     </button>
-                                    <button type="button" id="btnAlertEmailPdf" class="btn btn-info btn-sm" style="background: linear-gradient(135deg, #6366F1, #4F46E5); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(99,102,241,0.3);">
-                                        <span>✉️</span> Enviar al Correo
-                                    </button>
+                                    ${emailBtnMarkup}
                                 </div>
                             `,
                             showConfirmButton: false,
@@ -5890,7 +6355,11 @@
                                 });
                                 const btnE = document.getElementById('btnAlertEmailPdf');
                                 if (btnE) btnE.addEventListener('click', () => {
-                                    emailPosSalePdf(data.sale.id);
+                                    if (isDeliveryFailed) {
+                                        openEditEmailModal(data.sale.id);
+                                    } else {
+                                        emailPosSalePdf(data.sale.id);
+                                    }
                                 });
                             }
                         });
@@ -6002,11 +6471,25 @@
 
                     const tableBody = document.getElementById('salesTableBody');
                     if (tableBody) {
+                        const isPhys = (data.sale.sale_type === 'fisica' || data.sale_mode === 'fisica' || data.sale.source === 'courtesy_physical' || data.sale.source === 'pos_physical');
+                        
+                        const bName = data.sale.buyer_name || 'Público General';
+                        const bDni = data.sale.buyer_dni || '';
+                        const bEmail = data.sale.buyer_email || data.recipient || '';
+                        const bPhone = data.sale.buyer_phone || '';
+                        const firstL = (bName.trim()[0] || 'P').toUpperCase();
+                        const isEmailFailed = !isPhys && !data.email_sent && bEmail;
+
                         const newRow = document.createElement('tr');
                         newRow.className = 'sale-row-item';
                         newRow.setAttribute('data-sale-id', data.sale.id);
-                        
-                        const isPhys = (data.sale.sale_type === 'fisica' || data.sale_mode === 'fisica' || data.sale.source === 'courtesy_physical' || data.sale.source === 'pos_physical');
+                        newRow.setAttribute('data-receipt-number', data.receipt.receipt_number);
+                        newRow.setAttribute('data-buyer-name', bName);
+                        newRow.setAttribute('data-buyer-dni', bDni);
+                        newRow.setAttribute('data-buyer-email', bEmail);
+                        newRow.setAttribute('data-email-failed', isEmailFailed ? '1' : '0');
+                        newRow.setAttribute('data-email-sent', data.email_sent ? '1' : '0');
+                        newRow.setAttribute('data-email-error', data.email_error || '');
                         
                         let typeBadge = '';
                         if (isPhys) {
@@ -6045,15 +6528,15 @@
                             </button>
                         `;
 
-                        const bName = data.sale.buyer_name || 'Público General';
-                        const bDni = data.sale.buyer_dni || '';
-                        const bEmail = data.sale.buyer_email || '';
-                        const bPhone = data.sale.buyer_phone || '';
-                        const firstL = (bName.trim()[0] || 'P').toUpperCase();
                         let subInfo = '';
                         if (bDni) subInfo += `<span style="background: rgba(255, 255, 255, 0.06); padding: 0.1rem 0.35rem; border-radius: 4px; font-family: monospace;">DNI: ${bDni}</span> `;
                         if (bEmail) subInfo += `<span>✉️ ${bEmail}</span> `;
-                        if (bPhone) subInfo += `<span>📱 ${bPhone}</span>`;
+                        if (bPhone) subInfo += `<span>📱 ${bPhone}</span> `;
+                        if (isEmailFailed) {
+                            subInfo += `<span class="badge-email-failed" onclick="openEditEmailModal(${data.sale.id})" title="Clic para corregir correo: ${escapePosHtml(data.email_error || 'Error al entregar correo')}" style="background: rgba(239, 68, 68, 0.2); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.5); font-size: 0.72rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.2rem; transition: all 0.2s ease;"><span>⚠️</span> <span>Correo no entregado</span></span>`;
+                        } else if (data.email_sent) {
+                            subInfo += `<span class="badge-email-sent" style="background: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.35); font-size: 0.72rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.2rem;"><span>✓</span> <span>Entregado</span></span>`;
+                        }
                         if (!subInfo) subInfo = '<span style="color: #64748B;">Taquilla Directa</span>';
 
                         newRow.innerHTML = `
@@ -6244,9 +6727,30 @@
                     }
 
                     // 7. Modal flotante de confirmación y opciones rápidas
-                    const courtesyEmailSentMsg = targetCourtesyEmail 
-                        ? `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #10B981; font-weight: 700; background: rgba(16,185,129,0.12); padding: 0.4rem 0.75rem; border-radius: 10px; border: 1px solid rgba(16,185,129,0.3);">✉️ Pase oficial idéntico enviado a <strong>${escapePosHtml(targetCourtesyEmail)}</strong></div>` 
-                        : '';
+                    let courtesyEmailSentMsg = '';
+                    const isCourtesyDeliveryFailed = targetCourtesyEmail && !data.email_sent;
+                    if (targetCourtesyEmail) {
+                        if (data.email_sent) {
+                            courtesyEmailSentMsg = `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #10B981; font-weight: 700; background: rgba(16,185,129,0.12); padding: 0.45rem 0.75rem; border-radius: 10px; border: 1px solid rgba(16,185,129,0.3);">✉️ Pase oficial idéntico enviado a <strong>${escapePosHtml(targetCourtesyEmail)}</strong></div>`;
+                        } else {
+                            const errDetail = data.email_error ? `<br><small style="font-weight: normal; opacity: 0.9; font-size: 0.78rem;">${escapePosHtml(data.email_error)}</small>` : '';
+                            courtesyEmailSentMsg = `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #F87171; font-weight: 700; background: rgba(239,68,68,0.12); padding: 0.5rem 0.75rem; border-radius: 10px; border: 1px solid rgba(239,68,68,0.35); text-align: left;">
+                                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                    <span>⚠️</span> <span><strong>No se pudo entregar el correo</strong> a <u>${escapePosHtml(targetCourtesyEmail)}</u></span>
+                                </div>
+                                ${errDetail}
+                                <div style="margin-top: 0.35rem; font-size: 0.75rem; color: #FCA5A5;">Puedes corregir el correo o reintentar el envío ahora mismo.</div>
+                            </div>`;
+                        }
+                    }
+
+                    const courtesyEmailBtnMarkup = isCourtesyDeliveryFailed
+                        ? `<button type="button" id="btnAlertEmailPdfCourtesy" class="btn btn-warning btn-sm" style="background: linear-gradient(135deg, #EF4444, #DC2626); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(239,68,68,0.4);">
+                               <span>✏️</span> Corregir Correo
+                           </button>`
+                        : `<button type="button" id="btnAlertEmailPdfCourtesy" class="btn btn-info btn-sm" style="background: linear-gradient(135deg, #6366F1, #4F46E5); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(99,102,241,0.3);">
+                               <span>✉️</span> Enviar al Correo
+                           </button>`;
 
                     Swal.fire({
                         icon: 'success',
@@ -6263,9 +6767,7 @@
                                 <button type="button" id="btnAlertDownloadPdfCourtesy" class="btn btn-secondary btn-sm" style="background: linear-gradient(135deg, #06B6D4, #0284C7); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(6,182,212,0.3);">
                                     <span>🎟️</span> Descargar Entrada PDF
                                 </button>
-                                <button type="button" id="btnAlertEmailPdfCourtesy" class="btn btn-info btn-sm" style="background: linear-gradient(135deg, #6366F1, #4F46E5); border: none; color: #FFFFFF; padding: 0.65rem 1.25rem; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(99,102,241,0.3);">
-                                    <span>✉️</span> Enviar al Correo
-                                </button>
+                                ${courtesyEmailBtnMarkup}
                             </div>
                         `,
                         showConfirmButton: false,
@@ -6284,7 +6786,11 @@
                             });
                             const btnE = document.getElementById('btnAlertEmailPdfCourtesy');
                             if (btnE) btnE.addEventListener('click', () => {
-                                emailPosSalePdf(data.sale.id);
+                                if (isCourtesyDeliveryFailed) {
+                                    openEditEmailModal(data.sale.id);
+                                } else {
+                                    emailPosSalePdf(data.sale.id);
+                                }
                             });
                         }
                     });
