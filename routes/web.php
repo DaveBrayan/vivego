@@ -392,7 +392,7 @@ Route::match(['get', 'post'], '/optimizar-sistema', function (\Illuminate\Http\R
                         <span>💳</span> Procesador de Órdenes Culqi (Sin Terminal)
                     </div>
                     <div class="card-desc">
-                        Procesa cualquier orden pagada o depositada en Culqi de forma desatendida: <strong>crea la venta, emite los boletos oficiales con código QR y envía el correo con el PDF al comprador</strong>.
+                        Procesa cualquier orden pagada o depositada en Culqi de forma automática en segundo plano: <strong>crea la venta, emite los boletos oficiales con código QR y envía el correo con el PDF al comprador</strong>.
                     </div>
 
                     <!-- BOTONES RÁPIDOS PARA LAS ÓRDENES DETECTADAS -->

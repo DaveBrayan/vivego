@@ -845,7 +845,7 @@ class CheckoutController extends Controller
 
         $response = $culqiService->createOrder($payload);
 
-        // Guardar contexto completo de la orden en Cache para permitir emisión desatendida vía Webhook
+        // Guardar contexto completo de la orden en Cache para permitir emisión automática en segundo plano vía Webhook
         $orderContext = [
             'event_id' => $validated['event_id'] ?? null,
             'event_title' => $validated['event_title'] ?? '',
@@ -1663,7 +1663,7 @@ class CheckoutController extends Controller
             $this->logCheckout('info', "Culqi [Webhook Procesando Orden]: {$orderId}");
             $sale = $this->processCulqiPaidOrder($orderId, $culqiService);
             if ($sale) {
-                $this->logCheckout('info', "Culqi [Webhook Éxito]: Venta #{$sale->id} (Recibo: {$sale->receipt_number}) completada desatendida vía Webhook para orden {$orderId}");
+                $this->logCheckout('info', "Culqi [Webhook Éxito]: Venta #{$sale->id} (Recibo: {$sale->receipt_number}) confirmada automáticamente en segundo plano vía Webhook para orden {$orderId}");
                 return response()->json([
                     'status' => 'success',
                     'message' => 'Order processed and tickets generated successfully',
