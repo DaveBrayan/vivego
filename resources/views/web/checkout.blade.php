@@ -2308,12 +2308,19 @@
             }
         }
 
+        let isCulqiStatusCheckInProgress = false;
+
         // Verificación manual del estado del pago QR
         function verifyCulqiPaymentManual() {
             if (!currentCulqiOrderId) {
                 alert('⚠️ No se ha generado una orden de pago activa.');
                 return;
             }
+
+            if (isCulqiStatusCheckInProgress) {
+                return;
+            }
+            isCulqiStatusCheckInProgress = true;
 
             const btn = document.getElementById('btnVerifyCulqiManual');
             if (btn) {
@@ -2352,7 +2359,10 @@
                 }
 
                 if (data.success && data.is_paid) {
-                    if (culqiPollingInterval) clearInterval(culqiPollingInterval);
+                    if (culqiPollingInterval) {
+                        clearInterval(culqiPollingInterval);
+                        culqiPollingInterval = null;
+                    }
                     if (data.redirect_url) {
                         try {
                             sessionStorage.setItem('vivego_last_sale_redirect', data.redirect_url);
@@ -2382,6 +2392,9 @@
                     btn.innerHTML = '⚡ Ya realicé el pago / Verificar ahora';
                 }
                 console.error('[Culqi] Error manual verify:', err);
+            })
+            .finally(() => {
+                isCulqiStatusCheckInProgress = false;
             });
         }
 
@@ -2427,9 +2440,19 @@
         function startCulqiOrderPolling(orderId) {
             if (!orderId) return;
 
-            if (culqiPollingInterval) clearInterval(culqiPollingInterval);
+            if (culqiPollingInterval) {
+                clearInterval(culqiPollingInterval);
+                culqiPollingInterval = null;
+            }
+            isCulqiStatusCheckInProgress = false;
 
             culqiPollingInterval = setInterval(() => {
+                // Si ya hay una consulta en vuelo (o el usuario dio clic al botón manual), no superponer otra
+                if (isCulqiStatusCheckInProgress) {
+                    return;
+                }
+                isCulqiStatusCheckInProgress = true;
+
                 fetch("{{ route('web.checkout.culqi_order_status') }}", {
                     method: 'POST',
                     headers: {
@@ -2456,7 +2479,10 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.success && data.is_paid) {
-                        clearInterval(culqiPollingInterval);
+                        if (culqiPollingInterval) {
+                            clearInterval(culqiPollingInterval);
+                            culqiPollingInterval = null;
+                        }
                         if (typeof Culqi !== 'undefined' && Culqi.close) Culqi.close();
                         if (data.redirect_url) {
                             try {
@@ -2468,7 +2494,10 @@
                         }
                     }
                 })
-                .catch(err => console.warn('[Culqi] Polling status:', err));
+                .catch(err => console.warn('[Culqi] Polling status:', err))
+                .finally(() => {
+                    isCulqiStatusCheckInProgress = false;
+                });
             }, 3000);
         }
 

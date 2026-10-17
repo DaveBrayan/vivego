@@ -15,6 +15,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -915,10 +916,37 @@ class CheckoutController extends Controller
      */
     public function processCulqiPaidOrder(string $orderId, CulqiService $culqiService, array $clientOverrideData = []): ?TicketSale
     {
-        // 1. Verificación de Idempotencia: ¿Ya existe una venta para esta orden de Culqi?
+        // 1. Verificación rápida de Idempotencia previa al lock: ¿Ya existe una venta para esta orden de Culqi?
         $existingSale = TicketSale::where('tickets_data', 'LIKE', '%' . $orderId . '%')->first();
         if ($existingSale) {
             $this->logCheckout('info', "Culqi [Idempotencia]: Orden {$orderId} ya procesada previamente con Venta #{$existingSale->id} (Recibo: {$existingSale->receipt_number})");
+            return $existingSale;
+        }
+
+        // 2. Lock Atómico por orden para serializar cualquier petición concurrente (polling, webhook, doble clic)
+        try {
+            $lock = Cache::lock("culqi_order_lock_{$orderId}", 30);
+            return $lock->block(15, function () use ($orderId, $culqiService, $clientOverrideData) {
+                return $this->executeCulqiOrderProcessing($orderId, $culqiService, $clientOverrideData);
+            });
+        } catch (\Illuminate\Contracts\Cache\LockTimeoutException $e) {
+            $this->logCheckout('warning', "Culqi [Lock Timeout]: Timeout esperando lock para orden {$orderId}, consultando si otro hilo ya completó la venta");
+            return TicketSale::where('tickets_data', 'LIKE', '%' . $orderId . '%')->first();
+        } catch (\Throwable $e) {
+            $this->logCheckout('warning', "Culqi [Lock Fallback]: Lock atómico no disponible ({$e->getMessage()}), procesando con protección transaccional");
+            return $this->executeCulqiOrderProcessing($orderId, $culqiService, $clientOverrideData);
+        }
+    }
+
+    /**
+     * Lógica interna y transaccional para materializar una Orden Culqi pagada
+     */
+    protected function executeCulqiOrderProcessing(string $orderId, CulqiService $culqiService, array $clientOverrideData = []): ?TicketSale
+    {
+        // 1. Doble verificación de Idempotencia dentro del lock
+        $existingSale = TicketSale::where('tickets_data', 'LIKE', '%' . $orderId . '%')->first();
+        if ($existingSale) {
+            $this->logCheckout('info', "Culqi [Idempotencia en Lock]: Orden {$orderId} ya procesada previamente con Venta #{$existingSale->id} (Recibo: {$existingSale->receipt_number})");
             return $existingSale;
         }
 
@@ -1008,31 +1036,13 @@ class CheckoutController extends Controller
         $paymentType = strtoupper(!empty($orderResponse['payment_code']) ? 'PAGOEFECTIVO' : 'QR_BILLETERAS');
         $subMethod = $paymentType === 'PAGOEFECTIVO' ? 'PagoEfectivo (CIP)' : 'QR Billeteras (Yape / Plin)';
 
-        // 5. Correlativo continuo REC-XXXXXX
-        $allReceipts = TicketSale::where('receipt_number', 'LIKE', 'REC-%')->pluck('receipt_number');
-        $maxNum = 0;
-        foreach ($allReceipts as $rec) {
-            if (preg_match('/REC-(\d+)/i', $rec, $m)) {
-                $val = (int) $m[1];
-                if ($val > $maxNum) {
-                    $maxNum = $val;
-                }
-            }
-        }
-        $nextNum = max(1, $maxNum + 1);
-        $receiptNumber = 'REC-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
-        while (TicketSale::where('receipt_number', $receiptNumber)->exists()) {
-            $nextNum++;
-            $receiptNumber = 'REC-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
-        }
-
-        // 6. Evento
+        // 5. Evento
         $eventId = $clientOverrideData['event_id'] 
             ?? ($cachedContext['event_id'] 
             ?? ($metadata['event_id'] ?? null));
         $event = $eventId ? Event::find($eventId) : Event::first();
 
-        // 7. Datos de boletos / items
+        // 6. Datos de boletos / items
         $ticketsData = $clientOverrideData['tickets'] 
             ?? ($cachedContext['tickets'] 
             ?? [
@@ -1044,19 +1054,12 @@ class CheckoutController extends Controller
             $totalQty += (int)($t['quantity'] ?? 1);
         }
 
-        // 8. Descuentos y cupones
+        // 7. Descuentos y cupones
         $couponCodeInput = strtoupper(trim((string)($clientOverrideData['coupon_code'] ?? ($cachedContext['coupon_code'] ?? ''))));
         $couponDiscount = (float)($clientOverrideData['coupon_discount'] ?? ($cachedContext['coupon_discount'] ?? 0));
         $campaignNameInput = $clientOverrideData['campaign_name'] ?? ($cachedContext['campaign_name'] ?? null);
         $campaignDiscountInput = (float)($clientOverrideData['campaign_discount'] ?? ($cachedContext['campaign_discount'] ?? 0));
         $originalSubtotalInput = (float)($clientOverrideData['original_subtotal'] ?? ($cachedContext['original_subtotal'] ?? 0));
-
-        if ($couponCodeInput) {
-            $appliedCoupon = Coupon::where('code', $couponCodeInput)->first();
-            if ($appliedCoupon) {
-                $appliedCoupon->incrementUsage();
-            }
-        }
 
         $totalDiscountAmount = $couponDiscount + $campaignDiscountInput;
         $discountDescParts = [];
@@ -1068,7 +1071,7 @@ class CheckoutController extends Controller
         }
         $discountDescription = implode(' | ', $discountDescParts);
 
-        // 9. Upgrades
+        // 8. Upgrades
         $upgradeSaleId = $clientOverrideData['upgrade_sale_id'] ?? ($cachedContext['upgrade_sale_id'] ?? null);
         if ($upgradeSaleId) {
             $origSale = TicketSale::find($upgradeSaleId);
@@ -1114,51 +1117,94 @@ class CheckoutController extends Controller
         }
         unset($t);
 
-        // 10. Crear TicketSale
-        $sale = TicketSale::create([
-            'event_id' => $event?->id ?? 1,
-            'receipt_number' => $receiptNumber,
-            'buyer_name' => $buyerName,
-            'buyer_dni' => $buyerDni ?: '00000000',
-            'buyer_phone' => $buyerPhone ?: '999999999',
-            'zone_name' => $effectiveZoneName,
-            'unit_price' => $orderTotal / max(1, $totalQty),
-            'quantity' => max(1, $totalQty),
-            'original_subtotal' => $originalSubtotalInput > 0 ? $originalSubtotalInput : ($orderTotal + $totalDiscountAmount),
-            'discount_amount' => $totalDiscountAmount,
-            'discount_description' => $discountDescription ?: null,
-            'campaign_name' => $campaignNameInput ?: null,
-            'coupon_code' => $couponCodeInput ?: null,
-            'total_amount' => $orderTotal,
-            'payment_method' => 'Culqi',
-            'amount_paid' => $orderTotal,
-            'change_amount' => 0.00,
-            'status' => 'completed',
-            'is_upgrade' => !empty($upgradeSaleId),
-            'upgraded_from_sale_id' => $upgradeSaleId,
-            'upgrade_difference' => !empty($upgradeSaleId) ? $orderTotal : 0.00,
-            'tickets_data' => [
-                'items' => $ticketsData,
-                'is_presale' => function_exists('isSalePresale') ? isSalePresale(['items' => $ticketsData]) : false,
-                'sub_method' => $subMethod,
-                'customer_email' => $buyerEmail,
-                'culqi_transaction_id' => $orderResponse['id'] ?? $orderId,
-                'culqi_order_id' => $orderId,
-                'culqi_order_number' => $orderNumber,
-                'coupon_code' => $couponCodeInput ?: null,
-                'coupon_discount' => $couponDiscount,
+        // 9. Transacción de Base de Datos Atómica para crear la Venta y vincular Boletos sin condiciones de carrera
+        $sale = DB::transaction(function () use (
+            $orderId, $orderResponse, $orderNumber, $event, $totalQty, $orderTotal,
+            $buyerName, $buyerDni, $buyerPhone, $buyerEmail, $effectiveZoneName,
+            $originalSubtotalInput, $totalDiscountAmount, $discountDescription,
+            $campaignNameInput, $campaignDiscountInput, $couponCodeInput, $couponDiscount,
+            $upgradeSaleId, $subMethod, $ticketsData
+        ) {
+            // Verificación dentro de la transacción por si otro proceso commiteó justo antes
+            $existing = TicketSale::where('tickets_data', 'LIKE', '%' . $orderId . '%')->first();
+            if ($existing) {
+                return $existing;
+            }
+
+            // Aplicar uso de cupón de forma atómica
+            if ($couponCodeInput) {
+                $appliedCoupon = Coupon::where('code', $couponCodeInput)->lockForUpdate()->first();
+                if ($appliedCoupon) {
+                    $appliedCoupon->incrementUsage();
+                }
+            }
+
+            // Correlativo continuo REC-XXXXXX con lock pesimista
+            $allReceipts = TicketSale::where('receipt_number', 'LIKE', 'REC-%')->lockForUpdate()->pluck('receipt_number');
+            $maxNum = 0;
+            foreach ($allReceipts as $rec) {
+                if (preg_match('/REC-(\d+)/i', $rec, $m)) {
+                    $val = (int) $m[1];
+                    if ($val > $maxNum) {
+                        $maxNum = $val;
+                    }
+                }
+            }
+            $nextNum = max(1, $maxNum + 1);
+            $receiptNumber = 'REC-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
+            while (TicketSale::where('receipt_number', $receiptNumber)->exists()) {
+                $nextNum++;
+                $receiptNumber = 'REC-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
+            }
+
+            // Crear TicketSale oficial
+            $newSale = TicketSale::create([
+                'event_id' => $event?->id ?? 1,
+                'receipt_number' => $receiptNumber,
+                'buyer_name' => $buyerName,
+                'buyer_dni' => $buyerDni ?: '00000000',
+                'buyer_phone' => $buyerPhone ?: '999999999',
+                'zone_name' => $effectiveZoneName,
+                'unit_price' => $orderTotal / max(1, $totalQty),
+                'quantity' => max(1, $totalQty),
+                'original_subtotal' => $originalSubtotalInput > 0 ? $originalSubtotalInput : ($orderTotal + $totalDiscountAmount),
+                'discount_amount' => $totalDiscountAmount,
+                'discount_description' => $discountDescription ?: null,
                 'campaign_name' => $campaignNameInput ?: null,
-                'campaign_discount' => $campaignDiscountInput,
+                'coupon_code' => $couponCodeInput ?: null,
+                'total_amount' => $orderTotal,
+                'payment_method' => 'Culqi',
+                'amount_paid' => $orderTotal,
+                'change_amount' => 0.00,
+                'status' => 'completed',
                 'is_upgrade' => !empty($upgradeSaleId),
-                'upgrade_sale_id' => $upgradeSaleId,
-            ],
-            'seller_name' => 'Pasarela Web Culqi (QR/Auto)',
-        ]);
+                'upgraded_from_sale_id' => $upgradeSaleId,
+                'upgrade_difference' => !empty($upgradeSaleId) ? $orderTotal : 0.00,
+                'tickets_data' => [
+                    'items' => $ticketsData,
+                    'is_presale' => function_exists('isSalePresale') ? isSalePresale(['items' => $ticketsData]) : false,
+                    'sub_method' => $subMethod,
+                    'customer_email' => $buyerEmail,
+                    'culqi_transaction_id' => $orderResponse['id'] ?? $orderId,
+                    'culqi_order_id' => $orderId,
+                    'culqi_order_number' => $orderNumber,
+                    'coupon_code' => $couponCodeInput ?: null,
+                    'coupon_discount' => $couponDiscount,
+                    'campaign_name' => $campaignNameInput ?: null,
+                    'campaign_discount' => $campaignDiscountInput,
+                    'is_upgrade' => !empty($upgradeSaleId),
+                    'upgrade_sale_id' => $upgradeSaleId,
+                ],
+                'seller_name' => 'Pasarela Web Culqi (QR/Auto)',
+            ]);
 
-        // 11. Generar EventTickets oficiales
-        $this->processSaleCompletionAndTickets($sale, $event, $totalQty, $upgradeSaleId, $ticketsData);
+            // Generar y asignar boletos en event_tickets de forma atómica
+            $this->processSaleCompletionAndTickets($newSale, $event, $totalQty, $upgradeSaleId, $ticketsData);
 
-        // 12. Sincronizar cuenta de usuario
+            return $newSale;
+        });
+
+        // 10. Sincronizar cuenta de usuario
         $isNewUser = false;
         $tempPassword = null;
         if (!empty($buyerEmail)) {
@@ -1218,14 +1264,14 @@ class CheckoutController extends Controller
             }
         }
 
-        // 13. Enviar Correo Electrónico Automático
+        // 11. Enviar Correo Electrónico Automático
         if (!empty($buyerEmail) && filter_var($buyerEmail, FILTER_VALIDATE_EMAIL)) {
             \App\Services\EmailLogService::sendTicketPurchaseMail($sale, $tempPassword, $isNewUser, $clientOverrideData['ticket_pdf_base64'] ?? null);
         }
 
         $this->logCheckout('info', "Culqi [Venta QR Completada]: Venta #{$sale->id} registrada exitosamente para orden {$orderId}", [
             'sale_id' => $sale->id,
-            'receipt' => $receiptNumber,
+            'receipt' => $sale->receipt_number,
             'order_id' => $orderId,
             'buyer' => $buyerName,
             'email' => $buyerEmail,
@@ -1599,7 +1645,9 @@ class CheckoutController extends Controller
                 $this->logCheckout('info', "Culqi [Esperando Pago]: Esperando que el cliente complete el pago para la orden {$orderId}...");
             }
         } else {
-            $this->logCheckout('info', "Culqi [Pago Confirmado]: ¡Orden {$orderId} pagada exitosamente! Registrando venta...");
+            if (Cache::add("culqi_paid_logged_{$orderId}", true, now()->addMinutes(30))) {
+                $this->logCheckout('info', "Culqi [Pago Confirmado]: ¡Orden {$orderId} pagada exitosamente! Registrando venta...");
+            }
         }
 
         // 3. Si Culqi confirma que está pagada, materializar de inmediato la venta y los boletos
@@ -2040,6 +2088,7 @@ class CheckoutController extends Controller
                               ->orWhere('zone_name', 'LIKE', "%({$seatLetter} {$seatDigits})%");
                         })
                         ->orderBy('id', 'asc')
+                        ->lockForUpdate()
                         ->first();
                 } else {
                     // Caso Zona General: buscar el siguiente boleto disponible del pool garantizando correlativo único
@@ -2057,6 +2106,7 @@ class CheckoutController extends Controller
                         ->where('zone_name', 'NOT LIKE', '%(%')
                         ->orderBy('ticket_number', 'asc')
                         ->orderBy('id', 'asc')
+                        ->lockForUpdate()
                         ->first();
 
                     if (!$physicalTicket) {
@@ -2073,6 +2123,7 @@ class CheckoutController extends Controller
                             })
                             ->orderBy('ticket_number', 'asc')
                             ->orderBy('id', 'asc')
+                            ->lockForUpdate()
                             ->first();
                     }
                 }
@@ -2094,6 +2145,7 @@ class CheckoutController extends Controller
                     $targetTicketType = $requiredTicketType ?: 'digital';
                     $latestDigitalSeq = (int) \App\Models\EventTicket::where('event_id', $targetEvent->id)
                         ->where('ticket_type', $targetTicketType)
+                        ->lockForUpdate()
                         ->max('ticket_number') ?: 0;
                     $currentSeq = max($startSeq, $latestDigitalSeq + 1);
                     while (in_array($currentSeq, $matchedTicketNumbers)) {
