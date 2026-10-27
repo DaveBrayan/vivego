@@ -75,20 +75,20 @@
                     <button type="button" class="tool-btn" id="toolBtnPolygon" onclick="SeatMapEditor.setTool('polygon')" title="Clic para fijar puntos, doble clic para cerrar">
                         <span>📐</span> <strong>Polígono Libre</strong>
                     </button>
+                    <button type="button" class="tool-btn" id="toolBtnRect" onclick="SeatMapEditor.createRectangleZone()" title="Crear sector rectangular">
+                        <span>⏹️</span> <strong>Rectángulo</strong>
+                    </button>
+                    <button type="button" class="tool-btn" id="toolBtnSquare" onclick="SeatMapEditor.createSquareZone()" title="Crear sector cuadrado">
+                        <span>🔲</span> <strong>Cuadrado</strong>
+                    </button>
                     <button type="button" class="tool-btn" id="toolBtnArc" onclick="SeatMapEditor.createCurvedArcZone()" title="Crear Media Luna / Arco Curvo para tribuna o popular">
                         <span>🌙</span> <strong>Media Luna / Arco</strong>
                     </button>
                     <button type="button" class="tool-btn" id="toolBtnLateral" onclick="SeatMapEditor.createLateralStandZone()" title="Crear Tribuna Lateral Oriente / Occidente">
                         <span>🏛️</span> <strong>Tribuna Lateral</strong>
                     </button>
-                    <button type="button" class="tool-btn" id="toolBtnRect" onclick="SeatMapEditor.setTool('rect')" title="Arrastra en el lienzo para crear un sector rectangular">
-                        <span>⏹️</span> <strong>Rectángulo</strong>
-                    </button>
-                    <button type="button" class="tool-btn" id="toolBtnStage" onclick="SeatMapEditor.createStageZone()" title="Crear Escenario / Tarima principal en la parte superior">
+                    <button type="button" class="tool-btn" id="toolBtnStage" onclick="SeatMapEditor.createStageZone()" title="Crear Escenario / Tarima principal en la parte superior" style="grid-column: span 2;">
                         <span>🎪</span> <strong>Escenario / Tarima</strong>
-                    </button>
-                    <button type="button" class="tool-btn" id="toolBtnAddManual" onclick="SeatMapEditor.createManualZone()" title="Crear sector cuadrado en el centro">
-                        <span>➕</span> <strong>Zona Básica</strong>
                     </button>
                 </div>
             </div>
@@ -138,7 +138,7 @@
                             <label id="inspectorZoneNameLabel" style="font-size: 0.725rem; color: #CBD5E1; font-weight: 700;">NOMBRE DE LA ZONA</label>
                             <span style="font-size: 0.65rem; color: #94A3B8;">Sugerencias abajo</span>
                         </div>
-                        <input type="text" id="inspectorZoneName" class="form-input-custom" placeholder="Ej: ZONA VIP" style="font-size: 0.85rem; padding: 0.5rem;" oninput="SeatMapEditor.updateSelectedZoneProps()">
+                        <input type="text" id="inspectorZoneName" class="form-input-custom" placeholder="Ej: ZONA VIP" style="font-size: 0.85rem; padding: 0.5rem;" oninput="SeatMapEditor.updateSelectedZoneProps()" onblur="if(!this.value.trim()){ this.value = 'Zona'; SeatMapEditor.updateSelectedZoneProps(); }">
                         
                         <!-- Píldoras de nombres rápidos comerciales -->
                         <div id="inspectorCommercialNamePresets" style="display: flex; gap: 0.25rem; flex-wrap: wrap; margin-top: 0.35rem;">
@@ -408,6 +408,9 @@
                     </button>
                     <button type="button" class="ctx-menu-item" onclick="SeatMapEditor.convertSelectedZoneToRect()">
                         <span style="color: #FF5500;">⏹️</span> <strong>Convertir a Rectángulo (4 Vértices)</strong>
+                    </button>
+                    <button type="button" class="ctx-menu-item" onclick="SeatMapEditor.convertSelectedZoneToSquare()">
+                        <span style="color: #10B981;">🔲</span> <strong>Convertir a Cuadrado</strong>
                     </button>
                     <button type="button" class="ctx-menu-item" onclick="SeatMapEditor.convertSelectedZoneToArc()">
                         <span style="color: #F59E0B;">🌙</span> <strong>Convertir a Media Luna / Arco</strong>

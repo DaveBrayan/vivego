@@ -692,6 +692,30 @@
             this.syncToStandardTable();
         },
 
+        convertSelectedZoneToSquare: function() {
+            this.hideContextMenu();
+            const z = this.getSelectedZone();
+            if (!z || !z.points || z.points.length < 3) return;
+
+            const xs = z.points.map(p => p.x);
+            const ys = z.points.map(p => p.y);
+            const minX = Math.min(...xs);
+            const maxX = Math.max(...xs);
+            const minY = Math.min(...ys);
+            const maxY = Math.max(...ys);
+            const size = Math.max(80, Math.round((maxX - minX + maxY - minY) / 2));
+
+            z.points = [
+                { x: minX, y: minY },
+                { x: minX + size, y: minY },
+                { x: minX + size, y: minY + size },
+                { x: minX, y: minY + size }
+            ];
+
+            this.render();
+            this.syncToStandardTable();
+        },
+
         convertSelectedZoneToArc: function() {
             this.hideContextMenu();
             const z = this.getSelectedZone();
@@ -1294,11 +1318,11 @@
             this.syncToStandardTable();
         },
 
-        createManualZone: function() {
+        createRectangleZone: function() {
             const count = this.zones.length + 1;
-            const colors = ['#10B981', '#2563EB', '#38BDF8', '#78350F', '#F59E0B', '#EC4899', '#8B5CF6'];
-            const offset = (count * 20) % 100;
-            const newId = 'zone_' + Date.now();
+            const colors = ['#FF5500', '#2563EB', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#38BDF8'];
+            const offset = ((count - 1) * 20) % 120;
+            const newId = 'zone_rect_' + Date.now();
 
             const newZone = {
                 id: newId,
@@ -1310,10 +1334,10 @@
                 presale_enabled: false,
                 presale_discount: 20,
                 points: [
-                    { x: 360 + offset, y: 180 + offset },
-                    { x: 640 + offset, y: 180 + offset },
-                    { x: 640 + offset, y: 280 + offset },
-                    { x: 360 + offset, y: 280 + offset }
+                    { x: 360 + offset, y: 200 + offset },
+                    { x: 640 + offset, y: 200 + offset },
+                    { x: 640 + offset, y: 320 + offset },
+                    { x: 360 + offset, y: 320 + offset }
                 ],
                 seats: []
             };
@@ -1324,6 +1348,42 @@
             this.setTool('select');
             this.render();
             this.syncToStandardTable();
+        },
+
+        createSquareZone: function() {
+            const count = this.zones.length + 1;
+            const colors = ['#10B981', '#2563EB', '#38BDF8', '#78350F', '#F59E0B', '#EC4899', '#8B5CF6', '#FF5500'];
+            const offset = ((count - 1) * 20) % 120;
+            const newId = 'zone_sq_' + Date.now();
+
+            const newZone = {
+                id: newId,
+                name: 'Sector ' + count,
+                capacity: 100,
+                price: 50.00,
+                capacity_type: 'General',
+                color: colors[(count - 1) % colors.length],
+                presale_enabled: false,
+                presale_discount: 20,
+                points: [
+                    { x: 410 + offset, y: 200 + offset },
+                    { x: 590 + offset, y: 200 + offset },
+                    { x: 590 + offset, y: 380 + offset },
+                    { x: 410 + offset, y: 380 + offset }
+                ],
+                seats: []
+            };
+
+            this.zones.push(newZone);
+            this.selectedZoneId = newId;
+            this.selectedPointIdx = null;
+            this.setTool('select');
+            this.render();
+            this.syncToStandardTable();
+        },
+
+        createManualZone: function() {
+            this.createRectangleZone();
         },
 
         selectZone: function(zoneId) {
@@ -1435,11 +1495,17 @@
             const isStage = this.isStageZone(z);
 
             const nameEl = document.getElementById('inspectorZoneName');
-            z.name = nameEl ? (nameEl.value.trim() || (isStage ? 'ESCENARIO' : 'Zona')) : z.name;
+            if (nameEl) {
+                z.name = nameEl.value;
+            }
             const colorEl = document.getElementById('inspectorZoneColor');
-            z.color = colorEl ? colorEl.value : z.color;
+            if (colorEl) {
+                z.color = colorEl.value;
+            }
             const hexEl = document.getElementById('inspectorZoneColorHex');
-            if (hexEl) hexEl.textContent = z.color;
+            if (hexEl && z.color) {
+                hexEl.textContent = z.color;
+            }
 
             if (isStage) {
                 z.capacity = 0;
@@ -1454,11 +1520,15 @@
                 z.seats = [];
             } else {
                 const capTypeEl = document.getElementById('inspectorZoneCapacityType');
-                z.capacity_type = capTypeEl ? capTypeEl.value : (z.capacity_type || 'General');
+                if (capTypeEl) z.capacity_type = capTypeEl.value;
                 const priceEl = document.getElementById('inspectorZonePrice');
-                z.price = priceEl ? (parseFloat(priceEl.value) || 0) : z.price;
+                if (priceEl && priceEl.value !== '') {
+                    z.price = parseFloat(priceEl.value) || 0;
+                }
                 const capEl = document.getElementById('inspectorZoneCapacity');
-                z.capacity = capEl ? (parseInt(capEl.value) || 0) : z.capacity;
+                if (capEl && capEl.value !== '') {
+                    z.capacity = parseInt(capEl.value) || 0;
+                }
 
                 const presaleCheck = document.getElementById('inspectorZonePresaleEnabled');
                 const isPresale = presaleCheck ? presaleCheck.checked : false;
@@ -1504,8 +1574,36 @@
                 }
             }
 
-            this.render();
-            this.syncToStandardTable();
+            // Actualizar visualmente la tarjeta en la lista sin reconstruir el DOM (evita que el input pierda focus)
+            const activeCard = document.querySelector(`.zone-list-card.active`);
+            if (activeCard) {
+                const titleEl = activeCard.querySelector('strong');
+                if (titleEl) titleEl.textContent = z.name || (isStage ? 'ESCENARIO' : '(Sin Nombre)');
+                const colorDot = activeCard.querySelector('span[style*="width: 14px"]');
+                if (colorDot) {
+                    colorDot.style.background = z.color;
+                    colorDot.style.boxShadow = `0 0 8px ${z.color}88`;
+                }
+                const subEl = activeCard.querySelector('span[style*="font-size: 0.7rem"]');
+                if (subEl && !isStage) {
+                    subEl.textContent = `S/ ${(parseFloat(z.price) || 0).toFixed(2)}`;
+                }
+            }
+
+            // Actualizar en tiempo real el SVG sin tocar el inspector ni la lista de tarjetas
+            this.renderSvgZones();
+            this.renderSvgLabels();
+
+            // Si se cambió de color o escala, refrescar handles
+            if (this.currentTool === 'select') {
+                this.renderSvgHandles();
+            }
+
+            // Sincronizar con debounce para no saturar al tipear
+            if (this._syncTimeout) clearTimeout(this._syncTimeout);
+            this._syncTimeout = setTimeout(() => {
+                this.syncToStandardTable();
+            }, 300);
         },
 
         updateSeatNomenclaturePreview: function() {
@@ -2314,19 +2412,19 @@
             }
 
             const nameEl = document.getElementById('inspectorZoneName');
-            if (nameEl) nameEl.value = z.name;
+            if (nameEl && document.activeElement !== nameEl) nameEl.value = z.name || '';
             const capTypeEl = document.getElementById('inspectorZoneCapacityType');
-            if (capTypeEl) capTypeEl.value = isStage ? 'Escenario' : (z.capacity_type || 'General');
+            if (capTypeEl && document.activeElement !== capTypeEl) capTypeEl.value = isStage ? 'Escenario' : (z.capacity_type || 'General');
             const colorEl = document.getElementById('inspectorZoneColor');
-            if (colorEl) colorEl.value = z.color;
+            if (colorEl && document.activeElement !== colorEl) colorEl.value = z.color;
             const hexEl = document.getElementById('inspectorZoneColorHex');
             if (hexEl) hexEl.textContent = z.color;
 
             if (!isStage) {
                 const priceEl = document.getElementById('inspectorZonePrice');
-                if (priceEl) priceEl.value = (parseFloat(z.price) || 0).toFixed(2);
+                if (priceEl && document.activeElement !== priceEl) priceEl.value = (parseFloat(z.price) || 0).toFixed(2);
                 const capEl = document.getElementById('inspectorZoneCapacity');
-                if (capEl) capEl.value = z.capacity || 0;
+                if (capEl && document.activeElement !== capEl) capEl.value = z.capacity || 0;
 
                 const isPresale = !isStage && !!(z.presale_enabled === true || z.presale_enabled === 'true' || z.presale_enabled === 1 || z.has_presale === true || z.has_presale === 'true');
                 const presaleCheck = document.getElementById('inspectorZonePresaleEnabled');
