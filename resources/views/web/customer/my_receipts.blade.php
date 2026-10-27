@@ -97,13 +97,8 @@
                                     $items = $tData['items'] ?? (is_array($tData) ? $tData : []);
                                     $totalTickets = count($items) > 0 ? array_sum(array_column($items, 'quantity')) : max(1, $sale->quantity);
 
-                                    $eventDateStr = !empty($sale->event?->event_date) ? (is_string($sale->event->event_date) ? substr($sale->event->event_date, 0, 10) : $sale->event->event_date->format('Y-m-d')) : null;
-                                    $isPastEvent = false;
-                                    if ($eventDateStr) {
-                                        $eventTimeStr = $sale->event?->event_time ?: '23:59:59';
-                                        $eventDateTime = \Carbon\Carbon::parse($eventDateStr . ' ' . $eventTimeStr);
-                                        $isPastEvent = $eventDateTime->isPast();
-                                    }
+                                    // Evaluar si el evento ya fue finalizado o cerrado manualmente por el organizador
+                                    $isPastEvent = $sale->event ? $sale->event->isPast() : false;
 
                                     $pm = strtolower($sale->payment_method ?? '');
                                     $isCourtesy = ($pm === 'cortesía' || $pm === 'cortesia' || !empty($tData['is_courtesy']) || (float)$sale->total_amount == 0 || str_contains(strtolower($sale->zone_name ?? ''), 'cortesía') || str_contains(strtolower($sale->zone_name ?? ''), 'cortesia'));

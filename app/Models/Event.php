@@ -50,7 +50,7 @@ class Event extends Model
      */
     public function isPast(): bool
     {
-        return in_array(strtolower(trim((string) $this->status)), ['finalizado', 'concluido', 'terminado', 'cancelado']);
+        return in_array(strtolower(trim((string) $this->status)), ['finalizado', 'concluido', 'terminado', 'cancelado', 'cerrado']);
     }
 
     /**

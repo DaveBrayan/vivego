@@ -1980,7 +1980,7 @@
                     textPrice.setAttribute('font-size', '9');
                     textPrice.setAttribute('font-weight', '800');
                     textPrice.setAttribute('font-family', 'sans-serif');
-                    textPrice.textContent = z.price > 0 ? `S/ ${z.price.toFixed(2)} (${z.capacity} cap)` : `${z.capacity_type || 'General'}`;
+                    textPrice.textContent = z.price > 0 ? `S/ ${(parseFloat(z.price) || 0).toFixed(2)}` : `${z.capacity_type || 'General'}`;
                     g.appendChild(textPrice);
                 }
 
@@ -2272,7 +2272,8 @@
         },
 
         renderInspector: function() {
-            const card = document.getElementById('zoneInspectorCard');
+            const card = this._inspectorCardEl || document.getElementById('zoneInspectorCard');
+            if (card) this._inspectorCardEl = card;
             const empty = document.getElementById('zoneInspectorEmpty');
             const z = this.getSelectedZone();
 
@@ -2404,7 +2405,8 @@
             const list = document.getElementById('zonesListContainer');
             const badge = document.getElementById('zonesCountBadge');
             const navBadge = document.getElementById('navInteractiveZoneCountBadge');
-            const inspectorCard = document.getElementById('zoneInspectorCard');
+            const inspectorCard = this._inspectorCardEl || document.getElementById('zoneInspectorCard');
+            if (inspectorCard) this._inspectorCardEl = inspectorCard;
             const inspectorEmpty = document.getElementById('zoneInspectorEmpty');
 
             if (badge) badge.textContent = this.zones.length;
@@ -2427,6 +2429,16 @@
             }
             if (!list) return;
 
+            // Rescatar inspectorCard si fue insertado dentro de list para evitar destruirlo con innerHTML = ''
+            if (inspectorCard && inspectorCard.parentElement === list) {
+                if (inspectorEmpty && inspectorEmpty.parentElement) {
+                    inspectorEmpty.parentElement.appendChild(inspectorCard);
+                } else if (list.parentElement) {
+                    list.parentElement.appendChild(inspectorCard);
+                }
+                inspectorCard.style.display = 'none';
+            }
+
             list.innerHTML = '';
 
             if (this.zones.length === 0) {
@@ -2444,9 +2456,11 @@
 
                 const item = document.createElement('div');
                 item.className = `zone-list-card ${isSelected ? 'active' : ''}`;
-                item.onclick = () => {
+                item.onclick = (e) => {
+                    if (e.target && e.target.closest('.btn-delete-action')) return;
                     if (this.selectedZoneId === z.id) {
                         this.selectedZoneId = null;
+                        this.selectedPointIdx = null;
                         this.render();
                     } else {
                         this.selectZone(z.id);
@@ -2460,7 +2474,7 @@
                 if (isStage) {
                     subtitleHtml = '<span style="color: #94A3B8; font-size: 0.7rem; display: block; margin-top: 2px;">🎪 Área Estructural (Sin aforo)</span>';
                 } else {
-                    subtitleHtml = `<span style="color: #94A3B8; font-size: 0.7rem; display: block; margin-top: 2px;">${z.capacity || 0} entradas • S/ ${(parseFloat(z.price) || 0).toFixed(2)}</span>`;
+                    subtitleHtml = `<span style="color: #94A3B8; font-size: 0.7rem; display: block; margin-top: 2px;">S/ ${(parseFloat(z.price) || 0).toFixed(2)}</span>`;
                 }
 
                 item.innerHTML = `

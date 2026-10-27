@@ -381,31 +381,120 @@
             border-left: 4px solid #3B82F6;
             background: rgba(59, 130, 246, 0.05);
         }
+        /* ESTILOS DE LOGIN CON PIN DEL SISTEMA */
+        .pin-digit-box {
+            width: 44px;
+            height: 52px;
+            border-radius: 12px;
+            background: #14141E;
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            color: #00F0FF;
+            font-size: 1.6rem;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: monospace;
+            transition: all 0.2s ease;
+        }
+        .pin-digit-box.filled {
+            border-color: #00F0FF;
+            background: rgba(0, 240, 255, 0.1);
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.35);
+        }
+        .pin-key-btn {
+            background: #14141E;
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
+            color: #FFFFFF;
+            font-size: 1.35rem;
+            font-weight: 800;
+            border-radius: 14px;
+            padding: 0.85rem 0;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.1s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .pin-key-btn:active {
+            transform: scale(0.93);
+            background: rgba(0, 240, 255, 0.2);
+            border-color: #00F0FF;
+        }
+        @keyframes shakeError {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .pin-shake {
+            animation: shakeError 0.35s ease;
+        }
     </style>
 </head>
 <body>
 
-    <!-- OVERLAY DE BLOQUEO DE DISPOSITIVO YA VINCULADO -->
-    <div id="deviceLockOverlay" style="display: none; position: fixed; inset: 0; z-index: 999999; background: #0A0A10; padding: 2rem 1.5rem; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
-        <div style="width: 76px; height: 76px; border-radius: 22px; background: rgba(239, 68, 68, 0.15); border: 2px solid #EF4444; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin-bottom: 1.25rem; box-shadow: 0 0 30px rgba(239, 68, 68, 0.35);">
-            🔒
-        </div>
-        <h2 style="font-size: 1.35rem; font-weight: 900; color: #FFFFFF; margin-bottom: 0.5rem; text-transform: uppercase;">
-            Dispositivo Ya en Uso
-        </h2>
-        <p style="color: #EF4444; font-weight: 800; font-size: 0.95rem; margin-bottom: 0.5rem;" id="lockClaimedByName">
-            Este código QR ya fue activado en otro celular.
-        </p>
-        <p style="color: #94A3B8; font-size: 0.82rem; line-height: 1.5; max-width: 380px; margin: 0 auto 1.5rem auto;">
-            Por seguridad, cada celular de control debe tener su propio código QR individual. Por favor genera un nuevo dispositivo desde el panel web de ViveGo o libera el código anterior.
-        </p>
-        <div style="display: flex; flex-direction: column; gap: 0.75rem; width: 100%; max-width: 320px;">
-            <button type="button" onclick="checkDeviceClaim(true)" style="background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; font-weight: 900; padding: 0.85rem; border: none; border-radius: 12px; font-size: 0.9rem; cursor: pointer; box-shadow: 0 4px 15px rgba(0,240,255,0.3);">
-                🔄 Reintentar Conexión
+    <!-- OVERLAY DE INICIO DE SESIÓN CON PIN PARA EL SCANNER MÓVIL -->
+    <div id="pinLoginOverlay" style="display: {{ empty($activeProfile) ? 'flex' : 'none' }}; position: fixed; inset: 0; z-index: 999999; background: #0A0A10; padding: 2rem 1.25rem; flex-direction: column; align-items: center; justify-content: center; text-align: center; overflow-y: auto;">
+        <div style="width: 100%; max-width: 360px; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+            
+            <!-- Logo & Badge -->
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+                <div style="width: 72px; height: 72px; border-radius: 20px; background: rgba(0, 240, 255, 0.12); border: 2px solid #00F0FF; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; box-shadow: 0 0 35px rgba(0, 240, 255, 0.3);">
+                    🔐
+                </div>
+                <span style="font-size: 0.72rem; font-weight: 900; background: rgba(0, 240, 255, 0.15); color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.35); padding: 0.2rem 0.75rem; border-radius: 20px; letter-spacing: 1px;">
+                    CONTROL DE ACCESO
+                </span>
+            </div>
+
+            <!-- Título y Evento -->
+            <div>
+                <h2 style="font-size: 1.4rem; font-weight: 900; color: #FFFFFF; margin: 0 0 0.35rem 0;">
+                    Ingreso con PIN
+                </h2>
+                <p style="color: #00F0FF; font-weight: 800; font-size: 0.95rem; margin: 0; line-height: 1.3;">
+                    {{ $event->title }}
+                </p>
+                <small style="color: #94A3B8; font-size: 0.76rem; display: block; margin-top: 0.35rem;">
+                    Digita el PIN de 4 dígitos generado por el sistema para tu perfil o puerta.
+                </small>
+            </div>
+
+            <!-- Display de PIN con 4 dígitos -->
+            <div id="pinBoxesContainer" style="display: flex; gap: 0.65rem; justify-content: center; margin: 0.5rem 0;">
+                <div class="pin-digit-box" id="pinBox0">-</div>
+                <div class="pin-digit-box" id="pinBox1">-</div>
+                <div class="pin-digit-box" id="pinBox2">-</div>
+                <div class="pin-digit-box" id="pinBox3">-</div>
+            </div>
+
+            <!-- Mensaje de Error -->
+            <div id="pinErrorMessage" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #EF4444; border-radius: 10px; padding: 0.6rem 0.85rem; font-size: 0.8rem; font-weight: 700; width: 100%;">
+                PIN incorrecto o no asignado a este evento.
+            </div>
+
+            <!-- Teclado Numérico Táctil Digital (Keypad) -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; width: 100%; max-width: 320px; margin-top: 0.25rem;">
+                <button type="button" class="pin-key-btn" onclick="pressPinDigit('1')">1</button>
+                <button type="button" class="pin-key-btn" onclick="pressPinDigit('2')">2</button>
+                <button type="button" class="pin-key-btn" onclick="pressPinDigit('3')">3</button>
+                <button type="button" class="pin-key-btn" onclick="pressPinDigit('4')">4</button>
+                <button type="button" class="pin-key-btn" onclick="pressPinDigit('5')">5</button>
+                <button type="button" class="pin-key-btn" onclick="pressPinDigit('6')">6</button>
+                <button type="button" class="pin-key-btn" onclick="pressPinDigit('7')">7</button>
+                <button type="button" class="pin-key-btn" onclick="pressPinDigit('8')">8</button>
+                <button type="button" class="pin-key-btn" onclick="pressPinDigit('9')">9</button>
+                <button type="button" class="pin-key-btn" onclick="clearPinDigits()" style="font-size: 0.85rem; font-weight: 800; color: #94A3B8;">C</button>
+                <button type="button" class="pin-key-btn" onclick="pressPinDigit('0')">0</button>
+                <button type="button" class="pin-key-btn" onclick="backspacePinDigit()" style="font-size: 1.1rem; color: #EF4444;">⌫</button>
+            </div>
+
+            <!-- Botón de Ingresar -->
+            <button type="button" id="btnSubmitPinLogin" onclick="submitPinLogin()" style="width: 100%; max-width: 320px; background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; font-weight: 900; font-size: 0.95rem; padding: 0.9rem; border-radius: 14px; border: none; cursor: pointer; box-shadow: 0 4px 18px rgba(0, 240, 255, 0.4); margin-top: 0.25rem; transition: transform 0.15s ease;">
+                ⚡ Ingresar al Scanner
             </button>
-            <a href="{{ route('web.attendees') }}" style="background: rgba(255,255,255,0.08); color: #FFFFFF; text-decoration: none; padding: 0.85rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700;">
-                Ir a Asistentes
-            </a>
         </div>
     </div>
 
@@ -420,11 +509,18 @@
                 </div>
             </div>
 
-            <!-- Badge fijo no editable con el nombre del dispositivo asignado -->
-            <div style="display: inline-flex; align-items: center; background: rgba(0, 240, 255, 0.09); border: 1px solid rgba(0, 240, 255, 0.4); border-radius: 8px; padding: 0.28rem 0.65rem; gap: 0.35rem; max-width: 50%;" title="Terminal / Dispositivo Asignado">
-                <span style="font-size: 0.8rem; line-height: 1; flex-shrink: 0;">📱</span>
-                <strong id="mobileDeviceNameLabel" style="color: #00F0FF; font-size: 0.78rem; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Móvil</strong>
-                <input type="hidden" id="mobileDeviceName" value="Móvil">
+            <!-- Perfil Activo & Botón Salir -->
+            <div style="display: flex; align-items: center; gap: 0.4rem; max-width: 60%;">
+                <div style="display: inline-flex; align-items: center; background: rgba(0, 240, 255, 0.09); border: 1px solid rgba(0, 240, 255, 0.4); border-radius: 8px; padding: 0.28rem 0.6rem; gap: 0.35rem; min-width: 0;" title="Perfil / Puerta de Acceso">
+                    <span style="font-size: 0.8rem; line-height: 1; flex-shrink: 0;">📱</span>
+                    <strong id="mobileDeviceNameLabel" style="color: #00F0FF; font-size: 0.76rem; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        {{ $activeProfile ? $activeProfile->name : 'Móvil' }}
+                    </strong>
+                    <input type="hidden" id="mobileDeviceName" value="{{ $activeProfile ? $activeProfile->name : 'Móvil' }}">
+                </div>
+                <button type="button" onclick="confirmMobileLogout()" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #EF4444; border-radius: 8px; padding: 0.3rem 0.55rem; font-size: 0.72rem; font-weight: 800; cursor: pointer; white-space: nowrap;" title="Cerrar sesión de este scanner">
+                    Salir
+                </button>
             </div>
         </div>
     </header>
@@ -603,8 +699,13 @@
         const eventId = {{ $event->id }};
         const verifyUrl = "{{ route('web.scanner.verify_qr', $event->id) }}";
         const deviceLogsUrl = "{{ route('web.scanner.device_logs', $event->id) }}";
+        const pinLoginUrl = "{{ route('web.scanner.login_pin', $event->id) }}";
+        const pinLogoutUrl = "{{ route('web.scanner.logout_pin', $event->id) }}";
+        const sessionStatusUrl = "{{ route('web.scanner.session_status', $event->id) }}";
         const csrfToken = "{{ csrf_token() }}";
 
+        let currentProfile = @json($activeProfile);
+        let enteredPin = "";
         let html5QrScannerMobile = null;
         let isMobileScanning = false;
         let isProcessingMobileScan = false;
@@ -719,97 +820,207 @@
         }
 
         // =========================================================================
-        // SISTEMA DE DISPOSITIVO 1-A-1 & HISTORIAL EXCLUSIVO DE ESTE TERMINAL
         // =========================================================================
-        const claimUrl = "{{ route('web.scanner.claim_device', $event->id) }}";
+        // SISTEMA DE ACCESO POR PIN DEL SISTEMA & PERFIL DE SCANNER
+        // =========================================================================
+        function pressPinDigit(digit) {
+            if (enteredPin.length >= 4) return;
+            enteredPin += digit;
+            updatePinDisplay();
+            if (enteredPin.length === 4) {
+                setTimeout(submitPinLogin, 220);
+            }
+        }
 
-        function getSessionUuid() {
-            let uuid = sessionStorage.getItem('vivego_terminal_session_uuid');
-            if (!uuid) {
-                uuid = localStorage.getItem('vivego_terminal_session_uuid');
-                if (!uuid) {
-                    uuid = 'sess_' + Date.now() + '_' + Math.random().toString(36).substring(2, 12);
-                    localStorage.setItem('vivego_terminal_session_uuid', uuid);
+        function backspacePinDigit() {
+            if (enteredPin.length > 0) {
+                enteredPin = enteredPin.slice(0, -1);
+                updatePinDisplay();
+            }
+        }
+
+        function clearPinDigits() {
+            enteredPin = "";
+            updatePinDisplay();
+        }
+
+        function updatePinDisplay() {
+            for (let i = 0; i < 4; i++) {
+                const box = document.getElementById(`pinBox${i}`);
+                if (box) {
+                    if (i < enteredPin.length) {
+                        box.textContent = enteredPin[i];
+                        box.classList.add('filled');
+                    } else {
+                        box.textContent = '-';
+                        box.classList.remove('filled');
+                    }
                 }
-                sessionStorage.setItem('vivego_terminal_session_uuid', uuid);
             }
-            return uuid;
+            const errBox = document.getElementById('pinErrorMessage');
+            if (errBox) errBox.style.display = 'none';
         }
 
-        function getDeviceToken() {
-            const urlParams = new URLSearchParams(window.location.search);
-            let tok = urlParams.get('token') || urlParams.get('hash');
-            if (tok && tok.trim()) {
-                sessionStorage.setItem(`vivego_dev_token_evt_${eventId}`, tok.trim());
-                localStorage.setItem(`vivego_dev_token_evt_${eventId}`, tok.trim());
-                return tok.trim();
+        function showPinError(msg) {
+            const errBox = document.getElementById('pinErrorMessage');
+            const container = document.getElementById('pinBoxesContainer');
+            if (errBox) {
+                errBox.textContent = msg;
+                errBox.style.display = 'block';
             }
-            tok = sessionStorage.getItem(`vivego_dev_token_evt_${eventId}`)
-                  || localStorage.getItem(`vivego_dev_token_evt_${eventId}`);
-            if (!tok) {
-                tok = 'DEVTOK_' + (getActiveDeviceName().toUpperCase().replace(/[^A-Z0-9]/g, '_'));
-                sessionStorage.setItem(`vivego_dev_token_evt_${eventId}`, tok);
-                localStorage.setItem(`vivego_dev_token_evt_${eventId}`, tok);
+            if (container) {
+                container.classList.remove('pin-shake');
+                void container.offsetWidth;
+                container.classList.add('pin-shake');
             }
-            return tok;
         }
 
-        function getDeviceStorageKey() {
-            const dev = getActiveDeviceName();
-            const token = getDeviceToken();
-            const clean = (dev + '_' + token).toLowerCase().replace(/[^a-z0-9]/g, '_');
-            return `vivego_scan_history_evt_${eventId}_${clean}`;
+        function applyActiveProfile(prof) {
+            if (!prof) return;
+            currentProfile = prof;
+            const devInput = document.getElementById('mobileDeviceName');
+            const devLabel = document.getElementById('mobileDeviceNameLabel');
+            const histTitle = document.getElementById('historyDeviceTitleText');
+            if (devInput) devInput.value = prof.name;
+            if (devLabel) devLabel.textContent = prof.name;
+            if (histTitle) histTitle.textContent = `Terminal: ${prof.name}`;
+            updateHistoryDeviceLabel(prof.name);
         }
 
-        function checkDeviceClaim(isRetry = false) {
-            const token = getDeviceToken();
-            const sessionUuid = getSessionUuid();
-            const devName = getActiveDeviceName();
+        function submitPinLogin() {
+            if (enteredPin.length !== 4) {
+                showPinError('Por favor ingresa los 4 dígitos del PIN.');
+                return;
+            }
 
-            fetch(claimUrl, {
+            const btn = document.getElementById('btnSubmitPinLogin');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Verificando...';
+            }
+
+            fetch(pinLoginUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
                     'X-CSRF-TOKEN': csrfToken
                 },
-                body: JSON.stringify({
-                    device_token: token,
-                    session_uuid: sessionUuid,
-                    device_name: devName
-                })
+                body: JSON.stringify({ pin: enteredPin })
             })
-            .then(res => res.json().then(data => ({ status: res.status, data: data })))
-            .then(({ status, data }) => {
-                const overlay = document.getElementById('deviceLockOverlay');
-                const lockMsg = document.getElementById('lockClaimedByName');
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.profile) {
+                    applyActiveProfile(data.profile);
+                    localStorage.setItem(`vivego_scanner_saved_pin_${eventId}`, data.profile.access_pin);
+                    localStorage.setItem(`vivego_dev_name_evt_${eventId}`, data.profile.name);
+                    localStorage.setItem('vivego_scanner_device_name', data.profile.name);
 
-                if (status === 409 || data.status === 'already_claimed') {
-                    // Bloquear terminal si ya fue activado por otro celular
-                    if (overlay) overlay.style.display = 'flex';
-                    if (lockMsg) lockMsg.textContent = `Este código QR ya fue activado por otro celular (${data.claimed_by || 'Terminal'}).`;
-                    stopMobileCamera();
-                } else {
-                    // Reclamo exitoso
+                    const overlay = document.getElementById('pinLoginOverlay');
                     if (overlay) overlay.style.display = 'none';
-                    if (isRetry) {
-                        startMobileCamera();
-                        Swal.fire({
-                            toast: true,
-                            position: 'top-end',
-                            icon: 'success',
-                            title: '✓ Dispositivo conectado exclusivamente',
-                            showConfirmButton: false,
-                            timer: 2000,
-                            background: '#14141E',
-                            color: '#FFFFFF'
-                        });
-                    }
+
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: `✓ Conectado como: ${data.profile.name}`,
+                        showConfirmButton: false,
+                        timer: 2000,
+                        background: '#14141E',
+                        color: '#FFFFFF'
+                    });
+
+                    loadLocalScanHistory();
+                    startMobileCamera();
+                } else {
+                    showPinError(data.message || 'PIN incorrecto o no asignado a este evento.');
+                    clearPinDigits();
                 }
             })
             .catch(err => {
-                console.warn('Check device claim error:', err);
+                console.error('Error al verificar PIN:', err);
+                showPinError('Error al contactar con el servidor. Revisa tu conexión.');
+            })
+            .finally(() => {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '⚡ Ingresar al Scanner';
+                }
             });
+        }
+
+        function confirmMobileLogout() {
+            Swal.fire({
+                title: '¿Cerrar Sesión del Scanner?',
+                text: 'Se desconectará este terminal y se solicitará el PIN nuevamente para ingresar.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#EF4444',
+                cancelButtonColor: '#334155',
+                confirmButtonText: 'Sí, salir',
+                cancelButtonText: 'Cancelar',
+                background: '#14141E',
+                color: '#FFFFFF'
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    stopMobileCamera();
+                    fetch(pinLogoutUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken
+                        }
+                    }).catch(e => console.warn(e));
+
+                    localStorage.removeItem(`vivego_scanner_saved_pin_${eventId}`);
+                    currentProfile = null;
+                    clearPinDigits();
+
+                    const overlay = document.getElementById('pinLoginOverlay');
+                    if (overlay) overlay.style.display = 'flex';
+                }
+            });
+        }
+
+        function initPinAuth() {
+            // 1. Si ya vino autenticado en sesión del servidor
+            if (currentProfile && currentProfile.access_pin) {
+                applyActiveProfile(currentProfile);
+                const overlay = document.getElementById('pinLoginOverlay');
+                if (overlay) overlay.style.display = 'none';
+                startMobileCamera();
+                return;
+            }
+
+            // 2. Si viene PIN en la URL (?pin=1234)
+            const urlParams = new URLSearchParams(window.location.search);
+            const paramPin = urlParams.get('pin');
+            if (paramPin && paramPin.trim().length >= 4) {
+                enteredPin = paramPin.trim().substring(0, 4);
+                updatePinDisplay();
+                submitPinLogin();
+                return;
+            }
+
+            // 3. Si hay un PIN recordado en localStorage
+            const savedPin = localStorage.getItem(`vivego_scanner_saved_pin_${eventId}`);
+            if (savedPin && savedPin.trim().length >= 4) {
+                enteredPin = savedPin.trim().substring(0, 4);
+                updatePinDisplay();
+                submitPinLogin();
+                return;
+            }
+
+            // 4. De lo contrario, mostrar overlay para que digite su PIN
+            const overlay = document.getElementById('pinLoginOverlay');
+            if (overlay) overlay.style.display = 'flex';
+            stopMobileCamera();
+        }
+
+        function getDeviceStorageKey() {
+            const pin = currentProfile ? currentProfile.access_pin : (localStorage.getItem(`vivego_scanner_saved_pin_${eventId}`) || 'anon');
+            return `vivego_scan_history_evt_${eventId}_pin_${pin}`;
         }
 
         function loadLocalScanHistory() {
@@ -1446,7 +1657,8 @@
             if (isProcessingMobileScan) return;
             isProcessingMobileScan = true;
 
-            const dev = getActiveDeviceName();
+            const dev = currentProfile ? currentProfile.name : getActiveDeviceName();
+            const pin = currentProfile ? currentProfile.access_pin : (localStorage.getItem(`vivego_scanner_saved_pin_${eventId}`) || '');
 
             fetch(verifyUrl, {
                 method: 'POST',
@@ -1457,10 +1669,19 @@
                 },
                 body: JSON.stringify({
                     qr_payload: payload,
-                    device_name: dev
+                    device_name: dev,
+                    device_pin: pin
                 })
             })
             .then(async (res) => {
+                if (res.status === 401) {
+                    const data = await res.json().catch(() => ({}));
+                    stopMobileCamera();
+                    const overlay = document.getElementById('pinLoginOverlay');
+                    if (overlay) overlay.style.display = 'flex';
+                    showPinError(data.message || 'Tu sesión ha expirado o el PIN es inválido. Ingresa tu PIN.');
+                    return;
+                }
                 const text = await res.text();
                 try {
                     const data = JSON.parse(text);
@@ -1595,11 +1816,8 @@
 
         // Auto-activación e inicialización en vivo
         document.addEventListener('DOMContentLoaded', function() {
-            // Inicializar nombre del dispositivo (URL o LocalStorage)
-            initDeviceName();
-
-            // Verificar vinculación exclusiva 1-a-1 de este dispositivo
-            checkDeviceClaim();
+            // Inicializar autenticación de Scanner mediante PIN del sistema
+            initPinAuth();
 
             // Cargar Historial Local exclusivo de este dispositivo
             loadLocalScanHistory();
@@ -1607,8 +1825,21 @@
             // Iniciar sincronización continua de métricas globales del evento cada 3.5 segundos
             setInterval(syncMobileRealtimeFeed, 3500);
 
-            // Iniciar cámara
-            startMobileCamera();
+            // Escuchar teclado físico o numérico
+            window.addEventListener('keydown', function(e) {
+                const overlay = document.getElementById('pinLoginOverlay');
+                if (overlay && overlay.style.display !== 'none') {
+                    if (e.key >= '0' && e.key <= '9') {
+                        pressPinDigit(e.key);
+                    } else if (e.key === 'Backspace') {
+                        backspacePinDigit();
+                    } else if (e.key === 'Enter') {
+                        submitPinLogin();
+                    } else if (e.key === 'Escape') {
+                        clearPinDigits();
+                    }
+                }
+            });
         });
     </script>
 </body>

@@ -7,11 +7,13 @@ use App\Models\Event;
 use App\Models\EventTicket;
 use App\Models\Setting;
 use App\Models\Company;
+use App\Models\Device;
 use App\Models\TicketSale;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class AttendeeController extends Controller
@@ -80,7 +82,17 @@ class AttendeeController extends Controller
             ];
         }
 
-        return view('web.attendees', compact('events', 'settings', 'organizer'));
+        $globalMetrics = [
+            'total_events' => count($events),
+            'tickets_issued' => (int) array_sum(array_column($events, 'tickets_issued')),
+            'checked_in_count' => (int) array_sum(array_column($events, 'checked_in_count')),
+            'pending_count' => (int) array_sum(array_column($events, 'pending_count')),
+            'attendance_rate' => array_sum(array_column($events, 'tickets_issued')) > 0 
+                ? min(100, round((array_sum(array_column($events, 'checked_in_count')) / max(1, array_sum(array_column($events, 'tickets_issued')))) * 100, 1)) 
+                : 0,
+        ];
+
+        return view('web.attendees', compact('events', 'globalMetrics', 'settings', 'organizer'));
     }
 
     /**
@@ -103,16 +115,27 @@ class AttendeeController extends Controller
         $metrics = $this->getAttendanceMetrics($event->id);
         $zonesAttendance = $this->getZonesAttendance($event);
 
-        // Historial reciente de ingresos (últimos 25)
+        // Historial reciente de ingresos (asistieron)
         $recentCheckins = EventTicket::where('event_id', $event->id)
             ->where('is_used', true)
             ->where('status', '!=', 'upgraded')
             ->where('status', '!=', 'cancelled')
             ->orderBy('checked_in_at', 'desc')
-            ->take(25)
+            ->take(100)
             ->get();
 
-        return view('web.attendees_scanner', compact('event', 'metrics', 'recentCheckins', 'zonesAttendance', 'settings', 'organizer'));
+        // Boletos emitidos que aún no han ingresado (no asistieron / pendientes)
+        $pendingTickets = EventTicket::where('event_id', $event->id)
+            ->where(function ($q) {
+                $q->where('is_used', false)->orWhereNull('is_used');
+            })
+            ->where('status', '!=', 'upgraded')
+            ->where('status', '!=', 'cancelled')
+            ->orderBy('id', 'desc')
+            ->take(200)
+            ->get();
+
+        return view('web.attendees_scanner', compact('event', 'metrics', 'recentCheckins', 'pendingTickets', 'zonesAttendance', 'settings', 'organizer'));
     }
 
     /**
@@ -122,7 +145,27 @@ class AttendeeController extends Controller
     {
         $rawInput = trim((string) $request->input('qr_payload', ''));
         $deviceName = trim((string) $request->input('device_name', ''));
-        if (empty($deviceName)) {
+
+        // 0. Identificar el perfil de scanner que está realizando la validación
+        $activeDevice = null;
+        $scannerSession = session("scanner_device_{$event->id}");
+        if ($scannerSession && !empty($scannerSession['id'])) {
+            $activeDevice = Device::find($scannerSession['id']);
+        }
+
+        $pinInput = trim((string) $request->input('device_pin', ''));
+        if (!$activeDevice && !empty($pinInput)) {
+            $activeDevice = Device::where('access_pin', $pinInput)->first();
+        }
+
+        if ($activeDevice) {
+            $deviceName = $activeDevice->name;
+            $activeDevice->increment('scans_count');
+            $activeDevice->update([
+                'last_scanned_at' => now(),
+                'last_activity_at' => now(),
+            ]);
+        } elseif (empty($deviceName)) {
             $deviceName = 'Control Puerta Principal';
         }
 
@@ -417,6 +460,17 @@ class AttendeeController extends Controller
             'success' => true,
             'message' => "El ingreso del boleto {$ticketObj->ticket_code} fue anulado correctamente. Ya puede volver a ser escaneado.",
             'ticket_id' => $ticketObj->id,
+            'ticket' => [
+                'id' => $ticketObj->id,
+                'ticket_code' => $ticketObj->ticket_code,
+                'validation_hash' => $ticketObj->validation_hash ?: ('VG' . strtoupper(substr(md5($ticketObj->id), 0, 8))),
+                'zone_name' => $ticketObj->zone_name,
+                'buyer_name' => $ticketObj->buyer_name,
+                'buyer_dni' => $ticketObj->buyer_dni,
+                'created_at_formatted' => $ticketObj->created_at ? $ticketObj->created_at->format('d/m/Y h:i A') : 'Hoy',
+                'ticket_type' => $ticketObj->ticket_type,
+                'is_digital' => in_array($ticketObj->ticket_type, ['digital', 'cortesia_digital']),
+            ],
             'metrics' => $metrics,
             'zones' => $zonesAttendance,
         ]);
@@ -448,7 +502,17 @@ class AttendeeController extends Controller
             ->take(15)
             ->get();
 
-        return view('web.attendees_mobile_scanner', compact('event', 'metrics', 'recentCheckins', 'settings', 'organizer'));
+        $scannerSession = session("scanner_device_{$event->id}");
+        $activeProfile = null;
+        if ($scannerSession && !empty($scannerSession['id'])) {
+            $activeProfile = Device::find($scannerSession['id']);
+            if ($activeProfile && ($activeProfile->status !== 'active' || !$activeProfile->hasAccessToEvent($event->id))) {
+                session()->forget("scanner_device_{$event->id}");
+                $activeProfile = null;
+            }
+        }
+
+        return view('web.attendees_mobile_scanner', compact('event', 'metrics', 'recentCheckins', 'settings', 'organizer', 'activeProfile'));
     }
 
     /**
@@ -490,10 +554,46 @@ class AttendeeController extends Controller
             ->pluck('id')
             ->toArray();
 
+        // Boletos que no asistieron / pendientes de ingresar
+        $pendingTickets = EventTicket::where('event_id', $event->id)
+            ->where(function ($q) {
+                $q->where('is_used', false)->orWhereNull('is_used');
+            })
+            ->where('status', '!=', 'upgraded')
+            ->where('status', '!=', 'cancelled')
+            ->orderBy('id', 'desc')
+            ->take(100)
+            ->get()
+            ->map(function ($ticket) {
+                $hash = $ticket->validation_hash ?: ('VG' . strtoupper(substr(md5($ticket->id), 0, 8)));
+                return [
+                    'id' => $ticket->id,
+                    'ticket_code' => $ticket->ticket_code,
+                    'validation_hash' => $hash,
+                    'zone_name' => $ticket->zone_name,
+                    'buyer_name' => $ticket->buyer_name,
+                    'buyer_dni' => $ticket->buyer_dni,
+                    'created_at_formatted' => $ticket->created_at ? $ticket->created_at->format('d/m/Y h:i A') : '',
+                    'ticket_type' => $ticket->ticket_type,
+                    'is_digital' => in_array($ticket->ticket_type, ['digital', 'cortesia_digital']),
+                ];
+            });
+
+        $activePendingIds = EventTicket::where('event_id', $event->id)
+            ->where(function ($q) {
+                $q->where('is_used', false)->orWhereNull('is_used');
+            })
+            ->where('status', '!=', 'upgraded')
+            ->where('status', '!=', 'cancelled')
+            ->pluck('id')
+            ->toArray();
+
         return response()->json([
             'success' => true,
             'new_checkins' => $newCheckins,
             'active_checkin_ids' => $activeCheckinIds,
+            'pending_tickets' => $pendingTickets,
+            'active_pending_ids' => $activePendingIds,
             'metrics' => $metrics,
             'zones' => $zonesAttendance,
         ]);
@@ -1189,4 +1289,224 @@ class AttendeeController extends Controller
             'message' => 'Historial de escaneos de dispositivos vaciado exitosamente.',
         ]);
     }
+
+    /**
+     * Obtiene la lista de perfiles de scanner asignados a este evento desde la base de datos.
+     */
+    public function getScannerProfiles(Event $event): JsonResponse
+    {
+        $allDevices = Device::orderBy('id', 'desc')->get();
+        $filtered = $allDevices->filter(function ($d) use ($event) {
+            return $d->hasAccessToEvent($event->id);
+        })->values();
+
+        $accessUrl = route('web.scanner.direct', $event->id);
+
+        $profiles = $filtered->map(function ($d) use ($accessUrl) {
+            $d->ensurePin();
+            return [
+                'id' => $d->id,
+                'name' => $d->name,
+                'access_pin' => $d->access_pin,
+                'status' => $d->status,
+                'is_online' => $d->isOnline(),
+                'scans_count' => (int) $d->scans_count,
+                'last_scanned_at' => $d->last_scanned_at ? $d->last_scanned_at->format('d/m/Y h:i A') : 'Sin escaneos aún',
+                'last_activity_at' => $d->last_activity_at ? $d->last_activity_at->diffForHumans() : 'Sin conexión',
+                'access_url' => $accessUrl,
+                'created_at' => $d->created_at ? $d->created_at->format('d/m/Y') : '',
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'profiles' => $profiles,
+            'access_url' => $accessUrl,
+        ]);
+    }
+
+    /**
+     * Crea un nuevo perfil de scanner con PIN automático del sistema para este evento.
+     */
+    public function createScannerProfile(Request $request, Event $event): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:100',
+        ]);
+
+        $name = trim($validated['name']);
+        $pin = Device::generateUniquePin();
+
+        $device = Device::create([
+            'name' => $name,
+            'device_uuid' => (string) Str::uuid(),
+            'pairing_token' => Str::random(32),
+            'access_pin' => $pin,
+            'status' => 'active',
+            'assigned_events' => [$event->id],
+            'scans_count' => 0,
+        ]);
+
+        $accessUrl = route('web.scanner.direct', $event->id);
+
+        return response()->json([
+            'success' => true,
+            'message' => "¡Perfil '{$device->name}' creado con éxito con PIN {$device->access_pin}!",
+            'profile' => [
+                'id' => $device->id,
+                'name' => $device->name,
+                'access_pin' => $device->access_pin,
+                'status' => $device->status,
+                'is_online' => false,
+                'scans_count' => 0,
+                'last_scanned_at' => 'Sin escaneos aún',
+                'last_activity_at' => 'Creado recién',
+                'access_url' => $accessUrl,
+            ],
+        ]);
+    }
+
+    /**
+     * Elimina un perfil de scanner de la base de datos.
+     */
+    public function deleteScannerProfile(Event $event, Device $device): JsonResponse
+    {
+        $name = $device->name;
+        $device->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Perfil de scanner '{$name}' eliminado correctamente.",
+        ]);
+    }
+
+    /**
+     * Alterna el estado activo / bloqueado de un perfil de scanner.
+     */
+    public function toggleScannerProfile(Event $event, Device $device): JsonResponse
+    {
+        $newStatus = $device->status === 'active' ? 'revoked' : 'active';
+        $device->update(['status' => $newStatus]);
+
+        $msg = $newStatus === 'active' ? "Perfil '{$device->name}' reactivado." : "Perfil '{$device->name}' desactivado.";
+
+        return response()->json([
+            'success' => true,
+            'status' => $newStatus,
+            'message' => $msg,
+        ]);
+    }
+
+    /**
+     * Inicia sesión del scanner móvil mediante el PIN único asignado.
+     */
+    public function loginScannerPin(Request $request, Event $event): JsonResponse
+    {
+        $validated = $request->validate([
+            'pin' => 'required|string|min:4|max:10',
+            'device_model' => 'nullable|string',
+            'platform' => 'nullable|string',
+        ]);
+
+        $pin = trim($validated['pin']);
+        $device = Device::where('access_pin', $pin)->first();
+
+        if (!$device) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El PIN ingresado no existe o es incorrecto.',
+            ], 404);
+        }
+
+        if ($device->status === 'revoked') {
+            return response()->json([
+                'success' => false,
+                'message' => "El perfil '{$device->name}' se encuentra bloqueado o desactivado por el administrador.",
+            ], 403);
+        }
+
+        if (!$device->hasAccessToEvent($event->id)) {
+            return response()->json([
+                'success' => false,
+                'message' => "El perfil '{$device->name}' no está autorizado para este evento.",
+            ], 403);
+        }
+
+        // Actualizar datos del dispositivo
+        $device->update([
+            'status' => 'active',
+            'last_activity_at' => now(),
+            'last_ip' => $request->ip(),
+            'device_model' => $validated['device_model'] ?? ($device->device_model ?: 'Móvil Web'),
+            'platform' => $validated['platform'] ?? ($device->platform ?: 'Web'),
+        ]);
+
+        // Guardar sesión en Laravel
+        session([
+            "scanner_device_{$event->id}" => [
+                'id' => $device->id,
+                'name' => $device->name,
+                'access_pin' => $device->access_pin,
+                'logged_at' => now()->toDateTimeString(),
+            ]
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "¡Acceso concedido! Bienvenido, {$device->name}.",
+            'profile' => [
+                'id' => $device->id,
+                'name' => $device->name,
+                'access_pin' => $device->access_pin,
+                'scans_count' => (int) $device->scans_count,
+            ],
+        ]);
+    }
+
+    /**
+     * Cierra la sesión activa del scanner móvil.
+     */
+    public function logoutScannerPin(Request $request, Event $event): JsonResponse
+    {
+        session()->forget("scanner_device_{$event->id}");
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Sesión cerrada exitosamente.',
+        ]);
+    }
+
+    /**
+     * Consulta el estado actual de la sesión del scanner móvil.
+     */
+    public function scannerSessionStatus(Request $request, Event $event): JsonResponse
+    {
+        $scannerSession = session("scanner_device_{$event->id}");
+        $activeProfile = null;
+        if ($scannerSession && !empty($scannerSession['id'])) {
+            $activeProfile = Device::find($scannerSession['id']);
+            if ($activeProfile && ($activeProfile->status !== 'active' || !$activeProfile->hasAccessToEvent($event->id))) {
+                session()->forget("scanner_device_{$event->id}");
+                $activeProfile = null;
+            }
+        }
+
+        if ($activeProfile) {
+            $activeProfile->update(['last_activity_at' => now()]);
+            return response()->json([
+                'authenticated' => true,
+                'profile' => [
+                    'id' => $activeProfile->id,
+                    'name' => $activeProfile->name,
+                    'access_pin' => $activeProfile->access_pin,
+                    'scans_count' => (int) $activeProfile->scans_count,
+                ],
+            ]);
+        }
+
+        return response()->json([
+            'authenticated' => false,
+        ]);
+    }
 }
+

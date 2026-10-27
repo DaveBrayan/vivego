@@ -82,6 +82,45 @@
                     </div>
                 </div>
 
+                <!-- KPI CARDS GLOBALES DE CONTROL DE ACCESO -->
+                <div class="dash-stats-grid" style="margin-bottom: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem;">
+                    <div class="dash-stat-card" style="border: 1px solid rgba(0, 240, 255, 0.25); background: rgba(0, 240, 255, 0.04); padding: 1rem 1.25rem; border-radius: 16px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+                            <span style="font-size: 0.75rem; font-weight: 800; color: #94A3B8; text-transform: uppercase;">Boletos Emitidos</span>
+                            <span style="font-size: 1.2rem;">🎟️</span>
+                        </div>
+                        <div style="font-size: 1.5rem; font-weight: 900; color: #FFFFFF;">{{ number_format($globalMetrics['tickets_issued'] ?? 0) }}</div>
+                        <span style="font-size: 0.72rem; color: #00F0FF;">Total en todos los eventos</span>
+                    </div>
+
+                    <div class="dash-stat-card" style="border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05); padding: 1rem 1.25rem; border-radius: 16px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+                            <span style="font-size: 0.75rem; font-weight: 800; color: #94A3B8; text-transform: uppercase;">Asistieron (Ingresados)</span>
+                            <span style="font-size: 1.2rem;">✅</span>
+                        </div>
+                        <div style="font-size: 1.5rem; font-weight: 900; color: #10B981;">{{ number_format($globalMetrics['checked_in_count'] ?? 0) }}</div>
+                        <span style="font-size: 0.72rem; color: #10B981;">Boletos validados en puerta</span>
+                    </div>
+
+                    <div class="dash-stat-card" style="border: 1px solid rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); padding: 1rem 1.25rem; border-radius: 16px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+                            <span style="font-size: 0.75rem; font-weight: 800; color: #EF4444; text-transform: uppercase;">No Asistieron (Faltan)</span>
+                            <span style="font-size: 1.2rem;">⏳</span>
+                        </div>
+                        <div style="font-size: 1.5rem; font-weight: 900; color: #EF4444;">{{ number_format($globalMetrics['pending_count'] ?? 0) }}</div>
+                        <span style="font-size: 0.72rem; color: #94A3B8;">Boletos pendientes por ingresar</span>
+                    </div>
+
+                    <div class="dash-stat-card" style="border: 1px solid rgba(255, 85, 0, 0.25); background: rgba(255, 85, 0, 0.04); padding: 1rem 1.25rem; border-radius: 16px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+                            <span style="font-size: 0.75rem; font-weight: 800; color: #94A3B8; text-transform: uppercase;">% Asistencia Global</span>
+                            <span style="font-size: 1.2rem;">📊</span>
+                        </div>
+                        <div style="font-size: 1.5rem; font-weight: 900; color: var(--color-primary-orange);">{{ $globalMetrics['attendance_rate'] ?? 0 }}%</div>
+                        <span style="font-size: 0.72rem; color: #94A3B8;">Promedio de asistencia</span>
+                    </div>
+                </div>
+
                 <!-- LISTADO DE EVENTOS PARA CONTROL DE ACCESO -->
                 <div class="settings-card-box">
                     <div class="settings-card-header" style="flex-wrap: wrap; gap: 1rem;">

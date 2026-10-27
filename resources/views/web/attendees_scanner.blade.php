@@ -102,6 +102,60 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
+    .attendee-subtab-btn {
+        background: transparent;
+        border: none;
+        border-bottom: 3px solid transparent;
+        color: #94A3B8;
+        font-weight: 800;
+        font-size: 0.92rem;
+        padding: 0.85rem 1.4rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.65rem;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+        user-select: none;
+    }
+    .attendee-subtab-btn:hover {
+        color: #FFFFFF;
+        background: rgba(255, 255, 255, 0.03);
+    }
+    .attendee-subtab-btn.active#tabBtnCheckedIn {
+        color: #10B981;
+        border-bottom-color: #10B981;
+    }
+    .attendee-subtab-btn.active#tabBtnPending {
+        color: #EF4444;
+        border-bottom-color: #EF4444;
+    }
+    .attendee-tab-badge {
+        font-size: 0.72rem;
+        font-weight: 900;
+        padding: 0.18rem 0.65rem;
+        border-radius: 9999px;
+        transition: all 0.2s ease;
+    }
+    .attendee-tab-badge.badge-green {
+        background: rgba(16, 185, 129, 0.18);
+        color: #10B981;
+        border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+    .attendee-tab-badge.badge-red {
+        background: rgba(239, 68, 68, 0.18);
+        color: #EF4444;
+        border: 1px solid rgba(239, 68, 68, 0.35);
+    }
+    .attendee-tab-panel {
+        width: 100% !important;
+    }
+    .attendee-tab-panel.tab-panel-hidden {
+        display: none !important;
+    }
+    .attendee-tab-panel.tab-panel-active {
+        display: block !important;
+    }
 </style>
 <!-- html5-qrcode library for real camera QR scanning -->
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -147,10 +201,10 @@
                         </p>
                     </div>
                     <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-                        <button type="button" class="btn" onclick="openScannerDevicesModal()" style="background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; font-weight: 900; padding: 0.75rem 1.4rem; font-size: 0.9rem; border: none; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(0, 240, 255, 0.35); cursor: pointer; transition: all 0.2s ease;">
+                        <a href="{{ route('web.devices') }}" class="btn" style="background: rgba(0, 240, 255, 0.15); border: 1.5px solid #00F0FF; color: #00F0FF; font-weight: 800; padding: 0.75rem 1.4rem; font-size: 0.9rem; text-decoration: none; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(0, 240, 255, 0.2); transition: all 0.2s ease;">
                             <span>📱</span>
-                            <span>+ Vincular Scanner Web</span>
-                        </button>
+                            <span>Gestionar Dispositivos</span>
+                        </a>
                         <a href="{{ route('web.attendees') }}" class="btn" style="background: rgba(255, 85, 0, 0.18); border: 1.5px solid #FF5500; color: #FFFFFF; font-weight: 800; padding: 0.75rem 1.4rem; font-size: 0.9rem; text-decoration: none; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(255, 85, 0, 0.25); transition: all 0.2s ease;">
                             <span>⬅️</span>
                             <span>Volver a Asistentes</span>
@@ -245,25 +299,25 @@
                         <span style="font-size: 0.7rem; color: #00F0FF;">Emitidos (PDF + Taquilla)</span>
                     </div>
 
-                    <div class="dash-stat-card" style="border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05); padding: 0.85rem 1.15rem; border-radius: 14px;">
+                    <div class="dash-stat-card" style="border: 1.5px solid rgba(16, 185, 129, 0.35); background: rgba(16, 185, 129, 0.06); padding: 0.85rem 1.15rem; border-radius: 14px;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
-                            <span style="font-size: 0.72rem; font-weight: 800; color: #94A3B8; text-transform: uppercase;">Ingresados / Validados</span>
-                            <span style="font-size: 1.1rem;">✅</span>
+                            <span style="font-size: 0.74rem; font-weight: 900; color: #10B981; text-transform: uppercase; letter-spacing: 0.4px;">Asistentes</span>
+                            <span style="font-size: 1.15rem;">✅</span>
                         </div>
-                        <div style="font-size: 1.35rem; font-weight: 900; color: #10B981;" id="kpiCheckedIn">{{ number_format($metrics['checked_in_count']) }}</div>
+                        <div style="font-size: 1.45rem; font-weight: 900; color: #10B981;" id="kpiCheckedIn">{{ number_format($metrics['checked_in_count']) }}</div>
                         <div style="display: flex; gap: 0.6rem; margin-top: 0.25rem; font-size: 0.72rem; font-weight: 800;">
                             <span style="color: #00F0FF;">📱 Dig: <strong id="kpiDigitalChecked">{{ number_format($metrics['digital_checked'] ?? 0) }}</strong></span>
                             <span style="color: #FF7733;">🎟️ Fís: <strong id="kpiPhysicalChecked">{{ number_format($metrics['physical_checked'] ?? 0) }}</strong></span>
                         </div>
                     </div>
 
-                    <div class="dash-stat-card" style="border: 1px solid rgba(245, 158, 11, 0.25); background: rgba(245, 158, 11, 0.04); padding: 0.85rem 1.15rem; border-radius: 14px;">
+                    <div class="dash-stat-card" style="border: 1.5px solid rgba(239, 68, 68, 0.35); background: rgba(239, 68, 68, 0.06); padding: 0.85rem 1.15rem; border-radius: 14px;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
-                            <span style="font-size: 0.72rem; font-weight: 800; color: #94A3B8; text-transform: uppercase;">Pendientes de Ingreso</span>
-                            <span style="font-size: 1.1rem;">⏳</span>
+                            <span style="font-size: 0.74rem; font-weight: 900; color: #EF4444; text-transform: uppercase; letter-spacing: 0.4px;">No Asistieron</span>
+                            <span style="font-size: 1.15rem;">⏳</span>
                         </div>
-                        <div style="font-size: 1.35rem; font-weight: 900; color: #F59E0B;" id="kpiPending">{{ number_format($metrics['pending_count']) }}</div>
-                        <span style="font-size: 0.7rem; color: #F59E0B;">Por ingresar al local</span>
+                        <div style="font-size: 1.45rem; font-weight: 900; color: #EF4444;" id="kpiPending">{{ number_format($metrics['pending_count']) }}</div>
+                        <span style="font-size: 0.72rem; color: #94A3B8;">Boletos sin validar en puerta</span>
                     </div>
 
                     <div class="dash-stat-card" style="border: 1px solid rgba(255, 85, 0, 0.25); background: rgba(255, 85, 0, 0.04); padding: 0.85rem 1.15rem; border-radius: 14px;">
@@ -276,14 +330,14 @@
                     </div>
                 </div>
 
-                <!-- HISTORIAL DE INGRESOS EN VIVO -->
+                <!-- CONTROL DE ASISTENCIA EN TIEMPO REAL: ASISTENTES & NO ASISTIERON -->
                 <div class="settings-card-box">
                     <div class="settings-card-header" style="flex-wrap: wrap; gap: 1rem; justify-content: space-between;">
                         <div style="display: flex; align-items: center; gap: 1rem;">
                             <div class="card-header-icon" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #10B981;">📜</div>
                             <div>
-                                <h3 class="card-header-title">Registro de Accesos</h3>
-                                <p class="card-header-subtitle">Feed de entradas validadas con hora exacta y punto de control.</p>
+                                <h3 class="card-header-title">Control de Asistencia en Tiempo Real</h3>
+                                <p class="card-header-subtitle">Monitorea en vivo a los asistentes que ya ingresaron y a los que aún no han asistido.</p>
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
@@ -292,10 +346,6 @@
                                 <span>Historial de Dispositivos</span>
                                 <span id="devLogsBtnBadge" style="background: rgba(255,255,255,0.25); color: #FFFFFF; font-size: 0.7rem; font-weight: 900; padding: 0.1rem 0.45rem; border-radius: 20px;">LIVE</span>
                             </button>
-                            <button type="button" class="btn btn-sm" onclick="openScannerDevicesModal()" style="background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; font-weight: 900; font-size: 0.85rem; padding: 0.6rem 1.3rem; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.5rem; border: none; box-shadow: 0 4px 15px rgba(0, 240, 255, 0.35); cursor: pointer; transition: all 0.2s ease;">
-                                <span>📱</span>
-                                <span>+ Vincular Scanner</span>
-                            </button>
                             <button type="button" id="btnManualRefresh" onclick="manualRefreshFeed()" style="background: rgba(255,255,255,0.08); color: #FFFFFF; font-weight: 800; font-size: 0.85rem; padding: 0.6rem 1.15rem; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.45rem; border: 1px solid rgba(255,255,255,0.15); cursor: pointer; transition: all 0.2s ease;">
                                 <span id="refreshIcon" style="font-size: 1rem;">🔄</span>
                                 <span>Actualizar</span>
@@ -303,241 +353,261 @@
                         </div>
                     </div>
 
-                    <div class="dash-table-container">
-                        <table class="dash-table" id="checkinsTable">
-                            <thead>
-                                <tr>
-                                    <th style="width: 60px;">#</th>
-                                    <th>Código de Boleto</th>
-                                    <th>Sector / Zona</th>
-                                    <th>Asistente / Titular</th>
-                                    <th>DNI</th>
-                                    <th>Hora de Ingreso</th>
-                                    <th>Punto de Control</th>
-                                    <th>Estado</th>
-                                    <th style="text-align: right;">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="checkinsTableBody">
-                                @forelse($recentCheckins as $idx => $chk)
-                                    <tr class="checkin-row-item" id="checkinRow_{{ $chk->id }}">
-                                        <td>
-                                            <span style="font-weight: 800; color: #94A3B8;">#{{ sprintf('%02d', $idx + 1) }}</span>
-                                        </td>
-                                        <td>
-                                            <span style="font-family: monospace; font-weight: 800; color: #FFFFFF; font-size: 0.9rem;">
-                                                {{ $chk->ticket_code }}
-                                            </span>
-                                            <small style="display: block; font-family: monospace; color: #FF7733; font-size: 0.75rem; font-weight: 800;">
-                                                🔑 {{ $chk->validation_hash ?: ('VG' . strtoupper(substr(md5($chk->id), 0, 8))) }}
-                                            </small>
-                                        </td>
-                                        <td>
-                                            <div style="display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start;">
-                                                <span class="dash-badge-custom badge-green" style="font-size: 0.78rem; font-weight: 800;">
-                                                    {{ $chk->zone_name }}
+                    <!-- PESTAÑAS Y BARRA DE FILTRADO EN TIEMPO REAL -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid rgba(255, 255, 255, 0.08); padding: 0.35rem 1.25rem; background: rgba(0,0,0,0.22); margin: 0 -1.5rem 1.25rem -1.5rem; flex-wrap: wrap; gap: 0.85rem;">
+                        <!-- Pestañas de Navegación -->
+                        <div style="display: flex; gap: 0.5rem; overflow-x: auto;">
+                            <button type="button" id="tabBtnCheckedIn" class="attendee-subtab-btn active" onclick="switchAttendeeTab('checked_in')">
+                                <span>✅ Asistentes (Ingresaron)</span>
+                                <span id="tabCountCheckedIn" class="attendee-tab-badge badge-green">
+                                    {{ number_format($metrics['checked_in_count']) }}
+                                </span>
+                            </button>
+                            <button type="button" id="tabBtnPending" class="attendee-subtab-btn" onclick="switchAttendeeTab('pending')">
+                                <span>⏳ No Asistieron (Pendientes)</span>
+                                <span id="tabCountPending" class="attendee-tab-badge badge-red">
+                                    {{ number_format($metrics['pending_count']) }}
+                                </span>
+                            </button>
+                        </div>
+
+                        <!-- Barra de Búsqueda y Filtros Rápidos -->
+                        <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; padding: 0.25rem 0;">
+                            <!-- Buscador Rápido -->
+                            <div style="position: relative; min-width: 250px;">
+                                <span style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); font-size: 0.85rem; color: #94A3B8; pointer-events: none;">🔍</span>
+                                <input type="text" id="attendeesCardSearchInput" 
+                                       placeholder="Buscar por código, titular, DNI..." 
+                                       style="width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 0.5rem 0.85rem 0.5rem 2.2rem; color: #FFFFFF; font-size: 0.825rem; outline: none; transition: all 0.2s ease;"
+                                       onfocus="this.style.borderColor='#10B981'; this.style.background='rgba(255,255,255,0.09)';"
+                                       onblur="this.style.borderColor='rgba(255,255,255,0.15)'; this.style.background='rgba(255,255,255,0.06)';">
+                            </div>
+
+                            <!-- Selector de Sector / Zona -->
+                            <select id="filterZoneSelect" 
+                                    style="background: #1E1E2D; color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.18); padding: 0.5rem 0.75rem; border-radius: 10px; font-size: 0.825rem; font-weight: 700; cursor: pointer; outline: none;">
+                                <option value="all">📍 Todas las Zonas</option>
+                                @foreach($zonesAttendance as $za)
+                                    <option value="{{ strtolower($za['name']) }}">{{ $za['name'] }}</option>
+                                @endforeach
+                            </select>
+
+                            <!-- Selector de Tipo: Virtual / Físico -->
+                            <select id="filterTypeSelect" 
+                                    style="background: #1E1E2D; color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.18); padding: 0.5rem 0.75rem; border-radius: 10px; font-size: 0.825rem; font-weight: 700; cursor: pointer; outline: none;">
+                                <option value="all">🎫 Todos los Tipos</option>
+                                <option value="virtual">🌐 Virtuales</option>
+                                <option value="fisico">🎟️ Físicos</option>
+                            </select>
+
+                            <!-- Botón Limpiar Filtros -->
+                            <button type="button" id="btnClearTableFilters" onclick="clearTableFilters()" 
+                                    style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #EF4444; font-size: 0.78rem; font-weight: 800; padding: 0.5rem 0.75rem; border-radius: 10px; cursor: pointer; transition: all 0.2s ease;" title="Limpiar filtros">
+                                ✕ Limpiar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ========================================================================= -->
+                    <!-- PESTAÑA 1: ASISTENTES (BOLETOS VALIDADOS / INGRESADOS)                     -->
+                    <!-- ========================================================================= -->
+                    <div id="tabContentCheckins" class="attendee-tab-panel tab-panel-active">
+                        <div class="dash-table-container">
+                            <table class="dash-table" id="checkinsTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 60px;">#</th>
+                                        <th>Código de Boleto</th>
+                                        <th>Sector / Zona</th>
+                                        <th>Asistente / Titular</th>
+                                        <th>DNI</th>
+                                        <th>Hora de Ingreso</th>
+                                        <th>Punto de Control</th>
+                                        <th>Estado</th>
+                                        <th style="text-align: right;">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="checkinsTableBody">
+                                    @forelse($recentCheckins as $idx => $chk)
+                                        @php
+                                            $isDig = in_array($chk->ticket_type, ['digital', 'cortesia_digital']);
+                                        @endphp
+                                        <tr class="checkin-row-item" id="checkinRow_{{ $chk->id }}" data-zone="{{ strtolower($chk->zone_name) }}" data-type="{{ $isDig ? 'virtual' : 'fisico' }}">
+                                            <td>
+                                                <span style="font-weight: 800; color: #94A3B8;">#{{ sprintf('%02d', $idx + 1) }}</span>
+                                            </td>
+                                            <td>
+                                                <span style="font-family: monospace; font-weight: 800; color: #FFFFFF; font-size: 0.9rem;">
+                                                    {{ $chk->ticket_code }}
                                                 </span>
-                                                @php
-                                                    $isDig = in_array($chk->ticket_type, ['digital', 'cortesia_digital']);
-                                                @endphp
-                                                @if($isDig)
-                                                    <span class="dash-badge-custom badge-cyan" style="font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.55rem; letter-spacing: 0.3px;">
-                                                        🌐 Virtual
+                                                <small style="display: block; font-family: monospace; color: #FF7733; font-size: 0.75rem; font-weight: 800;">
+                                                    🔑 {{ $chk->validation_hash ?: ('VG' . strtoupper(substr(md5($chk->id), 0, 8))) }}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <div style="display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start;">
+                                                    <span class="dash-badge-custom badge-green" style="font-size: 0.78rem; font-weight: 800;">
+                                                        {{ $chk->zone_name }}
                                                     </span>
+                                                    @if($isDig)
+                                                        <span class="dash-badge-custom badge-cyan" style="font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.55rem; letter-spacing: 0.3px;">
+                                                            🌐 Virtual
+                                                        </span>
+                                                    @else
+                                                        <span class="dash-badge-custom badge-orange" style="font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.55rem; letter-spacing: 0.3px;">
+                                                            🎟️ Físico
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <strong style="color: #FFFFFF;">{{ $chk->buyer_name }}</strong>
+                                            </td>
+                                            <td>
+                                                <span style="color: #94A3B8; font-family: monospace;">{{ $chk->buyer_dni ?: '-' }}</span>
+                                            </td>
+                                            <td>
+                                                <span style="color: #00F0FF; font-weight: 700;">
+                                                    {{ $chk->checked_in_at ? $chk->checked_in_at->format('h:i:s A') : '-' }}
+                                                </span>
+                                                <small style="display: block; color: #64748B; font-size: 0.7rem;">{{ $chk->checked_in_at ? $chk->checked_in_at->format('d/m/Y') : '' }}</small>
+                                            </td>
+                                            <td>
+                                                <span style="color: #E2E8F0; font-size: 0.85rem;">{{ $chk->scanned_by ?: 'Puerta Principal' }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="dash-badge-custom badge-green" style="font-size: 0.75rem;">
+                                                    ✓ Ingresado
+                                                </span>
+                                            </td>
+                                            <td style="text-align: right;">
+                                                @if($canDeleteScans)
+                                                <button type="button" 
+                                                        onclick="resetCheckin({{ $chk->id }}, '{{ $chk->ticket_code }}')" 
+                                                        class="btn btn-sm"
+                                                        title="Eliminar escaneo y permitir escanear de nuevo"
+                                                        style="background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.35); padding: 0.35rem 0.75rem; font-size: 0.75rem; font-weight: 800; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 0.35rem;"
+                                                        onmouseenter="this.style.background='#EF4444'; this.style.color='#FFFFFF';"
+                                                        onmouseleave="this.style.background='rgba(239, 68, 68, 0.15)'; this.style.color='#EF4444';">
+                                                    <span>🗑️</span> <span>Anular Escaneo</span>
+                                                </button>
                                                 @else
-                                                    <span class="dash-badge-custom badge-orange" style="font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.55rem; letter-spacing: 0.3px;">
-                                                        🎟️ Físico
-                                                    </span>
+                                                <span style="color: #64748B; font-size: 0.75rem; font-weight: 700;">🔒 Protegido</span>
                                                 @endif
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <strong style="color: #FFFFFF;">{{ $chk->buyer_name }}</strong>
-                                        </td>
-                                        <td>
-                                            <span style="color: #94A3B8; font-family: monospace;">{{ $chk->buyer_dni }}</span>
-                                        </td>
-                                        <td>
-                                            <span style="color: #00F0FF; font-weight: 700;">
-                                                {{ $chk->checked_in_at ? $chk->checked_in_at->format('h:i:s A') : '-' }}
-                                            </span>
-                                            <small style="display: block; color: #64748B; font-size: 0.7rem;">{{ $chk->checked_in_at ? $chk->checked_in_at->format('d/m/Y') : '' }}</small>
-                                        </td>
-                                        <td>
-                                            <span style="color: #E2E8F0; font-size: 0.85rem;">{{ $chk->scanned_by ?: 'Puerta Principal' }}</span>
-                                        </td>
-                                        <td>
-                                            <span class="dash-badge-custom badge-green" style="font-size: 0.75rem;">
-                                                ✓ Ingresado
-                                            </span>
-                                        </td>
-                                        <td style="text-align: right;">
-                                            @if($canDeleteScans)
-                                            <button type="button" 
-                                                    onclick="resetCheckin({{ $chk->id }}, '{{ $chk->ticket_code }}')" 
-                                                    class="btn btn-sm"
-                                                    title="Eliminar escaneo y permitir escanear de nuevo"
-                                                    style="background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.35); padding: 0.35rem 0.75rem; font-size: 0.75rem; font-weight: 800; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 0.35rem;"
-                                                    onmouseenter="this.style.background='#EF4444'; this.style.color='#FFFFFF';"
-                                                    onmouseleave="this.style.background='rgba(239, 68, 68, 0.15)'; this.style.color='#EF4444';">
-                                                <span>🗑️</span> <span>Anular Escaneo</span>
-                                            </button>
-                                            @else
-                                            <span style="color: #64748B; font-size: 0.75rem; font-weight: 700;">🔒 Protegido</span>
-                                            @endif
-                                        </td>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr id="emptyCheckinsRow">
+                                            <td colspan="9" style="text-align: center; padding: 2.5rem; color: #94A3B8;">
+                                                <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎫</div>
+                                                <strong>Aún no se han registrado ingresos para este evento.</strong>
+                                                <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem;">Escanea el primer código QR o ingresa un número de boleto para comenzar.</p>
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ========================================================================= -->
+                    <!-- PESTAÑA 2: NO ASISTIERON (BOLETOS PENDIENTES DE INGRESO)                   -->
+                    <!-- ========================================================================= -->
+                    <div id="tabContentPending" class="attendee-tab-panel tab-panel-hidden" style="display: none !important;">
+                        <div class="dash-table-container">
+                            <table class="dash-table" id="pendingTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 60px;">#</th>
+                                        <th>Código de Boleto</th>
+                                        <th>Sector / Zona</th>
+                                        <th>Titular / Comprador</th>
+                                        <th>DNI</th>
+                                        <th>Fecha Emisión</th>
+                                        <th>Estado</th>
+                                        <th style="text-align: right;">Acción Rápida</th>
                                     </tr>
-                                @empty
-                                    <tr id="emptyCheckinsRow">
-                                        <td colspan="9" style="text-align: center; padding: 2.5rem; color: #94A3B8;">
-                                            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎫</div>
-                                            <strong>Aún no se han registrado ingresos para este evento.</strong>
-                                            <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem;">Escanea el primer código QR o ingresa un número de boleto para comenzar.</p>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody id="pendingTableBody">
+                                    @forelse($pendingTickets as $pidx => $pt)
+                                        @php
+                                            $isPtDig = in_array($pt->ticket_type, ['digital', 'cortesia_digital']);
+                                        @endphp
+                                        <tr class="pending-row-item" id="pendingRow_{{ $pt->id }}" data-zone="{{ strtolower($pt->zone_name) }}" data-type="{{ $isPtDig ? 'virtual' : 'fisico' }}">
+                                            <td>
+                                                <span style="font-weight: 800; color: #94A3B8;">#{{ sprintf('%02d', $pidx + 1) }}</span>
+                                            </td>
+                                            <td>
+                                                <span style="font-family: monospace; font-weight: 800; color: #FFFFFF; font-size: 0.9rem;">
+                                                    {{ $pt->ticket_code }}
+                                                </span>
+                                                <small style="display: block; font-family: monospace; color: #00F0FF; font-size: 0.75rem; font-weight: 800;">
+                                                    🔑 {{ $pt->validation_hash ?: ('VG' . strtoupper(substr(md5($pt->id), 0, 8))) }}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <div style="display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start;">
+                                                    <span class="dash-badge-custom badge-cyan" style="font-size: 0.78rem; font-weight: 800;">
+                                                        {{ $pt->zone_name }}
+                                                    </span>
+                                                    @if($isPtDig)
+                                                        <span class="dash-badge-custom badge-cyan" style="font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.55rem; letter-spacing: 0.3px;">
+                                                            🌐 Virtual
+                                                        </span>
+                                                    @else
+                                                        <span class="dash-badge-custom badge-orange" style="font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.55rem; letter-spacing: 0.3px;">
+                                                            🎟️ Físico
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <strong style="color: #FFFFFF;">{{ $pt->buyer_name ?: 'Sin Nombre' }}</strong>
+                                            </td>
+                                            <td>
+                                                <span style="color: #94A3B8; font-family: monospace;">{{ $pt->buyer_dni ?: '-' }}</span>
+                                            </td>
+                                            <td>
+                                                <span style="color: #CBD5E1; font-size: 0.85rem; font-weight: 600;">
+                                                    {{ $pt->created_at ? $pt->created_at->format('d/m/Y h:i A') : 'Boleto Emitido' }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="dash-badge-custom" style="background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.35); font-size: 0.72rem; font-weight: 800;">
+                                                    ⏳ No Asistió
+                                                </span>
+                                            </td>
+                                            <td style="text-align: right;">
+                                                <button type="button" 
+                                                        onclick="validateManualTicket('{{ $pt->ticket_code }}', '{{ addslashes($pt->buyer_name ?? '') }}')" 
+                                                        class="btn btn-sm"
+                                                        title="Validar y registrar ingreso de este boleto"
+                                                        style="background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.35); padding: 0.35rem 0.85rem; font-size: 0.75rem; font-weight: 800; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 0.35rem;"
+                                                        onmouseenter="this.style.background='#10B981'; this.style.color='#FFFFFF';"
+                                                        onmouseleave="this.style.background='rgba(16, 185, 129, 0.15)'; this.style.color='#10B981';">
+                                                    <span>⚡</span> <span>Validar Ingreso</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr id="emptyPendingRow">
+                                            <td colspan="8" style="text-align: center; padding: 2.5rem; color: #94A3B8;">
+                                                <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎉</div>
+                                                <strong style="color: #10B981;">¡Todos los boletos emitidos ya han ingresado!</strong>
+                                                <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem;">No hay personas pendientes de ingreso en este momento.</p>
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- MODAL DE VINCULACIÓN DE SCANNERS & DISPOSITIVOS MÓVILES (2 COLUMNAS) -->
-    <div id="scannerDevicesModal" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(5, 5, 12, 0.88); backdrop-filter: blur(10px); justify-content: center; align-items: center; padding: 1.25rem;">
-        <div style="background: #0F0F1A; border: 1.5px solid rgba(0, 240, 255, 0.35); border-radius: 24px; width: 100%; max-width: 980px; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 70px rgba(0,0,0,0.9), 0 0 45px rgba(0,240,255,0.15); animation: modalPop 0.25s ease;">
-            
-            <!-- Modal Header -->
-            <div style="padding: 1.25rem 1.75rem; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02);">
-                <div style="display: flex; align-items: center; gap: 0.85rem;">
-                    <div style="width: 46px; height: 46px; border-radius: 14px; background: rgba(0, 240, 255, 0.12); border: 1px solid rgba(0, 240, 255, 0.35); display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
-                        📱
-                    </div>
-                    <div>
-                        <h3 style="font-size: 1.2rem; font-weight: 900; color: #FFFFFF; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-                            <span>Vincular Terminales & Scanners Móviles</span>
-                            <span style="font-size: 0.72rem; padding: 0.15rem 0.6rem; border-radius: 20px; background: rgba(16,185,129,0.15); color: #10B981; border: 1px solid rgba(16,185,129,0.3); font-weight: 800;">LIVE</span>
-                        </h3>
-                        <p style="font-size: 0.82rem; color: #94A3B8; margin: 0.2rem 0 0 0;">Genera enlaces y códigos QR individuales y hasheados para cada celular o puerta de acceso.</p>
-                    </div>
-                </div>
-                <button type="button" onclick="closeScannerDevicesModal()" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #94A3B8; font-size: 1.1rem; width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease;">
-                    ✕
-                </button>
-            </div>
 
-            <!-- Modal Body (2 Columns) -->
-            <div style="padding: 1.5rem 1.75rem; overflow-y: auto; display: grid; grid-template-columns: 1.1fr 1.15fr; gap: 1.5rem; align-items: stretch;">
-                
-                <!-- COLUMNA 1: DISPOSITIVOS & AGREGAR NUEVO -->
-                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem;">
-                    
-                    <!-- Formulario Agregar Dispositivo -->
-                    <div>
-                        <label style="font-size: 0.8rem; font-weight: 800; color: #FFFFFF; text-transform: uppercase; letter-spacing: 0.4px; display: block; margin-bottom: 0.45rem;">
-                            ➕ Agregar Nuevo Dispositivo / Puerta
-                        </label>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <input type="text" id="newDeviceInputName" placeholder="Ej: Puerta VIP, Móvil 2, Control Norte..." style="flex: 1; background: #14141E; border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 0.7rem 0.9rem; color: #FFFFFF; font-size: 0.88rem; font-weight: 700; outline: none;" onkeydown="if(event.key==='Enter') addNewScannerDevice();">
-                            <button type="button" onclick="addNewScannerDevice()" style="background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; border: none; font-weight: 900; font-size: 0.85rem; padding: 0.7rem 1.1rem; border-radius: 12px; cursor: pointer; white-space: nowrap; box-shadow: 0 4px 14px rgba(0,240,255,0.35); transition: all 0.2s ease;">
-                                + Agregar
-                            </button>
-                        </div>
-                        <small style="color: #64748B; font-size: 0.73rem; margin-top: 0.35rem; display: block;">
-                            Cada dispositivo tendrá un código QR único y registrará el nombre exacto de la puerta en las asistencias.
-                        </small>
-                    </div>
-
-                    <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 0;">
-
-                    <!-- Listado de Dispositivos Registrados -->
-                    <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
-                            <span style="font-size: 0.78rem; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.4px;">
-                                Terminales Activos (<span id="devicesCountBadge">0</span>)
-                            </span>
-                            <span style="font-size: 0.72rem; color: #00F0FF; font-weight: 700;">● Click para seleccionar</span>
-                        </div>
-
-                        <div id="devicesListContainer" style="display: flex; flex-direction: column; gap: 0.6rem; max-height: 280px; overflow-y: auto; padding-right: 0.3rem;">
-                            <!-- Rendered via JS -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- COLUMNA 2: VISUALIZADOR DE QR & ENLACE HASHED -->
-                <div style="background: rgba(0, 240, 255, 0.03); border: 1.5px solid rgba(0, 240, 255, 0.25); border-radius: 20px; padding: 1.35rem; display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: space-between;">
-                    
-                    <div style="width: 100%; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.85rem; gap: 0.6rem;">
-                        <div style="text-align: left; flex: 1;">
-                            <span style="font-size: 0.7rem; font-weight: 800; color: #00F0FF; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0.25rem;">
-                                Nombre del Terminal (Modificable en Vivo)
-                            </span>
-                            <div style="display: flex; align-items: center; gap: 0.4rem; background: #14141E; border: 1.5px solid rgba(0, 240, 255, 0.4); border-radius: 10px; padding: 0.35rem 0.65rem;">
-                                <span style="font-size: 0.85rem;">📱</span>
-                                <input type="text" id="activeDeviceNameInput" oninput="handleActiveDeviceRename(this.value)" placeholder="Nombre del terminal..." style="background: transparent; border: none; color: #FFFFFF; font-size: 0.92rem; font-weight: 800; width: 100%; outline: none;">
-                            </div>
-                        </div>
-                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem;">
-                            <span id="activeDeviceHashBadge" style="background: rgba(0,240,255,0.12); border: 1px solid rgba(0,240,255,0.3); color: #00F0FF; font-family: monospace; font-size: 0.75rem; font-weight: 800; padding: 0.25rem 0.6rem; border-radius: 8px;">
-                                HASH: -
-                            </span>
-                            <span id="activeDeviceClaimBadge" style="font-size: 0.68rem; font-weight: 800; color: #94A3B8; padding: 0.15rem 0.5rem; border-radius: 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);">
-                                ⚪ Sin conectar
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- Tarjeta Blanca con QR de Alta Definición -->
-                    <div style="background: #FFFFFF; padding: 0.85rem; border-radius: 20px; display: inline-block; box-shadow: 0 12px 35px rgba(0,0,0,0.6); margin-bottom: 1rem; position: relative;">
-                        <img id="activeDeviceQrImg" src="" alt="QR Scanner" style="width: 180px; height: 180px; display: block; border-radius: 8px;">
-                    </div>
-
-                    <!-- Caja con URL Hashed del Scanner -->
-                    <div style="width: 100%; margin-bottom: 1rem;">
-                        <input type="text" id="activeDeviceUrlInput" readonly onclick="this.select(); copyActiveDeviceUrl(null);" title="Click para copiar" style="width: 100%; background: #14141E; border: 1px solid rgba(0,240,255,0.3); border-radius: 12px; padding: 0.7rem 0.9rem; color: #00F0FF; font-family: monospace; font-size: 0.76rem; text-align: center; outline: none; cursor: pointer;">
-                    </div>
-
-                    <!-- Botones de Acción para Compartir -->
-                    <div style="width: 100%; display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
-                        <button type="button" onclick="copyActiveDeviceUrl(this)" style="flex: 1; min-width: 120px; background: linear-gradient(135deg, #00F0FF, #00A3FF); color: #050B14; border: none; font-weight: 900; font-size: 0.82rem; padding: 0.65rem 0.9rem; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(0,240,255,0.35);">
-                            <span>📋</span>
-                            <span class="btn-copy-txt">Copiar Enlace</span>
-                        </button>
-                        <button type="button" onclick="shareActiveDeviceWa()" style="flex: 1; min-width: 120px; background: rgba(37, 211, 102, 0.15); color: #25D366; border: 1px solid rgba(37, 211, 102, 0.35); font-weight: 800; font-size: 0.82rem; padding: 0.65rem 0.9rem; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
-                            <span>💬</span>
-                            <span>WhatsApp</span>
-                        </button>
-                        <button type="button" onclick="releaseActiveDevice()" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.35); font-weight: 800; font-size: 0.82rem; padding: 0.65rem 0.9rem; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;" title="Liberar vinculación para abrir en otro celular">
-                            <span>🔓</span>
-                            <span>Liberar</span>
-                        </button>
-                        <a id="activeDeviceDirectLink" href="#" target="_blank" style="background: rgba(255,255,255,0.06); color: #FFFFFF; border: 1px solid rgba(255,255,255,0.18); font-weight: 800; font-size: 0.82rem; padding: 0.65rem 0.9rem; border-radius: 10px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
-                            <span>🚀</span>
-                            <span>Probar</span>
-                        </a>
-                    </div>
-
-                    <div style="margin-top: 0.85rem; padding: 0.6rem 0.85rem; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px dashed rgba(255,255,255,0.12); width: 100%;">
-                        <p style="margin: 0; font-size: 0.72rem; color: #94A3B8; line-height: 1.35;">
-                            📸 <strong>Instrucciones:</strong> Apunta la cámara del celular a este código QR. Cada terminal es <strong>exclusivo 1-a-1</strong>; para conectar otro celular genera un nuevo dispositivo o pulsa <em>Liberar</em>.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modal Footer -->
-            <div style="padding: 1rem 1.75rem; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.01);">
-                <span style="font-size: 0.75rem; color: #64748B;">
-                    🔒 Los enlaces cuentan con token de seguridad para operar sin inicio de sesión en puertas de acceso.
-                </span>
-                <button type="button" onclick="closeScannerDevicesModal()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #FFFFFF; font-weight: 800; font-size: 0.85rem; padding: 0.6rem 1.4rem; border-radius: 10px; cursor: pointer;">
-                    Cerrar
-                </button>
-            </div>
-        </div>
-    </div>
 
     <!-- MODAL DE HISTORIAL DE ESCANEOS POR DISPOSITIVOS (CONSOLIDADO EN VIVO) -->
     <div id="deviceLogsModal" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(5, 5, 10, 0.88); backdrop-filter: blur(14px); align-items: center; justify-content: center; padding: 1.25rem;">
@@ -668,391 +738,7 @@
 
         let isProcessingScan = false;
 
-        /* ========================================================
-           SISTEMA DE GESTIÓN Y VINCULACIÓN DE SCANNERS / DISPOSITIVOS
-           ======================================================== */
-        const STORAGE_KEY = `vivego_scanner_devices_evt_${eventId}`;
-        let scannerDevices = [];
-        let activeDeviceId = null;
 
-        function loadScannerDevices() {
-            try {
-                const saved = localStorage.getItem(STORAGE_KEY);
-                if (saved) {
-                    scannerDevices = JSON.parse(saved);
-                }
-            } catch (e) {
-                scannerDevices = [];
-            }
-
-            if (!Array.isArray(scannerDevices) || scannerDevices.length === 0) {
-                const defHash = generateDeviceHash();
-                scannerDevices = [
-                    {
-                        id: 'dev_' + Date.now(),
-                        name: 'Móvil 1 - Puerta Principal',
-                        hash: defHash,
-                        token: 'VGTOK_' + Math.random().toString(36).substring(2, 10).toUpperCase(),
-                        createdAt: new Date().toLocaleDateString()
-                    }
-                ];
-                saveScannerDevices();
-            }
-
-            if (!activeDeviceId || !scannerDevices.find(d => d.id === activeDeviceId)) {
-                activeDeviceId = scannerDevices[0].id;
-            }
-        }
-
-        function saveScannerDevices() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(scannerDevices));
-        }
-
-        function generateDeviceHash() {
-            const chars = '0123456789ABCDEF';
-            let res = 'VGDEV-';
-            for (let i = 0; i < 6; i++) {
-                res += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return res;
-        }
-
-        function getDeviceScannerUrl(device) {
-            const origin = window.location.origin;
-            const devName = encodeURIComponent(device.name);
-            const devToken = encodeURIComponent(device.token || device.hash);
-            return `${origin}/scanner/${eventId}?dev=${devName}&token=${devToken}`;
-        }
-
-        function openScannerDevicesModal() {
-            loadScannerDevices();
-            renderScannerDevicesList();
-            selectScannerDevice(activeDeviceId);
-
-            const modal = document.getElementById('scannerDevicesModal');
-            if (modal) {
-                modal.style.display = 'flex';
-                setTimeout(() => {
-                    const input = document.getElementById('newDeviceInputName');
-                    if (input) input.focus();
-                }, 100);
-            }
-        }
-
-        function closeScannerDevicesModal() {
-            const modal = document.getElementById('scannerDevicesModal');
-            if (modal) modal.style.display = 'none';
-        }
-
-        function renderScannerDevicesList() {
-            const container = document.getElementById('devicesListContainer');
-            const countBadge = document.getElementById('devicesCountBadge');
-            if (!container) return;
-
-            if (countBadge) countBadge.textContent = scannerDevices.length;
-
-            container.innerHTML = '';
-            scannerDevices.forEach((dev) => {
-                const isActive = dev.id === activeDeviceId;
-                const card = document.createElement('div');
-                card.id = `deviceCard_${dev.id}`;
-                card.style.cssText = `
-                    background: ${isActive ? 'rgba(0, 240, 255, 0.12)' : 'rgba(255, 255, 255, 0.03)'};
-                    border: 1.5px solid ${isActive ? '#00F0FF' : 'rgba(255, 255, 255, 0.09)'};
-                    border-radius: 14px;
-                    padding: 0.75rem 0.95rem;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                    box-shadow: ${isActive ? '0 0 18px rgba(0, 240, 255, 0.25)' : 'none'};
-                `;
-
-                card.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0;">
-                        <span style="font-size: 1.25rem;">📱</span>
-                        <div style="min-width: 0;">
-                            <strong class="device-card-name" style="font-size: 0.88rem; color: #FFFFFF; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                ${dev.name}
-                            </strong>
-                            <div style="display: flex; align-items: center; gap: 0.4rem; margin-top: 0.15rem;">
-                                <span style="font-family: monospace; font-size: 0.72rem; color: ${isActive ? '#00F0FF' : '#94A3B8'}; font-weight: 700;">
-                                    ${dev.hash || 'VGDEV'}
-                                </span>
-                                <span class="device-status-pill" style="font-size: 0.68rem; font-weight: 700; color: #94A3B8;">⚪ Disponible</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 0.4rem;">
-                        ${isActive ? '<span style="font-size: 0.7rem; font-weight: 900; background: #00F0FF; color: #050B14; padding: 0.15rem 0.45rem; border-radius: 6px;">ACTIVO</span>' : ''}
-                        ${scannerDevices.length > 1 ? `
-                            <button type="button" onclick="event.stopPropagation(); deleteScannerDevice('${dev.id}');" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #EF4444; border-radius: 8px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.8rem;" title="Eliminar dispositivo">
-                                🗑️
-                            </button>
-                        ` : ''}
-                    </div>
-                `;
-
-                card.onclick = () => selectScannerDevice(dev.id);
-                container.appendChild(card);
-            });
-        }
-
-        function addNewScannerDevice() {
-            const input = document.getElementById('newDeviceInputName');
-            let name = input ? input.value.trim() : '';
-
-            if (!name) {
-                name = `Móvil ${scannerDevices.length + 1} - Puerta ${scannerDevices.length + 1}`;
-            }
-
-            const newDev = {
-                id: 'dev_' + Date.now(),
-                name: name,
-                hash: generateDeviceHash(),
-                token: 'VGTOK_' + Math.random().toString(36).substring(2, 10).toUpperCase(),
-                createdAt: new Date().toLocaleDateString()
-            };
-
-            scannerDevices.push(newDev);
-            saveScannerDevices();
-
-            if (input) input.value = '';
-
-            activeDeviceId = newDev.id;
-            renderScannerDevicesList();
-            selectScannerDevice(newDev.id);
-            if (typeof loadDeviceLogsData === 'function') {
-                loadDeviceLogsData(false);
-            }
-
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: `✓ Dispositivo "${name}" creado`,
-                showConfirmButton: false,
-                timer: 2000,
-                background: '#14141E',
-                color: '#FFFFFF'
-            });
-        }
-
-        function selectScannerDevice(id) {
-            activeDeviceId = id;
-            const dev = scannerDevices.find(d => d.id === id) || scannerDevices[0];
-            if (!dev) return;
-
-            renderScannerDevicesList();
-
-            const url = getDeviceScannerUrl(dev);
-            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=8&data=${encodeURIComponent(url)}`;
-
-            const nameInput = document.getElementById('activeDeviceNameInput');
-            const hashBadge = document.getElementById('activeDeviceHashBadge');
-            const qrImg = document.getElementById('activeDeviceQrImg');
-            const urlInput = document.getElementById('activeDeviceUrlInput');
-            const directLink = document.getElementById('activeDeviceDirectLink');
-
-            if (nameInput) nameInput.value = dev.name;
-            if (hashBadge) hashBadge.textContent = `HASH: ${dev.hash || 'VGDEV'}`;
-            if (qrImg) qrImg.src = qrApiUrl;
-            if (urlInput) urlInput.value = url;
-            if (directLink) directLink.href = url;
-
-            checkDevicesClaimStatus();
-        }
-
-        function handleActiveDeviceRename(newName) {
-            const dev = scannerDevices.find(d => d.id === activeDeviceId);
-            if (!dev) return;
-
-            dev.name = newName.trim() || 'Móvil';
-            saveScannerDevices();
-
-            const url = getDeviceScannerUrl(dev);
-            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=8&data=${encodeURIComponent(url)}`;
-
-            const qrImg = document.getElementById('activeDeviceQrImg');
-            const urlInput = document.getElementById('activeDeviceUrlInput');
-            const directLink = document.getElementById('activeDeviceDirectLink');
-
-            if (qrImg) qrImg.src = qrApiUrl;
-            if (urlInput) urlInput.value = url;
-            if (directLink) directLink.href = url;
-
-            // Actualizar el nombre en la tarjeta de la lista izquierda
-            const cardName = document.querySelector(`#deviceCard_${dev.id} .device-card-name`);
-            if (cardName) cardName.textContent = dev.name;
-
-            if (typeof loadDeviceLogsData === 'function') {
-                loadDeviceLogsData(false);
-            }
-        }
-
-        function releaseActiveDevice() {
-            const dev = scannerDevices.find(d => d.id === activeDeviceId);
-            if (!dev) return;
-
-            const token = dev.token || dev.hash;
-            const releaseUrl = "{{ route('web.attendees.release_device', $event->id) }}";
-
-            fetch(releaseUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken
-                },
-                body: JSON.stringify({
-                    device_token: token
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'success',
-                    title: `✓ Vinculación de "${dev.name}" liberada`,
-                    text: 'Ya puedes escanear este QR desde otro celular',
-                    showConfirmButton: false,
-                    timer: 2500,
-                    background: '#14141E',
-                    color: '#FFFFFF'
-                });
-                checkDevicesClaimStatus();
-            })
-            .catch(err => console.error(err));
-        }
-
-        function checkDevicesClaimStatus() {
-            const statusUrl = "{{ route('web.attendees.devices_status', $event->id) }}";
-            const tokens = scannerDevices.map(d => d.token || d.hash);
-
-            fetch(statusUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken
-                },
-                body: JSON.stringify({
-                    tokens: tokens
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success && data.statuses) {
-                    const activeDev = scannerDevices.find(d => d.id === activeDeviceId);
-                    const activeToken = activeDev ? (activeDev.token || activeDev.hash) : null;
-                    const claimBadge = document.getElementById('activeDeviceClaimBadge');
-
-                    if (activeToken && data.statuses[activeToken]) {
-                        const st = data.statuses[activeToken];
-                        if (claimBadge) {
-                            if (st.claimed) {
-                                claimBadge.innerHTML = '🟢 Conectado (1 celular)';
-                                claimBadge.style.background = 'rgba(16, 185, 129, 0.15)';
-                                claimBadge.style.color = '#10B981';
-                                claimBadge.style.borderColor = 'rgba(16, 185, 129, 0.35)';
-                            } else {
-                                claimBadge.innerHTML = '⚪ Disponible';
-                                claimBadge.style.background = 'rgba(255, 255, 255, 0.06)';
-                                claimBadge.style.color = '#94A3B8';
-                                claimBadge.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                            }
-                        }
-                    }
-
-                    // Actualizar indicadores en la lista
-                    scannerDevices.forEach(d => {
-                        const tok = d.token || d.hash;
-                        const st = data.statuses[tok];
-                        const pill = document.querySelector(`#deviceCard_${d.id} .device-status-pill`);
-                        if (pill) {
-                            if (st && st.claimed) {
-                                pill.textContent = '🟢 Activo';
-                                pill.style.color = '#10B981';
-                            } else {
-                                pill.textContent = '⚪ Disponible';
-                                pill.style.color = '#94A3B8';
-                            }
-                        }
-                    });
-                }
-            })
-            .catch(err => {});
-        }
-
-        function deleteScannerDevice(id) {
-            if (scannerDevices.length <= 1) {
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'warning',
-                    title: 'Debe haber al menos 1 dispositivo vinculado',
-                    showConfirmButton: false,
-                    timer: 2000,
-                    background: '#14141E',
-                    color: '#FFFFFF'
-                });
-                return;
-            }
-
-            scannerDevices = scannerDevices.filter(d => d.id !== id);
-            saveScannerDevices();
-
-            if (activeDeviceId === id) {
-                activeDeviceId = scannerDevices[0].id;
-            }
-
-            renderScannerDevicesList();
-            selectScannerDevice(activeDeviceId);
-            if (typeof loadDeviceLogsData === 'function') {
-                loadDeviceLogsData(false);
-            }
-        }
-
-        function copyActiveDeviceUrl(btn) {
-            const dev = scannerDevices.find(d => d.id === activeDeviceId) || scannerDevices[0];
-            if (!dev) return;
-
-            const url = getDeviceScannerUrl(dev);
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(url).then(() => {
-                    if (btn) {
-                        const txt = btn.querySelector('.btn-copy-txt');
-                        if (txt) {
-                            txt.textContent = '✓ ¡Copiado!';
-                            setTimeout(() => { txt.textContent = 'Copiar Enlace'; }, 2000);
-                        }
-                    }
-                    Swal.fire({
-                        toast: true,
-                        position: 'top-end',
-                        icon: 'success',
-                        title: `📋 Enlace de "${dev.name}" copiado`,
-                        showConfirmButton: false,
-                        timer: 2000,
-                        background: '#14141E',
-                        color: '#FFFFFF'
-                    });
-                }).catch(() => fallbackCopy(url));
-            } else {
-                fallbackCopy(url);
-            }
-        }
-
-        function shareActiveDeviceWa() {
-            const dev = scannerDevices.find(d => d.id === activeDeviceId) || scannerDevices[0];
-            if (!dev) return;
-
-            const url = getDeviceScannerUrl(dev);
-            const msg = `🎟️ *VIVE GO - TERMINAL DE CONTROL DE ACCESO*\n\nHola, aquí tienes el enlace del *Scanner Móvil* para el evento:\n👉 *${eventTitle}*\n📍 *Punto de Control:* ${dev.name}\n🔑 *Hash Dispositivo:* ${dev.hash}\n\n🔗 ${url}\n\n_Abre este enlace desde la cámara o navegador de tu celular para validar entradas._`;
-            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
-        }
 
         function fallbackCopy(text) {
             const temp = document.createElement('input');
@@ -1196,8 +882,291 @@
             });
         }
 
+        // ========================================================
+        // CONTROL DE PESTAÑAS: ASISTENTES vs NO ASISTIERON
+        // ========================================================
+        let activeAttendeeTab = 'checked_in';
+
+        function switchAttendeeTab(tab) {
+            activeAttendeeTab = tab;
+            const btnCheckedIn = document.getElementById('tabBtnCheckedIn');
+            const btnPending = document.getElementById('tabBtnPending');
+            const contentCheckins = document.getElementById('tabContentCheckins');
+            const contentPending = document.getElementById('tabContentPending');
+
+            if (tab === 'checked_in') {
+                btnCheckedIn?.classList.add('active');
+                btnPending?.classList.remove('active');
+                
+                if (contentCheckins) {
+                    contentCheckins.classList.remove('tab-panel-hidden');
+                    contentCheckins.classList.add('tab-panel-active');
+                    contentCheckins.style.setProperty('display', 'block', 'important');
+                }
+                if (contentPending) {
+                    contentPending.classList.remove('tab-panel-active');
+                    contentPending.classList.add('tab-panel-hidden');
+                    contentPending.style.setProperty('display', 'none', 'important');
+                }
+            } else {
+                btnPending?.classList.add('active');
+                btnCheckedIn?.classList.remove('active');
+                
+                if (contentPending) {
+                    contentPending.classList.remove('tab-panel-hidden');
+                    contentPending.classList.add('tab-panel-active');
+                    contentPending.style.setProperty('display', 'block', 'important');
+                }
+                if (contentCheckins) {
+                    contentCheckins.classList.remove('tab-panel-active');
+                    contentCheckins.classList.add('tab-panel-hidden');
+                    contentCheckins.style.setProperty('display', 'none', 'important');
+                }
+            }
+
+            applyTableSearch();
+        }
+
+        // Búsqueda y filtrado dinámico en tiempo real para ambas tablas
+        function applyTableSearch() {
+            const cardInput = document.getElementById('attendeesCardSearchInput');
+            const navInput = document.getElementById('tableFilterInput');
+            const zoneSelect = document.getElementById('filterZoneSelect');
+            const typeSelect = document.getElementById('filterTypeSelect');
+            const clearBtn = document.getElementById('btnClearTableFilters');
+
+            const q = (cardInput && cardInput.value ? cardInput.value : (navInput ? navInput.value : '')).toLowerCase().trim();
+            const zoneFilter = zoneSelect ? zoneSelect.value.toLowerCase().trim() : 'all';
+            const typeFilter = typeSelect ? typeSelect.value.toLowerCase().trim() : 'all';
+
+            const hasActiveFilters = q !== '' || zoneFilter !== 'all' || typeFilter !== 'all';
+            if (clearBtn) {
+                clearBtn.style.display = hasActiveFilters ? 'inline-flex' : 'none';
+            }
+
+            // Filtrar Asistentes (Ingresados)
+            const checkinRows = document.querySelectorAll('#checkinsTableBody .checkin-row-item');
+            let visibleCheckins = 0;
+            checkinRows.forEach(r => {
+                const text = r.textContent.toLowerCase();
+                const rowZone = (r.dataset.zone || '').toLowerCase();
+                const rowType = (r.dataset.type || '').toLowerCase();
+
+                const matchText = !q || text.includes(q);
+                const matchZone = zoneFilter === 'all' || rowZone.includes(zoneFilter);
+                const matchType = typeFilter === 'all' || rowType === typeFilter;
+
+                const isVisible = matchText && matchZone && matchType;
+                r.style.display = isVisible ? '' : 'none';
+                if (isVisible) visibleCheckins++;
+            });
+
+            // Estado sin resultados en Asistentes
+            const checkinsTbody = document.getElementById('checkinsTableBody');
+            let noResultsCheckins = document.getElementById('noResultsCheckinsRow');
+            if (checkinRows.length > 0) {
+                if (visibleCheckins === 0) {
+                    if (!noResultsCheckins && checkinsTbody) {
+                        noResultsCheckins = document.createElement('tr');
+                        noResultsCheckins.id = 'noResultsCheckinsRow';
+                        noResultsCheckins.innerHTML = `
+                            <td colspan="9" style="text-align: center; padding: 2.5rem; color: #94A3B8;">
+                                <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">🔍</div>
+                                <strong style="color: #F1F5F9; font-size: 0.95rem;">No se encontraron asistentes que coincidan con la búsqueda.</strong>
+                                <p style="margin: 0.35rem 0 0 0; font-size: 0.8rem; color: #64748B;">Prueba cambiando el término de búsqueda o restableciendo los filtros.</p>
+                            </td>
+                        `;
+                        checkinsTbody.appendChild(noResultsCheckins);
+                    }
+                } else if (noResultsCheckins) {
+                    noResultsCheckins.remove();
+                }
+            }
+
+            // Filtrar No Asistieron (Pendientes)
+            const pendingRows = document.querySelectorAll('#pendingTableBody .pending-row-item');
+            let visiblePending = 0;
+            pendingRows.forEach(r => {
+                const text = r.textContent.toLowerCase();
+                const rowZone = (r.dataset.zone || '').toLowerCase();
+                const rowType = (r.dataset.type || '').toLowerCase();
+
+                const matchText = !q || text.includes(q);
+                const matchZone = zoneFilter === 'all' || rowZone.includes(zoneFilter);
+                const matchType = typeFilter === 'all' || rowType === typeFilter;
+
+                const isVisible = matchText && matchZone && matchType;
+                r.style.display = isVisible ? '' : 'none';
+                if (isVisible) visiblePending++;
+            });
+
+            // Estado sin resultados en No Asistieron
+            const pendingTbody = document.getElementById('pendingTableBody');
+            let noResultsPending = document.getElementById('noResultsPendingRow');
+            if (pendingRows.length > 0) {
+                if (visiblePending === 0) {
+                    if (!noResultsPending && pendingTbody) {
+                        noResultsPending = document.createElement('tr');
+                        noResultsPending.id = 'noResultsPendingRow';
+                        noResultsPending.innerHTML = `
+                            <td colspan="8" style="text-align: center; padding: 2.5rem; color: #94A3B8;">
+                                <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">🔍</div>
+                                <strong style="color: #F1F5F9; font-size: 0.95rem;">No se encontraron boletos pendientes que coincidan con la búsqueda.</strong>
+                                <p style="margin: 0.35rem 0 0 0; font-size: 0.8rem; color: #64748B;">Prueba cambiando el término de búsqueda o restableciendo los filtros.</p>
+                            </td>
+                        `;
+                        pendingTbody.appendChild(noResultsPending);
+                    }
+                } else if (noResultsPending) {
+                    noResultsPending.remove();
+                }
+            }
+        }
+
+        // Restablecer filtros
+        function clearTableFilters() {
+            const cardInput = document.getElementById('attendeesCardSearchInput');
+            const navInput = document.getElementById('tableFilterInput');
+            const zoneSelect = document.getElementById('filterZoneSelect');
+            const typeSelect = document.getElementById('filterTypeSelect');
+
+            if (cardInput) cardInput.value = '';
+            if (navInput) navInput.value = '';
+            if (zoneSelect) zoneSelect.value = 'all';
+            if (typeSelect) typeSelect.value = 'all';
+
+            applyTableSearch();
+        }
+
+        // Validar manualmente un boleto que no había asistido
+        function validateManualTicket(ticketCode, buyerName) {
+            if (isProcessingScan) return;
+            Swal.fire({
+                title: '¿Registrar Ingreso Manual?',
+                html: `
+                    <p style="color: #94A3B8; font-size: 0.95rem; margin-bottom: 0.5rem;">
+                        ¿Deseas registrar el ingreso de <strong style="color: #FFFFFF;">${buyerName || 'Titular'}</strong>?
+                    </p>
+                    <p style="font-family: monospace; color: #00F0FF; font-weight: 800; font-size: 1.1rem; background: rgba(0,240,255,0.08); padding: 0.6rem; border-radius: 10px; border: 1.5px dashed rgba(0,240,255,0.35); margin: 0.65rem 0;">
+                        ${ticketCode}
+                    </p>
+                    <p style="color: #10B981; font-size: 0.82rem; font-weight: 700; margin: 0;">
+                        ✨ El boleto se moverá automáticamente a la lista de Asistentes en tiempo real.
+                    </p>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: '✅ Registrar Ingreso',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#10B981',
+                cancelButtonColor: '#475569',
+                background: '#14141E',
+                color: '#FFFFFF'
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    processTicketScan(ticketCode);
+                }
+            });
+        }
+
+        // Eliminar fila de la tabla de No Asistentes cuando el boleto se escanea
+        function removePendingRow(ticketId) {
+            const row = document.getElementById(`pendingRow_${ticketId}`);
+            if (row) {
+                row.style.transition = 'all 0.35s ease';
+                row.style.opacity = '0';
+                row.style.transform = 'translateX(-30px)';
+                setTimeout(() => {
+                    row.remove();
+                    const tbody = document.getElementById('pendingTableBody');
+                    if (tbody && tbody.querySelectorAll('.pending-row-item').length === 0 && !document.getElementById('emptyPendingRow')) {
+                        tbody.innerHTML = `
+                            <tr id="emptyPendingRow">
+                                <td colspan="8" style="text-align: center; padding: 2.5rem; color: #94A3B8;">
+                                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎉</div>
+                                    <strong style="color: #10B981;">¡Todos los boletos emitidos ya han ingresado!</strong>
+                                    <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem;">No hay personas pendientes de ingreso en este momento.</p>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                }, 350);
+            }
+        }
+
+        // Agregar fila a la tabla de No Asistentes (p. ej. al desanular o sincronizar)
+        function appendPendingRow(ticket) {
+            const tbody = document.getElementById('pendingTableBody');
+            if (!tbody) return;
+
+            const emptyRow = document.getElementById('emptyPendingRow');
+            if (emptyRow) emptyRow.remove();
+
+            const existingRow = document.getElementById(`pendingRow_${ticket.id}`);
+            if (existingRow) return;
+
+            // Si ya está en la tabla de ingresados, no debe estar en pendientes
+            if (document.getElementById(`checkinRow_${ticket.id}`)) return;
+
+            const isDig = ticket.is_digital || ['digital', 'cortesia_digital'].includes(ticket.ticket_type);
+            const typeBadgeHtml = isDig
+                ? '<span class="dash-badge-custom badge-cyan" style="font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.55rem; letter-spacing: 0.3px;">🌐 Virtual</span>'
+                : '<span class="dash-badge-custom badge-orange" style="font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.55rem; letter-spacing: 0.3px;">🎟️ Físico</span>';
+
+            const tr = document.createElement('tr');
+            tr.className = 'pending-row-item';
+            tr.id = `pendingRow_${ticket.id}`;
+            tr.dataset.zone = (ticket.zone_name || '').toLowerCase();
+            tr.dataset.type = isDig ? 'virtual' : 'fisico';
+            const safeName = (ticket.buyer_name || 'Sin Nombre').replace(/'/g, "\\'");
+            tr.innerHTML = `
+                <td><span style="font-weight: 800; color: #94A3B8;">#--</span></td>
+                <td>
+                    <span style="font-family: monospace; font-weight: 800; color: #FFFFFF; font-size: 0.9rem;">${ticket.ticket_code}</span>
+                    <small style="display: block; font-family: monospace; color: #00F0FF; font-size: 0.75rem; font-weight: 800;">🔑 ${ticket.validation_hash || ''}</small>
+                </td>
+                <td>
+                    <div style="display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start;">
+                        <span class="dash-badge-custom badge-cyan" style="font-size: 0.78rem; font-weight: 800;">${ticket.zone_name}</span>
+                        ${typeBadgeHtml}
+                    </div>
+                </td>
+                <td><strong style="color: #FFFFFF;">${ticket.buyer_name || 'Sin Nombre'}</strong></td>
+                <td><span style="color: #94A3B8; font-family: monospace;">${ticket.buyer_dni || '-'}</span></td>
+                <td>
+                    <span style="color: #CBD5E1; font-size: 0.85rem; font-weight: 600;">${ticket.created_at_formatted || 'Boleto Emitido'}</span>
+                </td>
+                <td>
+                    <span class="dash-badge-custom" style="background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.35); font-size: 0.72rem; font-weight: 800;">
+                        ⏳ No Asistió
+                    </span>
+                </td>
+                <td style="text-align: right;">
+                    <button type="button" 
+                            onclick="validateManualTicket('${ticket.ticket_code}', '${safeName}')" 
+                            class="btn btn-sm"
+                            title="Validar y registrar ingreso de este boleto"
+                            style="background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.35); padding: 0.35rem 0.85rem; font-size: 0.75rem; font-weight: 800; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 0.35rem;"
+                            onmouseenter="this.style.background='#10B981'; this.style.color='#FFFFFF';"
+                            onmouseleave="this.style.background='rgba(16, 185, 129, 0.15)'; this.style.color='#10B981';">
+                        <span>⚡</span> <span>Validar Ingreso</span>
+                    </button>
+                </td>
+            `;
+
+            if (tbody.firstChild) {
+                tbody.insertBefore(tr, tbody.firstChild);
+            } else {
+                tbody.appendChild(tr);
+            }
+            applyTableSearch();
+        }
+
         // Agregar fila dinámica a la tabla de accesos en tiempo real
         function appendCheckinRow(ticket) {
+            // Si estaba en No Asistentes, removerlo inmediatamente en tiempo real
+            removePendingRow(ticket.id);
+
             const tbody = document.getElementById('checkinsTableBody');
             const emptyRow = document.getElementById('emptyCheckinsRow');
             if (emptyRow) emptyRow.remove();
@@ -1213,6 +1182,8 @@
             const tr = document.createElement('tr');
             tr.className = 'checkin-row-item row-highlight-new';
             tr.id = `checkinRow_${ticket.id}`;
+            tr.dataset.zone = (ticket.zone_name || '').toLowerCase();
+            tr.dataset.type = isDig ? 'virtual' : 'fisico';
             tr.innerHTML = `
                 <td><span style="font-weight: 800; color: #10B981;">NUEVO</span></td>
                 <td>
@@ -1253,6 +1224,7 @@
             } else {
                 tbody.appendChild(tr);
             }
+            applyTableSearch();
         }
 
         // Anular / Eliminar el escaneo de un boleto para permitir re-escanearlo
@@ -1264,7 +1236,7 @@
                         Se cancelará el registro de ingreso para el boleto <strong style="color: #FFFFFF; font-family: monospace;">${ticketCode}</strong>.
                     </p>
                     <p style="color: #10B981; font-weight: 700; font-size: 0.85rem;">
-                        ✨ El boleto volverá a quedar como disponible y podrá ser escaneado nuevamente.
+                        ✨ El boleto volverá a quedar como No Asistió (Pendiente) y podrá ser escaneado nuevamente.
                     </p>
                 `,
                 icon: 'warning',
@@ -1316,6 +1288,11 @@
                                         `;
                                     }
                                 }, 400);
+                            }
+
+                            // Re-agregar a la lista de No Asistentes
+                            if (data.ticket) {
+                                appendPendingRow(data.ticket);
                             }
 
                             if (data.metrics) {
@@ -1371,6 +1348,12 @@
             if (checkedEl && m.checked_in_count !== undefined) checkedEl.textContent = Number(m.checked_in_count).toLocaleString();
             if (pendingEl && m.pending_count !== undefined) pendingEl.textContent = Number(m.pending_count).toLocaleString();
             if (rateEl && m.attendance_rate !== undefined) rateEl.textContent = `${m.attendance_rate}%`;
+
+            // Actualizar contadores de las pestañas
+            const tabCheckedEl = document.getElementById('tabCountCheckedIn');
+            const tabPendingEl = document.getElementById('tabCountPending');
+            if (tabCheckedEl && m.checked_in_count !== undefined) tabCheckedEl.textContent = Number(m.checked_in_count).toLocaleString();
+            if (tabPendingEl && m.pending_count !== undefined) tabPendingEl.textContent = Number(m.pending_count).toLocaleString();
 
             // Mini KPIs
             const kpiDig = document.getElementById('kpiDigitalChecked');
@@ -1453,6 +1436,7 @@
                     const tbody = document.getElementById('checkinsTableBody');
                     const emptyRow = document.getElementById('emptyCheckinsRow');
 
+                    // 1. Sincronizar Asistentes (Ingresados)
                     if (data.new_checkins && data.new_checkins.length > 0) {
                         if (emptyRow) emptyRow.remove();
 
@@ -1460,9 +1444,7 @@
                             tbody.innerHTML = '';
                         }
 
-                        // Iterar en reversa (del más antiguo al más reciente del lote) para que al insertar al tope queden en orden cronológico descendente
                         const checkinsToProcess = isManual ? data.new_checkins : [...data.new_checkins].reverse();
-
                         checkinsToProcess.forEach(t => {
                             const existingRow = document.getElementById(`checkinRow_${t.id}`);
                             if (!existingRow) {
@@ -1473,10 +1455,35 @@
                                     scannedCell.innerHTML = `<span style="color: #E2E8F0; font-size: 0.85rem;">${t.scanned_by}</span>`;
                                 }
                             }
+                            removePendingRow(t.id);
                         });
                     }
 
-                    // Sincronizar filas removidas / anuladas
+                    // 2. Sincronizar No Asistentes (Pendientes)
+                    if (data.pending_tickets && Array.isArray(data.pending_tickets)) {
+                        const pendingTbody = document.getElementById('pendingTableBody');
+                        if (isManual && pendingTbody) {
+                            pendingTbody.innerHTML = '';
+                        }
+
+                        data.pending_tickets.forEach(pt => {
+                            const inChecked = document.getElementById(`checkinRow_${pt.id}`);
+                            if (!inChecked) {
+                                appendPendingRow(pt);
+                            } else {
+                                removePendingRow(pt.id);
+                            }
+                        });
+                    }
+
+                    // 3. Quitar de Pendientes cualquier ID que ya haya ingresado
+                    if (data.active_checkin_ids && Array.isArray(data.active_checkin_ids)) {
+                        data.active_checkin_ids.forEach(cid => {
+                            removePendingRow(cid);
+                        });
+                    }
+
+                    // 4. Sincronizar filas removidas / anuladas en Asistentes
                     if (data.active_checkin_ids && Array.isArray(data.active_checkin_ids)) {
                         const activeSet = new Set(data.active_checkin_ids.map(Number));
                         const rows = document.querySelectorAll('#checkinsTableBody .checkin-row-item');
@@ -1500,6 +1507,31 @@
                         }
                     }
 
+                    // 5. Sincronizar filas obsoletas en No Asistentes
+                    if (data.active_pending_ids && Array.isArray(data.active_pending_ids)) {
+                        const pendingSet = new Set(data.active_pending_ids.map(Number));
+                        const pRows = document.querySelectorAll('#pendingTableBody .pending-row-item');
+                        pRows.forEach(pr => {
+                            const rawId = pr.id.replace('pendingRow_', '');
+                            if (rawId && !pendingSet.has(Number(rawId))) {
+                                pr.remove();
+                            }
+                        });
+
+                        const pTbody = document.getElementById('pendingTableBody');
+                        if (data.active_pending_ids.length === 0 && pTbody && !document.getElementById('emptyPendingRow')) {
+                            pTbody.innerHTML = `
+                                <tr id="emptyPendingRow">
+                                    <td colspan="8" style="text-align: center; padding: 2.5rem; color: #94A3B8;">
+                                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎉</div>
+                                        <strong style="color: #10B981;">¡Todos los boletos emitidos ya han ingresado!</strong>
+                                        <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem;">No hay personas pendientes de ingreso en este momento.</p>
+                                    </td>
+                                </tr>
+                            `;
+                        }
+                    }
+
                     if (data.metrics) {
                         updateKpis(data.metrics);
                     }
@@ -1507,6 +1539,9 @@
                     if (data.zones) {
                         updateZones(data.zones);
                     }
+
+                    // Aplicar filtro de búsqueda activo
+                    applyTableSearch();
 
                     if (isManual) {
                         Swal.fire({
@@ -1548,19 +1583,33 @@
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            loadScannerDevices();
+            if (typeof loadScannerDevices === 'function') {
+                loadScannerDevices();
+            }
 
-            // Buscador en tabla de ingresos
-            const tableFilter = document.getElementById('tableFilterInput');
-            if (tableFilter) {
-                tableFilter.addEventListener('input', function() {
-                    const q = this.value.toLowerCase().trim();
-                    const rows = document.querySelectorAll('#checkinsTableBody .checkin-row-item');
-                    rows.forEach(r => {
-                        const text = r.textContent.toLowerCase();
-                        r.style.display = text.includes(q) ? '' : 'none';
-                    });
+            // Sincronización y eventos de búsqueda y filtros
+            const cardSearch = document.getElementById('attendeesCardSearchInput');
+            const topNavFilter = document.getElementById('tableFilterInput');
+            const zoneSelect = document.getElementById('filterZoneSelect');
+            const typeSelect = document.getElementById('filterTypeSelect');
+
+            if (cardSearch) {
+                cardSearch.addEventListener('input', function () {
+                    if (topNavFilter) topNavFilter.value = this.value;
+                    applyTableSearch();
                 });
+            }
+            if (topNavFilter) {
+                topNavFilter.addEventListener('input', function () {
+                    if (cardSearch) cardSearch.value = this.value;
+                    applyTableSearch();
+                });
+            }
+            if (zoneSelect) {
+                zoneSelect.addEventListener('change', applyTableSearch);
+            }
+            if (typeSelect) {
+                typeSelect.addEventListener('change', applyTableSearch);
             }
 
             // Theme Toggle

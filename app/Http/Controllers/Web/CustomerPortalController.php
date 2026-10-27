@@ -318,17 +318,12 @@ class CustomerPortalController extends Controller
             ], 404);
         }
 
-        // Validar si el evento ya pasó
-        $eventDateStr = !empty($event->event_date) ? (is_string($event->event_date) ? substr($event->event_date, 0, 10) : $event->event_date->format('Y-m-d')) : null;
-        if ($eventDateStr) {
-            $eventTimeStr = $event->event_time ?: '23:59:59';
-            $eventDateTime = \Carbon\Carbon::parse($eventDateStr . ' ' . $eventTimeStr);
-            if ($eventDateTime->isPast()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'El evento ya ha finalizado. No es posible realizar mejoras de entrada.',
-                ], 422);
-            }
+        // Validar si el evento ya fue finalizado o cerrado
+        if ($event->isPast()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El evento ya ha finalizado. No es posible realizar mejoras de entrada.',
+            ], 422);
         }
 
         $zonesRaw = is_array($event->zones) ? $event->zones : (is_string($event->zones) ? json_decode($event->zones, true) : []);

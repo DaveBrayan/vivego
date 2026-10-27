@@ -1753,7 +1753,7 @@
 
         // MOTOR DEL DISEÑADOR INTERACTIVO (20.40 CM × 9.80 CM)
         const defaultTemplateData = @json($defaultTemplateData ?? null);
-        let certState = { background: null, elements: [] };
+        let certState = { background: 'https://vivego.pe/storage/media/media_1790179292_KOX4lcFk.png', elements: [] };
         let selectedElementId = null;
         let currentZoom = 1.0;
         let isDragging = false;
@@ -1770,11 +1770,11 @@
 
             if (tpl) {
                 if (tpl.elements && Array.isArray(tpl.elements) && tpl.elements.length > 0) {
-                    certState.background = tpl.background || tpl.bg_image || null;
-                    certState.elements = tpl.elements;
+                    certState.background = tpl.background || tpl.bg_image || 'https://vivego.pe/storage/media/media_1790179292_KOX4lcFk.png';
+                    certState.elements = JSON.parse(JSON.stringify(tpl.elements));
                     console.log('[ViveGo Stepper] ✓ Plantilla cargada desde elements:', certState.elements.length, 'elementos');
-                } else if (tpl.positions) {
-                    certState.background = tpl.bg_image || null;
+                } else if (tpl.positions && Object.keys(tpl.positions).length > 0) {
+                    certState.background = tpl.bg_image || tpl.background || 'https://vivego.pe/storage/media/media_1790179292_KOX4lcFk.png';
                     certState.elements = [];
                     Object.keys(tpl.positions).forEach((key, idx) => {
                         const p = tpl.positions[key];
@@ -1811,108 +1811,270 @@
             }
         }
 
-        // Si no existen elementos en la plantilla, inicializar con el diseño oficial predeterminado de ViveGo
+        // Si no existen elementos en la plantilla, inicializar con el diseño oficial predeterminado de ViveGo (Gran Concierto Internacional Huancayo)
         if (!certState.elements || certState.elements.length === 0) {
-            console.log('[ViveGo Stepper] ℹ️ Inicializando elementos predeterminados estándar de ViveGo.');
+            console.log('[ViveGo Stepper] ℹ️ Inicializando elementos predeterminados estándar de ViveGo (Gran Concierto Huancayo).');
+            certState.background = 'https://vivego.pe/storage/media/media_1790179292_KOX4lcFk.png';
             certState.elements = [
                 {
-                    id: 'el_logo_brand',
-                    type: 'logo',
-                    src: '/images/logo.png',
-                    x: 25,
-                    y: 20,
-                    content: 'Logo Marca',
-                    style: { fontFamily: 'font-montserrat', fontSize: '12px', color: '#000000', fontWeight: 'normal', fontStyle: 'normal', textAlign: 'left', width: '120px', height: 'auto', rotation: 0, objectFit: 'contain' }
+                    id: "canvaElLogo",
+                    type: "logo",
+                    src: "https://vivego.pe/images/logo.png",
+                    x: 278,
+                    y: 321,
+                    content: "Etiqueta",
+                    style: {
+                        fontFamily: "\"Plus Jakarta Sans\", -apple-system, BlinkMacSystemFont, sans-serif",
+                        fontSize: "16px",
+                        color: "rgb(244, 246, 249)",
+                        fontWeight: "400",
+                        fontStyle: "normal",
+                        textAlign: "start",
+                        width: "113px",
+                        height: "41px",
+                        rotation: 0,
+                        objectFit: "cover"
+                    }
                 },
                 {
-                    id: 'el_event_title',
-                    type: 'system_tag',
+                    id: "canvaElBanner",
+                    type: "banner",
+                    src: "https://vivego.pe/storage/media/media_1790906062_QgchAsWy.png",
+                    x: 92,
+                    y: 7,
+                    content: "Etiqueta",
+                    style: {
+                        fontFamily: "\"Plus Jakarta Sans\", -apple-system, BlinkMacSystemFont, sans-serif",
+                        fontSize: "16px",
+                        color: "rgb(244, 246, 249)",
+                        fontWeight: "400",
+                        fontStyle: "normal",
+                        textAlign: "start",
+                        width: "461px",
+                        height: "166px",
+                        rotation: 0,
+                        objectFit: "cover"
+                    }
+                },
+                {
+                    id: "el_1790907383363",
+                    type: "system_tag",
                     src: null,
-                    x: 160,
-                    y: 18,
-                    content: '<strong>Gran Concierto Principal 2026</strong>',
-                    style: { fontFamily: 'font-montserrat', fontSize: '15px', color: '#FF5500', fontWeight: 'bold', fontStyle: 'normal', textAlign: 'left', width: '380px', height: 'auto', rotation: 0, objectFit: 'cover' }
+                    x: 105,
+                    y: 226,
+                    content: "<p><strong>DNI: </strong>70654321</p>",
+                    style: {
+                        fontFamily: "font-montserrat",
+                        fontSize: "12px",
+                        color: "#000000",
+                        fontWeight: "normal",
+                        fontStyle: "normal",
+                        textAlign: "left",
+                        width: "auto",
+                        height: "auto",
+                        rotation: 0,
+                        objectFit: "contain"
+                    }
                 },
                 {
-                    id: 'el_event_zone',
-                    type: 'system_tag',
+                    id: "el_1790907397851",
+                    type: "system_tag",
                     src: null,
-                    x: 160,
-                    y: 48,
-                    content: 'Sector: <b>ZONA PLATINUM</b>',
-                    style: { fontFamily: 'font-montserrat', fontSize: '13px', color: '#000000', fontWeight: 'bold', fontStyle: 'normal', textAlign: 'left', width: '220px', height: 'auto', rotation: 0, objectFit: 'cover' }
+                    x: 104,
+                    y: 203,
+                    content: "<p><strong>Comprador:</strong> Juan Pérez</p>",
+                    style: {
+                        fontFamily: "font-montserrat",
+                        fontSize: "12px",
+                        color: "#000000",
+                        fontWeight: "normal",
+                        fontStyle: "normal",
+                        textAlign: "left",
+                        width: "414px",
+                        height: "auto",
+                        rotation: 0,
+                        objectFit: "contain"
+                    }
                 },
                 {
-                    id: 'el_event_price',
-                    type: 'system_tag',
+                    id: "el_1790907425331",
+                    type: "system_tag",
                     src: null,
-                    x: 390,
-                    y: 48,
-                    content: 'Precio: <b>S/ 150.00</b>',
-                    style: { fontFamily: 'font-montserrat', fontSize: '13px', color: '#10B981', fontWeight: 'bold', fontStyle: 'normal', textAlign: 'right', width: '150px', height: 'auto', rotation: 0, objectFit: 'cover' }
+                    x: 136,
+                    y: 179,
+                    content: "<p><strong> GRAN CONCIERTO INTERNACIONAL HUANCAYO</strong></p>",
+                    style: {
+                        fontFamily: "font-montserrat",
+                        fontSize: "14px",
+                        color: "#000000",
+                        fontWeight: "normal",
+                        fontStyle: "normal",
+                        textAlign: "left",
+                        width: "auto",
+                        height: "auto",
+                        rotation: 0,
+                        objectFit: "contain"
+                    }
                 },
                 {
-                    id: 'el_event_banner',
-                    type: 'banner',
-                    src: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=600&q=80',
-                    x: 160,
-                    y: 80,
-                    content: 'Banner Ticket',
-                    style: { fontFamily: 'font-montserrat', fontSize: '12px', color: '#000000', fontWeight: 'normal', fontStyle: 'normal', textAlign: 'left', width: '380px', height: '145px', rotation: 0, objectFit: 'cover' }
-                },
-                {
-                    id: 'el_event_datetime',
-                    type: 'system_tag',
+                    id: "el_1790907460859",
+                    type: "system_tag",
                     src: null,
-                    x: 160,
-                    y: 240,
-                    content: '📅 15/11/2026 — 20:00 hrs',
-                    style: { fontFamily: 'font-montserrat', fontSize: '11px', color: '#475569', fontWeight: 'bold', fontStyle: 'normal', textAlign: 'left', width: '220px', height: 'auto', rotation: 0, objectFit: 'cover' }
+                    x: 619,
+                    y: 39,
+                    content: "<p>N° 00001</p>",
+                    style: {
+                        fontFamily: "font-montserrat",
+                        fontSize: "19px",
+                        color: "#000000",
+                        fontWeight: "normal",
+                        fontStyle: "normal",
+                        textAlign: "left",
+                        width: "auto",
+                        height: "auto",
+                        rotation: 0,
+                        objectFit: "contain"
+                    }
                 },
                 {
-                    id: 'el_event_venue',
-                    type: 'system_tag',
+                    id: "el_1790907479475",
+                    type: "system_tag",
                     src: null,
-                    x: 380,
-                    y: 240,
-                    content: '📍 Estadio Nacional Ayacucho',
-                    style: { fontFamily: 'font-montserrat', fontSize: '11px', color: '#475569', fontWeight: 'normal', fontStyle: 'normal', textAlign: 'right', width: '160px', height: 'auto', rotation: 0, objectFit: 'cover' }
+                    x: 614,
+                    y: 269,
+                    content: "<p>VG-9A8B7C6D</p>",
+                    style: {
+                        fontFamily: "font-montserrat",
+                        fontSize: "14px",
+                        color: "#ffffff",
+                        fontWeight: "normal",
+                        fontStyle: "normal",
+                        textAlign: "left",
+                        width: "119px",
+                        height: "auto",
+                        rotation: 0,
+                        objectFit: "contain"
+                    }
                 },
                 {
-                    id: 'el_event_qr',
-                    type: 'qr',
+                    id: "el_1790907503443",
+                    type: "system_tag",
                     src: null,
-                    x: 580,
-                    y: 30,
-                    content: 'Código QR',
-                    style: { fontFamily: 'font-montserrat', fontSize: '12px', color: '#000000', fontWeight: 'normal', fontStyle: 'normal', textAlign: 'center', width: '150px', height: '150px', rotation: 0, objectFit: 'contain' }
+                    x: 591,
+                    y: 303,
+                    content: "<p>La responsabilidad de este boleto</p><p> es  exclusiva del cliente, </p><p>no compartir ni publicar.</p><p> Se recomienda llevar impreso.</p>",
+                    style: {
+                        fontFamily: "font-montserrat",
+                        fontSize: "9px",
+                        color: "#000000",
+                        fontWeight: "normal",
+                        fontStyle: "normal",
+                        textAlign: "center",
+                        width: "auto",
+                        height: "auto",
+                        rotation: 0,
+                        objectFit: "contain"
+                    }
                 },
                 {
-                    id: 'el_event_hash',
-                    type: 'system_tag',
+                    id: "el_1790907539763",
+                    type: "system_tag",
                     src: null,
-                    x: 580,
-                    y: 190,
-                    content: 'Hash: VG-8A9B-2026',
-                    style: { fontFamily: 'font-space-grotesk', fontSize: '10px', color: '#64748B', fontWeight: 'bold', fontStyle: 'normal', textAlign: 'center', width: '150px', height: 'auto', rotation: 0, objectFit: 'cover' }
+                    x: 406,
+                    y: 259,
+                    content: "<p><strong>Zona:</strong> VIP</p>",
+                    style: {
+                        fontFamily: "font-montserrat",
+                        fontSize: "13px",
+                        color: "#000000",
+                        fontWeight: "normal",
+                        fontStyle: "normal",
+                        textAlign: "left",
+                        width: "auto",
+                        height: "auto",
+                        rotation: 0,
+                        objectFit: "contain"
+                    }
                 },
                 {
-                    id: 'el_event_num',
-                    type: 'system_tag',
+                    id: "el_1790907551643",
+                    type: "system_tag",
                     src: null,
-                    x: 580,
-                    y: 210,
-                    content: 'N° 000001',
-                    style: { fontFamily: 'font-montserrat', fontSize: '11px', color: '#000000', fontWeight: 'bold', fontStyle: 'normal', textAlign: 'center', width: '150px', height: 'auto', rotation: 0, objectFit: 'cover' }
+                    x: 407,
+                    y: 278,
+                    content: "<p><strong>Precio:</strong> S/ 100.00</p>",
+                    style: {
+                        fontFamily: "font-montserrat",
+                        fontSize: "13px",
+                        color: "#000000",
+                        fontWeight: "normal",
+                        fontStyle: "normal",
+                        textAlign: "left",
+                        width: "auto",
+                        height: "auto",
+                        rotation: 0,
+                        objectFit: "contain"
+                    }
                 },
                 {
-                    id: 'el_event_disclaimer',
-                    type: 'system_tag',
+                    id: "el_1790907581883",
+                    type: "system_tag",
                     src: null,
-                    x: 25,
-                    y: 310,
-                    content: 'La responsabilidad de este boleto es exclusiva del cliente, no compartir ni duplicar.',
-                    style: { fontFamily: 'font-montserrat', fontSize: '9px', color: '#94A3B8', fontWeight: 'normal', fontStyle: 'normal', textAlign: 'center', width: '720px', height: 'auto', rotation: 0, objectFit: 'cover' }
+                    x: 104,
+                    y: 268,
+                    content: "<p><strong>LOCAL</strong>: Mil Maravillas-Huancayo</p>",
+                    style: {
+                        fontFamily: "font-montserrat",
+                        fontSize: "12px",
+                        color: "#000000",
+                        fontWeight: "normal",
+                        fontStyle: "normal",
+                        textAlign: "left",
+                        width: "auto",
+                        height: "auto",
+                        rotation: 0,
+                        objectFit: "contain"
+                    }
+                },
+                {
+                    id: "el_1790907617780",
+                    type: "system_tag",
+                    src: null,
+                    x: 105,
+                    y: 284,
+                    content: "<p><strong>Dirección:</strong> Av. General Cordova Nº  1253-CHILCA</p>",
+                    style: {
+                        fontFamily: "font-montserrat",
+                        fontSize: "11px",
+                        color: "#000000",
+                        fontWeight: "normal",
+                        fontStyle: "normal",
+                        textAlign: "left",
+                        width: "auto",
+                        height: "auto",
+                        rotation: 0,
+                        objectFit: "contain"
+                    }
+                },
+                {
+                    id: "el_1790908094315",
+                    type: "qr",
+                    src: null,
+                    x: 591,
+                    y: 83,
+                    content: "Texto",
+                    style: {
+                        fontFamily: "font-montserrat",
+                        fontSize: "12px",
+                        color: "#000000",
+                        fontWeight: "normal",
+                        fontStyle: "normal",
+                        textAlign: "left",
+                        width: "165px",
+                        height: "173px",
+                        rotation: 0,
+                        objectFit: "contain"
+                    }
                 }
             ];
         }
@@ -1924,10 +2086,16 @@
                 const dateVal = document.getElementById('event_date_picker')?.value || document.getElementById('event_date')?.value;
                 const timeVal = document.getElementById('event_time_picker')?.value || document.getElementById('event_time')?.value;
                 const venueVal = document.getElementById('event_venue')?.value;
+                const addressVal = document.getElementById('event_address')?.value;
 
                 if (titleVal) {
-                    const titleEl = certState.elements.find(e => e.id === 'el_event_title' || e.id === 'canvaElTitle' || (e.content && e.content.includes('Concierto')));
-                    if (titleEl) titleEl.content = `<strong>${titleVal}</strong>`;
+                    const titleEl = certState.elements.find(e => 
+                        e.id === 'el_event_title' || 
+                        e.id === 'canvaElTitle' || 
+                        e.id === 'el_1790907425331' || 
+                        (e.content && (e.content.toLowerCase().includes('concierto') || e.content.toLowerCase().includes('huancayo')))
+                    );
+                    if (titleEl) titleEl.content = `<p><strong> ${titleVal}</strong></p>`;
                 }
                 if (bannerVal) {
                     const bannerEl = certState.elements.find(e => e.type === 'banner' || e.id === 'el_event_banner' || e.id === 'canvaElBanner');
@@ -1938,8 +2106,39 @@
                     if (dtEl) dtEl.content = `📅 ${dateVal} — ${timeVal} hrs`;
                 }
                 if (venueVal) {
-                    const vEl = certState.elements.find(e => e.id === 'el_event_venue' || e.id === 'canvaElVenue' || (e.content && e.content.includes('📍')));
-                    if (vEl) vEl.content = `📍 ${venueVal}`;
+                    const vEl = certState.elements.find(e => 
+                        e.id === 'el_event_venue' || 
+                        e.id === 'canvaElVenue' || 
+                        e.id === 'el_1790907581883' || 
+                        (e.content && (e.content.includes('LOCAL') || e.content.includes('📍')))
+                    );
+                    if (vEl) vEl.content = `<p><strong>LOCAL</strong>: ${venueVal}</p>`;
+                }
+                if (addressVal) {
+                    const addrEl = certState.elements.find(e => 
+                        e.id === 'el_event_address' || 
+                        e.id === 'canvaElCity' || 
+                        e.id === 'el_1790907617780' || 
+                        (e.content && e.content.includes('Dirección'))
+                    );
+                    if (addrEl) addrEl.content = `<p><strong>Dirección:</strong> ${addressVal}</p>`;
+                }
+
+                const firstZoneRow = document.querySelector('#zonesTableBody tr');
+                if (firstZoneRow) {
+                    const zName = firstZoneRow.querySelector('.zone-name-input')?.value;
+                    const zPrice = firstZoneRow.querySelector('.zone-price-input')?.value;
+                    if (zName) {
+                        const zoneEl = certState.elements.find(e => e.id === 'el_event_zone' || e.id === 'el_1790907539763' || (e.content && e.content.includes('Zona:')));
+                        if (zoneEl) zoneEl.content = `<p><strong>Zona:</strong> ${zName}</p>`;
+                    }
+                    if (zPrice !== undefined && zPrice !== '') {
+                        const priceEl = certState.elements.find(e => e.id === 'el_event_price' || e.id === 'el_1790907551643' || (e.content && e.content.includes('Precio:')));
+                        if (priceEl) {
+                            const formattedPrice = parseFloat(zPrice || 0).toFixed(2);
+                            priceEl.content = `<p><strong>Precio:</strong> S/ ${formattedPrice}</p>`;
+                        }
+                    }
                 }
                 console.log('[ViveGo Stepper] ✓ Datos del Paso 1 sincronizados en las etiquetas del Canva.');
             } catch(e) {

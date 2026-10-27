@@ -36,13 +36,8 @@
                         $qty = count($items) > 0 ? array_sum(array_column($items, 'quantity')) : max(1, $s->quantity);
                         $totalTicketsCount += $qty;
 
-                        $eDateStr = !empty($s->event?->event_date) ? (is_string($s->event->event_date) ? substr($s->event->event_date, 0, 10) : $s->event->event_date->format('Y-m-d')) : null;
-                        $isPast = false;
-                        if ($eDateStr) {
-                            $eTime = $s->event?->event_time ?: '23:59:59';
-                            $dt = \Carbon\Carbon::parse($eDateStr . ' ' . $eTime);
-                            $isPast = $dt->isPast();
-                        }
+                        // El evento cuenta como finalizado solo cuando el organizador lo marca como Finalizado/Cerrado
+                        $isPast = $s->event ? $s->event->isPast() : false;
                         if ($isPast) {
                             $pastCount += $qty;
                         } else {
@@ -111,14 +106,8 @@
                         $items = $tData['items'] ?? (is_array($tData) ? $tData : []);
                         $totalTickets = count($items) > 0 ? array_sum(array_column($items, 'quantity')) : max(1, $sale->quantity);
 
-                        // Evaluar si el evento ya pasó
-                        $eventDateStr = !empty($sale->event?->event_date) ? (is_string($sale->event->event_date) ? substr($sale->event->event_date, 0, 10) : $sale->event->event_date->format('Y-m-d')) : null;
-                        $isPastEvent = false;
-                        if ($eventDateStr) {
-                            $eventTimeStr = $sale->event?->event_time ?: '23:59:59';
-                            $eventDateTime = \Carbon\Carbon::parse($eventDateStr . ' ' . $eventTimeStr);
-                            $isPastEvent = $eventDateTime->isPast();
-                        }
+                        // Evaluar si el evento ya fue finalizado o cerrado manualmente por el organizador
+                        $isPastEvent = $sale->event ? $sale->event->isPast() : false;
 
                         $isUpgraded = $sale->isUpgraded();
                         $pm = strtolower($sale->payment_method ?? '');

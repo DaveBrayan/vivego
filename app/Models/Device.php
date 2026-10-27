@@ -15,6 +15,7 @@ class Device extends Model
         'name',
         'device_uuid',
         'pairing_token',
+        'access_pin',
         'api_token',
         'status',
         'assigned_events',
@@ -96,8 +97,33 @@ class Device extends Model
             'server_url' => rtrim($effectiveUrl, '/'),
             'device_uuid' => $this->device_uuid,
             'token' => $this->pairing_token,
+            'access_pin' => $this->access_pin,
             'name' => $this->name,
             'timestamp' => now()->timestamp,
         ], JSON_UNESCAPED_SLASHES);
+    }
+
+    /**
+     * Genera un PIN numérico único de 4 dígitos que no colisione con otro dispositivo.
+     */
+    public static function generateUniquePin(): string
+    {
+        do {
+            $pin = str_pad((string) mt_rand(1000, 9999), 4, '0', STR_PAD_LEFT);
+        } while (self::where('access_pin', $pin)->exists());
+
+        return $pin;
+    }
+
+    /**
+     * Garantiza que el dispositivo tenga un PIN numérico de 4 dígitos asignado.
+     */
+    public function ensurePin(): string
+    {
+        if (empty($this->access_pin) || strlen($this->access_pin) !== 4) {
+            $this->access_pin = self::generateUniquePin();
+            $this->save();
+        }
+        return $this->access_pin;
     }
 }

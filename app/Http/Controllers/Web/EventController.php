@@ -259,7 +259,9 @@ class EventController extends Controller
 
         // Cargar Plantillas de Boletos desde MySQL
         $templates = TicketTemplate::orderBy('is_default', 'desc')->get();
-        $defaultTemplateModel = TicketTemplate::where('is_default', 1)->first() ?? TicketTemplate::first();
+        $defaultTemplateModel = TicketTemplate::where('is_default', 1)->first()
+            ?? TicketTemplate::where('name', 'like', '%HUANCAYO%')->first()
+            ?? TicketTemplate::first();
 
         $defaultTemplateData = $defaultTemplateModel ? [
             'id' => $defaultTemplateModel->id,
@@ -268,7 +270,7 @@ class EventController extends Controller
             'type' => $defaultTemplateModel->type,
             'bg_color' => ($defaultTemplateModel->bg_color) ? $defaultTemplateModel->bg_color : '#FFFFFF',
             'bg_image' => $defaultTemplateModel->bg_image,
-            'strip_color' => ($defaultTemplateModel->strip_color) ? $defaultTemplateModel->strip_color : '#000000',
+            'strip_color' => ($defaultTemplateModel->strip_color) ? $defaultTemplateModel->strip_color : '#FF5500',
             'positions' => $defaultTemplateModel->positions ?? [],
             'elements' => $defaultTemplateModel->elements ?? [],
         ] : null;

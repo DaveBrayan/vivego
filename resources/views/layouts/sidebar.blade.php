@@ -395,7 +395,7 @@
             <li class="dash-nav-item {{ (request()->routeIs('web.attendees*') || request()->is('admin/asistentes*')) ? 'active' : '' }}">
                 <a href="{{ \Illuminate\Support\Facades\Route::has('web.attendees') ? route('web.attendees') : url('/admin/asistentes') }}" class="dash-nav-link">
                     <span class="dash-nav-icon">👥</span>
-                    <span class="dash-nav-text">Asistentes & Scanner</span>
+                    <span class="dash-nav-text">Asistentes</span>
                 </a>
             </li>
             @endif

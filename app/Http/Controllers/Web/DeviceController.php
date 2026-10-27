@@ -24,6 +24,12 @@ class DeviceController extends Controller
         $organizer = Company::first();
 
         $devices = Device::orderBy('id', 'desc')->get();
+
+        // Garantizar que todos los dispositivos tengan un PIN numérico válido de 4 dígitos
+        foreach ($devices as $d) {
+            $d->ensurePin();
+        }
+
         $allEvents = Event::orderBy('id', 'desc')->get()->map(function ($ev) {
             $zones = is_string($ev->zones) ? json_decode($ev->zones, true) : (is_array($ev->zones) ? $ev->zones : []);
             $totalCapacity = 0;
@@ -44,8 +50,19 @@ class DeviceController extends Controller
             return $ev;
         });
 
-        // Métricas de dispositivos
+        // Separar Scanners Web y Terminales App
+        $webScanners = $devices->filter(function ($dev) {
+            return strtolower($dev->platform ?? '') === 'web' || (!empty($dev->access_pin) && empty($dev->device_model));
+        })->values();
+
+        $appDevices = $devices->filter(function ($dev) {
+            return strtolower($dev->platform ?? '') !== 'web';
+        })->values();
+
+        // Métricas generales y específicas
         $totalDevices = $devices->count();
+        $totalWebScanners = $webScanners->count();
+        $totalAppDevices = $appDevices->count();
         $activeDevices = $devices->where('status', 'active')->count();
         $pendingDevices = $devices->where('status', 'pending')->count();
         $totalScans = (int) $devices->sum('scans_count');
@@ -64,8 +81,12 @@ class DeviceController extends Controller
 
         return view('web.devices', compact(
             'devices',
+            'webScanners',
+            'appDevices',
             'allEvents',
             'totalDevices',
+            'totalWebScanners',
+            'totalAppDevices',
             'activeDevices',
             'pendingDevices',
             'totalScans',
@@ -76,7 +97,72 @@ class DeviceController extends Controller
     }
 
     /**
-     * Crea un nuevo dispositivo y genera su token y código QR de vinculación.
+     * Crea un nuevo Scanner Web asignado a uno o varios eventos con PIN automático inmodificable de 4 dígitos.
+     */
+    public function storeWebScanner(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:100',
+            'event_ids' => 'nullable|array',
+            'event_ids.*' => 'exists:events,id',
+            'event_id' => 'nullable|exists:events,id',
+        ]);
+
+        $eventIds = [];
+        if (!empty($validated['event_ids'])) {
+            $eventIds = array_values(array_unique(array_map('intval', $validated['event_ids'])));
+        } elseif (!empty($validated['event_id'])) {
+            $eventIds = [(int) $validated['event_id']];
+        }
+
+        if (empty($eventIds)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Debes seleccionar al menos un evento para autorizar este scanner web.',
+            ], 422);
+        }
+
+        $pin = Device::generateUniquePin();
+
+        $device = Device::create([
+            'name' => trim($validated['name']),
+            'device_uuid' => (string) Str::uuid(),
+            'pairing_token' => 'WEB_' . strtoupper(Str::random(16)),
+            'access_pin' => $pin,
+            'platform' => 'Web',
+            'status' => 'active',
+            'assigned_events' => $eventIds,
+            'last_activity_at' => now(),
+            'paired_at' => now(),
+        ]);
+
+        $firstEvent = Event::find($eventIds[0]);
+        $eventsCount = count($eventIds);
+        $eventTitle = $firstEvent ? $firstEvent->title . ($eventsCount > 1 ? " (+".($eventsCount - 1)." más)" : "") : 'Múltiples Eventos';
+
+        $serverHost = request()->getHttpHost();
+        $scheme = request()->getScheme();
+        $baseHost = "{$scheme}://{$serverHost}";
+        if (str_contains($serverHost, '127.0.0.1') || str_contains($serverHost, 'localhost')) {
+            $localIp = '192.168.100.129';
+            $port = request()->getPort() ?: 8000;
+            $baseHost = "http://{$localIp}:{$port}";
+        }
+        $accessUrl = rtrim($baseHost, '/') . '/scanner/' . ($firstEvent ? $firstEvent->id : '');
+
+        return response()->json([
+            'success' => true,
+            'message' => "¡Scanner Web '{$device->name}' creado con éxito con PIN {$device->access_pin}!",
+            'device' => $device,
+            'pin' => $device->access_pin,
+            'access_url' => $accessUrl,
+            'event_title' => $eventTitle,
+            'assigned_events_count' => $eventsCount,
+        ]);
+    }
+
+    /**
+     * Crea un nuevo dispositivo para la App Móvil y genera su token y código QR de vinculación.
      */
     public function store(Request $request): JsonResponse
     {
@@ -90,6 +176,8 @@ class DeviceController extends Controller
             'name' => trim($validated['name']),
             'device_uuid' => (string) Str::uuid(),
             'pairing_token' => Str::random(32),
+            'access_pin' => Device::generateUniquePin(),
+            'platform' => 'App',
             'status' => 'pending',
             'assigned_events' => !empty($validated['assigned_events']) ? array_map('intval', $validated['assigned_events']) : null,
         ]);
@@ -113,16 +201,26 @@ class DeviceController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'assigned_events' => 'nullable|array',
+            'assigned_events.*' => 'exists:events,id',
+            'event_ids' => 'nullable|array',
+            'event_ids.*' => 'exists:events,id',
         ]);
+
+        $eventIds = null;
+        if ($request->has('assigned_events')) {
+            $eventIds = !empty($validated['assigned_events']) ? array_values(array_unique(array_map('intval', $validated['assigned_events']))) : null;
+        } elseif ($request->has('event_ids')) {
+            $eventIds = !empty($validated['event_ids']) ? array_values(array_unique(array_map('intval', $validated['event_ids']))) : null;
+        }
 
         $device->update([
             'name' => trim($validated['name']),
-            'assigned_events' => !empty($validated['assigned_events']) ? array_map('intval', $validated['assigned_events']) : null,
+            'assigned_events' => $eventIds,
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => "Dispositivo '{$device->name}' actualizado correctamente.",
+            'message' => "Scanner '{$device->name}' actualizado correctamente.",
             'device' => $device,
         ]);
     }

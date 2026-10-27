@@ -58,6 +58,13 @@ Route::get('/libro-de-reclamaciones/constancia/{code}', [ClaimBookController::cl
 // Terminal Móvil de Control de Acceso & Scanner QR
 Route::get('/scanner/{event}', [AttendeeController::class, 'mobileScanner'])->name('web.scanner.direct');
 Route::post('/scanner/{event}/validar-qr', [AttendeeController::class, 'verifyQr'])->name('web.scanner.verify_qr');
+Route::get('/scanner/{event}/profiles', [AttendeeController::class, 'getScannerProfiles'])->name('web.scanner.profiles');
+Route::post('/scanner/{event}/profiles/create', [AttendeeController::class, 'createScannerProfile'])->name('web.scanner.profiles.create');
+Route::delete('/scanner/{event}/profiles/{device}', [AttendeeController::class, 'deleteScannerProfile'])->name('web.scanner.profiles.delete');
+Route::post('/scanner/{event}/profiles/{device}/toggle', [AttendeeController::class, 'toggleScannerProfile'])->name('web.scanner.profiles.toggle');
+Route::post('/scanner/{event}/login-pin', [AttendeeController::class, 'loginScannerPin'])->name('web.scanner.login_pin');
+Route::post('/scanner/{event}/logout-pin', [AttendeeController::class, 'logoutScannerPin'])->name('web.scanner.logout_pin');
+Route::get('/scanner/{event}/session-status', [AttendeeController::class, 'scannerSessionStatus'])->name('web.scanner.session_status');
 Route::post('/scanner/{event}/claim-device', [AttendeeController::class, 'claimDeviceSession'])->name('web.scanner.claim_device');
 Route::post('/scanner/{event}/release-device', [AttendeeController::class, 'releaseDeviceSession'])->name('web.scanner.release_device');
 Route::post('/scanner/{event}/devices-status', [AttendeeController::class, 'getDevicesStatus'])->name('web.scanner.devices_status');
@@ -147,10 +154,11 @@ Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group
     Route::post('/admin/asistentes/{event}/anular-escaneo/{ticket}', [AttendeeController::class, 'resetCheckin'])->name('web.attendees.reset_checkin');
     Route::delete('/admin/asistentes/{event}/anular-escaneo/{ticket}', [AttendeeController::class, 'resetCheckin'])->name('web.attendees.destroy_checkin');
 
-    // Control de Dispositivos Móviles & Handhelds (App Flutter)
+    // Control de Dispositivos Móviles & Handhelds (App Flutter & Web Scanners)
     Route::get('/admin/dispositivos', [DeviceController::class, 'index'])->name('web.devices');
     Route::post('/admin/dispositivos', [DeviceController::class, 'store'])->name('web.devices.store');
-    Route::put('/admin/dispositivos/{device}', [DeviceController::class, 'update'])->name('web.devices.update');
+    Route::post('/admin/dispositivos/web-scanner', [DeviceController::class, 'storeWebScanner'])->name('web.devices.store_web');
+    Route::match(['put', 'post'], '/admin/dispositivos/{device}', [DeviceController::class, 'update'])->name('web.devices.update');
     Route::delete('/admin/dispositivos/{device}', [DeviceController::class, 'destroy'])->name('web.devices.destroy');
     Route::post('/admin/dispositivos/{device}/regenerar-qr', [DeviceController::class, 'regenerateQr'])->name('web.devices.regenerate_qr');
     Route::post('/admin/dispositivos/{device}/toggle-status', [DeviceController::class, 'toggleStatus'])->name('web.devices.toggle_status');
