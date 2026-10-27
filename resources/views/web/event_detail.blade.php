@@ -95,8 +95,9 @@
                     gap: 1.25rem;
                 }
                 #artistHeroImg {
-                    max-width: 960px;
-                    max-height: 380px;
+                    width: 100%;
+                    max-width: 1020px;
+                    height: auto;
                 }
                 .template2-content-grid.has-seatmap {
                     display: grid;
@@ -138,7 +139,7 @@
             /* =========================================================
                VISTA MÓVIL Y TABLET (< 992px): 1 COLUMNA APILADA
                Orden idéntico pero compacto y sin huecos muertos:
-               1. Imagen Artista
+               1. Imagen Artista (Grande y nítida como antes)
                2. Mapa de Zonas
                3. Cuadro de Precios y Compra
                4. Recinto y Detalles
@@ -156,8 +157,9 @@
                     gap: 0.85rem !important;
                 }
                 #artistHeroImg {
+                    width: 100%;
                     max-width: 100%;
-                    max-height: 260px;
+                    height: auto;
                 }
                 .template2-content-grid {
                     display: flex !important;
