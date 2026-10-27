@@ -4154,6 +4154,7 @@
                     emailInput.value = '';
                     emailInput.readOnly = true;
                     emailInput.style.opacity = '0.55';
+                    emailInput.required = false;
                 }
                 if (phoneInput) {
                     phoneInput.value = '-';
@@ -4162,6 +4163,11 @@
                 }
                 if (starDni) starDni.style.display = 'none';
                 if (starName) starName.style.display = 'none';
+                const starEmail = document.getElementById('star_buyer_email');
+                if (starEmail) starEmail.style.display = 'none';
+                if (typeof setPosNominationMode === 'function') {
+                    setPosNominationMode('general');
+                }
             } else {
                 if (dniInput) {
                     dniInput.value = '';
@@ -4180,6 +4186,7 @@
                     emailInput.value = '';
                     emailInput.readOnly = false;
                     emailInput.style.opacity = '1';
+                    emailInput.required = true;
                 }
                 if (phoneInput) {
                     phoneInput.value = '';
@@ -4188,6 +4195,8 @@
                 }
                 if (starDni) starDni.style.display = '';
                 if (starName) starName.style.display = '';
+                const starEmail = document.getElementById('star_buyer_email');
+                if (starEmail) starEmail.style.display = '';
             }
         }
 
@@ -4224,6 +4233,7 @@
                     emailInput.value = '';
                     emailInput.readOnly = true;
                     emailInput.style.opacity = '0.55';
+                    emailInput.required = false;
                 }
                 if (phoneInput) {
                     phoneInput.value = '-';
@@ -4232,6 +4242,9 @@
                 }
                 if (starDni) starDni.style.display = 'none';
                 if (starName) starName.style.display = 'none';
+                if (typeof setCourtesyNominationMode === 'function') {
+                    setCourtesyNominationMode('general');
+                }
             } else {
                 if (dniInput) {
                     dniInput.value = '';
@@ -4250,6 +4263,7 @@
                     emailInput.value = '';
                     emailInput.readOnly = false;
                     emailInput.style.opacity = '1';
+                    emailInput.required = false;
                 }
                 if (phoneInput) {
                     phoneInput.value = '';
@@ -5984,8 +5998,10 @@
                 return;
             }
 
+            const isAnonymous = document.getElementById('chkAnonymousBuyer')?.checked || (buyerDni === '00000000') || (buyerName === 'CLIENTE VARIOS');
+
             // Auto-detectar correo si no se escribió pero el cliente existe en el sistema
-            if (!buyerEmail && window.posExistingClients && Array.isArray(window.posExistingClients)) {
+            if (!isAnonymous && !buyerEmail && window.posExistingClients && Array.isArray(window.posExistingClients)) {
                 const found = window.posExistingClients.find(c => (c.dni && buyerDni && c.dni === buyerDni && c.email && c.email.includes('@')) || (c.name && buyerName && c.name.toLowerCase().trim() === buyerName.toLowerCase().trim() && c.email && c.email.includes('@')));
                 if (found && found.email) {
                     buyerEmail = found.email.trim();
@@ -5994,27 +6010,29 @@
                 }
             }
 
-            // Validar correo obligatorio para venta POS
-            if (!buyerEmail || !buyerEmail.includes('@') || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail)) {
-                Swal.fire({
-                    title: 'Correo Electrónico Obligatorio',
-                    text: 'Por favor ingresa un correo electrónico válido para registrar la venta y enviar los boletos al cliente.',
-                    icon: 'warning',
-                    confirmButtonColor: '#FF5500',
-                    background: '#14141E',
-                    color: '#FFFFFF'
-                });
-                const emailInput = document.getElementById('pos_buyer_email');
-                if (emailInput) {
-                    emailInput.focus();
-                    emailInput.style.borderColor = '#EF4444';
-                    emailInput.style.boxShadow = '0 0 12px rgba(239, 68, 68, 0.4)';
-                    setTimeout(() => {
-                        emailInput.style.borderColor = '';
-                        emailInput.style.boxShadow = '';
-                    }, 2000);
+            // Validar correo obligatorio para venta POS solo si NO es anónimo / Sin Datos
+            if (!isAnonymous) {
+                if (!buyerEmail || !buyerEmail.includes('@') || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail)) {
+                    Swal.fire({
+                        title: 'Correo Electrónico Obligatorio',
+                        text: 'Por favor ingresa un correo electrónico válido para registrar la venta y enviar los boletos al cliente.',
+                        icon: 'warning',
+                        confirmButtonColor: '#FF5500',
+                        background: '#14141E',
+                        color: '#FFFFFF'
+                    });
+                    const emailInput = document.getElementById('pos_buyer_email');
+                    if (emailInput) {
+                        emailInput.focus();
+                        emailInput.style.borderColor = '#EF4444';
+                        emailInput.style.boxShadow = '0 0 12px rgba(239, 68, 68, 0.4)';
+                        setTimeout(() => {
+                            emailInput.style.borderColor = '';
+                            emailInput.style.boxShadow = '';
+                        }, 2000);
+                    }
+                    return;
                 }
-                return;
             }
 
             const btnSubmit = document.getElementById('btnSubmitPosSale');
@@ -6023,7 +6041,7 @@
                 btnSubmit.textContent = '⏳ Procesando venta y emitiendo boletos...';
             }
 
-            let isNominated = (window.posNominationMode === 'nominated');
+            let isNominated = !isAnonymous && (window.posNominationMode === 'nominated');
             let nominatedAttendees = [];
 
             if (isNominated) {
@@ -6042,12 +6060,13 @@
                 zone_name: zoneName,
                 quantity: finalQuantity,
                 selected_seats: (hasSeats && posSelectedSeats.length > 0) ? posSelectedSeats : null,
-                buyer_name: buyerName,
-                buyer_dni: buyerDni,
-                buyer_phone: buyerPhone,
-                buyer_email: buyerEmail || null,
+                buyer_name: isAnonymous ? 'CLIENTE VARIOS' : (buyerName || 'CLIENTE VARIOS'),
+                buyer_dni: isAnonymous ? '00000000' : (buyerDni || '00000000'),
+                buyer_phone: isAnonymous ? '-' : (buyerPhone || '-'),
+                buyer_email: (!isAnonymous && buyerEmail) ? buyerEmail : null,
                 payment_method: paymentMethod,
                 amount_paid: amountPaid,
+                is_anonymous: isAnonymous,
                 is_nominated: isNominated,
                 nominated_attendees: isNominated ? nominatedAttendees : null
             };
@@ -6521,16 +6540,17 @@
         async function handlePosCourtesySubmit(e) {
             e.preventDefault();
 
+            const isAnonymous = document.getElementById('chkAnonymousCourtesy')?.checked || false;
             const zoneName = document.getElementById('pos_courtesy_zone_select')?.value || selectedCourtesyZoneName;
             const quantity = parseInt(document.getElementById('pos_courtesy_quantity').value, 10) || 1;
-            const buyerName = document.getElementById('pos_courtesy_name').value.trim() || 'INVITADO DE CORTESÍA';
-            const buyerDni = document.getElementById('pos_courtesy_dni').value.trim() || '00000000';
-            let buyerEmail = document.getElementById('pos_courtesy_email')?.value.trim() || '';
-            const buyerPhone = document.getElementById('pos_courtesy_phone').value.trim() || '-';
+            const buyerName = isAnonymous ? 'INVITADO DE CORTESÍA' : (document.getElementById('pos_courtesy_name').value.trim() || 'INVITADO DE CORTESÍA');
+            const buyerDni = isAnonymous ? '00000000' : (document.getElementById('pos_courtesy_dni').value.trim() || '00000000');
+            let buyerEmail = isAnonymous ? '' : (document.getElementById('pos_courtesy_email')?.value.trim() || '');
+            const buyerPhone = isAnonymous ? '-' : (document.getElementById('pos_courtesy_phone').value.trim() || '-');
             const courtesyNote = document.getElementById('pos_courtesy_note')?.value || 'Cortesía Directa';
 
-            // Auto-detectar correo si no se escribió pero el invitado/beneficiario existe en el sistema
-            if (!buyerEmail && window.posExistingClients && Array.isArray(window.posExistingClients)) {
+            // Auto-detectar correo si no se escribió pero el invitado/beneficiario existe en el sistema (solo si no es anónimo)
+            if (!isAnonymous && !buyerEmail && window.posExistingClients && Array.isArray(window.posExistingClients)) {
                 const found = window.posExistingClients.find(c => (c.dni && buyerDni && c.dni === buyerDni && c.email && c.email.includes('@')) || (c.name && buyerName && c.name.toLowerCase().trim() === buyerName.toLowerCase().trim() && c.email && c.email.includes('@')));
                 if (found && found.email) {
                     buyerEmail = found.email.trim();
@@ -6543,7 +6563,7 @@
                 btnSubmit.textContent = '⏳ Emitiendo cortesías y generando QR...';
             }
 
-            let isNominatedCourtesy = (window.courtesyNominationMode === 'nominated');
+            let isNominatedCourtesy = !isAnonymous && (window.courtesyNominationMode === 'nominated');
             let nominatedCourtesyAttendees = [];
 
             if (isNominatedCourtesy) {
@@ -6562,10 +6582,11 @@
                 quantity: quantity,
                 buyer_name: buyerName,
                 buyer_dni: buyerDni,
-                buyer_email: buyerEmail || null,
-                buyer_phone: buyerPhone !== '-' ? `${buyerPhone} (${courtesyNote})` : courtesyNote,
+                buyer_email: (!isAnonymous && buyerEmail) ? buyerEmail : null,
+                buyer_phone: isAnonymous ? '-' : (buyerPhone !== '-' ? `${buyerPhone} (${courtesyNote})` : courtesyNote),
                 payment_method: 'Cortesía',
                 amount_paid: 0.00,
+                is_anonymous: isAnonymous,
                 is_nominated: isNominatedCourtesy,
                 nominated_attendees: isNominatedCourtesy ? nominatedCourtesyAttendees : null
             };

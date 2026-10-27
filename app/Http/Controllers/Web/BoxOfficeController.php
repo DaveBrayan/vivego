@@ -358,11 +358,27 @@ class BoxOfficeController extends Controller
      */
     public function storeSale(Request $request, $id): JsonResponse
     {
+        $paymentMethod = $request->input('payment_method', '');
+        $isCourtesy = in_array(strtolower($paymentMethod), ['cortesía', 'cortesia']);
+        $rawDni = trim((string) $request->input('buyer_dni', ''));
+        $rawName = strtoupper(trim((string) $request->input('buyer_name', '')));
+        $isAnonymous = ($rawDni === '00000000') 
+            || in_array($rawName, ['CLIENTE VARIOS', 'INVITADO DE CORTESIA', 'INVITADO DE CORTESÍA', 'PUBLICO GENERAL', 'PÚBLICO GENERAL'])
+            || $request->boolean('is_anonymous');
+
+        // Normalizar correo vacío a null para evitar fallos de formato con string vacío
+        if ($request->has('buyer_email') && trim((string)$request->input('buyer_email')) === '') {
+            $request->merge(['buyer_email' => null]);
+        }
+
+        // El correo es obligatorio ÚNICAMENTE para ventas regulares con datos (no cortesías ni anónimas)
+        $emailRule = ($isCourtesy || $isAnonymous) ? 'nullable|string|email|max:255' : 'required|string|email|max:255';
+
         $validated = $request->validate([
             'buyer_name' => 'nullable|string|max:255',
             'buyer_dni' => 'nullable|string|max:20',
             'buyer_phone' => 'nullable|string|max:100',
-            'buyer_email' => 'required|string|email|max:255',
+            'buyer_email' => $emailRule,
             'zone_name' => 'required|string|max:100',
             'quantity' => 'required|integer|min:1',
             'payment_method' => 'required|string|in:Efectivo,Culqi,culqi,Yape,Plin,Tarjeta,Transferencia,Cortesía,cortesia',
@@ -378,12 +394,13 @@ class BoxOfficeController extends Controller
             'buyer_email.email' => 'Debes ingresar un correo electrónico válido (ej: cliente@correo.com).',
         ]);
 
-        $buyerName = !empty(trim($validated['buyer_name'] ?? '')) ? trim($validated['buyer_name']) : 'CLIENTE VARIOS';
+        $defaultBuyerName = $isCourtesy ? 'INVITADO DE CORTESÍA' : 'CLIENTE VARIOS';
+        $buyerName = !empty(trim($validated['buyer_name'] ?? '')) ? trim($validated['buyer_name']) : $defaultBuyerName;
         $buyerDni = !empty(trim($validated['buyer_dni'] ?? '')) ? trim($validated['buyer_dni']) : '00000000';
         $buyerPhone = !empty(trim($validated['buyer_phone'] ?? '')) ? trim($validated['buyer_phone']) : '-';
         $buyerEmail = !empty(trim($validated['buyer_email'] ?? '')) ? trim($validated['buyer_email']) : null;
-        $isNominated = !empty($validated['is_nominated']) || $request->boolean('is_nominated');
-        $nominatedAttendees = is_array($request->input('nominated_attendees')) ? array_values($request->input('nominated_attendees')) : [];
+        $isNominated = (!$isAnonymous && (!empty($validated['is_nominated']) || $request->boolean('is_nominated')));
+        $nominatedAttendees = (!$isAnonymous && is_array($request->input('nominated_attendees'))) ? array_values($request->input('nominated_attendees')) : [];
 
         $adminId = session('admin_id');
         $loggedAdmin = $adminId ? \App\Models\Administrator::find($adminId) : null;
