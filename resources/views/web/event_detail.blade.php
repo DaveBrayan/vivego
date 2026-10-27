@@ -25,25 +25,125 @@
                 background-attachment: fixed;
                 z-index: -2;
             }
-            /* Orden estricto para Plantilla 2 en todas las pantallas móviles y tablets */
-            @media (max-width: 1024px) {
-                #artistHeroWrapper {
-                    order: 1 !important;
+
+            /* Contenedor Principal */
+            .template2-main-container {
+                position: relative;
+                z-index: 1;
+                width: 100%;
+                margin: 0 auto;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                box-sizing: border-box;
+            }
+
+            /* Eliminar divisor hr y márgenes excesivos dentro de la plantilla 2 */
+            .template2-main-container .event-section-divider {
+                display: none !important;
+            }
+            .template2-main-container .public-seatmap-wrapper {
+                margin-bottom: 0 !important;
+                width: 100% !important;
+            }
+
+            /* Cabecera / Imagen del Artista Centrada */
+            #artistHeroWrapper {
+                width: 100%;
+                text-align: center;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin-bottom: 0 !important;
+            }
+            #artistHeroImg {
+                width: 100%;
+                height: auto;
+                object-fit: contain;
+                display: block;
+                margin: 0 auto;
+                filter: drop-shadow(0 15px 35px rgba(0,0,0,0.7));
+            }
+
+            /* Tarjeta de Precios y Compra */
+            .template2-booking-card {
+                background: #FFFFFF;
+                border: 1px solid #E2E8F0;
+                border-radius: 20px;
+                box-shadow: 0 15px 40px rgba(0,0,0,0.18);
+                box-sizing: border-box;
+            }
+
+            /* Tarjetas de Información (Recinto y Detalles) */
+            .template2-info-blocks-wrapper {
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                gap: 0.85rem;
+                box-sizing: border-box;
+            }
+
+            /* =========================================================
+               VISTA DE ESCRITORIO (>= 992px): 2 COLUMNAS
+               Columna Izquierda: Mapa de Zonas + Recinto y Detalles
+               Columna Derecha: Cuadro de Precios y Compra (Sticky)
+               ========================================================= */
+            @media (min-width: 992px) {
+                .template2-main-container {
+                    max-width: 1240px;
+                    padding: 1rem 1.5rem 4rem 1.5rem;
+                    gap: 1.25rem;
                 }
-                .public-seatmap-wrapper {
-                    order: 2 !important;
-                    width: 100% !important;
-                    margin-bottom: 0 !important;
+                #artistHeroImg {
+                    max-width: 960px;
+                    max-height: 380px;
+                }
+                .template2-content-grid.has-seatmap {
+                    display: grid;
+                    grid-template-columns: 1.15fr 0.85fr;
+                    grid-template-areas:
+                        "seatmap booking"
+                        "info    booking";
+                    gap: 1.5rem;
+                    width: 100%;
+                    align-items: start;
+                }
+                .template2-content-grid.no-seatmap {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 1.25rem;
+                    max-width: 700px;
+                    margin: 0 auto;
+                    width: 100%;
+                }
+                .template2-seatmap-area {
+                    grid-area: seatmap;
+                    width: 100%;
                 }
                 .template2-booking-card {
-                    order: 3 !important;
+                    grid-area: booking;
+                    width: 100%;
+                    padding: 1.75rem 1.5rem;
+                    position: sticky;
+                    top: 1.5rem;
                 }
                 .template2-info-blocks-wrapper {
-                    order: 4 !important;
+                    grid-area: info;
+                    width: 100%;
+                    margin-top: 0.25rem;
                 }
             }
-            /* Dispositivos Móviles: Activa el Fondo 9:16 (1080x1920 px) y Espaciados Optimizados */
-            @media (max-width: 768px) {
+
+            /* =========================================================
+               VISTA MÓVIL Y TABLET (< 992px): 1 COLUMNA APILADA
+               Orden idéntico pero compacto y sin huecos muertos:
+               1. Imagen Artista
+               2. Mapa de Zonas
+               3. Cuadro de Precios y Compra
+               4. Recinto y Detalles
+               ========================================================= */
+            @media (max-width: 991px) {
                 .template2-backdrop {
                     background-image: url('{{ $event['background_mobile_image'] ?: ($event['background_image'] ?: $event['banner_image']) }}') !important;
                     background-size: cover !important;
@@ -51,12 +151,38 @@
                     background-repeat: no-repeat !important;
                 }
                 .template2-main-container {
-                    padding-left: 0.75rem !important;
-                    padding-right: 0.75rem !important;
-                    gap: 1.25rem !important;
+                    max-width: 100%;
+                    padding: 0.75rem 0.75rem 3.5rem 0.75rem !important;
+                    gap: 0.85rem !important;
+                }
+                #artistHeroImg {
+                    max-width: 100%;
+                    max-height: 260px;
+                }
+                .template2-content-grid {
+                    display: flex !important;
+                    flex-direction: column !important;
+                    gap: 0.85rem !important;
+                    width: 100% !important;
+                }
+                .template2-seatmap-area {
+                    order: 1 !important;
+                    width: 100% !important;
                 }
                 .template2-booking-card {
+                    order: 2 !important;
+                    width: 100% !important;
                     padding: 1.25rem 1rem !important;
+                }
+                .template2-info-blocks-wrapper {
+                    order: 3 !important;
+                    width: 100% !important;
+                }
+                .template2-main-container .public-seatmap-card {
+                    min-height: 320px !important;
+                }
+                .template2-main-container .public-seatmap-canvas-layer {
+                    height: 320px !important;
                 }
             }
         </style>
@@ -64,21 +190,29 @@
         <!-- Fondo Fijo Dual: 16:9 en PC y 9:16 en Móviles -->
         <div class="template2-backdrop"></div>
 
-        <div class="template2-main-container" style="position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 2rem 1rem 5rem 1rem; display: flex; flex-direction: column; align-items: center; gap: 2.5rem;">
+        <div class="template2-main-container">
             
             <!-- 1. IMAGEN DEL ARTISTA EXTRA GRANDE (SIN TEXTOS NI INTERFERENCIAS) -->
             @php
                 $artistImgSrc = $event['artist_image'] ?: $event['banner_image'];
+                $hasSeatMap = (!empty($event['has_interactive_zones']) && !empty($event['interactive_zones'])) || !empty($event['reference_image']);
             @endphp
-            <div id="artistHeroWrapper" style="width: 100%; text-align: center; display: flex; justify-content: center; margin-bottom: 0.5rem;">
-                <img id="artistHeroImg" src="{{ $artistImgSrc }}" alt="{{ $event['title'] }}" style="width: 100%; max-width: 860px; height: auto; object-fit: contain; display: block; margin: 0 auto; filter: drop-shadow(0 15px 35px rgba(0,0,0,0.7));">
+            <div id="artistHeroWrapper">
+                <img id="artistHeroImg" src="{{ $artistImgSrc }}" alt="{{ $event['title'] }}">
             </div>
 
-            <!-- 2. MAPA INTERACTIVO DE ZONAS O IMAGEN DE REFERENCIA -->
-            @include('web.events.partials.public_interactive_seat_map')
+            <!-- CONTENEDOR GRID: 2 COLUMNAS EN DESKTOP (IZQUIERDA: ZONAS | DERECHA: PRECIOS), 1 COLUMNA EN MÓVIL -->
+            <div class="template2-content-grid {{ $hasSeatMap ? 'has-seatmap' : 'no-seatmap' }}">
 
-            <!-- 3. SELECCIÓN DE ENTRADAS Y COMPRA (TEMA BLANCO) -->
-            <div class="template2-booking-card" style="width: 100%; max-width: 860px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 1.75rem 1.5rem; box-shadow: 0 15px 40px rgba(0,0,0,0.18);">
+                <!-- 2. MAPA INTERACTIVO DE ZONAS O IMAGEN DE REFERENCIA -->
+                @if($hasSeatMap)
+                    <div class="template2-seatmap-area">
+                        @include('web.events.partials.public_interactive_seat_map')
+                    </div>
+                @endif
+
+                <!-- 3. SELECCIÓN DE ENTRADAS Y COMPRA (TEMA BLANCO) -->
+                <div class="template2-booking-card">
                 
                 @if(count($event['dates']) > 1)
                     <!-- Selector de Fecha si hay múltiples -->
@@ -224,8 +358,8 @@
 
             </div>
 
-            <!-- Información Adicional Desplegable (Ubicación / Detalles) (TEMA BLANCO) -->
-            <div class="template2-info-blocks-wrapper" style="width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 0.85rem; margin-top: 0.25rem;">
+            <!-- 4. Información Adicional Desplegable (Ubicación / Detalles) (TEMA BLANCO) -->
+            <div class="template2-info-blocks-wrapper">
                 
                 <!-- Recinto / Local Blanco -->
                 <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 1.15rem 1.35rem; box-shadow: 0 10px 30px rgba(0,0,0,0.12);">
@@ -257,9 +391,11 @@
                     </div>
                 @endif
 
-            </div>
+            </div> <!-- /.template2-info-blocks-wrapper -->
 
-        </div>
+        </div> <!-- /.template2-content-grid -->
+
+    </div> <!-- /.template2-main-container -->
     @else
         <!-- ==========================================
              PLANTILLA 1: ESTÁNDAR (CLÁSICA VIVE GO)
