@@ -3490,9 +3490,24 @@
             }
 
             let zones = [];
-            const standardContainer = document.getElementById('step2StandardContainer');
-            const isStandardVisible = standardContainer && (standardContainer.style.display !== 'none');
-            const currentMode = isStandardVisible ? 'standard' : ((typeof window.currentStep2ZoneMode !== 'undefined') ? window.currentStep2ZoneMode : 'standard');
+            let currentMode = (typeof window.currentStep2ZoneMode !== 'undefined') ? window.currentStep2ZoneMode : 'standard';
+
+            // Comprobación de seguridad: Si SeatMapEditor contiene datos de zonas interactivas (puntos/polígonos/butacas),
+            // garantizar que se mantenga el Modo Interactivo para no perder los trazados, a menos que el usuario haya seleccionado explícitamente el Modo Estándar
+            if (typeof SeatMapEditor !== 'undefined' && Array.isArray(SeatMapEditor.zones) && SeatMapEditor.zones.length > 0) {
+                const hasInteractiveData = SeatMapEditor.zones.some(z => 
+                    (Array.isArray(z.points) && z.points.length >= 3) || 
+                    z.is_interactive === true || 
+                    z.is_interactive === 'true' || 
+                    z.is_interactive === 1 || 
+                    z.zone_mode === 'interactive' || 
+                    (Array.isArray(z.seats) && z.seats.length > 0)
+                );
+                if (hasInteractiveData && !window.userExplicitlySelectedStandardMode) {
+                    currentMode = 'interactive';
+                    window.currentStep2ZoneMode = 'interactive';
+                }
+            }
 
             if (currentMode === 'standard' && typeof SeatMapEditor !== 'undefined' && typeof SeatMapEditor.syncFromStandardTable === 'function') {
                 SeatMapEditor.syncFromStandardTable();

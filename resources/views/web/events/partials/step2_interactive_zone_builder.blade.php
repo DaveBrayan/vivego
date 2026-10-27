@@ -10,10 +10,10 @@
 
     <!-- Pestañas Conmutadoras de Modo -->
     <div class="step2-mode-tabs" style="display: inline-flex; gap: 0.35rem; background: rgba(15, 23, 42, 0.7); padding: 4px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.12);">
-        <button type="button" class="btn-step2-tab active" id="btnStep2ModeStandard" onclick="switchStep2Mode('standard')">
+        <button type="button" class="btn-step2-tab active" id="btnStep2ModeStandard" onclick="switchStep2Mode('standard', true)">
             🖼️ Modo Estándar (Imagen)
         </button>
-        <button type="button" class="btn-step2-tab" id="btnStep2ModeInteractive" onclick="switchStep2Mode('interactive')">
+        <button type="button" class="btn-step2-tab" id="btnStep2ModeInteractive" onclick="switchStep2Mode('interactive', true)">
             🗺️ Modo Interactivo (Zonas & Butacas)
         </button>
     </div>

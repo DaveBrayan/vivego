@@ -108,15 +108,16 @@
             this.zones = [];
 
             if (Array.isArray(phpInitialZones) && phpInitialZones.length > 0) {
-                const hasExplicitInteractive = phpInitialZones.some(pz => pz.is_interactive === true || pz.zone_mode === 'interactive');
-                const hasExplicitStandard = phpInitialZones.some(pz => pz.is_interactive === false || pz.zone_mode === 'standard');
+                const hasExplicitInteractive = phpInitialZones.some(pz => 
+                    pz.is_interactive === true || 
+                    pz.is_interactive === 'true' || 
+                    pz.is_interactive === 1 || 
+                    pz.zone_mode === 'interactive' ||
+                    (Array.isArray(pz.points) && pz.points.length >= 3)
+                );
                 const hasNumberedSeats = phpInitialZones.some(pz => (Array.isArray(pz.seats) && pz.seats.length > 0) || (pz.capacity_type === 'Butacas Numeradas'));
 
-                if (hasExplicitInteractive) {
-                    hasInteractiveZones = true;
-                } else if (hasExplicitStandard) {
-                    hasInteractiveZones = false;
-                } else if (hasNumberedSeats) {
+                if (hasExplicitInteractive || hasNumberedSeats) {
                     hasInteractiveZones = true;
                 } else {
                     hasInteractiveZones = false;
@@ -2798,8 +2799,14 @@
         }
     };
 
-    function switchStep2Mode(mode) {
+    function switchStep2Mode(mode, isUserClick = false) {
         window.currentStep2ZoneMode = mode;
+        if (isUserClick && mode === 'standard') {
+            window.userExplicitlySelectedStandardMode = true;
+        } else if (isUserClick && mode === 'interactive') {
+            window.userExplicitlySelectedStandardMode = false;
+        }
+
         const btnStandard = document.getElementById('btnStep2ModeStandard');
         const btnInteractive = document.getElementById('btnStep2ModeInteractive');
         const standardContainer = document.getElementById('step2StandardContainer');
