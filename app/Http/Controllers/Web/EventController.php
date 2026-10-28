@@ -49,9 +49,9 @@ class EventController extends Controller
         $events = [];
 
         foreach ($dbEvents as $ev) {
-            $zones = $ev->zones ?? [];
+            $zones = $ev->commercial_zones;
             $totalCapacity = (int) array_sum(array_column($zones, 'capacity'));
-            $minPrice = count($zones) > 0 ? min(array_column($zones, 'price')) : 50;
+            $minPrice = $ev->min_price;
 
             // Cortesías: configuración y cupo asignado por zonas
             $cSettings = is_array($ev->courtesy_settings) 

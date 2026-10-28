@@ -35,8 +35,8 @@ class HomeController extends Controller
         $badgeOptions = ['PREVENTA OFICIAL', 'ÚLTIMOS CUPOS', 'MÁS VENDIDO', 'DESTACADO', 'EN VIVO', 'RECOMENDADO'];
 
         foreach ($dbEvents as $index => $ev) {
-            $zones = is_array($ev->zones) ? $ev->zones : (is_string($ev->zones) ? json_decode($ev->zones, true) : []);
-            $minPrice = (!empty($zones) && count($zones) > 0) ? min(array_column($zones, 'price')) : 50.00;
+            $zones = $ev->commercial_zones;
+            $minPrice = $ev->min_price;
             $currentAvailable = !empty($zones) ? (int) array_sum(array_column($zones, 'capacity')) : 100;
             $ticketsSold = $ev->sales ? (int) $ev->sales->where('status', '!=', 'cancelled')->sum('quantity') : 0;
             $totalCapacity = $currentAvailable;

@@ -70,10 +70,9 @@ class BoxOfficeController extends Controller
         $globalTotalCapacity = 0;
 
         foreach ($dbEvents as $ev) {
-            $rawZones = $ev->zones ?? [];
-            $zones = array_values(array_filter($rawZones, fn($z) => !$this->isStageZone($z)));
+            $zones = $ev->commercial_zones;
             $totalCapacity = (int) array_sum(array_column($zones, 'capacity'));
-            $minPrice = count($zones) > 0 ? min(array_column($zones, 'price')) : 50;
+            $minPrice = $ev->min_price;
 
             // Calcular ventas reales desde la tabla ticket_sales
             $salesCount = $ev->sales ? (int) $ev->sales->sum('quantity') : (int) TicketSale::where('event_id', $ev->id)->sum('quantity');

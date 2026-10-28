@@ -54,6 +54,105 @@ class Event extends Model
     }
 
     /**
+     * Determina si una zona corresponde a un escenario o tarima no comercializable.
+     */
+    public static function isStageZone($zone): bool
+    {
+        if (!is_array($zone)) {
+            return false;
+        }
+
+        $name = strtoupper(trim((string) ($zone['name'] ?? '')));
+        $capType = (string) ($zone['capacity_type'] ?? '');
+        $type = (string) ($zone['type'] ?? '');
+
+        if (in_array($name, ['ESCENARIO', 'TARIMA'])
+            || str_contains($name, 'ESCENARIO')
+            || str_contains($name, 'TARIMA')
+            || strcasecmp($capType, 'Escenario') === 0
+            || strcasecmp($type, 'stage') === 0
+            || !empty($zone['is_stage'])
+            || !empty($zone['is_area'])) {
+            return true;
+        }
+
+        $priceVal = (float)($zone['price'] ?? 0);
+        $capVal = (int)($zone['capacity'] ?? 0);
+        $hasSeats = !empty($zone['seats']) && is_array($zone['seats']) && count($zone['seats']) > 0;
+        if ($priceVal === 0.0 && $capVal === 0 && !$hasSeats) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Retorna las zonas comerciales del evento (excluyendo escenarios y áreas estructurales).
+     */
+    public function getCommercialZonesAttribute(): array
+    {
+        $rawZones = $this->zones ?? [];
+        if (is_string($rawZones)) {
+            $rawZones = json_decode($rawZones, true) ?: [];
+        }
+        if (!is_array($rawZones)) {
+            return [];
+        }
+
+        return array_values(array_filter($rawZones, fn($z) => !self::isStageZone($z)));
+    }
+
+    /**
+     * Retorna el precio base mínimo comercial del evento (considerando preventas activas si aplican).
+     */
+    public function getMinPriceAttribute(): float
+    {
+        $commercialZones = $this->commercial_zones;
+        if (empty($commercialZones)) {
+            return 50.00;
+        }
+
+        $prices = [];
+        $today = date('Y-m-d');
+
+        foreach ($commercialZones as $cz) {
+            $regPrice = isset($cz['price']) ? (float)$cz['price'] : 0.0;
+            $effPrice = $regPrice;
+
+            // Verificar si tiene preventa activa
+            $hasPresale = !empty($cz['has_presale']) && ($cz['has_presale'] === true || $cz['has_presale'] === 1 || $cz['has_presale'] === '1' || $cz['has_presale'] === 'true');
+            $discPercent = isset($cz['presale_discount']) ? (float)$cz['presale_discount'] : 0;
+            $pStart = !empty($cz['presale_start_date']) ? $cz['presale_start_date'] : null;
+            $pEnd = !empty($cz['presale_end_date']) ? $cz['presale_end_date'] : null;
+            $pStock = isset($cz['presale_stock']) && $cz['presale_stock'] !== '' ? (int)$cz['presale_stock'] : null;
+
+            if ($hasPresale && $discPercent > 0) {
+                $valid = true;
+                if ($pStart && $today < $pStart) $valid = false;
+                if ($pEnd && $today > $pEnd) $valid = false;
+                if ($pStock !== null && $pStock <= 0) $valid = false;
+
+                if ($valid) {
+                    if (isset($cz['presale_price']) && (float)$cz['presale_price'] > 0) {
+                        $effPrice = (float)$cz['presale_price'];
+                    } else {
+                        $effPrice = round($regPrice * (1 - ($discPercent / 100)), 2);
+                    }
+                }
+            }
+
+            $prices[] = $effPrice;
+        }
+
+        $positivePrices = array_values(array_filter($prices, fn($p) => $p > 0));
+        if (count($positivePrices) > 0) {
+            return (float) min($positivePrices);
+        }
+
+        return count($prices) > 0 ? (float) min($prices) : 50.00;
+    }
+
+    /**
      * Determina si la fecha/hora del calendario ya pasaron (independientemente del estado).
      */
     public function isDatePassed(): bool
