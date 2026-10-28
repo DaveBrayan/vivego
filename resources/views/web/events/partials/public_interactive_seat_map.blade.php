@@ -182,7 +182,7 @@
             <div id="publicZoneTooltip" style="position: absolute; display: none; z-index: 30; pointer-events: none; background: #0F172A; border: 1.5px solid rgba(255, 85, 0, 0.7); border-radius: 12px; padding: 0.65rem 0.95rem; color: #FFFFFF; box-shadow: 0 10px 28px rgba(0,0,0,0.45); transform: translate(-50%, -120%); transition: opacity 0.15s ease; min-width: 150px; backdrop-filter: blur(8px);">
                 <div id="tooltipZoneTitle" style="font-weight: 900; font-size: 0.9rem; margin-bottom: 0.15rem; color: #FF8800;"></div>
                 <div id="tooltipZonePrice" style="font-size: 1.05rem; font-weight: 900; color: #10B981;"></div>
-                <div id="tooltipZoneCap" style="font-size: 0.725rem; color: #94A3B8; margin-top: 0.1rem;"></div>
+                <div id="tooltipZoneCap" style="font-size: 0.725rem; color: #94A3B8; margin-top: 0.1rem; display: none;"></div>
                 <div id="tooltipZoneActionHint" style="margin-top: 0.35rem; font-size: 0.68rem; font-weight: 800; background: rgba(255,85,0,0.2); color: #FF8800; padding: 2px 6px; border-radius: 4px; text-align: center;">
                     👉 Clic para seleccionar
                 </div>
@@ -558,10 +558,13 @@
             if (capEl) {
                 if (isStage && priceVal === 0) {
                     capEl.textContent = 'Zona de Presentación';
+                    capEl.style.display = 'block';
                 } else if (hasSeats) {
                     capEl.textContent = 'Zona con Selección de Butacas';
+                    capEl.style.display = 'block';
                 } else {
-                    capEl.textContent = 'Admisión General';
+                    capEl.textContent = '';
+                    capEl.style.display = 'none';
                 }
             }
 
@@ -609,6 +612,7 @@
             const isCurrentlySelected = (e.currentTarget && e.currentTarget.classList && e.currentTarget.classList.contains('selected'));
 
             if (capEl) {
+                capEl.style.display = 'block';
                 if (isOccupied) {
                     capEl.textContent = 'No disponible para venta';
                 } else if (isCurrentlySelected) {
