@@ -1670,9 +1670,20 @@
             const zW = Math.max(20, zMaxX - zMinX);
             const zH = Math.max(20, zMaxY - zMinY);
 
-            // Margen holgado con respecto a los bordes de la zona
-            const padX = Math.max(34, Math.min(65, Math.round(zW * 0.12)));
-            const padY = Math.max(32, Math.min(55, Math.round(zH * 0.14)));
+            // Margen inteligente según cantidad de filas y columnas para aprovechar el espacio
+            let padX = Math.max(20, Math.min(45, Math.round(zW * 0.08)));
+            if (numCols >= 16) {
+                padX = Math.max(16, Math.min(26, Math.round(zW * 0.04)));
+            } else if (numCols >= 10) {
+                padX = Math.max(20, Math.min(32, Math.round(zW * 0.06)));
+            }
+
+            let padY = Math.max(20, Math.min(42, Math.round(zH * 0.08)));
+            if (numRows >= 12) {
+                padY = Math.max(16, Math.min(24, Math.round(zH * 0.04)));
+            } else if (numRows >= 8) {
+                padY = Math.max(18, Math.min(30, Math.round(zH * 0.06)));
+            }
 
             const minX = zMinX + padX;
             const maxX = zMaxX - padX;
@@ -2006,10 +2017,25 @@
                     const padT = sMinY - zMinY;
                     const padB = zMaxY - sMaxY;
 
-                    const desiredPadX = Math.max(34, Math.min(65, Math.round(zW * 0.12)));
-                    const desiredPadY = Math.max(32, Math.min(55, Math.round(zH * 0.14)));
+                    const sCols = parseInt(z.seat_cols || z.cols) || (Array.isArray(z.seats) ? new Set(z.seats.map(s => s.col)).size : 10);
+                    const sRows = parseInt(z.seat_rows || z.rows) || (Array.isArray(z.seats) ? new Set(z.seats.map(s => s.row)).size : 5);
 
-                    if (padL < 24 || padR < 24 || padT < 24 || padB < 24) {
+                    let desiredPadX = Math.max(20, Math.min(45, Math.round(zW * 0.08)));
+                    if (sCols >= 16) {
+                        desiredPadX = Math.max(16, Math.min(26, Math.round(zW * 0.04)));
+                    } else if (sCols >= 10) {
+                        desiredPadX = Math.max(20, Math.min(32, Math.round(zW * 0.06)));
+                    }
+
+                    let desiredPadY = Math.max(20, Math.min(42, Math.round(zH * 0.08)));
+                    if (sRows >= 12) {
+                        desiredPadY = Math.max(16, Math.min(24, Math.round(zH * 0.04)));
+                    } else if (sRows >= 8) {
+                        desiredPadY = Math.max(18, Math.min(30, Math.round(zH * 0.06)));
+                    }
+
+                    const minAllowedPad = (sCols >= 16 || sRows >= 12) ? 12 : 18;
+                    if (padL < minAllowedPad || padR < minAllowedPad || padT < minAllowedPad || padB < minAllowedPad) {
                         const sW = Math.max(1, sMaxX - sMinX);
                         const sH = Math.max(1, sMaxY - sMinY);
                         const targetMinX = zMinX + desiredPadX;
@@ -2029,30 +2055,30 @@
                 }
             });
 
-            // Calcular tamaño dinámico amplio de butacas en el editor según separación
-            let minSeatStep = Infinity;
-            this.zones.forEach(z => {
-                if (Array.isArray(z.seats) && z.seats.length >= 2) {
-                    for (let i = 0; i < Math.min(z.seats.length, 25); i++) {
-                        for (let j = i + 1; j < Math.min(z.seats.length, 25); j++) {
-                            const dist = Math.hypot(z.seats[i].x - z.seats[j].x, z.seats[i].y - z.seats[j].y);
-                            if (dist > 6 && dist < minSeatStep) minSeatStep = dist;
-                        }
-                    }
-                }
-            });
-
-            let baseSeatSize = 24;
-            if (minSeatStep < Infinity) {
-                baseSeatSize = Math.max(18, Math.min(36, Math.round(minSeatStep * 0.76)));
-            }
-            const seatSize = Math.max(16, Math.round(baseSeatSize / Math.sqrt(this.zoom)));
-            const halfSize = seatSize / 2;
-            const strokeW = (1.4 / Math.sqrt(this.zoom)).toFixed(2);
-            const numFontSize = Math.max(8.5, Math.min(13, Math.round(seatSize * 0.48)));
-
             this.zones.forEach(z => {
                 if (Array.isArray(z.seats) && z.seats.length > 0) {
+                    // Calcular separación dinámica por zona garantizando siempre separación sin traslape
+                    let minStep = 32;
+                    if (z.seats.length >= 2) {
+                        let dMin = Infinity;
+                        const sampleLimit = Math.min(z.seats.length, 80);
+                        for (let i = 0; i < sampleLimit; i++) {
+                            for (let j = i + 1; j < Math.min(sampleLimit, i + 25); j++) {
+                                const dist = Math.hypot(z.seats[i].x - z.seats[j].x, z.seats[i].y - z.seats[j].y);
+                                if (dist > 4 && dist < dMin) dMin = dist;
+                            }
+                        }
+                        if (dMin < Infinity) minStep = dMin;
+                    }
+
+                    // Garantizar SIEMPRE una separación visible entre butacas adyacentes (al menos 3 a 5px libres)
+                    const maxAllowedSide = Math.max(10, Math.floor(minStep - 4));
+                    const idealSide = Math.round(minStep * 0.74);
+                    const seatSize = Math.max(10, Math.min(46, Math.min(idealSide, maxAllowedSide)));
+                    const halfSize = seatSize / 2;
+                    const cornerRadius = Math.max(2, Math.min(6, Math.round(seatSize * 0.16)));
+                    const strokeW = seatSize < 20 ? 0.9 : 1.3;
+
                     z.seats.forEach((s, sIdx) => {
                         const seatG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
                         seatG.style.cursor = 'pointer';
@@ -2062,13 +2088,14 @@
                         rect.setAttribute('y', s.y - halfSize);
                         rect.setAttribute('width', seatSize);
                         rect.setAttribute('height', seatSize);
-                        rect.setAttribute('rx', '4');
+                        rect.setAttribute('rx', cornerRadius);
+                        rect.setAttribute('ry', cornerRadius);
                         rect.setAttribute('fill', z.color || '#2563EB');
                         rect.setAttribute('stroke', '#FFFFFF');
                         rect.setAttribute('stroke-width', strokeW);
 
                         const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-                        title.textContent = `${z.name} - Butaca ${s.label || s.number} (S/ ${z.price.toFixed(2)})`;
+                        title.textContent = `${z.name} - Butaca ${s.label || s.number} (S/ ${(parseFloat(z.price) || 0).toFixed(2)})`;
                         rect.appendChild(title);
                         seatG.appendChild(rect);
 
@@ -2097,11 +2124,20 @@
                             displayNum = String(sIdx + 1);
                         }
 
-                        let seatFontSize = numFontSize;
-                        if (displayNum.length >= 3) {
-                            seatFontSize = Math.max(7, Math.min(10.5, Math.round(seatSize * 0.38)));
+                        let seatFontSize = Math.max(6, Math.min(14, Math.round(seatSize * 0.44)));
+                        let letterSpacing = '-0.2px';
+                        if (displayNum.length >= 4) {
+                            seatFontSize = Math.max(5.5, Math.min(9, Math.round(seatSize * 0.28)));
+                            letterSpacing = '-0.6px';
+                        } else if (displayNum.length === 3) {
+                            seatFontSize = Math.max(5.8, Math.min(11, Math.round(seatSize * 0.34)));
+                            letterSpacing = '-0.5px';
                         } else if (displayNum.length === 2) {
-                            seatFontSize = Math.max(8, Math.min(12, Math.round(seatSize * 0.44)));
+                            seatFontSize = Math.max(6.5, Math.min(13, Math.round(seatSize * 0.40)));
+                            letterSpacing = '-0.3px';
+                        } else {
+                            seatFontSize = Math.max(7, Math.min(15, Math.round(seatSize * 0.48)));
+                            letterSpacing = '0px';
                         }
 
                         if (seatSize >= 9) {
@@ -2112,7 +2148,7 @@
                             txt.setAttribute('dominant-baseline', 'central');
                             txt.setAttribute('fill', '#FFFFFF');
                             txt.setAttribute('font-size', seatFontSize);
-                            txt.setAttribute('letter-spacing', displayNum.length >= 3 ? '-0.5px' : '-0.2px');
+                            txt.setAttribute('letter-spacing', letterSpacing);
                             txt.setAttribute('font-weight', '900');
                             txt.setAttribute('font-family', 'sans-serif');
                             txt.setAttribute('pointer-events', 'none');
@@ -2145,7 +2181,7 @@
                 // Si tiene butacas numeradas, colocar la etiqueta ARRIBA de la zona para no tapar los asientos del centro
                 if (hasSeats) {
                     const zMinY = Math.min(...ys);
-                    centerY = (zMinY >= 26) ? (zMinY - 22) : (zMinY + 16);
+                    centerY = (zMinY >= 38) ? (zMinY - 20) : Math.max(16, zMinY + 16);
                 }
 
                 const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');

@@ -110,8 +110,8 @@
 
     .public-seat-group:hover .public-seat-rect {
         stroke: #FF5500 !important;
-        stroke-width: 2.2px !important;
-        filter: drop-shadow(0 0 6px rgba(255, 85, 0, 0.95)) drop-shadow(0 2px 5px rgba(0, 0, 0, 0.45));
+        stroke-width: 1.8px !important;
+        filter: drop-shadow(0 0 5px rgba(255, 85, 0, 0.9)) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
     }
 
     .public-seat-group:hover text {
@@ -121,8 +121,8 @@
     .public-seat-group.selected .public-seat-rect {
         fill: #FF5500 !important;
         stroke: #FFFFFF !important;
-        stroke-width: 2.2px !important;
-        filter: drop-shadow(0 0 10px rgba(255, 85, 0, 0.95)) !important;
+        stroke-width: 1.8px !important;
+        filter: drop-shadow(0 0 6px rgba(255, 85, 0, 0.95)) !important;
     }
 
     .public-seat-group.selected text {
@@ -457,10 +457,25 @@
                     const padT = sMinY - zMinY;
                     const padB = zMaxY - sMaxY;
 
-                    const desiredPadX = Math.max(34, Math.min(65, Math.round(zW * 0.12)));
-                    const desiredPadY = Math.max(32, Math.min(55, Math.round(zH * 0.14)));
+                    const sCols = parseInt(z.seat_cols || z.cols) || (Array.isArray(z.seats) ? new Set(z.seats.map(s => s.col)).size : 10);
+                    const sRows = parseInt(z.seat_rows || z.rows) || (Array.isArray(z.seats) ? new Set(z.seats.map(s => s.row)).size : 5);
 
-                    if (padL < 24 || padR < 24 || padT < 24 || padB < 24) {
+                    let desiredPadX = Math.max(20, Math.min(45, Math.round(zW * 0.08)));
+                    if (sCols >= 16) {
+                        desiredPadX = Math.max(16, Math.min(26, Math.round(zW * 0.04)));
+                    } else if (sCols >= 10) {
+                        desiredPadX = Math.max(20, Math.min(32, Math.round(zW * 0.06)));
+                    }
+
+                    let desiredPadY = Math.max(20, Math.min(42, Math.round(zH * 0.08)));
+                    if (sRows >= 12) {
+                        desiredPadY = Math.max(16, Math.min(24, Math.round(zH * 0.04)));
+                    } else if (sRows >= 8) {
+                        desiredPadY = Math.max(18, Math.min(30, Math.round(zH * 0.06)));
+                    }
+
+                    const minAllowedPad = (sCols >= 16 || sRows >= 12) ? 12 : 18;
+                    if (padL < minAllowedPad || padR < minAllowedPad || padT < minAllowedPad || padB < minAllowedPad) {
                         const sW = Math.max(1, sMaxX - sMinX);
                         const sH = Math.max(1, sMaxY - sMinY);
                         const targetMinX = zMinX + desiredPadX;
@@ -478,23 +493,27 @@
                         });
                     }
 
-                    // Calcular tamaño dinámico de la butaca según separación (más amplio y visible)
+                    // Calcular tamaño dinámico de la butaca según separación (sin traslape horizontal o vertical)
                     let minStep = 32;
                     if (z.seats.length >= 2) {
                         let dMin = Infinity;
-                        for (let i = 0; i < Math.min(z.seats.length, 25); i++) {
-                            for (let j = i + 1; j < Math.min(z.seats.length, 25); j++) {
+                        const sampleLimit = Math.min(z.seats.length, 80);
+                        for (let i = 0; i < sampleLimit; i++) {
+                            for (let j = i + 1; j < Math.min(sampleLimit, i + 25); j++) {
                                 const dist = Math.hypot(z.seats[i].x - z.seats[j].x, z.seats[i].y - z.seats[j].y);
-                                if (dist > 5 && dist < dMin) dMin = dist;
+                                if (dist > 4 && dist < dMin) dMin = dist;
                             }
                         }
                         if (dMin < Infinity) minStep = dMin;
                     }
 
-                    // Tamaño amplio y cómodo (hasta 52px) para que las butacas sean grandes y claras
-                    const seatSide = Math.max(26, Math.min(52, Math.round(minStep * 0.82)));
+                    // Garantizar SIEMPRE una separación visible entre butacas adyacentes (al menos 3 a 5px libres)
+                    const maxAllowedSide = Math.max(10, Math.floor(minStep - 4));
+                    const idealSide = Math.round(minStep * 0.74);
+                    const seatSide = Math.max(10, Math.min(46, Math.min(idealSide, maxAllowedSide)));
                     const halfSide = seatSide / 2;
-                    const numFontSize = Math.max(10.5, Math.min(16, Math.round(seatSide * 0.44)));
+                    const cornerRadius = Math.max(2, Math.min(6, Math.round(seatSide * 0.16)));
+                    const strokeW = seatSide < 20 ? '0.9' : (seatSide < 28 ? '1.2' : '1.4');
 
                     z.seats.forEach((seat, sIdx) => {
                         const isOccupied = (seat.status === 'occupied' || seat.status === 'ocupado' || seat.status === 'vendido' || seat.is_occupied);
@@ -526,11 +545,20 @@
                             displayNum = String(sIdx + 1);
                         }
 
-                        let dynamicFontSize = numFontSize;
-                        if (displayNum.length >= 3) {
-                            dynamicFontSize = Math.max(8.5, Math.min(12, Math.round(seatSide * 0.36)));
+                        let dynamicFontSize = Math.max(6, Math.min(14, Math.round(seatSide * 0.44)));
+                        let letterSpacing = '-0.2px';
+                        if (displayNum.length >= 4) {
+                            dynamicFontSize = Math.max(5.5, Math.min(9, Math.round(seatSide * 0.28)));
+                            letterSpacing = '-0.6px';
+                        } else if (displayNum.length === 3) {
+                            dynamicFontSize = Math.max(5.8, Math.min(11, Math.round(seatSide * 0.34)));
+                            letterSpacing = '-0.5px';
                         } else if (displayNum.length === 2) {
-                            dynamicFontSize = Math.max(9.5, Math.min(14.5, Math.round(seatSide * 0.42)));
+                            dynamicFontSize = Math.max(6.5, Math.min(13, Math.round(seatSide * 0.40)));
+                            letterSpacing = '-0.3px';
+                        } else {
+                            dynamicFontSize = Math.max(7, Math.min(15, Math.round(seatSide * 0.48)));
+                            letterSpacing = '0px';
                         }
 
                         const seatG = document.createElementNS(NS, 'g');
@@ -545,30 +573,32 @@
                         rect.setAttribute('y', seat.y - halfSide);
                         rect.setAttribute('width', seatSide);
                         rect.setAttribute('height', seatSide);
-                        rect.setAttribute('rx', 6);
-                        rect.setAttribute('ry', 6);
+                        rect.setAttribute('rx', cornerRadius);
+                        rect.setAttribute('ry', cornerRadius);
                         rect.setAttribute('class', 'public-seat-rect');
                         rect.setAttribute('fill', isOccupied ? '#DC2626' : (isBlocked ? '#475569' : color));
                         rect.setAttribute('stroke', isOccupied ? '#B91C1C' : (isBlocked ? '#94A3B8' : 'rgba(255, 255, 255, 0.5)'));
-                        rect.setAttribute('stroke-width', '1.3');
+                        rect.setAttribute('stroke-width', strokeW);
                         rect.setAttribute('opacity', isBlocked ? '0.70' : '1');
                         rect.setAttribute('filter', 'url(#publicSeatShadow)');
                         seatG.appendChild(rect);
 
                         // Número Centrado Adentro de la Butaca
-                        const txt = document.createElementNS(NS, 'text');
-                        txt.setAttribute('x', seat.x);
-                        txt.setAttribute('y', seat.y);
-                        txt.setAttribute('text-anchor', 'middle');
-                        txt.setAttribute('dominant-baseline', 'central');
-                        txt.setAttribute('fill', '#FFFFFF');
-                        txt.setAttribute('font-size', dynamicFontSize);
-                        txt.setAttribute('letter-spacing', displayNum.length >= 3 ? '-0.5px' : '-0.2px');
-                        txt.setAttribute('font-weight', '900');
-                        txt.setAttribute('font-family', 'sans-serif');
-                        txt.setAttribute('pointer-events', 'none');
-                        txt.textContent = displayNum;
-                        seatG.appendChild(txt);
+                        if (seatSide >= 9) {
+                            const txt = document.createElementNS(NS, 'text');
+                            txt.setAttribute('x', seat.x);
+                            txt.setAttribute('y', seat.y);
+                            txt.setAttribute('text-anchor', 'middle');
+                            txt.setAttribute('dominant-baseline', 'central');
+                            txt.setAttribute('fill', '#FFFFFF');
+                            txt.setAttribute('font-size', dynamicFontSize);
+                            txt.setAttribute('letter-spacing', letterSpacing);
+                            txt.setAttribute('font-weight', '900');
+                            txt.setAttribute('font-family', 'sans-serif');
+                            txt.setAttribute('pointer-events', 'none');
+                            txt.textContent = displayNum;
+                            seatG.appendChild(txt);
+                        }
 
                         // Eventos sobre butaca individual
                         seatG.addEventListener('mouseenter', (e) => this.onSeatMouseEnter(e, seat, z, isOccupied));
@@ -646,7 +676,7 @@
                     headerG.style.pointerEvents = 'none';
 
                     const rawTitle = nameText.toUpperCase();
-                    const labelY = (zMinY >= 26) ? (zMinY - 15) : (zMinY + 15);
+                    const labelY = (zMinY >= 34) ? (zMinY - 14) : Math.max(14, zMinY + 14);
                     let titleTextContent = '';
                     if (isDigitalDisabled) {
                         titleTextContent = `${rawTitle} • 🔒 SOLO FÍSICA`;
@@ -655,7 +685,7 @@
                     } else {
                         titleTextContent = `${rawTitle}${priceVal > 0 ? ' • ' + priceFormatted : ''}`;
                     }
-                    const badgeW = Math.max(90, Math.min(220, titleTextContent.length * 8.5 + 26));
+                    const badgeW = Math.max(90, Math.min(280, titleTextContent.length * 8.0 + 26));
 
                     const badgeRect = document.createElementNS(NS, 'rect');
                     badgeRect.setAttribute('x', centerX - badgeW / 2);
