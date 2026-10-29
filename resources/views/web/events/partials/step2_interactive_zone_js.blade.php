@@ -1663,10 +1663,21 @@
 
             const xs = z.points.map(p => p.x);
             const ys = z.points.map(p => p.y);
-            const minX = Math.min(...xs) + 15;
-            const maxX = Math.max(...xs) - 15;
-            const minY = Math.min(...ys) + 25;
-            const maxY = Math.max(...ys) - 15;
+            const zMinX = Math.min(...xs);
+            const zMaxX = Math.max(...xs);
+            const zMinY = Math.min(...ys);
+            const zMaxY = Math.max(...ys);
+            const zW = Math.max(20, zMaxX - zMinX);
+            const zH = Math.max(20, zMaxY - zMinY);
+
+            // Margen holgado con respecto a los bordes de la zona
+            const padX = Math.max(34, Math.min(65, Math.round(zW * 0.12)));
+            const padY = Math.max(32, Math.min(55, Math.round(zH * 0.14)));
+
+            const minX = zMinX + padX;
+            const maxX = zMaxX - padX;
+            const minY = zMinY + padY;
+            const maxY = zMaxY - padY;
 
             const width = Math.max(20, maxX - minX);
             const height = Math.max(20, maxY - minY);
@@ -1971,10 +1982,74 @@
             if (!group) return;
             group.innerHTML = '';
 
-            const seatSize = Math.max(8, 13 / Math.sqrt(this.zoom));
+            // Asegurar que las butacas existentes respeten un margen holgado respecto a los bordes de la zona
+            this.zones.forEach(z => {
+                if (Array.isArray(z.seats) && z.seats.length > 0 && Array.isArray(z.points) && z.points.length >= 3) {
+                    const zXs = z.points.map(p => p.x);
+                    const zYs = z.points.map(p => p.y);
+                    const zMinX = Math.min(...zXs);
+                    const zMaxX = Math.max(...zXs);
+                    const zMinY = Math.min(...zYs);
+                    const zMaxY = Math.max(...zYs);
+                    const zW = Math.max(10, zMaxX - zMinX);
+                    const zH = Math.max(10, zMaxY - zMinY);
+
+                    const sXs = z.seats.map(s => s.x);
+                    const sYs = z.seats.map(s => s.y);
+                    const sMinX = Math.min(...sXs);
+                    const sMaxX = Math.max(...sXs);
+                    const sMinY = Math.min(...sYs);
+                    const sMaxY = Math.max(...sYs);
+
+                    const padL = sMinX - zMinX;
+                    const padR = zMaxX - sMaxX;
+                    const padT = sMinY - zMinY;
+                    const padB = zMaxY - sMaxY;
+
+                    const desiredPadX = Math.max(34, Math.min(65, Math.round(zW * 0.12)));
+                    const desiredPadY = Math.max(32, Math.min(55, Math.round(zH * 0.14)));
+
+                    if (padL < 24 || padR < 24 || padT < 24 || padB < 24) {
+                        const sW = Math.max(1, sMaxX - sMinX);
+                        const sH = Math.max(1, sMaxY - sMinY);
+                        const targetMinX = zMinX + desiredPadX;
+                        const targetMaxX = zMaxX - desiredPadX;
+                        const targetMinY = zMinY + desiredPadY;
+                        const targetMaxY = zMaxY - desiredPadY;
+                        const targetW = Math.max(10, targetMaxX - targetMinX);
+                        const targetH = Math.max(10, targetMaxY - targetMinY);
+
+                        z.seats.forEach(s => {
+                            const normX = (s.x - sMinX) / sW;
+                            const normY = (s.y - sMinY) / sH;
+                            s.x = Math.round(targetMinX + normX * targetW);
+                            s.y = Math.round(targetMinY + normY * targetH);
+                        });
+                    }
+                }
+            });
+
+            // Calcular tamaño dinámico amplio de butacas en el editor según separación
+            let minSeatStep = Infinity;
+            this.zones.forEach(z => {
+                if (Array.isArray(z.seats) && z.seats.length >= 2) {
+                    for (let i = 0; i < Math.min(z.seats.length, 25); i++) {
+                        for (let j = i + 1; j < Math.min(z.seats.length, 25); j++) {
+                            const dist = Math.hypot(z.seats[i].x - z.seats[j].x, z.seats[i].y - z.seats[j].y);
+                            if (dist > 6 && dist < minSeatStep) minSeatStep = dist;
+                        }
+                    }
+                }
+            });
+
+            let baseSeatSize = 24;
+            if (minSeatStep < Infinity) {
+                baseSeatSize = Math.max(18, Math.min(36, Math.round(minSeatStep * 0.76)));
+            }
+            const seatSize = Math.max(16, Math.round(baseSeatSize / Math.sqrt(this.zoom)));
             const halfSize = seatSize / 2;
-            const strokeW = (1.2 / Math.sqrt(this.zoom)).toFixed(2);
-            const numFontSize = Math.max(6, Math.min(10, Math.round(seatSize * 0.50)));
+            const strokeW = (1.4 / Math.sqrt(this.zoom)).toFixed(2);
+            const numFontSize = Math.max(8.5, Math.min(13, Math.round(seatSize * 0.48)));
 
             this.zones.forEach(z => {
                 if (Array.isArray(z.seats) && z.seats.length > 0) {
@@ -1987,7 +2062,7 @@
                         rect.setAttribute('y', s.y - halfSize);
                         rect.setAttribute('width', seatSize);
                         rect.setAttribute('height', seatSize);
-                        rect.setAttribute('rx', '2.5');
+                        rect.setAttribute('rx', '4');
                         rect.setAttribute('fill', z.color || '#2563EB');
                         rect.setAttribute('stroke', '#FFFFFF');
                         rect.setAttribute('stroke-width', strokeW);
@@ -1998,13 +2073,35 @@
                         seatG.appendChild(rect);
 
                         let displayNum = '';
-                        if (s.col !== undefined && s.col !== null && s.col !== '') {
-                            displayNum = String(s.col);
-                        } else if (s.number) {
+                        if (s.row !== undefined && s.row !== null && s.row !== '' &&
+                            s.col !== undefined && s.col !== null && s.col !== '') {
+                            const rStr = String(s.row).trim();
+                            const cStr = String(s.col).trim();
+                            if (isNaN(rStr) || isNaN(cStr)) {
+                                displayNum = `${rStr}${cStr}`;
+                            } else {
+                                displayNum = `${rStr}-${cStr}`;
+                            }
+                        } else if (s.number && String(s.number).includes('-')) {
                             const p = String(s.number).split('-');
-                            displayNum = p.length > 1 ? p[p.length - 1] : String(s.number);
+                            if (isNaN(p[0]) || isNaN(p[1])) {
+                                displayNum = p.join('');
+                            } else {
+                                displayNum = String(s.number);
+                            }
+                        } else if (s.number) {
+                            displayNum = String(s.number);
+                        } else if (s.col !== undefined && s.col !== null && s.col !== '') {
+                            displayNum = String(s.col);
                         } else {
                             displayNum = String(sIdx + 1);
+                        }
+
+                        let seatFontSize = numFontSize;
+                        if (displayNum.length >= 3) {
+                            seatFontSize = Math.max(7, Math.min(10.5, Math.round(seatSize * 0.38)));
+                        } else if (displayNum.length === 2) {
+                            seatFontSize = Math.max(8, Math.min(12, Math.round(seatSize * 0.44)));
                         }
 
                         if (seatSize >= 9) {
@@ -2014,7 +2111,8 @@
                             txt.setAttribute('text-anchor', 'middle');
                             txt.setAttribute('dominant-baseline', 'central');
                             txt.setAttribute('fill', '#FFFFFF');
-                            txt.setAttribute('font-size', numFontSize);
+                            txt.setAttribute('font-size', seatFontSize);
+                            txt.setAttribute('letter-spacing', displayNum.length >= 3 ? '-0.5px' : '-0.2px');
                             txt.setAttribute('font-weight', '900');
                             txt.setAttribute('font-family', 'sans-serif');
                             txt.setAttribute('pointer-events', 'none');
@@ -2039,32 +2137,39 @@
                 const xs = z.points.map(p => p.x);
                 const ys = z.points.map(p => p.y);
                 const centerX = xs.reduce((a, b) => a + b, 0) / xs.length;
-                const centerY = ys.reduce((a, b) => a + b, 0) / ys.length;
+                let centerY = ys.reduce((a, b) => a + b, 0) / ys.length;
+
+                const hasSeats = Array.isArray(z.seats) && z.seats.length > 0;
+                const isStage = this.isStageZone(z);
+
+                // Si tiene butacas numeradas, colocar la etiqueta ARRIBA de la zona para no tapar los asientos del centro
+                if (hasSeats) {
+                    const zMinY = Math.min(...ys);
+                    centerY = (zMinY >= 26) ? (zMinY - 22) : (zMinY + 16);
+                }
 
                 const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
                 g.setAttribute('transform', `translate(${centerX}, ${centerY})`);
                 g.style.pointerEvents = 'none';
 
                 const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                rect.setAttribute('x', '-70');
-                rect.setAttribute('y', '-16');
-                rect.setAttribute('width', '140');
-                rect.setAttribute('height', '32');
+                rect.setAttribute('x', hasSeats ? '-65' : '-70');
+                rect.setAttribute('y', hasSeats ? '-13' : '-16');
+                rect.setAttribute('width', hasSeats ? '130' : '140');
+                rect.setAttribute('height', hasSeats ? '26' : '32');
                 rect.setAttribute('rx', '8');
-                rect.setAttribute('fill', 'rgba(15, 23, 42, 0.90)');
+                rect.setAttribute('fill', 'rgba(15, 23, 42, 0.92)');
                 rect.setAttribute('stroke', z.color);
                 rect.setAttribute('stroke-width', (1.5 / Math.sqrt(this.zoom)).toFixed(2));
                 rect.setAttribute('filter', 'url(#labelShadow)');
                 g.appendChild(rect);
 
-                const isStage = this.isStageZone(z);
-
                 const textName = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 textName.setAttribute('x', '0');
-                textName.setAttribute('y', isStage ? '4' : '-3');
+                textName.setAttribute('y', isStage ? '4' : (hasSeats ? '-1' : '-3'));
                 textName.setAttribute('text-anchor', 'middle');
                 textName.setAttribute('fill', '#FFFFFF');
-                textName.setAttribute('font-size', isStage ? '11.5' : '10.5');
+                textName.setAttribute('font-size', isStage ? '11.5' : (hasSeats ? '10' : '10.5'));
                 textName.setAttribute('font-weight', '900');
                 textName.setAttribute('font-family', 'sans-serif');
                 textName.textContent = z.name.length > 16 ? (z.name.slice(0, 14) + '..') : z.name;
@@ -2073,10 +2178,10 @@
                 if (!isStage) {
                     const textPrice = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                     textPrice.setAttribute('x', '0');
-                    textPrice.setAttribute('y', '10');
+                    textPrice.setAttribute('y', hasSeats ? '9' : '10');
                     textPrice.setAttribute('text-anchor', 'middle');
                     textPrice.setAttribute('fill', '#10B981');
-                    textPrice.setAttribute('font-size', '9');
+                    textPrice.setAttribute('font-size', hasSeats ? '8.5' : '9');
                     textPrice.setAttribute('font-weight', '800');
                     textPrice.setAttribute('font-family', 'sans-serif');
                     textPrice.textContent = z.price > 0 ? `S/ ${(parseFloat(z.price) || 0).toFixed(2)}` : `${z.capacity_type || 'General'}`;

@@ -83,11 +83,24 @@ class EventDetailController extends Controller
 
                     $splitSettings = is_array($eventModel->quota_split_settings) ? $eventModel->quota_split_settings : (json_decode($eventModel->quota_split_settings ?? '[]', true) ?: []);
                     $isSplitActive = !empty($splitSettings['enabled']);
+                    $eventSalesType = $eventModel->sales_type ?? 'ambos';
 
                     $regularPrice = isset($zone['price']) ? (float)$zone['price'] : 50.00;
                     $capacityVal = isset($zone['capacity']) ? (int)$zone['capacity'] : 100;
 
-                    if ($isSplitActive) {
+                    $isDigitalDisabled = false;
+                    $statusType = 'available';
+                    $statusBadge = null;
+                    $statusMessage = null;
+
+                    // Si la venta del evento es exclusivamente física (presencial)
+                    if ($eventSalesType === 'fisica') {
+                        $isDigitalDisabled = true;
+                        $capacityVal = 0;
+                        $statusType = 'digital_unavailable';
+                        $statusBadge = '🔒 SOLO FÍSICA';
+                        $statusMessage = 'No disponible para venta digital';
+                    } elseif ($isSplitActive) {
                         $cleanZ = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $zoneName)));
                         $szConfig = null;
                         if (!empty($splitSettings['zones']) && is_array($splitSettings['zones'])) {
@@ -98,10 +111,25 @@ class EventDetailController extends Controller
                                 }
                             }
                         }
+
+                        $physicalCap = isset($szConfig['physical']) && is_numeric($szConfig['physical']) ? (int) $szConfig['physical'] : 0;
+                        $virtualCap = null;
                         if ($szConfig && isset($szConfig['virtual']) && is_numeric($szConfig['virtual'])) {
-                            $capacityVal = (int) $szConfig['virtual'];
+                            $virtualCap = (int) $szConfig['virtual'];
                         } elseif (isset($zone['virtual_capacity']) && is_numeric($zone['virtual_capacity'])) {
-                            $capacityVal = (int) $zone['virtual_capacity'];
+                            $virtualCap = (int) $zone['virtual_capacity'];
+                        }
+
+                        if ($virtualCap !== null) {
+                            $capacityVal = $virtualCap;
+                        }
+
+                        // Si en división de aforo el cupo virtual es 0 pero tiene cupo físico o total
+                        if ($virtualCap !== null && $virtualCap <= 0 && ($physicalCap > 0 || (int)($zone['capacity'] ?? 0) > 0)) {
+                            $isDigitalDisabled = true;
+                            $statusType = 'digital_unavailable';
+                            $statusBadge = '🔒 SOLO FÍSICA';
+                            $statusMessage = 'No disponible para venta digital';
                         }
                     }
 
@@ -142,7 +170,28 @@ class EventDetailController extends Controller
                     // La capacidad total de la zona es la configurada, y la disponible es descontando las ventas
                     $totalCapacityVal = max(0, $capacityVal);
                     $remainingCapacity = max(0, $totalCapacityVal - $soldCount);
-                    $isAvailable = $remainingCapacity > 0;
+
+                    if ($isDigitalDisabled) {
+                        $isAvailable = false;
+                    } else {
+                        if ($remainingCapacity <= 0) {
+                            $isAvailable = false;
+                            $statusType = 'sold_out';
+                            $statusBadge = '🚫 AGOTADO';
+                            $statusMessage = 'Entradas agotadas';
+                        } else {
+                            $isAvailable = true;
+                            $statusType = 'available';
+                        }
+                    }
+
+                    // Propagar estado a la estructura de la zona para el mapa interactivo
+                    $zones[$idx]['is_digital_disabled'] = $isDigitalDisabled;
+                    $zones[$idx]['is_available'] = $isAvailable;
+                    $zones[$idx]['available'] = $isAvailable;
+                    $zones[$idx]['status_type'] = $statusType;
+                    $zones[$idx]['status_badge'] = $statusBadge;
+                    $zones[$idx]['status_message'] = $statusMessage;
 
                     // Datos de Preventa
                     $hasPresale = !empty($zone['has_presale']) && ($zone['has_presale'] === true || $zone['has_presale'] === 1 || $zone['has_presale'] === '1' || $zone['has_presale'] === 'true');
@@ -214,6 +263,10 @@ class EventDetailController extends Controller
                         'capacity' => $remainingCapacity,
                         'total_capacity' => $totalCapacityVal,
                         'available' => $isAvailable,
+                        'is_digital_disabled' => $isDigitalDisabled,
+                        'status_type' => $statusType,
+                        'status_badge' => $statusBadge,
+                        'status_message' => $statusMessage,
                     ];
                 }
             } else {

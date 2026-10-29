@@ -12,7 +12,7 @@
     .public-seatmap-card {
         position: relative;
         width: 100%;
-        min-height: 480px;
+        min-height: 560px;
         background: #FFFFFF !important;
         border-radius: 20px;
         overflow: hidden;
@@ -25,7 +25,7 @@
 
     @media (max-width: 768px) {
         .public-seatmap-card {
-            min-height: 380px;
+            min-height: 400px;
             border-radius: 16px;
         }
     }
@@ -45,7 +45,8 @@
         position: relative;
         flex: 1;
         width: 100%;
-        height: 480px;
+        height: 560px;
+        min-height: 540px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -55,7 +56,8 @@
 
     @media (max-width: 768px) {
         .public-seatmap-canvas-layer {
-            height: 350px;
+            height: 400px;
+            min-height: 380px;
         }
     }
 
@@ -103,32 +105,38 @@
     /* Estilos de Butacas Cuadradas con Número Integrado */
     .public-seat-group {
         cursor: pointer;
-        transition: transform 0.12s ease;
-    }
-
-    .public-seat-group:hover {
-        transform: scale(1.12);
-        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
+        transition: filter 0.15s ease;
     }
 
     .public-seat-group:hover .public-seat-rect {
         stroke: #FF5500 !important;
-        stroke-width: 2px !important;
+        stroke-width: 2.2px !important;
+        filter: drop-shadow(0 0 6px rgba(255, 85, 0, 0.95)) drop-shadow(0 2px 5px rgba(0, 0, 0, 0.45));
+    }
+
+    .public-seat-group:hover text {
+        fill: #FFFFFF !important;
     }
 
     .public-seat-group.selected .public-seat-rect {
         fill: #FF5500 !important;
         stroke: #FFFFFF !important;
-        stroke-width: 2px !important;
-        filter: drop-shadow(0 0 10px rgba(255, 85, 0, 0.8)) !important;
+        stroke-width: 2.2px !important;
+        filter: drop-shadow(0 0 10px rgba(255, 85, 0, 0.95)) !important;
+    }
+
+    .public-seat-group.selected text {
+        fill: #FFFFFF !important;
+        font-weight: 900 !important;
     }
 
     .public-seat-group.occupied {
         cursor: not-allowed;
     }
 
-    .public-seat-group.occupied:hover {
-        transform: none;
+    .public-seat-group.occupied:hover .public-seat-rect {
+        stroke: #B91C1C !important;
+        stroke-width: 1.2px !important;
         filter: none;
     }
 
@@ -136,6 +144,23 @@
         fill: #DC2626 !important;
         stroke: #B91C1C !important;
         opacity: 0.95;
+    }
+
+    .public-seat-group.digital-disabled {
+        cursor: not-allowed !important;
+        opacity: 0.70;
+    }
+
+    .public-seat-group.digital-disabled:hover .public-seat-rect {
+        stroke: #64748B !important;
+        stroke-width: 1.5px !important;
+        filter: none !important;
+    }
+
+    .public-seat-group.digital-disabled .public-seat-rect {
+        fill: #475569 !important;
+        stroke: #94A3B8 !important;
+        opacity: 0.65;
     }
 
     .ticket-type-row.map-highlighted {
@@ -275,8 +300,8 @@
             if (totalPointsCount > 0) {
                 const boxWidth = Math.max(100, maxX - minX);
                 const boxHeight = Math.max(100, maxY - minY);
-                const padX = Math.max(25, Math.round(boxWidth * 0.05));
-                const padY = Math.max(25, Math.round(boxHeight * 0.05));
+                const padX = Math.max(18, Math.round(boxWidth * 0.035));
+                const padY = Math.max(18, Math.round(boxHeight * 0.035));
                 const vbX = Math.round(minX - padX);
                 const vbY = Math.round(minY - padY);
                 const vbW = Math.round(boxWidth + padX * 2);
@@ -316,7 +341,9 @@
                                 (z.type && z.type === 'stage') ||
                                 (priceVal === 0 && (parseInt(z.capacity) || 0) === 0 && !hasSeats);
 
-                const isClickable = !hasSeats && (!isStage || priceVal > 0);
+                const isDigitalDisabled = !!z.is_digital_disabled;
+                const isZoneAvailable = (z.available !== false && z.is_available !== false) && !isDigitalDisabled;
+                const isClickable = !hasSeats && (!isStage || priceVal > 0) && !isDigitalDisabled && isZoneAvailable;
                 const isSelected = this.isZoneMatch(this.selectedZoneName, z.name);
 
                 const xs = z.points.map(p => p.x);
@@ -345,19 +372,19 @@
                     polygon.setAttribute('stroke-width', '1.5');
                     polygon.setAttribute('class', 'svg-public-zone stage-zone');
                 } else if (hasSeats) {
-                    // Zona con butacas: fondo de sector contenedor suave (gris/tinte)
-                    polygon.setAttribute('fill', color);
-                    polygon.setAttribute('fill-opacity', isSelected ? '0.35' : '0.22');
-                    polygon.setAttribute('stroke', isSelected ? '#FF5500' : color);
+                    // Zona con butacas: fondo contenedor
+                    polygon.setAttribute('fill', isDigitalDisabled ? '#475569' : color);
+                    polygon.setAttribute('fill-opacity', isDigitalDisabled ? '0.18' : (isSelected ? '0.35' : '0.22'));
+                    polygon.setAttribute('stroke', isSelected ? '#FF5500' : (isDigitalDisabled ? '#64748B' : color));
                     polygon.setAttribute('stroke-width', isSelected ? '2.8' : '1.8');
-                    polygon.setAttribute('class', `svg-public-zone has-seats ${isSelected ? 'selected' : ''}`);
+                    polygon.setAttribute('class', `svg-public-zone has-seats ${isSelected ? 'selected' : ''} ${isDigitalDisabled ? 'digital-disabled' : ''}`);
                 } else {
                     // Zona General sin butacas: color sólido vibrante con alto impacto
-                    polygon.setAttribute('fill', color);
-                    polygon.setAttribute('fill-opacity', isSelected ? '0.98' : '0.90');
-                    polygon.setAttribute('stroke', isSelected ? '#FF5500' : 'rgba(0,0,0,0.15)');
+                    polygon.setAttribute('fill', isDigitalDisabled ? '#64748B' : color);
+                    polygon.setAttribute('fill-opacity', isDigitalDisabled ? '0.45' : (isSelected ? '0.98' : '0.90'));
+                    polygon.setAttribute('stroke', isSelected ? '#FF5500' : (isDigitalDisabled ? '#94A3B8' : 'rgba(0,0,0,0.15)'));
                     polygon.setAttribute('stroke-width', isSelected ? '3.5' : '1.5');
-                    polygon.setAttribute('class', `svg-public-zone no-seats ${isSelected ? 'selected' : ''}`);
+                    polygon.setAttribute('class', `svg-public-zone no-seats ${isSelected ? 'selected' : ''} ${isDigitalDisabled ? 'digital-disabled' : ''}`);
                 }
 
                 // Eventos de Mouse sobre la Superficie (SOLO para zonas comerciales, no para el escenario)
@@ -369,11 +396,40 @@
                     if (hasSeats) {
                         polygon.addEventListener('click', (e) => {
                             e.stopPropagation();
+                            if (isDigitalDisabled || !isZoneAvailable) {
+                                if (typeof Swal !== 'undefined') {
+                                    Swal.fire({
+                                        title: 'Venta Digital No Disponible',
+                                        text: `El sector "${z.name}" no está habilitado para compra por internet (solo disponible en puntos de venta físicos o boletería).`,
+                                        icon: 'info',
+                                        confirmButtonColor: '#0F172A',
+                                        confirmButtonText: 'Entendido'
+                                    });
+                                } else {
+                                    alert(`El sector "${z.name}" no está disponible para venta digital.`);
+                                }
+                                return;
+                            }
                             const hintEl = document.getElementById('tooltipZoneActionHint');
                             if (hintEl) {
                                 hintEl.textContent = '👇 Haz clic en una butaca para elegirla';
                                 hintEl.style.background = 'rgba(255,85,0,0.25)';
                                 hintEl.style.color = '#FF5500';
+                            }
+                        });
+                    } else if (isDigitalDisabled || !isZoneAvailable) {
+                        polygon.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({
+                                    title: 'Venta Digital No Disponible',
+                                    text: `La zona "${z.name}" no está habilitada para compra por internet (solo disponible en puntos de venta físicos o boletería).`,
+                                    icon: 'info',
+                                    confirmButtonColor: '#0F172A',
+                                    confirmButtonText: 'Entendido'
+                                });
+                            } else {
+                                alert(`La zona "${z.name}" no está disponible para venta digital.`);
                             }
                         });
                     } else if (isClickable) {
@@ -388,41 +444,100 @@
 
                 // 2.2 Si tiene Butacas: Renderizar Cuadrados con su Número Adentro (1, 2, 3...)
                 if (hasSeats) {
-                    // Calcular tamaño dinámico de la butaca según separación
-                    let minStep = 24;
+                    // Asegurar margen generoso de las butacas con respecto a los bordes de la zona
+                    const seatXs = z.seats.map(s => s.x);
+                    const seatYs = z.seats.map(s => s.y);
+                    const sMinX = Math.min(...seatXs);
+                    const sMaxX = Math.max(...seatXs);
+                    const sMinY = Math.min(...seatYs);
+                    const sMaxY = Math.max(...seatYs);
+
+                    const padL = sMinX - zMinX;
+                    const padR = zMaxX - sMaxX;
+                    const padT = sMinY - zMinY;
+                    const padB = zMaxY - sMaxY;
+
+                    const desiredPadX = Math.max(34, Math.min(65, Math.round(zW * 0.12)));
+                    const desiredPadY = Math.max(32, Math.min(55, Math.round(zH * 0.14)));
+
+                    if (padL < 24 || padR < 24 || padT < 24 || padB < 24) {
+                        const sW = Math.max(1, sMaxX - sMinX);
+                        const sH = Math.max(1, sMaxY - sMinY);
+                        const targetMinX = zMinX + desiredPadX;
+                        const targetMaxX = zMaxX - desiredPadX;
+                        const targetMinY = zMinY + desiredPadY;
+                        const targetMaxY = zMaxY - desiredPadY;
+                        const targetW = Math.max(10, targetMaxX - targetMinX);
+                        const targetH = Math.max(10, targetMaxY - targetMinY);
+
+                        z.seats.forEach(s => {
+                            const normX = (s.x - sMinX) / sW;
+                            const normY = (s.y - sMinY) / sH;
+                            s.x = Math.round(targetMinX + normX * targetW);
+                            s.y = Math.round(targetMinY + normY * targetH);
+                        });
+                    }
+
+                    // Calcular tamaño dinámico de la butaca según separación (más amplio y visible)
+                    let minStep = 32;
                     if (z.seats.length >= 2) {
                         let dMin = Infinity;
-                        for (let i = 0; i < Math.min(z.seats.length, 15); i++) {
-                            for (let j = i + 1; j < Math.min(z.seats.length, 15); j++) {
+                        for (let i = 0; i < Math.min(z.seats.length, 25); i++) {
+                            for (let j = i + 1; j < Math.min(z.seats.length, 25); j++) {
                                 const dist = Math.hypot(z.seats[i].x - z.seats[j].x, z.seats[i].y - z.seats[j].y);
-                                if (dist > 4 && dist < dMin) dMin = dist;
+                                if (dist > 5 && dist < dMin) dMin = dist;
                             }
                         }
                         if (dMin < Infinity) minStep = dMin;
                     }
 
-                    const seatSide = Math.max(14, Math.min(26, Math.round(minStep * 0.82)));
+                    // Tamaño amplio y cómodo (hasta 52px) para que las butacas sean grandes y claras
+                    const seatSide = Math.max(26, Math.min(52, Math.round(minStep * 0.82)));
                     const halfSide = seatSide / 2;
-                    const numFontSize = Math.max(7.5, Math.min(12, Math.round(seatSide * 0.50)));
+                    const numFontSize = Math.max(10.5, Math.min(16, Math.round(seatSide * 0.44)));
 
                     z.seats.forEach((seat, sIdx) => {
                         const isOccupied = (seat.status === 'occupied' || seat.status === 'ocupado' || seat.status === 'vendido' || seat.is_occupied);
+                        const isBlocked = isDigitalDisabled || !isZoneAvailable;
                         
-                        // Extraer el número visible (1, 2, 3... o A-1)
+                        // Extraer el código visible según la configuración (ej: A1, A2... o 1-1)
                         let displayNum = '';
-                        if (seat.col !== undefined && seat.col !== null && seat.col !== '') {
-                            displayNum = String(seat.col);
-                        } else if (seat.number) {
+                        if (seat.row !== undefined && seat.row !== null && seat.row !== '' &&
+                            seat.col !== undefined && seat.col !== null && seat.col !== '') {
+                            const rStr = String(seat.row).trim();
+                            const cStr = String(seat.col).trim();
+                            if (isNaN(rStr) || isNaN(cStr)) {
+                                displayNum = `${rStr}${cStr}`;
+                            } else {
+                                displayNum = `${rStr}-${cStr}`;
+                            }
+                        } else if (seat.number && String(seat.number).includes('-')) {
                             const p = String(seat.number).split('-');
-                            displayNum = p.length > 1 ? p[p.length - 1] : String(seat.number);
+                            if (isNaN(p[0]) || isNaN(p[1])) {
+                                displayNum = p.join('');
+                            } else {
+                                displayNum = String(seat.number);
+                            }
+                        } else if (seat.number) {
+                            displayNum = String(seat.number);
+                        } else if (seat.col !== undefined && seat.col !== null && seat.col !== '') {
+                            displayNum = String(seat.col);
                         } else {
                             displayNum = String(sIdx + 1);
                         }
 
+                        let dynamicFontSize = numFontSize;
+                        if (displayNum.length >= 3) {
+                            dynamicFontSize = Math.max(8.5, Math.min(12, Math.round(seatSide * 0.36)));
+                        } else if (displayNum.length === 2) {
+                            dynamicFontSize = Math.max(9.5, Math.min(14.5, Math.round(seatSide * 0.42)));
+                        }
+
                         const seatG = document.createElementNS(NS, 'g');
-                        seatG.setAttribute('class', 'public-seat-group' + (isOccupied ? ' occupied' : ''));
+                        seatG.setAttribute('class', 'public-seat-group' + (isOccupied ? ' occupied' : '') + (isBlocked ? ' digital-disabled' : ''));
                         seatG.setAttribute('data-seat-id', seat.label || seat.display_name || seat.number || seat.id || '');
                         seatG.setAttribute('data-zone-name', z.name);
+                        seatG.style.cursor = (isOccupied || isBlocked) ? 'not-allowed' : 'pointer';
 
                         // Cuadro de Butaca
                         const rect = document.createElementNS(NS, 'rect');
@@ -430,12 +545,13 @@
                         rect.setAttribute('y', seat.y - halfSide);
                         rect.setAttribute('width', seatSide);
                         rect.setAttribute('height', seatSide);
-                        rect.setAttribute('rx', 3);
-                        rect.setAttribute('ry', 3);
+                        rect.setAttribute('rx', 6);
+                        rect.setAttribute('ry', 6);
                         rect.setAttribute('class', 'public-seat-rect');
-                        rect.setAttribute('fill', isOccupied ? '#DC2626' : color);
-                        rect.setAttribute('stroke', isOccupied ? '#B91C1C' : 'rgba(255, 255, 255, 0.45)');
-                        rect.setAttribute('stroke-width', '1.2');
+                        rect.setAttribute('fill', isOccupied ? '#DC2626' : (isBlocked ? '#475569' : color));
+                        rect.setAttribute('stroke', isOccupied ? '#B91C1C' : (isBlocked ? '#94A3B8' : 'rgba(255, 255, 255, 0.5)'));
+                        rect.setAttribute('stroke-width', '1.3');
+                        rect.setAttribute('opacity', isBlocked ? '0.70' : '1');
                         rect.setAttribute('filter', 'url(#publicSeatShadow)');
                         seatG.appendChild(rect);
 
@@ -446,7 +562,8 @@
                         txt.setAttribute('text-anchor', 'middle');
                         txt.setAttribute('dominant-baseline', 'central');
                         txt.setAttribute('fill', '#FFFFFF');
-                        txt.setAttribute('font-size', numFontSize);
+                        txt.setAttribute('font-size', dynamicFontSize);
+                        txt.setAttribute('letter-spacing', displayNum.length >= 3 ? '-0.5px' : '-0.2px');
                         txt.setAttribute('font-weight', '900');
                         txt.setAttribute('font-family', 'sans-serif');
                         txt.setAttribute('pointer-events', 'none');
@@ -522,6 +639,50 @@
                     }
 
                     labelsGroup.appendChild(textG);
+                } else {
+                    // 2.4 Si tiene Butacas: Nombre del Sector Arriba de la Zona (No en el centro)
+                    const headerG = document.createElementNS(NS, 'g');
+                    headerG.setAttribute('class', 'svg-zone-header-badge');
+                    headerG.style.pointerEvents = 'none';
+
+                    const rawTitle = nameText.toUpperCase();
+                    const labelY = (zMinY >= 26) ? (zMinY - 15) : (zMinY + 15);
+                    let titleTextContent = '';
+                    if (isDigitalDisabled) {
+                        titleTextContent = `${rawTitle} • 🔒 SOLO FÍSICA`;
+                    } else if (!isZoneAvailable) {
+                        titleTextContent = `${rawTitle} • 🚫 AGOTADO`;
+                    } else {
+                        titleTextContent = `${rawTitle}${priceVal > 0 ? ' • ' + priceFormatted : ''}`;
+                    }
+                    const badgeW = Math.max(90, Math.min(220, titleTextContent.length * 8.5 + 26));
+
+                    const badgeRect = document.createElementNS(NS, 'rect');
+                    badgeRect.setAttribute('x', centerX - badgeW / 2);
+                    badgeRect.setAttribute('y', labelY - 12);
+                    badgeRect.setAttribute('width', badgeW);
+                    badgeRect.setAttribute('height', '24');
+                    badgeRect.setAttribute('rx', '7');
+                    badgeRect.setAttribute('fill', 'rgba(15, 23, 42, 0.92)');
+                    badgeRect.setAttribute('stroke', isDigitalDisabled ? '#64748B' : color);
+                    badgeRect.setAttribute('stroke-width', '1.3');
+                    badgeRect.setAttribute('filter', 'url(#publicSeatShadow)');
+                    headerG.appendChild(badgeRect);
+
+                    const titleTxt = document.createElementNS(NS, 'text');
+                    titleTxt.setAttribute('x', centerX);
+                    titleTxt.setAttribute('y', labelY);
+                    titleTxt.setAttribute('text-anchor', 'middle');
+                    titleTxt.setAttribute('dominant-baseline', 'central');
+                    titleTxt.setAttribute('fill', '#FFFFFF');
+                    titleTxt.setAttribute('font-size', '11');
+                    titleTxt.setAttribute('font-weight', '900');
+                    titleTxt.setAttribute('font-family', 'sans-serif');
+                    titleTxt.setAttribute('letter-spacing', '0.5px');
+                    titleTxt.textContent = titleTextContent;
+                    headerG.appendChild(titleTxt);
+
+                    labelsGroup.appendChild(headerG);
                 }
             });
 
@@ -540,6 +701,8 @@
 
             const hasSeats = Array.isArray(z.seats) && z.seats.length > 0;
             const priceVal = parseFloat(z.price) || 0;
+            const isDigitalDisabled = !!z.is_digital_disabled;
+            const isAvailable = (z.available !== false && z.is_available !== false) && !isDigitalDisabled;
 
             if (titleEl) {
                 titleEl.textContent = isStage ? (z.name.startsWith('🎪') ? z.name : `🎪 ${z.name}`) : (z.name || 'Zona');
@@ -549,6 +712,12 @@
                 if (isStage && priceVal === 0) {
                     priceEl.textContent = 'ESCENARIO DEL EVENTO';
                     priceEl.style.color = '#38BDF8';
+                } else if (isDigitalDisabled) {
+                    priceEl.textContent = '🔒 SOLO VENTA FÍSICA';
+                    priceEl.style.color = '#94A3B8';
+                } else if (!isAvailable) {
+                    priceEl.textContent = '🚫 ENTRADAS AGOTADAS';
+                    priceEl.style.color = '#EF4444';
                 } else {
                     priceEl.textContent = 'S/ ' + priceVal.toFixed(2);
                     priceEl.style.color = '#10B981';
@@ -558,6 +727,12 @@
             if (capEl) {
                 if (isStage && priceVal === 0) {
                     capEl.textContent = 'Zona de Presentación';
+                    capEl.style.display = 'block';
+                } else if (isDigitalDisabled) {
+                    capEl.textContent = '🔒 No disponible para venta digital';
+                    capEl.style.display = 'block';
+                } else if (!isAvailable) {
+                    capEl.textContent = '🚫 Entradas agotadas';
                     capEl.style.display = 'block';
                 } else if (hasSeats) {
                     capEl.textContent = 'Zona con Selección de Butacas';
@@ -573,6 +748,14 @@
                     hintEl.textContent = '🎪 Ubicación de Tarima';
                     hintEl.style.background = 'rgba(56, 189, 248, 0.2)';
                     hintEl.style.color = '#38BDF8';
+                } else if (isDigitalDisabled) {
+                    hintEl.textContent = '🔒 Solo venta física / boletería';
+                    hintEl.style.background = 'rgba(100, 116, 139, 0.25)';
+                    hintEl.style.color = '#94A3B8';
+                } else if (!isAvailable) {
+                    hintEl.textContent = '🚫 Sector agotado';
+                    hintEl.style.background = 'rgba(239, 68, 68, 0.2)';
+                    hintEl.style.color = '#EF4444';
                 } else if (hasSeats) {
                     hintEl.textContent = '🪑 Selecciona tus butacas en el plano';
                     hintEl.style.background = 'rgba(16, 185, 129, 0.2)';
@@ -596,12 +779,21 @@
             const hintEl = document.getElementById('tooltipZoneActionHint');
             if (!tooltip) return;
 
+            const isDigitalDisabled = !!z.is_digital_disabled;
+            const isBlocked = isDigitalDisabled || (z.available === false || z.is_available === false);
+
             const seatLabel = seat.label || seat.display_name || (seat.number ? `Butaca ${seat.number}` : (seat.id ? `Butaca ${seat.id}` : 'Asiento'));
             if (titleEl) titleEl.textContent = `${z.name} (${seatLabel})`;
             
             if (priceEl) {
                 if (isOccupied) {
                     priceEl.textContent = '🚫 OCUPADA / VENDIDA';
+                    priceEl.style.color = '#EF4444';
+                } else if (isDigitalDisabled) {
+                    priceEl.textContent = '🔒 SOLO VENTA FÍSICA';
+                    priceEl.style.color = '#94A3B8';
+                } else if (z.available === false || z.is_available === false) {
+                    priceEl.textContent = '🚫 AGOTADA';
                     priceEl.style.color = '#EF4444';
                 } else {
                     priceEl.textContent = 'S/ ' + (parseFloat(z.price) || 0).toFixed(2);
@@ -615,6 +807,10 @@
                 capEl.style.display = 'block';
                 if (isOccupied) {
                     capEl.textContent = 'No disponible para venta';
+                } else if (isDigitalDisabled) {
+                    capEl.textContent = '🔒 No disponible para venta digital';
+                } else if (z.available === false || z.is_available === false) {
+                    capEl.textContent = 'Entradas agotadas';
                 } else if (isCurrentlySelected) {
                     capEl.textContent = '✅ Butaca seleccionada';
                 } else {
@@ -626,6 +822,14 @@
                 if (isOccupied) {
                     hintEl.textContent = '❌ Butaca no disponible';
                     hintEl.style.background = 'rgba(239,68,68,0.2)';
+                    hintEl.style.color = '#EF4444';
+                } else if (isDigitalDisabled) {
+                    hintEl.textContent = '🔒 Solo disponible en boletería física';
+                    hintEl.style.background = 'rgba(100, 116, 139, 0.25)';
+                    hintEl.style.color = '#94A3B8';
+                } else if (z.available === false || z.is_available === false) {
+                    hintEl.textContent = '🚫 Sector agotado';
+                    hintEl.style.background = 'rgba(239,68,68,0.15)';
                     hintEl.style.color = '#EF4444';
                 } else if (isCurrentlySelected) {
                     hintEl.textContent = '🔄 Clic para desmarcar butaca';
@@ -643,6 +847,9 @@
         },
 
         onSeatClick: function(seatGroup, seat, z, isOccupied) {
+            const isDigitalDisabled = !!z.is_digital_disabled;
+            const isBlocked = isDigitalDisabled || (z.available === false || z.is_available === false);
+
             if (isOccupied) {
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
@@ -652,6 +859,25 @@
                         confirmButtonColor: '#EF4444',
                         confirmButtonText: 'Entendido'
                     });
+                }
+                return;
+            }
+
+            if (isBlocked) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: isDigitalDisabled ? 'Venta Digital No Disponible' : 'Sector Agotado',
+                        text: isDigitalDisabled 
+                            ? `Las butacas del sector "${z.name}" no están habilitadas para compra por internet (solo disponibles en puntos de venta físicos o boletería).`
+                            : `Las entradas para el sector "${z.name}" se encuentran agotadas.`,
+                        icon: isDigitalDisabled ? 'info' : 'warning',
+                        confirmButtonColor: '#0F172A',
+                        confirmButtonText: 'Entendido'
+                    });
+                } else {
+                    alert(isDigitalDisabled 
+                        ? `El sector "${z.name}" no está disponible para venta digital.` 
+                        : `El sector "${z.name}" se encuentra agotado.`);
                 }
                 return;
             }
@@ -681,6 +907,18 @@
             // 3. Sincronizar el contador exacto en la lista de entradas
             const matchedRows = this.getTicketRowsForZone(actualName);
             matchedRows.forEach(row => {
+                const isRowAvail = row.getAttribute('data-available') !== 'false';
+                const isRowDigDisabled = row.getAttribute('data-digital-disabled') === 'true';
+
+                if (!isRowAvail || isRowDigDisabled) {
+                    const countEl = row.querySelector('.ticket-count-val');
+                    if (countEl) countEl.textContent = '0';
+                    row.removeAttribute('data-selected-seats');
+                    const seatContainer = row.querySelector('.selected-seat-tags-box');
+                    if (seatContainer) seatContainer.innerHTML = '';
+                    return;
+                }
+
                 const countEl = row.querySelector('.ticket-count-val');
                 if (countEl) {
                     countEl.textContent = selectedCount;
@@ -723,9 +961,12 @@
 
         selectNextAvailableSeat: function(zoneName) {
             const z = this.zones.find(item => this.isZoneMatch(item.name, zoneName));
+            if (z && (z.is_digital_disabled || z.available === false || z.is_available === false)) {
+                return false;
+            }
             const actualName = z ? z.name : zoneName;
 
-            const availableGroup = document.querySelector(`.public-seat-group[data-zone-name="${actualName}"]:not(.occupied):not(.selected)`);
+            const availableGroup = document.querySelector(`.public-seat-group[data-zone-name="${actualName}"]:not(.occupied):not(.digital-disabled):not(.selected)`);
             if (!availableGroup) return false;
 
             availableGroup.classList.add('selected');
@@ -752,6 +993,24 @@
         },
 
         selectGeneralZone: function(zoneName) {
+            const z = this.zones.find(item => this.isZoneMatch(item.name, zoneName));
+            if (z && (z.is_digital_disabled || z.available === false || z.is_available === false)) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: z.is_digital_disabled ? 'Venta Digital No Disponible' : 'Zona Agotada',
+                        text: z.is_digital_disabled 
+                            ? `La zona "${z.name}" no está habilitada para compra por internet (solo disponible en puntos de venta físicos o boletería).`
+                            : `La zona "${z.name}" se encuentra agotada.`,
+                        icon: z.is_digital_disabled ? 'info' : 'warning',
+                        confirmButtonColor: '#0F172A',
+                        confirmButtonText: 'Entendido'
+                    });
+                } else {
+                    alert(`La zona "${z.name}" no está disponible para compra.`);
+                }
+                return;
+            }
+
             this.selectedZoneName = zoneName;
 
             document.querySelectorAll('.svg-public-zone').forEach(poly => {

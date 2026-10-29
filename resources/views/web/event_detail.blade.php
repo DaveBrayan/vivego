@@ -90,9 +90,9 @@
                ========================================================= */
             @media (min-width: 992px) {
                 .template2-main-container {
-                    max-width: 1240px;
+                    max-width: 1360px;
                     padding: 1rem 1.5rem 4rem 1.5rem;
-                    gap: 1.25rem;
+                    gap: 1.5rem;
                 }
                 #artistHeroImg {
                     width: 100%;
@@ -101,7 +101,7 @@
                 }
                 .template2-content-grid.has-seatmap {
                     display: grid;
-                    grid-template-columns: 1.15fr 0.85fr;
+                    grid-template-columns: 1.35fr 0.85fr;
                     grid-template-areas:
                         "seatmap booking"
                         "info    booking";
@@ -259,6 +259,10 @@
                     @foreach($event['tickets'] as $ticket)
                         @php
                             $isAvail = !empty($ticket['available']);
+                            $isDigitalDisabled = !empty($ticket['is_digital_disabled']);
+                            $statusType = $ticket['status_type'] ?? ($isAvail ? 'available' : ($isDigitalDisabled ? 'digital_unavailable' : 'sold_out'));
+                            $statusBadge = $ticket['status_badge'] ?? ($isDigitalDisabled ? '🔒 SOLO FÍSICA' : '🚫 AGOTADO');
+                            $statusMessage = $ticket['status_message'] ?? ($isDigitalDisabled ? 'No disponible para venta digital' : 'Entradas agotadas');
                             $hasCamp = !empty($ticket['has_campaign']);
                         @endphp
                         <div class="ticket-type-row" 
@@ -269,16 +273,24 @@
                              data-presale-discount="{{ $ticket['presale_discount'] }}"
                              data-has-campaign="{{ $hasCamp ? 'true' : 'false' }}"
                              data-available="{{ $isAvail ? 'true' : 'false' }}"
-                             style="background: {{ $isAvail ? '#FFFFFF' : '#F1F5F9' }}; border: 1.5px solid {{ $isAvail ? '#E2E8F0' : '#CBD5E1' }}; border-radius: 14px; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; {{ !$isAvail ? 'opacity: 0.65;' : '' }}">
+                             data-digital-disabled="{{ $isDigitalDisabled ? 'true' : 'false' }}"
+                             data-status-type="{{ $statusType }}"
+                             style="background: {{ $isAvail ? '#FFFFFF' : '#F8FAFC' }}; border: 1.5px solid {{ $isAvail ? '#E2E8F0' : '#CBD5E1' }}; border-radius: 14px; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; {{ !$isAvail ? 'opacity: 0.72;' : '' }}">
                             
                             <div class="ticket-type-info" style="flex: 1;">
                                 <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                                     <span class="ticket-name" style="font-size: 1.05rem; font-weight: 800; color: {{ $isAvail ? '#0F172A' : '#64748B' }};">{{ $ticket['name'] }}</span>
                                     
                                     @if(!$isAvail)
-                                        <span style="background: #EF4444; color: #FFFFFF; font-size: 0.7rem; font-weight: 900; padding: 2px 8px; border-radius: 6px; text-transform: uppercase;">
-                                            🚫 AGOTADO
-                                        </span>
+                                        @if($isDigitalDisabled)
+                                            <span style="background: #334155; color: #F8FAFC; font-size: 0.68rem; font-weight: 900; padding: 2.5px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.3px; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                                🔒 VENTA SOLO FÍSICA
+                                            </span>
+                                        @else
+                                            <span style="background: #EF4444; color: #FFFFFF; font-size: 0.7rem; font-weight: 900; padding: 2px 8px; border-radius: 6px; text-transform: uppercase;">
+                                                🚫 AGOTADO
+                                            </span>
+                                        @endif
                                     @elseif($hasCamp)
                                         <span style="background: {{ $ticket['campaign_color'] ?? '#FF5500' }}; color: #FFFFFF; font-size: 0.725rem; font-weight: 900; padding: 2px 8px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); text-transform: uppercase; letter-spacing: 0.5px;">
                                             {{ $ticket['campaign_badge'] }}
@@ -291,7 +303,15 @@
                                 </div>
                                 
                                 @if(!$isAvail)
-                                    <span style="font-size: 0.8rem; color: #EF4444; font-weight: 700; display: block; margin-top: 0.2rem;">Entradas agotadas</span>
+                                    @if($isDigitalDisabled)
+                                        <span style="font-size: 0.8rem; color: #64748B; font-weight: 700; display: block; margin-top: 0.25rem;">
+                                            ℹ️ No disponible para venta digital (solo boletería o puntos físicos)
+                                        </span>
+                                    @else
+                                        <span style="font-size: 0.8rem; color: #EF4444; font-weight: 700; display: block; margin-top: 0.2rem;">
+                                            Entradas agotadas
+                                        </span>
+                                    @endif
                                 @elseif($hasCamp)
                                     <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-top: 0.35rem;">
                                         <span class="ticket-price" style="font-size: 1.25rem; font-weight: 900; color: var(--color-primary-orange);">S/ {{ number_format($ticket['price'], 2) }}</span>
