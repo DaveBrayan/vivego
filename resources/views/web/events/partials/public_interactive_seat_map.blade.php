@@ -295,6 +295,17 @@
                         totalPointsCount++;
                     });
                 }
+                if (z.label_x !== undefined && z.label_x !== null && z.label_y !== undefined && z.label_y !== null) {
+                    const lx = parseFloat(z.label_x);
+                    const ly = parseFloat(z.label_y);
+                    if (!isNaN(lx) && !isNaN(ly)) {
+                        if (lx - 50 < minX) minX = lx - 50;
+                        if (lx + 50 > maxX) maxX = lx + 50;
+                        if (ly - 20 < minY) minY = ly - 20;
+                        if (ly + 20 > maxY) maxY = ly + 20;
+                        totalPointsCount++;
+                    }
+                }
             });
 
             if (totalPointsCount > 0) {
@@ -354,8 +365,14 @@
                 const zMaxY = Math.max(...ys);
                 const zW = zMaxX - zMinX;
                 const zH = zMaxY - zMinY;
-                const centerX = xs.reduce((a, b) => a + b, 0) / xs.length;
-                const centerY = ys.reduce((a, b) => a + b, 0) / ys.length;
+                const autoCenterX = xs.reduce((a, b) => a + b, 0) / xs.length;
+                const autoCenterY = ys.reduce((a, b) => a + b, 0) / ys.length;
+
+                const hasCustomLabel = (z.label_x !== undefined && z.label_x !== null && !isNaN(parseFloat(z.label_x))) &&
+                                       (z.label_y !== undefined && z.label_y !== null && !isNaN(parseFloat(z.label_y)));
+
+                const centerX = hasCustomLabel ? parseFloat(z.label_x) : autoCenterX;
+                const centerY = hasCustomLabel ? parseFloat(z.label_y) : autoCenterY;
 
                 // 2.1 Superficie Poligonal Fiel (Polygon)
                 const pointsStr = z.points.map(p => `${p.x},${p.y}`).join(' ');
@@ -670,13 +687,16 @@
 
                     labelsGroup.appendChild(textG);
                 } else {
-                    // 2.4 Si tiene Butacas: Nombre del Sector Arriba de la Zona (No en el centro)
+                    // 2.4 Si tiene Butacas: Nombre del Sector Arriba de la Zona (o en posición personalizada)
                     const headerG = document.createElementNS(NS, 'g');
                     headerG.setAttribute('class', 'svg-zone-header-badge');
                     headerG.style.pointerEvents = 'none';
 
                     const rawTitle = nameText.toUpperCase();
-                    const labelY = (zMinY >= 34) ? (zMinY - 14) : Math.max(14, zMinY + 14);
+                    const defaultLabelY = (zMinY >= 34) ? (zMinY - 14) : Math.max(14, zMinY + 14);
+                    const labelX = hasCustomLabel ? centerX : autoCenterX;
+                    const labelY = hasCustomLabel ? centerY : defaultLabelY;
+
                     let titleTextContent = '';
                     if (isDigitalDisabled) {
                         titleTextContent = `${rawTitle} • 🔒 SOLO FÍSICA`;
@@ -688,7 +708,7 @@
                     const badgeW = Math.max(90, Math.min(280, titleTextContent.length * 8.0 + 26));
 
                     const badgeRect = document.createElementNS(NS, 'rect');
-                    badgeRect.setAttribute('x', centerX - badgeW / 2);
+                    badgeRect.setAttribute('x', labelX - badgeW / 2);
                     badgeRect.setAttribute('y', labelY - 12);
                     badgeRect.setAttribute('width', badgeW);
                     badgeRect.setAttribute('height', '24');
@@ -700,7 +720,7 @@
                     headerG.appendChild(badgeRect);
 
                     const titleTxt = document.createElementNS(NS, 'text');
-                    titleTxt.setAttribute('x', centerX);
+                    titleTxt.setAttribute('x', labelX);
                     titleTxt.setAttribute('y', labelY);
                     titleTxt.setAttribute('text-anchor', 'middle');
                     titleTxt.setAttribute('dominant-baseline', 'central');

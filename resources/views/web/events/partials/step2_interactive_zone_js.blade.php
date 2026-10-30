@@ -50,15 +50,23 @@
                 const activeTag = document.activeElement?.tagName;
                 const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(activeTag) || document.activeElement?.isContentEditable;
                 
-                if (!isInput && (e.key === 'Delete' || e.key === 'Backspace' || e.key === 'Del' || e.keyCode === 46)) {
+                const isDeleteKey = e.key === 'Delete' || e.key === 'Del' || e.code === 'Delete' || 
+                                    e.key === 'Backspace' || e.code === 'Backspace' || 
+                                    e.keyCode === 46 || e.keyCode === 8;
+
+                if (!isInput && isDeleteKey) {
                     if (this.selectedPointIdx !== null && this.selectedZoneId) {
                         e.preventDefault();
+                        e.stopPropagation();
                         this.deleteSelectedPoint();
                         return;
                     }
 
-                    if (this.selectedZoneId) {
+                    // Solo permitir borrar la zona entera si se presiona Delete/Supr (evitar borrar por error con Backspace)
+                    const isPureDelete = e.key === 'Delete' || e.key === 'Del' || e.code === 'Delete' || e.keyCode === 46;
+                    if (isPureDelete && this.selectedZoneId) {
                         e.preventDefault();
+                        e.stopPropagation();
                         this.deleteSelectedZone();
                     }
                 }
@@ -84,8 +92,8 @@
                     Swal.fire({
                         icon: 'warning',
                         title: 'Mínimo 3 Vértices',
-                        text: 'Un polígono debe tener al menos 3 puntos. Si deseas borrar todo el sector, pulsa Supr sin seleccionar un punto.',
-                        timer: 2000,
+                        text: 'Un polígono debe tener al menos 3 puntos. Si deseas borrar todo el sector, presiona Supr sin seleccionar un punto.',
+                        timer: 2500,
                         showConfirmButton: false,
                         background: '#14141E',
                         color: '#FFFFFF'
@@ -153,6 +161,8 @@
                         price: parseFloat(pz.price) || 50,
                         capacity_type: pz.capacity_type || 'Aforo General',
                         color: pz.color || defaultColors[idx % defaultColors.length],
+                        label_x: (pz.label_x !== undefined && pz.label_x !== null && !isNaN(parseFloat(pz.label_x))) ? parseFloat(pz.label_x) : null,
+                        label_y: (pz.label_y !== undefined && pz.label_y !== null && !isNaN(parseFloat(pz.label_y))) ? parseFloat(pz.label_y) : null,
                         presale_enabled: isPresale,
                         presale_discount: isPresale ? (parseFloat(pz.presale_discount) || 20) : (parseFloat(pz.presale_discount) || 0),
                         presale_price: isPresale ? (parseFloat(pz.presale_price) || null) : null,
@@ -202,6 +212,8 @@
                             price: price,
                             capacity_type: capType,
                             color: defaultColors[idx % defaultColors.length],
+                            label_x: null,
+                            label_y: null,
                             presale_enabled: isPresale,
                             presale_discount: presaleDisc,
                             presale_start_date: presaleStart,
@@ -398,6 +410,8 @@
                     price: price,
                     capacity_type: capType,
                     color: existing ? existing.color : defaultColors[idx % defaultColors.length],
+                    label_x: (existing && existing.label_x !== undefined && existing.label_x !== null) ? existing.label_x : null,
+                    label_y: (existing && existing.label_y !== undefined && existing.label_y !== null) ? existing.label_y : null,
                     presale_enabled: isPresale,
                     presale_discount: isPresale ? presaleDisc : 0,
                     presale_price: isPresale ? (!isNaN(presalePriceVal) && presalePriceVal !== null ? presalePriceVal : (price * (1 - (presaleDisc / 100)))) : null,
@@ -454,6 +468,8 @@
                     zone_mode: 'interactive',
                     is_interactive: true,
                     color: z.color || (isStage ? '#334155' : '#FF5500'),
+                    label_x: (z.label_x !== undefined && z.label_x !== null && !isNaN(parseFloat(z.label_x))) ? Math.round(z.label_x) : null,
+                    label_y: (z.label_y !== undefined && z.label_y !== null && !isNaN(parseFloat(z.label_y))) ? Math.round(z.label_y) : null,
                     points: Array.isArray(z.points) ? z.points : [],
                     has_presale: isPresale,
                     presale_discount: pDisc,
@@ -1408,6 +1424,8 @@
                 price: z.price,
                 capacity_type: z.capacity_type,
                 color: z.color,
+                label_x: (z.label_x !== undefined && z.label_x !== null) ? (z.label_x + offset) : null,
+                label_y: (z.label_y !== undefined && z.label_y !== null) ? (z.label_y + offset) : null,
                 presale_enabled: z.presale_enabled,
                 presale_discount: z.presale_discount,
                 points: newPoints,
@@ -1899,9 +1917,12 @@
             if (!group) return;
             group.innerHTML = '';
 
-            const strokeW = (2 / Math.sqrt(this.zoom)).toFixed(2);
-            const selectedStrokeW = (2.6 / Math.sqrt(this.zoom)).toFixed(2);
-            const dashArr = `${(4 / this.zoom).toFixed(1)} ${(2.5 / this.zoom).toFixed(1)}`;
+            // Líneas y bordes punteados más finos y elegantes con el zoom
+            const strokeW = Math.max(0.4, (1.2 / Math.pow(this.zoom, 1.25))).toFixed(2);
+            const selectedStrokeW = Math.max(0.6, (1.6 / Math.pow(this.zoom, 1.25))).toFixed(2);
+            const dashLen = Math.max(1.2, (2.6 / Math.pow(this.zoom, 1.25))).toFixed(1);
+            const dashGap = Math.max(1.0, (1.8 / Math.pow(this.zoom, 1.25))).toFixed(1);
+            const dashArr = `${dashLen} ${dashGap}`;
 
             this.zones.forEach(z => {
                 const isSelected = (z.id === this.selectedZoneId);
@@ -1921,6 +1942,27 @@
                 polygon.onmousedown = (e) => {
                     e.stopPropagation();
                     if (e.button === 0 && this.currentTool === 'select') {
+                        // Detección directa de vértice al hacer clic sobre el polígono (arrastre a la primera)
+                        const coords = this.getSvgCoordinates(e);
+                        const hitRadius = Math.max(12, 18 / this.zoom);
+                        let vertexIdx = -1;
+                        if (Array.isArray(z.points)) {
+                            for (let i = 0; i < z.points.length; i++) {
+                                if (Math.hypot(coords.x - z.points[i].x, coords.y - z.points[i].y) <= hitRadius) {
+                                    vertexIdx = i;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (vertexIdx !== -1) {
+                            this.selectZone(z.id);
+                            this.selectedPointIdx = vertexIdx;
+                            this.render();
+                            this.startHandleDrag(e, z.id, vertexIdx);
+                            return;
+                        }
+
                         this.selectZone(z.id);
                         this.startZoneDrag(e, z);
                     }
@@ -1944,41 +1986,129 @@
                 startX: startCoords.x,
                 startY: startCoords.y,
                 origPoints: zone.points.map(p => ({ x: p.x, y: p.y })),
-                origSeats: Array.isArray(zone.seats) ? zone.seats.map(s => ({ ...s })) : []
+                origSeats: Array.isArray(zone.seats) ? zone.seats.map(s => ({ ...s })) : [],
+                origLabelX: (zone.label_x !== undefined && zone.label_x !== null) ? zone.label_x : null,
+                origLabelY: (zone.label_y !== undefined && zone.label_y !== null) ? zone.label_y : null
             };
 
             const onMouseMove = (ev) => {
                 if (!this.isDraggingZone || !this.dragZoneInfo) return;
                 const currentCoords = this.getSvgCoordinates(ev);
-                const dx = Math.round(currentCoords.x - this.dragZoneInfo.startX);
-                const dy = Math.round(currentCoords.y - this.dragZoneInfo.startY);
+                let dx = Math.round(currentCoords.x - this.dragZoneInfo.startX);
+                let dy = Math.round(currentCoords.y - this.dragZoneInfo.startY);
 
                 const currentZ = this.zones.find(item => item.id === this.dragZoneInfo.id);
-                if (currentZ) {
-                    currentZ.points = this.dragZoneInfo.origPoints.map(p => ({
-                        x: p.x + dx,
-                        y: p.y + dy
+                if (!currentZ) return;
+
+                // Imán inteligente al mover la zona entera respecto a otros cuadros
+                const origXs = this.dragZoneInfo.origPoints.map(p => p.x);
+                const origYs = this.dragZoneInfo.origPoints.map(p => p.y);
+                const origMinX = Math.min(...origXs);
+                const origMaxX = Math.max(...origXs);
+                const origMinY = Math.min(...origYs);
+                const origMaxY = Math.max(...origYs);
+                const origCx = (origMinX + origMaxX) / 2;
+                const origCy = (origMinY + origMaxY) / 2;
+
+                const curMinX = origMinX + dx;
+                const curMaxX = origMaxX + dx;
+                const curMinY = origMinY + dy;
+                const curMaxY = origMaxY + dy;
+                const curCx = origCx + dx;
+                const curCy = origCy + dy;
+
+                const snapThreshold = Math.max(5, (7 / this.zoom));
+                let snapDeltaX = 0;
+                let minDiffX = snapThreshold;
+                let guideX = null;
+
+                let snapDeltaY = 0;
+                let minDiffY = snapThreshold;
+                let guideY = null;
+
+                this.zones.forEach(oz => {
+                    if (oz.id === currentZ.id || !Array.isArray(oz.points) || oz.points.length < 3) return;
+                    const oXs = oz.points.map(p => p.x);
+                    const oYs = oz.points.map(p => p.y);
+                    const oMinX = Math.min(...oXs);
+                    const oMaxX = Math.max(...oXs);
+                    const oMinY = Math.min(...oYs);
+                    const oMaxY = Math.max(...oYs);
+                    const oCx = (oMinX + oMaxX) / 2;
+                    const oCy = (oMinY + oMaxY) / 2;
+
+                    const xTests = [
+                        { cur: curMinX, target: oMinX },
+                        { cur: curMinX, target: oMaxX },
+                        { cur: curMaxX, target: oMinX },
+                        { cur: curMaxX, target: oMaxX },
+                        { cur: curCx, target: oCx }
+                    ];
+
+                    xTests.forEach(t => {
+                        const d = Math.abs(t.cur - t.target);
+                        if (d < minDiffX) {
+                            minDiffX = d;
+                            snapDeltaX = Math.round(t.target - t.cur);
+                            guideX = { type: 'vertical', x: t.target, y1: Math.min(curMinY, oMinY) - 20, y2: Math.max(curMaxY, oMaxY) + 20, targetX: t.target, targetY: oCy };
+                        }
+                    });
+
+                    const yTests = [
+                        { cur: curMinY, target: oMinY },
+                        { cur: curMinY, target: oMaxY },
+                        { cur: curMaxY, target: oMinY },
+                        { cur: curMaxY, target: oMaxY },
+                        { cur: curCy, target: oCy }
+                    ];
+
+                    yTests.forEach(t => {
+                        const d = Math.abs(t.cur - t.target);
+                        if (d < minDiffY) {
+                            minDiffY = d;
+                            snapDeltaY = Math.round(t.target - t.cur);
+                            guideY = { type: 'horizontal', y: t.target, x1: Math.min(curMinX, oMinX) - 20, x2: Math.max(curMaxX, oMaxX) + 20, targetX: oCx, targetY: t.target };
+                        }
+                    });
+                });
+
+                dx += snapDeltaX;
+                dy += snapDeltaY;
+
+                const zoneGuides = [];
+                if (guideX) zoneGuides.push(guideX);
+                if (guideY) zoneGuides.push(guideY);
+                this.renderSnapGuides(zoneGuides);
+
+                currentZ.points = this.dragZoneInfo.origPoints.map(p => ({
+                    x: p.x + dx,
+                    y: p.y + dy
+                }));
+
+                if (Array.isArray(currentZ.seats) && currentZ.seats.length > 0) {
+                    currentZ.seats = this.dragZoneInfo.origSeats.map(s => ({
+                        ...s,
+                        x: s.x + dx,
+                        y: s.y + dy
                     }));
-
-                    if (Array.isArray(currentZ.seats) && currentZ.seats.length > 0) {
-                        currentZ.seats = this.dragZoneInfo.origSeats.map(s => ({
-                            ...s,
-                            x: s.x + dx,
-                            y: s.y + dy
-                        }));
-                    }
-
-                    this.renderSvgZones();
-                    this.renderSvgSeats();
-                    this.renderSvgLabels();
-                    this.renderSvgHandles();
-                    this.renderTransformGizmo();
                 }
+
+                if (this.dragZoneInfo.origLabelX !== null && this.dragZoneInfo.origLabelY !== null) {
+                    currentZ.label_x = this.dragZoneInfo.origLabelX + dx;
+                    currentZ.label_y = this.dragZoneInfo.origLabelY + dy;
+                }
+
+                this.renderSvgZones();
+                this.renderSvgSeats();
+                this.renderSvgLabels();
+                this.renderSvgHandles();
+                this.renderTransformGizmo();
             };
 
             const onMouseUp = () => {
                 this.isDraggingZone = false;
                 this.dragZoneInfo = null;
+                this.clearSnapGuides();
                 window.removeEventListener('mousemove', onMouseMove);
                 window.removeEventListener('mouseup', onMouseUp);
                 this.syncToStandardTable();
@@ -2172,21 +2302,40 @@
 
                 const xs = z.points.map(p => p.x);
                 const ys = z.points.map(p => p.y);
-                const centerX = xs.reduce((a, b) => a + b, 0) / xs.length;
-                let centerY = ys.reduce((a, b) => a + b, 0) / ys.length;
+                const autoCenterX = xs.reduce((a, b) => a + b, 0) / xs.length;
+                let autoCenterY = ys.reduce((a, b) => a + b, 0) / ys.length;
 
                 const hasSeats = Array.isArray(z.seats) && z.seats.length > 0;
                 const isStage = this.isStageZone(z);
+                const isSelected = (z.id === this.selectedZoneId);
 
-                // Si tiene butacas numeradas, colocar la etiqueta ARRIBA de la zona para no tapar los asientos del centro
+                // Si tiene butacas numeradas y no se ha movido manualmente, colocar arriba para no tapar los asientos
                 if (hasSeats) {
                     const zMinY = Math.min(...ys);
-                    centerY = (zMinY >= 38) ? (zMinY - 20) : Math.max(16, zMinY + 16);
+                    autoCenterY = (zMinY >= 38) ? (zMinY - 20) : Math.max(16, zMinY + 16);
                 }
 
+                const labelX = (z.label_x !== undefined && z.label_x !== null && !isNaN(parseFloat(z.label_x)))
+                    ? parseFloat(z.label_x)
+                    : Math.round(autoCenterX);
+                const labelY = (z.label_y !== undefined && z.label_y !== null && !isNaN(parseFloat(z.label_y)))
+                    ? parseFloat(z.label_y)
+                    : Math.round(autoCenterY);
+
                 const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-                g.setAttribute('transform', `translate(${centerX}, ${centerY})`);
-                g.style.pointerEvents = 'none';
+                g.setAttribute('transform', `translate(${labelX}, ${labelY})`);
+                g.setAttribute('class', `svg-zone-label-badge ${isSelected ? 'selected' : ''}`);
+                g.style.pointerEvents = 'all';
+                g.style.cursor = 'grab';
+                g.title = 'Arrastra esta etiqueta para reubicarla libremente donde no tape las butacas';
+
+                g.onmousedown = (e) => {
+                    e.stopPropagation();
+                    if (e.button === 0 && this.currentTool === 'select') {
+                        this.selectZone(z.id);
+                        this.startLabelDrag(e, z);
+                    }
+                };
 
                 const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                 rect.setAttribute('x', hasSeats ? '-65' : '-70');
@@ -2194,32 +2343,49 @@
                 rect.setAttribute('width', hasSeats ? '130' : '140');
                 rect.setAttribute('height', hasSeats ? '26' : '32');
                 rect.setAttribute('rx', '8');
-                rect.setAttribute('fill', 'rgba(15, 23, 42, 0.92)');
-                rect.setAttribute('stroke', z.color);
-                rect.setAttribute('stroke-width', (1.5 / Math.sqrt(this.zoom)).toFixed(2));
+                rect.setAttribute('fill', 'rgba(15, 23, 42, 0.94)');
+                rect.setAttribute('stroke', isSelected ? '#38BDF8' : z.color);
+                rect.setAttribute('stroke-width', isSelected ? (2.2 / Math.sqrt(this.zoom)).toFixed(2) : (1.5 / Math.sqrt(this.zoom)).toFixed(2));
+                if (isSelected) {
+                    rect.setAttribute('stroke-dasharray', `${(3 / this.zoom).toFixed(1)} ${(2 / this.zoom).toFixed(1)}`);
+                }
                 rect.setAttribute('filter', 'url(#labelShadow)');
                 g.appendChild(rect);
 
+                if (isSelected) {
+                    const dragIcon = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    dragIcon.setAttribute('x', hasSeats ? '-57' : '-62');
+                    dragIcon.setAttribute('y', '3');
+                    dragIcon.setAttribute('fill', '#38BDF8');
+                    dragIcon.setAttribute('font-size', '10');
+                    dragIcon.setAttribute('font-weight', '900');
+                    dragIcon.setAttribute('pointer-events', 'none');
+                    dragIcon.textContent = '⠿';
+                    g.appendChild(dragIcon);
+                }
+
                 const textName = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                textName.setAttribute('x', '0');
+                textName.setAttribute('x', isSelected ? '4' : '0');
                 textName.setAttribute('y', isStage ? '4' : (hasSeats ? '-1' : '-3'));
                 textName.setAttribute('text-anchor', 'middle');
                 textName.setAttribute('fill', '#FFFFFF');
                 textName.setAttribute('font-size', isStage ? '11.5' : (hasSeats ? '10' : '10.5'));
                 textName.setAttribute('font-weight', '900');
                 textName.setAttribute('font-family', 'sans-serif');
+                textName.setAttribute('pointer-events', 'none');
                 textName.textContent = z.name.length > 16 ? (z.name.slice(0, 14) + '..') : z.name;
                 g.appendChild(textName);
 
                 if (!isStage) {
                     const textPrice = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                    textPrice.setAttribute('x', '0');
+                    textPrice.setAttribute('x', isSelected ? '4' : '0');
                     textPrice.setAttribute('y', hasSeats ? '9' : '10');
                     textPrice.setAttribute('text-anchor', 'middle');
                     textPrice.setAttribute('fill', '#10B981');
                     textPrice.setAttribute('font-size', hasSeats ? '8.5' : '9');
                     textPrice.setAttribute('font-weight', '800');
                     textPrice.setAttribute('font-family', 'sans-serif');
+                    textPrice.setAttribute('pointer-events', 'none');
                     textPrice.textContent = z.price > 0 ? `S/ ${(parseFloat(z.price) || 0).toFixed(2)}` : `${z.capacity_type || 'General'}`;
                     g.appendChild(textPrice);
                 }
@@ -2228,47 +2394,479 @@
             });
         },
 
+        startLabelDrag: function(e, zone) {
+            this.isDraggingLabel = true;
+            const startCoords = this.getSvgCoordinates(e);
+
+            const xs = zone.points.map(p => p.x);
+            const ys = zone.points.map(p => p.y);
+            const autoX = xs.reduce((a, b) => a + b, 0) / xs.length;
+            let autoY = ys.reduce((a, b) => a + b, 0) / ys.length;
+            if (Array.isArray(zone.seats) && zone.seats.length > 0) {
+                const zMinY = Math.min(...ys);
+                autoY = (zMinY >= 38) ? (zMinY - 20) : Math.max(16, zMinY + 16);
+            }
+
+            const origX = (zone.label_x !== undefined && zone.label_x !== null) ? zone.label_x : Math.round(autoX);
+            const origY = (zone.label_y !== undefined && zone.label_y !== null) ? zone.label_y : Math.round(autoY);
+
+            const viewport = document.getElementById('seatMapViewport');
+            if (viewport) viewport.style.cursor = 'grabbing';
+
+            const onMouseMove = (ev) => {
+                if (!this.isDraggingLabel) return;
+                const curCoords = this.getSvgCoordinates(ev);
+                const dx = Math.round(curCoords.x - startCoords.x);
+                const dy = Math.round(curCoords.y - startCoords.y);
+
+                zone.label_x = origX + dx;
+                zone.label_y = origY + dy;
+
+                this.renderSvgLabels();
+            };
+
+            const onMouseUp = () => {
+                this.isDraggingLabel = false;
+                if (viewport) viewport.style.cursor = 'default';
+                window.removeEventListener('mousemove', onMouseMove);
+                window.removeEventListener('mouseup', onMouseUp);
+                this.syncToStandardTable();
+            };
+
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
+        },
+
+        resetLabelPosition: function(zoneId) {
+            const z = zoneId ? this.zones.find(item => item.id === zoneId) : this.getSelectedZone();
+            if (!z) return;
+            z.label_x = null;
+            z.label_y = null;
+            this.renderSvgLabels();
+            this.syncToStandardTable();
+        },
+
         renderSvgHandles: function() {
             const group = document.getElementById('svgHandlesGroup');
             if (!group) return;
             group.innerHTML = '';
 
             const selectedZone = this.getSelectedZone();
-            if (!selectedZone || this.currentTool !== 'select' || this.isBuyerPreview) return;
+            if (!selectedZone || this.currentTool !== 'select' || this.isBuyerPreview || !Array.isArray(selectedZone.points) || selectedZone.points.length === 0) return;
 
-            const handleRadius = Math.max(1.8, 3.8 / this.zoom);
-            const strokeWidth = Math.max(0.6, 1.2 / this.zoom);
+            const n = selectedZone.points.length;
+            const edgeHitWidth = Math.max(12, 18 / this.zoom);
+
+            // 1. Trazar líneas hitbox invisibles sobre los bordes punteados para permitir doble clic y agregar puntos
+            for (let i = 0; i < n; i++) {
+                const p1 = selectedZone.points[i];
+                const p2 = selectedZone.points[(i + 1) % n];
+
+                const edgeLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                edgeLine.setAttribute('x1', p1.x);
+                edgeLine.setAttribute('y1', p1.y);
+                edgeLine.setAttribute('x2', p2.x);
+                edgeLine.setAttribute('y2', p2.y);
+                edgeLine.setAttribute('stroke', 'transparent');
+                edgeLine.setAttribute('stroke-width', edgeHitWidth.toFixed(2));
+                edgeLine.setAttribute('stroke-linecap', 'round');
+                edgeLine.style.cursor = 'copy';
+                edgeLine.title = 'Doble clic en la línea punteada para agregar un nuevo punto aquí';
+
+                edgeLine.ondblclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const coords = this.getSvgCoordinates(e);
+                    this.addPointToZoneAt(selectedZone, coords.x, coords.y, i);
+                };
+
+                group.appendChild(edgeLine);
+            }
+
+            // 2. Vértices ultra-finos que se escalan más pequeños y elegantes con el zoom
+            const handleRadius = Math.max(1.2, (2.8 / Math.pow(this.zoom, 1.25)));
+            const strokeWidth = Math.max(0.4, (0.75 / Math.pow(this.zoom, 1.25)));
+            const hitRadius = Math.max(12, (18 / this.zoom));
 
             selectedZone.points.forEach((p, idx) => {
                 const isPointActive = (this.selectedPointIdx === idx);
 
+                const handleG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                handleG.setAttribute('data-point-idx', idx);
+                handleG.style.cursor = 'pointer';
+
+                // Hitbox invisible amplio para que el clic / arrastre no falle nunca a la primera
+                const hitCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                hitCircle.setAttribute('cx', p.x);
+                hitCircle.setAttribute('cy', p.y);
+                hitCircle.setAttribute('r', hitRadius.toFixed(2));
+                hitCircle.setAttribute('fill', 'transparent');
+                hitCircle.setAttribute('class', 'handle-hit-circle');
+                handleG.appendChild(hitCircle);
+
+                // Halo exterior verde esmeralda para el punto seleccionado
+                const glowCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                glowCircle.setAttribute('cx', p.x);
+                glowCircle.setAttribute('cy', p.y);
+                glowCircle.setAttribute('r', (handleRadius * 1.8).toFixed(2));
+                glowCircle.setAttribute('fill', 'rgba(16, 185, 129, 0.28)');
+                glowCircle.setAttribute('stroke', '#10B981');
+                glowCircle.setAttribute('stroke-width', Math.max(0.6, (1.0 / this.zoom)).toFixed(2));
+                glowCircle.setAttribute('stroke-dasharray', `${Math.max(1.2, 2.0 / this.zoom).toFixed(1)} ${Math.max(1.0, 1.5 / this.zoom).toFixed(1)}`);
+                glowCircle.setAttribute('class', 'handle-glow-circle');
+                glowCircle.style.display = isPointActive ? 'block' : 'none';
+                handleG.appendChild(glowCircle);
+
+                // Círculo visual principal
                 const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                 circle.setAttribute('cx', p.x);
                 circle.setAttribute('cy', p.y);
-                circle.setAttribute('r', isPointActive ? (handleRadius * 1.35).toFixed(2) : handleRadius.toFixed(2));
+                circle.setAttribute('r', isPointActive ? (handleRadius * 1.3).toFixed(2) : handleRadius.toFixed(2));
                 circle.setAttribute('fill', isPointActive ? '#10B981' : '#FF5500');
                 circle.setAttribute('stroke', '#FFFFFF');
                 circle.setAttribute('stroke-width', strokeWidth.toFixed(2));
                 circle.setAttribute('class', `svg-handle-circle ${isPointActive ? 'active-point' : ''}`);
-                circle.style.cursor = 'pointer';
-                circle.title = isPointActive ? 'Punto seleccionado. Pulsa Supr / Delete para eliminarlo' : 'Haz clic para seleccionar este punto (en verde) y borrarlo con Supr';
+                handleG.appendChild(circle);
 
-                circle.onclick = (e) => {
+                handleG.title = isPointActive 
+                    ? `Punto #${idx + 1} activo. Mantén el clic y arrastra para mover (con imán) o pulsa Supr para eliminar` 
+                    : `Haz clic y arrastra directamente para ubicar este punto`;
+
+                handleG.onclick = (e) => {
                     e.stopPropagation();
                     this.selectedPointIdx = idx;
-                    this.render();
                 };
 
-                circle.onmousedown = (e) => {
+                // Arrastre inmediato a la primera manteniendo el clic
+                handleG.onmousedown = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    if (e.button === 0) {
+                        this.selectedPointIdx = idx;
+                        this.highlightHandle(idx);
+                        this.startHandleDrag(e, selectedZone.id, idx);
+                    }
+                };
+
+                // Clic derecho en el handle -> eliminar directamente como atajo
+                handleG.oncontextmenu = (e) => {
+                    e.preventDefault();
                     e.stopPropagation();
                     this.selectedPointIdx = idx;
-                    this.draggingHandle = { zoneId: selectedZone.id, pointIdx: idx };
-                    window.addEventListener('mousemove', this.onHandleMouseMove);
-                    window.addEventListener('mouseup', this.onHandleMouseUp);
+                    this.deleteSelectedPoint();
                 };
 
-                group.appendChild(circle);
+                group.appendChild(handleG);
             });
+        },
+
+        startHandleDrag: function(e, zoneId, pointIdx) {
+            this.isDraggingHandle = true;
+            this.draggingHandle = { zoneId: zoneId, pointIdx: pointIdx };
+            this.selectedPointIdx = pointIdx;
+
+            const viewport = document.getElementById('seatMapViewport');
+            if (viewport) viewport.style.cursor = 'crosshair';
+
+            const onMouseMove = (ev) => {
+                if (!this.isDraggingHandle || !this.draggingHandle) return;
+                const rawCoords = this.getSvgCoordinates(ev);
+                const z = this.zones.find(item => item.id === this.draggingHandle.zoneId);
+                if (!z || !Array.isArray(z.points) || !z.points[this.draggingHandle.pointIdx]) return;
+
+                // Aplicar imán inteligente (magnet snap) contra otros puntos y cajas
+                const snapped = this.calculateMagnetSnap(rawCoords.x, rawCoords.y, z.id, this.draggingHandle.pointIdx);
+                z.points[this.draggingHandle.pointIdx].x = snapped.x;
+                z.points[this.draggingHandle.pointIdx].y = snapped.y;
+
+                this.renderSvgZones();
+                this.renderSvgHandlesFast();
+                this.renderTransformGizmo();
+                this.renderSnapGuides(snapped.guides);
+            };
+
+            const onMouseUp = () => {
+                this.isDraggingHandle = false;
+                this.draggingHandle = null;
+                if (viewport) viewport.style.cursor = 'default';
+                this.clearSnapGuides();
+                window.removeEventListener('mousemove', onMouseMove);
+                window.removeEventListener('mouseup', onMouseUp);
+                this.render();
+                this.syncToStandardTable();
+            };
+
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
+        },
+
+        highlightHandle: function(activeIdx) {
+            const group = document.getElementById('svgHandlesGroup');
+            if (!group) return;
+            const handleGroups = group.querySelectorAll('g');
+            handleGroups.forEach((g, idx) => {
+                const isCurrent = (idx === activeIdx);
+                const circle = g.querySelector('.svg-handle-circle');
+                const glow = g.querySelector('.handle-glow-circle');
+                if (circle) {
+                    circle.setAttribute('fill', isCurrent ? '#10B981' : '#FF5500');
+                    if (isCurrent) circle.classList.add('active-point');
+                    else circle.classList.remove('active-point');
+                }
+                if (glow) {
+                    glow.style.display = isCurrent ? 'block' : 'none';
+                }
+            });
+        },
+
+        renderSvgHandlesFast: function() {
+            const group = document.getElementById('svgHandlesGroup');
+            if (!group) return;
+            const selectedZone = this.getSelectedZone();
+            if (!selectedZone || !Array.isArray(selectedZone.points)) return;
+
+            const n = selectedZone.points.length;
+            const lines = group.querySelectorAll('line');
+            for (let i = 0; i < n && i < lines.length; i++) {
+                const p1 = selectedZone.points[i];
+                const p2 = selectedZone.points[(i + 1) % n];
+                lines[i].setAttribute('x1', p1.x);
+                lines[i].setAttribute('y1', p1.y);
+                lines[i].setAttribute('x2', p2.x);
+                lines[i].setAttribute('y2', p2.y);
+            }
+
+            const handleGroups = group.querySelectorAll('g');
+            for (let i = 0; i < n && i < handleGroups.length; i++) {
+                const p = selectedZone.points[i];
+                const circles = handleGroups[i].querySelectorAll('circle');
+                circles.forEach(c => {
+                    c.setAttribute('cx', p.x);
+                    c.setAttribute('cy', p.y);
+                });
+            }
+        },
+
+        calculateMagnetSnap: function(rawX, rawY, currentZoneId, currentPointIdx) {
+            const snapThreshold = Math.max(6, (8 / this.zoom));
+            let bestSnapX = null;
+            let minDiffX = snapThreshold;
+            let snapSourceX = null;
+
+            let bestSnapY = null;
+            let minDiffY = snapThreshold;
+            let snapSourceY = null;
+
+            this.zones.forEach(z => {
+                if (!Array.isArray(z.points) || z.points.length === 0) return;
+                const isCurrentZone = (z.id === currentZoneId);
+
+                // 1. Alinear con los vértices de esta zona o de otras zonas
+                z.points.forEach((p, pIdx) => {
+                    if (isCurrentZone && pIdx === currentPointIdx) return; // No auto-alinear consigo mismo
+
+                    const dx = Math.abs(rawX - p.x);
+                    if (dx <= minDiffX) {
+                        minDiffX = dx;
+                        bestSnapX = p.x;
+                        snapSourceX = { x: p.x, y: p.y, label: z.name };
+                    }
+
+                    const dy = Math.abs(rawY - p.y);
+                    if (dy <= minDiffY) {
+                        minDiffY = dy;
+                        bestSnapY = p.y;
+                        snapSourceY = { x: p.x, y: p.y, label: z.name };
+                    }
+                });
+
+                // 2. Alinear con los bordes del cuadro de otras zonas
+                if (!isCurrentZone && z.points.length >= 3) {
+                    const xs = z.points.map(p => p.x);
+                    const ys = z.points.map(p => p.y);
+                    const minX = Math.min(...xs);
+                    const maxX = Math.max(...xs);
+                    const minY = Math.min(...ys);
+                    const maxY = Math.max(...ys);
+
+                    [minX, maxX].forEach(edgeX => {
+                        const dx = Math.abs(rawX - edgeX);
+                        if (dx <= minDiffX) {
+                            minDiffX = dx;
+                            bestSnapX = edgeX;
+                            snapSourceX = { x: edgeX, y: rawY, label: z.name };
+                        }
+                    });
+
+                    [minY, maxY].forEach(edgeY => {
+                        const dy = Math.abs(rawY - edgeY);
+                        if (dy <= minDiffY) {
+                            minDiffY = dy;
+                            bestSnapY = edgeY;
+                            snapSourceY = { x: rawX, y: edgeY, label: z.name };
+                        }
+                    });
+                }
+            });
+
+            const finalX = (bestSnapX !== null) ? bestSnapX : Math.round(rawX);
+            const finalY = (bestSnapY !== null) ? bestSnapY : Math.round(rawY);
+
+            const guides = [];
+            if (bestSnapX !== null && snapSourceX) {
+                guides.push({
+                    type: 'vertical',
+                    x: bestSnapX,
+                    y1: Math.min(finalY, snapSourceX.y) - 30,
+                    y2: Math.max(finalY, snapSourceX.y) + 30,
+                    targetX: snapSourceX.x,
+                    targetY: snapSourceX.y
+                });
+            }
+
+            if (bestSnapY !== null && snapSourceY) {
+                guides.push({
+                    type: 'horizontal',
+                    y: bestSnapY,
+                    x1: Math.min(finalX, snapSourceY.x) - 30,
+                    x2: Math.max(finalX, snapSourceY.x) + 30,
+                    targetX: snapSourceY.x,
+                    targetY: snapSourceY.y
+                });
+            }
+
+            return {
+                x: finalX,
+                y: finalY,
+                guides: guides
+            };
+        },
+
+        renderSnapGuides: function(guides) {
+            const group = document.getElementById('svgSnapGuidesGroup');
+            if (!group) return;
+            group.innerHTML = '';
+
+            if (!Array.isArray(guides) || guides.length === 0) return;
+
+            const strokeW = Math.max(0.6, (1.1 / this.zoom)).toFixed(2);
+            const dashArr = `${Math.max(2, 3.5 / this.zoom).toFixed(1)} ${Math.max(1.5, 2.5 / this.zoom).toFixed(1)}`;
+            const dotR = Math.max(1.6, (2.8 / this.zoom)).toFixed(2);
+
+            guides.forEach(g => {
+                if (g.type === 'vertical') {
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', g.x);
+                    line.setAttribute('y1', Math.max(0, g.y1));
+                    line.setAttribute('x2', g.x);
+                    line.setAttribute('y2', Math.min(650, g.y2));
+                    line.setAttribute('stroke', '#00F0FF');
+                    line.setAttribute('stroke-width', strokeW);
+                    line.setAttribute('stroke-dasharray', dashArr);
+                    line.setAttribute('pointer-events', 'none');
+                    group.appendChild(line);
+
+                    const targetDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    targetDot.setAttribute('cx', g.targetX);
+                    targetDot.setAttribute('cy', g.targetY);
+                    targetDot.setAttribute('r', dotR);
+                    targetDot.setAttribute('fill', '#00F0FF');
+                    targetDot.setAttribute('stroke', '#FFFFFF');
+                    targetDot.setAttribute('stroke-width', strokeW);
+                    targetDot.setAttribute('pointer-events', 'none');
+                    group.appendChild(targetDot);
+                } else if (g.type === 'horizontal') {
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', Math.max(0, g.x1));
+                    line.setAttribute('y1', g.y);
+                    line.setAttribute('x2', Math.min(1000, g.x2));
+                    line.setAttribute('y2', g.y);
+                    line.setAttribute('stroke', '#00F0FF');
+                    line.setAttribute('stroke-width', strokeW);
+                    line.setAttribute('stroke-dasharray', dashArr);
+                    line.setAttribute('pointer-events', 'none');
+                    group.appendChild(line);
+
+                    const targetDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    targetDot.setAttribute('cx', g.targetX);
+                    targetDot.setAttribute('cy', g.targetY);
+                    targetDot.setAttribute('r', dotR);
+                    targetDot.setAttribute('fill', '#00F0FF');
+                    targetDot.setAttribute('stroke', '#FFFFFF');
+                    targetDot.setAttribute('stroke-width', strokeW);
+                    targetDot.setAttribute('pointer-events', 'none');
+                    group.appendChild(targetDot);
+                }
+            });
+        },
+
+        clearSnapGuides: function() {
+            const group = document.getElementById('svgSnapGuidesGroup');
+            if (group) group.innerHTML = '';
+        },
+
+        addPointToZoneAt: function(zone, clickX, clickY, segmentIdx) {
+            if (!zone || !Array.isArray(zone.points)) return false;
+            const n = zone.points.length;
+            const p1 = zone.points[segmentIdx];
+            const p2 = zone.points[(segmentIdx + 1) % n];
+
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const lenSq = dx * dx + dy * dy;
+            let projX = clickX;
+            let projY = clickY;
+
+            if (lenSq > 0) {
+                let t = ((clickX - p1.x) * dx + (clickY - p1.y) * dy) / lenSq;
+                t = Math.max(0.04, Math.min(0.96, t));
+                projX = Math.round(p1.x + t * dx);
+                projY = Math.round(p1.y + t * dy);
+            }
+
+            const insertIdx = segmentIdx + 1;
+            zone.points.splice(insertIdx, 0, { x: projX, y: projY });
+            this.selectedPointIdx = insertIdx;
+            this.render();
+            this.syncToStandardTable();
+            return true;
+        },
+
+        tryAddPointNearEdge: function(zone, clickX, clickY) {
+            if (!zone || !Array.isArray(zone.points) || zone.points.length < 3) return false;
+            const n = zone.points.length;
+            let bestDist = Infinity;
+            let bestIdx = -1;
+            const maxThreshold = Math.max(16, 26 / this.zoom);
+
+            for (let i = 0; i < n; i++) {
+                const p1 = zone.points[i];
+                const p2 = zone.points[(i + 1) % n];
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                const lenSq = dx * dx + dy * dy;
+                let dist;
+
+                if (lenSq === 0) {
+                    dist = Math.hypot(clickX - p1.x, clickY - p1.y);
+                } else {
+                    let t = ((clickX - p1.x) * dx + (clickY - p1.y) * dy) / lenSq;
+                    t = Math.max(0, Math.min(1, t));
+                    const projX = p1.x + t * dx;
+                    const projY = p1.y + t * dy;
+                    dist = Math.hypot(clickX - projX, clickY - projY);
+                }
+
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    bestIdx = i;
+                }
+            }
+
+            if (bestDist <= maxThreshold && bestIdx !== -1) {
+                return this.addPointToZoneAt(zone, clickX, clickY, bestIdx);
+            }
+            return false;
         },
 
         renderTransformGizmo: function() {
@@ -2286,7 +2884,7 @@
             const minY = Math.min(...ys);
             const maxY = Math.max(...ys);
 
-            const pad = 12 / this.zoom;
+            const pad = Math.max(6, 10 / this.zoom);
             const boxX = minX - pad;
             const boxY = minY - pad;
             const boxW = (maxX - minX) + (pad * 2);
@@ -2294,10 +2892,10 @@
             const cx = (minX + maxX) / 2;
             const cy = (minY + maxY) / 2;
 
-            const strokeW = Math.max(0.7, 1.1 / this.zoom);
-            const sqSize = Math.max(5.5, 8.5 / this.zoom);
+            const strokeW = Math.max(0.4, (0.85 / Math.pow(this.zoom, 1.15)));
+            const sqSize = Math.max(3.0, (5.5 / Math.pow(this.zoom, 1.15)));
             const halfSq = sqSize / 2;
-            const rotStemH = 20 / this.zoom;
+            const rotStemH = Math.max(12, 16 / this.zoom);
 
             const bboxRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
             bboxRect.setAttribute('x', boxX);
@@ -2307,7 +2905,7 @@
             bboxRect.setAttribute('fill', 'none');
             bboxRect.setAttribute('stroke', '#38BDF8');
             bboxRect.setAttribute('stroke-width', strokeW.toFixed(2));
-            bboxRect.setAttribute('stroke-dasharray', `${(3 / this.zoom).toFixed(1)} ${(2 / this.zoom).toFixed(1)}`);
+            bboxRect.setAttribute('stroke-dasharray', `${Math.max(1.5, 2.5 / this.zoom).toFixed(1)} ${Math.max(1.0, 1.8 / this.zoom).toFixed(1)}`);
             bboxRect.style.pointerEvents = 'none';
             group.appendChild(bboxRect);
 
@@ -2323,7 +2921,7 @@
             const rotHandle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
             rotHandle.setAttribute('cx', cx);
             rotHandle.setAttribute('cy', boxY - rotStemH);
-            rotHandle.setAttribute('r', Math.max(2.5, 4.5 / this.zoom).toFixed(2));
+            rotHandle.setAttribute('r', Math.max(1.8, (3.2 / Math.pow(this.zoom, 1.15))).toFixed(2));
             rotHandle.setAttribute('fill', '#38BDF8');
             rotHandle.setAttribute('stroke', '#FFFFFF');
             rotHandle.setAttribute('stroke-width', strokeW.toFixed(2));
@@ -2373,6 +2971,8 @@
 
             const origPoints = zone.points.map(p => ({ x: p.x, y: p.y }));
             const origSeats = Array.isArray(zone.seats) ? zone.seats.map(s => ({ ...s })) : [];
+            const origLabelX = (zone.label_x !== undefined && zone.label_x !== null) ? zone.label_x : null;
+            const origLabelY = (zone.label_y !== undefined && zone.label_y !== null) ? zone.label_y : null;
 
             const onMouseMove = (ev) => {
                 const curCoords = this.getSvgCoordinates(ev);
@@ -2393,6 +2993,11 @@
                         x: Math.round(anchorX + (s.x - anchorX) * scaleX),
                         y: Math.round(anchorY + (s.y - anchorY) * scaleY)
                     }));
+                }
+
+                if (origLabelX !== null && origLabelY !== null) {
+                    zone.label_x = Math.round(anchorX + (origLabelX - anchorX) * scaleX);
+                    zone.label_y = Math.round(anchorY + (origLabelY - anchorY) * scaleY);
                 }
 
                 this.renderSvgZones();
@@ -2418,6 +3023,8 @@
 
             const origPoints = zone.points.map(p => ({ x: p.x, y: p.y }));
             const origSeats = Array.isArray(zone.seats) ? zone.seats.map(s => ({ ...s })) : [];
+            const origLabelX = (zone.label_x !== undefined && zone.label_x !== null) ? zone.label_x : null;
+            const origLabelY = (zone.label_y !== undefined && zone.label_y !== null) ? zone.label_y : null;
 
             const onMouseMove = (ev) => {
                 const curCoords = this.getSvgCoordinates(ev);
@@ -2446,6 +3053,13 @@
                             y: Math.round(cy + dx * sin + dy * cos)
                         };
                     });
+                }
+
+                if (origLabelX !== null && origLabelY !== null) {
+                    const ldx = origLabelX - cx;
+                    const ldy = origLabelY - cy;
+                    zone.label_x = Math.round(cx + ldx * cos - ldy * sin);
+                    zone.label_y = Math.round(cy + ldx * sin + ldy * cos);
                 }
 
                 this.renderSvgZones();
@@ -2856,6 +3470,16 @@
             e.stopPropagation();
             if (this.currentTool === 'polygon' && this.drawingPoints.length >= 3) {
                 this.finishPolygonDrawing();
+                return;
+            }
+
+            if (this.currentTool === 'select' && this.selectedZoneId) {
+                const zone = this.getSelectedZone();
+                if (zone && Array.isArray(zone.points) && zone.points.length >= 3) {
+                    const coords = this.getSvgCoordinates(e);
+                    const added = this.tryAddPointNearEdge(zone, coords.x, coords.y);
+                    if (added) return;
+                }
             }
         },
 
@@ -2895,21 +3519,25 @@
 
         onHandleMouseMove: function(e) {
             if (!SeatMapEditor.draggingHandle) return;
-            const coords = SeatMapEditor.getSvgCoordinates(e);
+            const rawCoords = SeatMapEditor.getSvgCoordinates(e);
             const z = SeatMapEditor.zones.find(item => item.id === SeatMapEditor.draggingHandle.zoneId);
             if (z && z.points[SeatMapEditor.draggingHandle.pointIdx]) {
-                z.points[SeatMapEditor.draggingHandle.pointIdx].x = Math.round(coords.x);
-                z.points[SeatMapEditor.draggingHandle.pointIdx].y = Math.round(coords.y);
+                const snapped = SeatMapEditor.calculateMagnetSnap(rawCoords.x, rawCoords.y, z.id, SeatMapEditor.draggingHandle.pointIdx);
+                z.points[SeatMapEditor.draggingHandle.pointIdx].x = snapped.x;
+                z.points[SeatMapEditor.draggingHandle.pointIdx].y = snapped.y;
                 SeatMapEditor.renderSvgZones();
-                SeatMapEditor.renderSvgHandles();
+                SeatMapEditor.renderSvgHandlesFast();
                 SeatMapEditor.renderTransformGizmo();
+                SeatMapEditor.renderSnapGuides(snapped.guides);
             }
         },
 
         onHandleMouseUp: function() {
             SeatMapEditor.draggingHandle = null;
+            SeatMapEditor.clearSnapGuides();
             window.removeEventListener('mousemove', SeatMapEditor.onHandleMouseMove);
             window.removeEventListener('mouseup', SeatMapEditor.onHandleMouseUp);
+            SeatMapEditor.render();
             SeatMapEditor.syncToStandardTable();
         },
 
@@ -2949,7 +3577,7 @@
         },
 
         onViewportMouseDown: function(e) {
-            if (e.target.tagName === 'rect' || e.target.tagName === 'polygon' || e.target.tagName === 'circle') return;
+            if (e.target.tagName === 'rect' || e.target.tagName === 'polygon' || e.target.tagName === 'circle' || e.target.tagName === 'line' || e.target.tagName === 'text' || e.target.closest('#svgHandlesGroup') || e.target.closest('#svgLabelsGroup') || e.target.closest('#svgZonesGroup')) return;
             if (this.currentTool !== 'select') return;
 
             this.selectedPointIdx = null;

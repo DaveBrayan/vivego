@@ -122,6 +122,9 @@
                         <span id="inspectorCardHeaderIcon">✏️</span> <span id="inspectorCardHeaderText">Propiedades de Zona</span>
                     </strong>
                     <div style="display: flex; gap: 0.35rem;">
+                        <button type="button" class="dash-btn-icon-action" onclick="SeatMapEditor.resetLabelPosition()" title="Auto-centrar etiqueta en la zona" style="padding: 4px 6px; font-size: 0.8rem; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.4); color: #34D399; border-radius: 6px; cursor: pointer;">
+                            📍
+                        </button>
                         <button type="button" class="dash-btn-icon-action" onclick="SeatMapEditor.duplicateSelectedZone()" title="Duplicar Zona" style="padding: 4px 6px; font-size: 0.8rem; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.4); color: #60A5FA; border-radius: 6px; cursor: pointer;">
                             📑
                         </button>
@@ -310,6 +313,9 @@
                     <span id="canvasModeIndicator" class="dash-badge-custom badge-blue" style="font-size: 0.75rem; font-weight: 800;">
                         🖐️ Modo Selección
                     </span>
+                    <span style="font-size: 0.72rem; color: #94A3B8;" class="d-none d-lg-inline">
+                        💡 <b>Doble clic en borde:</b> agregar punto • <b>Supr:</b> borrar punto • <b>Arrastrar etiqueta:</b> ubicar nombre
+                    </span>
                     <div id="polygonActionPill" style="display: none; align-items: center; gap: 0.35rem;">
                         <button type="button" class="btn btn-sm" onclick="SeatMapEditor.finishPolygonDrawing()" style="background: #10B981; color: #FFFFFF; font-weight: 800; font-size: 0.75rem; padding: 0.25rem 0.65rem; border-radius: 6px; border: none; cursor: pointer; box-shadow: 0 2px 8px rgba(16,185,129,0.4);">
                             ✅ Cerrar Polígono (Enter)
@@ -381,7 +387,10 @@
                         <!-- Capa 5: Caja de Transformación Externa (Agrandar, Achicar y Rotar) -->
                         <g id="svgTransformGizmoGroup"></g>
 
-                        <!-- Capa 6: Vista previa de trazado en vivo -->
+                        <!-- Capa 6: Guías Magnéticas Inteligentes (Imán de Alineación) -->
+                        <g id="svgSnapGuidesGroup"></g>
+
+                        <!-- Capa 7: Vista previa de trazado en vivo -->
                         <g id="svgDrawPreviewGroup"></g>
                     </svg>
                 </div>
