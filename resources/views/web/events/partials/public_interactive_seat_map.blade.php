@@ -110,8 +110,9 @@
 
     .public-seat-group:hover .public-seat-rect {
         stroke: #FF5500 !important;
-        stroke-width: 1.8px !important;
-        filter: drop-shadow(0 0 5px rgba(255, 85, 0, 0.9)) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
+        stroke-width: 2px !important;
+        stroke-opacity: 1 !important;
+        filter: drop-shadow(0 0 6px rgba(255, 85, 0, 0.95)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
     }
 
     .public-seat-group:hover text {
@@ -121,8 +122,9 @@
     .public-seat-group.selected .public-seat-rect {
         fill: #FF5500 !important;
         stroke: #FFFFFF !important;
-        stroke-width: 1.8px !important;
-        filter: drop-shadow(0 0 6px rgba(255, 85, 0, 0.95)) !important;
+        stroke-width: 2.2px !important;
+        stroke-opacity: 1 !important;
+        filter: drop-shadow(0 0 8px rgba(255, 85, 0, 0.95)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
     }
 
     .public-seat-group.selected text {
@@ -195,8 +197,8 @@
             <div id="publicSeatMapCanvasLayer" class="public-seatmap-canvas-layer">
                 <svg id="publicSeatMapSvg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible;" preserveAspectRatio="xMidYMid meet">
                     <defs>
-                        <filter id="publicSeatShadow" x="-20%" y="-20%" width="140%" height="140%">
-                            <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#000000" flood-opacity="0.25" />
+                        <filter id="publicSeatShadow" x="-30%" y="-30%" width="160%" height="160%">
+                            <feDropShadow dx="0" dy="1.5" stdDeviation="2.2" flood-color="#000000" flood-opacity="0.32" />
                         </filter>
                     </defs>
                     <!-- Zonas generadas fielmente por polígonos SVG dinámicos -->
@@ -263,8 +265,8 @@
             } else {
                 const newDefs = document.createElementNS("http://www.w3.org/2000/svg", 'defs');
                 newDefs.innerHTML = `
-                    <filter id="publicSeatShadow" x="-20%" y="-20%" width="140%" height="140%">
-                        <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#000000" flood-opacity="0.25" />
+                    <filter id="publicSeatShadow" x="-30%" y="-30%" width="160%" height="160%">
+                        <feDropShadow dx="0" dy="1.5" stdDeviation="2.2" flood-color="#000000" flood-opacity="0.32" />
                     </filter>
                 `;
                 svg.appendChild(newDefs);
@@ -406,11 +408,40 @@
 
                 // Eventos de Mouse sobre la Superficie (SOLO para zonas comerciales, no para el escenario)
                 if (!isStage) {
-                    polygon.addEventListener('mouseenter', (e) => this.onZoneMouseEnter(e, z, false));
-                    polygon.addEventListener('mousemove', (e) => this.onZoneMouseMove(e));
-                    polygon.addEventListener('mouseleave', () => this.onZoneMouseLeave());
+                    if (!hasSeats) {
+                        // Zona General sin butacas: el tooltip describe el sector completo y permite selección
+                        polygon.addEventListener('mouseenter', (e) => this.onZoneMouseEnter(e, z, false));
+                        polygon.addEventListener('mousemove', (e) => this.onZoneMouseMove(e));
+                        polygon.addEventListener('mouseleave', () => this.onZoneMouseLeave());
 
-                    if (hasSeats) {
+                        if (isDigitalDisabled || !isZoneAvailable) {
+                            polygon.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                if (typeof Swal !== 'undefined') {
+                                    Swal.fire({
+                                        title: 'Venta Digital No Disponible',
+                                        text: `La zona "${z.name}" no está habilitada para compra por internet (solo disponible en puntos de venta físicos o boletería).`,
+                                        icon: 'info',
+                                        confirmButtonColor: '#0F172A',
+                                        confirmButtonText: 'Entendido'
+                                    });
+                                } else {
+                                    alert(`La zona "${z.name}" no está disponible para venta digital.`);
+                                }
+                            });
+                        } else if (isClickable) {
+                            polygon.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                this.selectGeneralZone(z.name);
+                            });
+                        }
+                    } else {
+                        // Zona con butacas: al mover el mouse sobre el fondo de la zona, OCULTAR el tooltip
+                        // (el tooltip solo debe aparecer cuando el cursor pasa directamente sobre una butaca o silla)
+                        polygon.addEventListener('mouseenter', () => this.onZoneMouseLeave());
+                        polygon.addEventListener('mousemove', () => this.onZoneMouseLeave());
+                        polygon.addEventListener('mouseleave', () => this.onZoneMouseLeave());
+
                         polygon.addEventListener('click', (e) => {
                             e.stopPropagation();
                             if (isDigitalDisabled || !isZoneAvailable) {
@@ -425,34 +456,7 @@
                                 } else {
                                     alert(`El sector "${z.name}" no está disponible para venta digital.`);
                                 }
-                                return;
                             }
-                            const hintEl = document.getElementById('tooltipZoneActionHint');
-                            if (hintEl) {
-                                hintEl.textContent = '👇 Haz clic en una butaca para elegirla';
-                                hintEl.style.background = 'rgba(255,85,0,0.25)';
-                                hintEl.style.color = '#FF5500';
-                            }
-                        });
-                    } else if (isDigitalDisabled || !isZoneAvailable) {
-                        polygon.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            if (typeof Swal !== 'undefined') {
-                                Swal.fire({
-                                    title: 'Venta Digital No Disponible',
-                                    text: `La zona "${z.name}" no está habilitada para compra por internet (solo disponible en puntos de venta físicos o boletería).`,
-                                    icon: 'info',
-                                    confirmButtonColor: '#0F172A',
-                                    confirmButtonText: 'Entendido'
-                                });
-                            } else {
-                                alert(`La zona "${z.name}" no está disponible para venta digital.`);
-                            }
-                        });
-                    } else if (isClickable) {
-                        polygon.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            this.selectGeneralZone(z.name);
                         });
                     }
                 }
@@ -461,52 +465,71 @@
 
                 // 2.2 Si tiene Butacas: Renderizar Cuadrados con su Número Adentro (1, 2, 3...)
                 if (hasSeats) {
-                    // Asegurar margen generoso de las butacas con respecto a los bordes de la zona
-                    const seatXs = z.seats.map(s => s.x);
-                    const seatYs = z.seats.map(s => s.y);
+                    // Guardar coordenadas originales para mantener consistencia e idempotencia ante múltiples renders
+                    z.seats.forEach(s => {
+                        if (s._origX === undefined) s._origX = s.x;
+                        if (s._origY === undefined) s._origY = s.y;
+                    });
+
+                    const seatXs = z.seats.map(s => s._origX);
+                    const seatYs = z.seats.map(s => s._origY);
                     const sMinX = Math.min(...seatXs);
                     const sMaxX = Math.max(...seatXs);
                     const sMinY = Math.min(...seatYs);
                     const sMaxY = Math.max(...seatYs);
-
-                    const padL = sMinX - zMinX;
-                    const padR = zMaxX - sMaxX;
-                    const padT = sMinY - zMinY;
-                    const padB = zMaxY - sMaxY;
+                    const sW = Math.max(1, sMaxX - sMinX);
+                    const sH = Math.max(1, sMaxY - sMinY);
 
                     const sCols = parseInt(z.seat_cols || z.cols) || (Array.isArray(z.seats) ? new Set(z.seats.map(s => s.col)).size : 10);
                     const sRows = parseInt(z.seat_rows || z.rows) || (Array.isArray(z.seats) ? new Set(z.seats.map(s => s.row)).size : 5);
 
-                    let desiredPadX = Math.max(20, Math.min(45, Math.round(zW * 0.08)));
+                    // Reducir márgenes laterales para pegar las butacas más a los bordes de la zona
+                    let targetPadX = Math.max(12, Math.min(18, Math.round(zW * 0.025)));
                     if (sCols >= 16) {
-                        desiredPadX = Math.max(16, Math.min(26, Math.round(zW * 0.04)));
+                        targetPadX = Math.max(10, Math.min(15, Math.round(zW * 0.02)));
                     } else if (sCols >= 10) {
-                        desiredPadX = Math.max(20, Math.min(32, Math.round(zW * 0.06)));
+                        targetPadX = Math.max(14, Math.min(20, Math.round(zW * 0.035)));
+                    } else {
+                        targetPadX = Math.max(16, Math.min(26, Math.round(zW * 0.05)));
                     }
 
-                    let desiredPadY = Math.max(20, Math.min(42, Math.round(zH * 0.08)));
-                    if (sRows >= 12) {
-                        desiredPadY = Math.max(16, Math.min(24, Math.round(zH * 0.04)));
-                    } else if (sRows >= 8) {
-                        desiredPadY = Math.max(18, Math.min(30, Math.round(zH * 0.06)));
+                    let targetPadY = Math.max(16, Math.min(24, Math.round(zH * 0.065)));
+                    if (sRows >= 10) {
+                        targetPadY = Math.max(14, Math.min(20, Math.round(zH * 0.05)));
+                    } else if (sRows >= 6) {
+                        targetPadY = Math.max(16, Math.min(22, Math.round(zH * 0.065)));
+                    } else {
+                        targetPadY = Math.max(18, Math.min(26, Math.round(zH * 0.08)));
                     }
 
-                    const minAllowedPad = (sCols >= 16 || sRows >= 12) ? 12 : 18;
-                    if (padL < minAllowedPad || padR < minAllowedPad || padT < minAllowedPad || padB < minAllowedPad) {
-                        const sW = Math.max(1, sMaxX - sMinX);
-                        const sH = Math.max(1, sMaxY - sMinY);
-                        const targetMinX = zMinX + desiredPadX;
-                        const targetMaxX = zMaxX - desiredPadX;
-                        const targetMinY = zMinY + desiredPadY;
-                        const targetMaxY = zMaxY - desiredPadY;
-                        const targetW = Math.max(10, targetMaxX - targetMinX);
-                        const targetH = Math.max(10, targetMaxY - targetMinY);
+                    const targetMinX = zMinX + targetPadX;
+                    const targetMaxX = zMaxX - targetPadX;
+                    const targetW = Math.max(10, targetMaxX - targetMinX);
 
+                    const targetMinY = zMinY + targetPadY;
+                    const targetMaxY = zMaxY - targetPadY;
+                    const targetH = Math.max(10, targetMaxY - targetMinY);
+
+                    // Extender las butacas uniformemente hacia los laterales en la vista previa
+                    if (sW > 0) {
                         z.seats.forEach(s => {
-                            const normX = (s.x - sMinX) / sW;
-                            const normY = (s.y - sMinY) / sH;
+                            const normX = (s._origX - sMinX) / sW;
                             s.x = Math.round(targetMinX + normX * targetW);
+                        });
+                    } else {
+                        z.seats.forEach(s => {
+                            s.x = Math.round((targetMinX + targetMaxX) / 2);
+                        });
+                    }
+
+                    if (sH > 0) {
+                        z.seats.forEach(s => {
+                            const normY = (s._origY - sMinY) / sH;
                             s.y = Math.round(targetMinY + normY * targetH);
+                        });
+                    } else {
+                        z.seats.forEach(s => {
+                            s.y = Math.round((targetMinY + targetMaxY) / 2);
                         });
                     }
 
@@ -514,9 +537,9 @@
                     let minStep = 32;
                     if (z.seats.length >= 2) {
                         let dMin = Infinity;
-                        const sampleLimit = Math.min(z.seats.length, 80);
+                        const sampleLimit = Math.min(z.seats.length, 120);
                         for (let i = 0; i < sampleLimit; i++) {
-                            for (let j = i + 1; j < Math.min(sampleLimit, i + 25); j++) {
+                            for (let j = i + 1; j < Math.min(sampleLimit, i + 35); j++) {
                                 const dist = Math.hypot(z.seats[i].x - z.seats[j].x, z.seats[i].y - z.seats[j].y);
                                 if (dist > 4 && dist < dMin) dMin = dist;
                             }
@@ -524,13 +547,13 @@
                         if (dMin < Infinity) minStep = dMin;
                     }
 
-                    // Garantizar SIEMPRE una separación visible entre butacas adyacentes (al menos 3 a 5px libres)
-                    const maxAllowedSide = Math.max(10, Math.floor(minStep - 4));
-                    const idealSide = Math.round(minStep * 0.74);
-                    const seatSide = Math.max(10, Math.min(46, Math.min(idealSide, maxAllowedSide)));
+                    // Hacer las butacas más grandes y notorias en la vista previa con separación limpia
+                    const maxAllowedSide = Math.max(12, Math.floor(minStep - 3.5));
+                    const idealSide = Math.round(minStep * 0.85);
+                    const seatSide = Math.max(12, Math.min(48, Math.min(idealSide, maxAllowedSide)));
                     const halfSide = seatSide / 2;
-                    const cornerRadius = Math.max(2, Math.min(6, Math.round(seatSide * 0.16)));
-                    const strokeW = seatSide < 20 ? '0.9' : (seatSide < 28 ? '1.2' : '1.4');
+                    const cornerRadius = Math.max(3, Math.min(7, Math.round(seatSide * 0.18)));
+                    const strokeW = seatSide < 20 ? '1.1' : (seatSide < 28 ? '1.5' : '1.8');
 
                     z.seats.forEach((seat, sIdx) => {
                         const isOccupied = (seat.status === 'occupied' || seat.status === 'ocupado' || seat.status === 'vendido' || seat.is_occupied);
@@ -562,19 +585,19 @@
                             displayNum = String(sIdx + 1);
                         }
 
-                        let dynamicFontSize = Math.max(6, Math.min(14, Math.round(seatSide * 0.44)));
+                        let dynamicFontSize = Math.max(7, Math.min(14, Math.round(seatSide * 0.44)));
                         let letterSpacing = '-0.2px';
                         if (displayNum.length >= 4) {
-                            dynamicFontSize = Math.max(5.5, Math.min(9, Math.round(seatSide * 0.28)));
-                            letterSpacing = '-0.6px';
-                        } else if (displayNum.length === 3) {
-                            dynamicFontSize = Math.max(5.8, Math.min(11, Math.round(seatSide * 0.34)));
+                            dynamicFontSize = Math.max(6.5, Math.min(10.5, Math.round(seatSide * 0.32)));
                             letterSpacing = '-0.5px';
-                        } else if (displayNum.length === 2) {
-                            dynamicFontSize = Math.max(6.5, Math.min(13, Math.round(seatSide * 0.40)));
+                        } else if (displayNum.length === 3) {
+                            dynamicFontSize = Math.max(8.0, Math.min(12.5, Math.round(seatSide * 0.42)));
                             letterSpacing = '-0.3px';
+                        } else if (displayNum.length === 2) {
+                            dynamicFontSize = Math.max(9.0, Math.min(14.5, Math.round(seatSide * 0.48)));
+                            letterSpacing = '-0.2px';
                         } else {
-                            dynamicFontSize = Math.max(7, Math.min(15, Math.round(seatSide * 0.48)));
+                            dynamicFontSize = Math.max(10, Math.min(16.5, Math.round(seatSide * 0.52)));
                             letterSpacing = '0px';
                         }
 
@@ -584,7 +607,7 @@
                         seatG.setAttribute('data-zone-name', z.name);
                         seatG.style.cursor = (isOccupied || isBlocked) ? 'not-allowed' : 'pointer';
 
-                        // Cuadro de Butaca
+                        // Cuadro de Butaca más grande y notorio con borde blanco nítido y sombra
                         const rect = document.createElementNS(NS, 'rect');
                         rect.setAttribute('x', seat.x - halfSide);
                         rect.setAttribute('y', seat.y - halfSide);
@@ -594,8 +617,9 @@
                         rect.setAttribute('ry', cornerRadius);
                         rect.setAttribute('class', 'public-seat-rect');
                         rect.setAttribute('fill', isOccupied ? '#DC2626' : (isBlocked ? '#475569' : color));
-                        rect.setAttribute('stroke', isOccupied ? '#B91C1C' : (isBlocked ? '#94A3B8' : 'rgba(255, 255, 255, 0.5)'));
+                        rect.setAttribute('stroke', isOccupied ? '#991B1B' : (isBlocked ? '#94A3B8' : '#FFFFFF'));
                         rect.setAttribute('stroke-width', strokeW);
+                        rect.setAttribute('stroke-opacity', isOccupied ? '0.9' : '0.85');
                         rect.setAttribute('opacity', isBlocked ? '0.70' : '1');
                         rect.setAttribute('filter', 'url(#publicSeatShadow)');
                         seatG.appendChild(rect);
@@ -611,16 +635,25 @@
                             txt.setAttribute('font-size', dynamicFontSize);
                             txt.setAttribute('letter-spacing', letterSpacing);
                             txt.setAttribute('font-weight', '900');
-                            txt.setAttribute('font-family', 'sans-serif');
+                            txt.setAttribute('font-family', "'Inter', system-ui, -apple-system, sans-serif");
                             txt.setAttribute('pointer-events', 'none');
                             txt.textContent = displayNum;
                             seatG.appendChild(txt);
                         }
 
-                        // Eventos sobre butaca individual
-                        seatG.addEventListener('mouseenter', (e) => this.onSeatMouseEnter(e, seat, z, isOccupied));
-                        seatG.addEventListener('mousemove', (e) => this.onZoneMouseMove(e));
-                        seatG.addEventListener('mouseleave', () => this.onZoneMouseLeave());
+                        // Eventos sobre butaca individual (el tooltip aparece solo al pasar el mouse por la butaca)
+                        seatG.addEventListener('mouseenter', (e) => {
+                            e.stopPropagation();
+                            this.onSeatMouseEnter(e, seat, z, isOccupied);
+                        });
+                        seatG.addEventListener('mousemove', (e) => {
+                            e.stopPropagation();
+                            this.onZoneMouseMove(e);
+                        });
+                        seatG.addEventListener('mouseleave', (e) => {
+                            e.stopPropagation();
+                            this.onZoneMouseLeave();
+                        });
                         seatG.addEventListener('click', (e) => {
                             e.stopPropagation();
                             this.onSeatClick(seatG, seat, z, isOccupied);
