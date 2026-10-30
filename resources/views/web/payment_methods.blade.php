@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Pasarelas de Pago | Izipay & Culqi | Vive Go')
+@section('title', 'Pasarela de Pagos | Culqi Perú | Vive Go')
 
 @section('content')
     <div class="dashboard-root-wrapper">
@@ -40,259 +40,17 @@
                 <!-- CONTENEDOR DE ALERTAS AJAX DE TEST -->
                 <div id="testResultAlert" style="display: none; margin-bottom: 1rem;"></div>
 
-                <!-- NAVEGACIÓN POR PESTAÑAS PRINCIPALES (IZIPAY / CULQI) -->
-                @php
-                    $activeTab = request('tab', 'izipay');
-                @endphp
-                <div class="gateway-main-tabs-nav">
-                    <button type="button" class="gateway-tab-btn {{ $activeTab === 'izipay' ? 'active' : '' }}" onclick="switchGatewayTab('izipay', this)">
-                        <span class="tab-btn-icon">💳</span>
-                        <div class="tab-btn-text">
-                            <strong class="tab-title">Izipay Perú</strong>
-                            <span class="tab-subtitle">
-                                @if($izipay->is_active)
-                                    <span class="tab-dot active">●</span> Activa
-                                @else
-                                    <span class="tab-dot inactive">○</span> Inactiva
-                                @endif
-                                • {{ $izipay->isSandbox() ? 'Sandbox' : 'Live' }}
-                            </span>
-                        </div>
-                    </button>
-
-                    <button type="button" class="gateway-tab-btn {{ $activeTab === 'culqi' ? 'active' : '' }}" onclick="switchGatewayTab('culqi', this)">
-                        <span class="tab-btn-icon" style="display: flex; align-items: center; justify-content: center;">
-                            <img src="{{ asset('images/logo-yape.png') }}" alt="Yape" style="width: 24px; height: 24px; object-fit: contain; border-radius: 6px;">
-                        </span>
-                        <div class="tab-btn-text">
-                            <strong class="tab-title">Culqi Perú</strong>
-                            <span class="tab-subtitle">
-                                @if($culqi->is_active)
-                                    <span class="tab-dot active">●</span> Activa
-                                @else
-                                    <span class="tab-dot inactive">○</span> Inactiva
-                                @endif
-                                • QR, Yape & Tarjetas
-                            </span>
-                        </div>
-                        <span class="badge-tab-highlight">Soporte QR 📱</span>
-                    </button>
-                </div>
-
                 <!-- ========================================================================= -->
-                <!-- PESTAÑA 1: IZIPAY PERÚ -->
+                <!-- CONFIGURACIÓN OFICIAL: CULQI PERÚ (QR, TARJETAS, YAPE, PAGOEFECTIVO) -->
                 <!-- ========================================================================= -->
-                <div id="tab-content-izipay" class="gateway-tab-content {{ $activeTab === 'izipay' ? 'active' : '' }}">
-                    <!-- HEADER PAGE COMPACTO IZIPAY -->
-                    <div class="settings-header-banner" style="margin-bottom: 1rem; padding: 1.25rem 1.5rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 0.75rem;">
-                            <div>
-                                <span class="settings-tag" style="margin-bottom: 0.25rem;">💳 PASARELA OFICIAL #1</span>
-                                <h1 class="settings-page-title" style="font-size: 1.4rem; margin: 0;">Configuración Oficial de Izipay Perú</h1>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                @if($izipay->is_active)
-                                    <span class="badge-status-pill badge-active">● Activa</span>
-                                @else
-                                    <span class="badge-status-pill badge-inactive">○ Inactiva</span>
-                                @endif
-
-                                @if($izipay->isSandbox())
-                                    <span class="badge-status-pill badge-sandbox">🧪 Sandbox (Pruebas)</span>
-                                @else
-                                    <span class="badge-status-pill badge-live">🚀 Producción (Live)</span>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- FORMULARIO IZIPAY -->
-                    <form action="{{ route('web.payment_methods.update_izipay') }}" method="POST" id="izipayConfigForm" class="settings-card-box payment-gateway-card">
-                        @csrf
-
-                        <!-- 1. BARRA DE ESTADO Y ENTORNO -->
-                        <div class="compact-controls-bar">
-                            <div class="switch-control-group">
-                                <label class="switch-container">
-                                    <input type="checkbox" name="is_active" value="1" {{ $izipay->is_active ? 'checked' : '' }}>
-                                    <span class="switch-slider"></span>
-                                </label>
-                                <span class="switch-label-text">Habilitar Izipay en la pasarela de pagos</span>
-                            </div>
-
-                            <div class="env-radios-group">
-                                <label class="env-radio-btn {{ $izipay->mode === 'sandbox' ? 'selected' : '' }}">
-                                    <input type="radio" name="mode" value="sandbox" {{ $izipay->mode === 'sandbox' ? 'checked' : '' }} onchange="updateModeUI(this)">
-                                    <span>🧪 Modo Pruebas (Sandbox)</span>
-                                </label>
-                                <label class="env-radio-btn {{ $izipay->mode === 'production' ? 'selected' : '' }}">
-                                    <input type="radio" name="mode" value="production" {{ $izipay->mode === 'production' ? 'checked' : '' }} onchange="updateModeUI(this)">
-                                    <span>🚀 Modo Producción (Live)</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- 2. GRID DE CREDENCIALES IZIPAY -->
-                        <div class="compact-section-title">
-                            <span>🔑</span> Credenciales de API REST (Back Office Izipay)
-                        </div>
-
-                        <div class="credentials-grid-4col">
-                            <!-- Col 1: Usuario -->
-                            <div class="form-group-custom">
-                                <label for="izipay_username" class="form-label-compact">Usuario / Comercio <span class="required-star">*</span></label>
-                                <div class="input-with-icon-wrapper">
-                                    <span class="input-prefix-icon">👤</span>
-                                    <input type="text" id="izipay_username" name="username" class="form-input-custom input-compact input-has-icon"
-                                        value="{{ old('username', $izipay->getCredential('username')) }}"
-                                        placeholder="Ej: 87877354">
-                                </div>
-                            </div>
-
-                            <!-- Col 2: Password -->
-                            <div class="form-group-custom">
-                                <label for="izipay_password" class="form-label-compact">Contraseña API REST <span class="required-star">*</span></label>
-                                <div class="input-with-icon-wrapper">
-                                    <span class="input-prefix-icon">🔒</span>
-                                    <input type="password" id="izipay_password" name="password" class="form-input-custom input-compact input-has-icon"
-                                        value="{{ old('password', $izipay->getCredential('password')) }}"
-                                        placeholder="Contraseña REST">
-                                    <button type="button" class="btn-toggle-secret" onclick="togglePasswordVisibility('izipay_password', this)" title="Mostrar/Ocultar">👁️</button>
-                                </div>
-                            </div>
-
-                            <!-- Col 3: Public Key -->
-                            <div class="form-group-custom">
-                                <label for="izipay_public_key" class="form-label-compact">Clave Pública (JS) <span class="required-star">*</span></label>
-                                <div class="input-with-icon-wrapper">
-                                    <span class="input-prefix-icon">🌐</span>
-                                    <input type="text" id="izipay_public_key" name="public_key" class="form-input-custom input-compact input-has-icon"
-                                        value="{{ old('public_key', $izipay->getCredential('public_key')) }}"
-                                        placeholder="87877354:publickey_...">
-                                </div>
-                            </div>
-
-                            <!-- Col 4: HMAC-SHA256 -->
-                            <div class="form-group-custom">
-                                <label for="izipay_hmac_sha256" class="form-label-compact">Clave HMAC-SHA256 <span class="required-star">*</span></label>
-                                <div class="input-with-icon-wrapper">
-                                    <span class="input-prefix-icon">🛡️</span>
-                                    <input type="password" id="izipay_hmac_sha256" name="hmac_sha256" class="form-input-custom input-compact input-has-icon"
-                                        value="{{ old('hmac_sha256', $izipay->getCredential('hmac_sha256')) }}"
-                                        placeholder="Clave HMAC-SHA256">
-                                    <button type="button" class="btn-toggle-secret" onclick="togglePasswordVisibility('izipay_hmac_sha256', this)" title="Mostrar/Ocultar">👁️</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 3. ENDPOINT Y WEBHOOK IPN IZIPAY -->
-                        <div class="endpoint-webhook-grid">
-                            <div class="form-group-custom">
-                                <label for="izipay_client_endpoint" class="form-label-compact">Endpoint del Servidor API</label>
-                                <input type="url" id="izipay_client_endpoint" name="client_endpoint" class="form-input-custom input-compact"
-                                    value="{{ old('client_endpoint', $izipay->getCredential('client_endpoint', 'https://api.micuentaweb.pe')) }}"
-                                    placeholder="https://api.micuentaweb.pe">
-                            </div>
-
-                            <div class="form-group-custom">
-                                <label class="form-label-compact">URL de Notificación Instantánea (Webhook / IPN)</label>
-                                <div class="webhook-copy-wrapper">
-                                    <input type="text" id="ipnWebhookUrl" readonly value="{{ $ipnUrl }}" class="form-input-custom input-compact" style="color: #10B981; font-family: monospace;">
-                                    <button type="button" class="btn btn-secondary btn-sm btn-copy-inline" onclick="copyWebhookUrl('ipnWebhookUrl', 'btnCopyWebhook')" id="btnCopyWebhook" title="Copiar URL">
-                                        📋 Copiar
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 4. MÉTODOS DE COBRO HABILITADOS IZIPAY -->
-                        <div class="compact-section-title" style="margin-top: 1rem;">
-                            <span>💳</span> Métodos de Cobro Habilitados en el Checkout
-                        </div>
-
-                        <div class="payment-methods-grid-4col">
-                            <!-- Tarjetas -->
-                            <div class="toggle-card-compact">
-                                <div class="toggle-card-info">
-                                    <span class="toggle-icon-small">💳</span>
-                                    <div>
-                                        <strong class="toggle-name">Tarjetas</strong>
-                                        <span class="toggle-desc">Crédito / Débito</span>
-                                    </div>
-                                </div>
-                                <label class="switch-container switch-sm">
-                                    <input type="checkbox" name="enable_cards" value="1" {{ $izipay->getSetting('enable_cards', true) ? 'checked' : '' }}>
-                                    <span class="switch-slider"></span>
-                                </label>
-                            </div>
-
-                            <!-- QR & Yape / Plin -->
-                            <div class="toggle-card-compact">
-                                <div class="toggle-card-info">
-                                    <span class="toggle-icon-small">📱</span>
-                                    <div>
-                                        <strong class="toggle-name">QR Yape / Plin</strong>
-                                        <span class="toggle-desc">Billeteras Digitales</span>
-                                    </div>
-                                </div>
-                                <label class="switch-container switch-sm">
-                                    <input type="checkbox" name="enable_qr_yape" value="1" {{ $izipay->getSetting('enable_qr_yape', true) ? 'checked' : '' }}>
-                                    <span class="switch-slider"></span>
-                                </label>
-                            </div>
-
-                            <!-- PagoEfectivo -->
-                            <div class="toggle-card-compact">
-                                <div class="toggle-card-info">
-                                    <span class="toggle-icon-small">💵</span>
-                                    <div>
-                                        <strong class="toggle-name">PagoEfectivo</strong>
-                                        <span class="toggle-desc">Banca & Agentes</span>
-                                    </div>
-                                </div>
-                                <label class="switch-container switch-sm">
-                                    <input type="checkbox" name="enable_pagoefectivo" value="1" {{ $izipay->getSetting('enable_pagoefectivo', true) ? 'checked' : '' }}>
-                                    <span class="switch-slider"></span>
-                                </label>
-                            </div>
-
-                            <!-- Tokenización -->
-                            <div class="toggle-card-compact">
-                                <div class="toggle-card-info">
-                                    <span class="toggle-icon-small">🔄</span>
-                                    <div>
-                                        <strong class="toggle-name">Tokenización</strong>
-                                        <span class="toggle-desc">Suscripciones Auto</span>
-                                    </div>
-                                </div>
-                                <label class="switch-container switch-sm">
-                                    <input type="checkbox" name="enable_recurring" value="1" {{ $izipay->getSetting('enable_recurring', true) ? 'checked' : '' }}>
-                                    <span class="switch-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- 5. BOTONES DE ACCIÓN IZIPAY -->
-                        <div class="compact-action-buttons">
-                            <button type="submit" class="btn btn-primary" style="padding: 0.75rem 1.75rem; font-weight: 800;">
-                                💾 Guardar Configuración Izipay
-                            </button>
-
-                            <button type="button" class="btn btn-outline" id="btnTestConnection" onclick="testIzipayConnection()" style="padding: 0.75rem 1.5rem; font-weight: 700;">
-                                ⚡ Probar Conexión con Izipay
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- ========================================================================= -->
-                <!-- PESTAÑA 2: CULQI PERÚ (QR, TARJETAS, YAPE, PAGOEFECTIVO) -->
-                <!-- ========================================================================= -->
-                <div id="tab-content-culqi" class="gateway-tab-content {{ $activeTab === 'culqi' ? 'active' : '' }}">
+                <div id="tab-content-culqi" class="gateway-tab-content active" style="display: block;">
                     <!-- HEADER PAGE COMPACTO CULQI -->
                     <div class="settings-header-banner culqi-banner" style="margin-bottom: 1rem; padding: 1.25rem 1.5rem;">
                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 0.75rem;">
                             <div>
+                                <span class="settings-tag culqi-tag" style="margin-bottom: 0.25rem;">🟧 PASARELA OFICIAL CULQI PERÚ</span>
+                                <h1 class="settings-page-title" style="font-size: 1.4rem; margin: 0;">Configuración Oficial de Culqi Perú</h1>
+                            </div>
                                 <span class="settings-tag culqi-tag" style="margin-bottom: 0.25rem;">🟧 PASARELA CULQI PERÚ (SDK culqi/culqi-php)</span>
                                 <h1 class="settings-page-title" style="font-size: 1.4rem; margin: 0;">Configuración Oficial de Culqi Perú</h1>
                             </div>
@@ -1073,23 +831,6 @@
 
 @push('scripts')
 <script>
-    // Cambiar entre Pestaña Izipay y Culqi
-    function switchGatewayTab(tabKey, btn) {
-        document.querySelectorAll('.gateway-tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.gateway-tab-content').forEach(c => c.classList.remove('active'));
-
-        btn.classList.add('active');
-        const content = document.getElementById('tab-content-' + tabKey);
-        if (content) {
-            content.classList.add('active');
-        }
-
-        // Actualizar URL sin recargar
-        const url = new URL(window.location.href);
-        url.searchParams.set('tab', tabKey);
-        window.history.replaceState({}, '', url);
-    }
-
     // Mostrar / Ocultar contraseñas y llaves secretas
     function togglePasswordVisibility(inputId, btn) {
         const input = document.getElementById(inputId);
@@ -1125,76 +866,6 @@
         setTimeout(() => {
             btn.innerHTML = origText;
         }, 2000);
-    }
-
-    // Probar Conexión con Izipay vía AJAX
-    function testIzipayConnection() {
-        const btn = document.getElementById('btnTestConnection');
-        const alertBox = document.getElementById('testResultAlert');
-        const username = document.getElementById('izipay_username').value;
-        const password = document.getElementById('izipay_password').value;
-        const endpoint = document.getElementById('izipay_client_endpoint').value;
-
-        btn.disabled = true;
-        const origText = btn.innerHTML;
-        btn.innerHTML = '⏳ Conectando...';
-
-        fetch("{{ route('web.payment_methods.test_izipay') }}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({
-                username: username,
-                password: password,
-                client_endpoint: endpoint
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-            btn.disabled = false;
-            btn.innerHTML = origText;
-            alertBox.style.display = 'block';
-
-            if (data.success) {
-                alertBox.className = 'alert-custom alert-success';
-                alertBox.style.cssText = 'margin-bottom: 1rem; display: flex;';
-                alertBox.innerHTML = `
-                    <div class="alert-icon-box">✓</div>
-                    <div class="alert-content">
-                        <h4>¡Conexión Exitosa con Izipay!</h4>
-                        <p>${data.message} Modo detectado: <strong>${data.mode || 'Sandbox'}</strong>.</p>
-                    </div>
-                    <button class="alert-close-btn" onclick="this.parentElement.style.display='none'">✕</button>
-                `;
-            } else {
-                alertBox.className = 'alert-custom';
-                alertBox.style.cssText = 'background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #FCA5A5; padding: 0.85rem 1rem; border-radius: 12px; display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;';
-                alertBox.innerHTML = `
-                    <div class="alert-icon-box" style="background: rgba(239, 68, 68, 0.2); color: #EF4444; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">✕</div>
-                    <div class="alert-content" style="flex: 1;">
-                        <h4 style="margin: 0; color: #EF4444; font-weight: 800; font-size: 0.95rem;">Error al conectar con Izipay</h4>
-                        <p style="margin: 0.2rem 0 0 0; font-size: 0.85rem;">${data.message}</p>
-                    </div>
-                    <button class="alert-close-btn" style="background: none; border: none; color: #FFF; font-size: 1.1rem; cursor: pointer;" onclick="this.parentElement.style.display='none'">✕</button>
-                `;
-            }
-        })
-        .catch(err => {
-            btn.disabled = false;
-            btn.innerHTML = origText;
-            alertBox.style.display = 'block';
-            alertBox.className = 'alert-custom';
-            alertBox.innerHTML = `
-                <div class="alert-icon-box" style="background: rgba(239, 68, 68, 0.2); color: #EF4444; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">✕</div>
-                <div class="alert-content" style="flex: 1;">
-                    <h4 style="margin: 0; color: #EF4444; font-weight: 800; font-size: 0.95rem;">Error de comunicación</h4>
-                    <p style="margin: 0.2rem 0 0 0; font-size: 0.85rem;">${err.message}</p>
-                </div>
-                <button class="alert-close-btn" style="background: none; border: none; color: #FFF; font-size: 1.1rem; cursor: pointer;" onclick="this.parentElement.style.display='none'">✕</button>
-            `;
-        });
     }
 
     // Probar Conexión con Culqi vía AJAX

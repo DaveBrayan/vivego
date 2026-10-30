@@ -20,15 +20,12 @@ class PaymentGatewayController extends Controller
     public function index(): View
     {
         $settings = Setting::current();
-        $izipay = PaymentGateway::getIzipay();
         $culqi = PaymentGateway::getCulqi();
-        $otherGateways = PaymentGateway::whereNotIn('code', ['izipay', 'culqi'])->get();
 
-        // Webhook URLs calculadas dinámicamente
-        $ipnUrl = url('/api/izipay/ipn');
+        // Webhook URL de Culqi calculada dinámicamente
         $culqiWebhookUrl = url('/api/culqi/webhook');
 
-        return view('web.payment_methods', compact('settings', 'izipay', 'culqi', 'otherGateways', 'ipnUrl', 'culqiWebhookUrl'));
+        return view('web.payment_methods', compact('settings', 'culqi', 'culqiWebhookUrl'));
     }
 
     /**
@@ -126,8 +123,8 @@ class PaymentGatewayController extends Controller
 
         $culqi->save();
 
-        return redirect()->route('web.payment_methods', ['tab' => 'culqi'])
-            ->with('success', '¡La configuración de Culqi (QR & Tarjetas) se ha guardado exitosamente!');
+        return redirect()->route('web.payment_methods')
+            ->with('success', '¡La configuración de Culqi se ha guardado exitosamente!');
     }
 
     /**

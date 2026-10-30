@@ -31,17 +31,10 @@
 
                 <!-- Badges de Confianza -->
                 <div class="trust-badges-group">
-                    @if(!empty($izipay?->is_active))
-                        <div class="izipay-verified-pill">
-                            <span class="izipay-logo-txt">izi<span>pay</span></span>
-                            <span class="verified-dot">● Oficial</span>
-                        </div>
-                    @endif
-
                     @if(!empty($culqi?->is_active))
                         <div class="culqi-verified-pill">
                             <span class="culqi-logo-txt">culqi</span>
-                            <span class="verified-dot">● QR & Yape</span>
+                            <span class="verified-dot">● Oficial</span>
                         </div>
                     @endif
 
@@ -351,11 +344,10 @@
                     </form>
                 </div>
 
-                <!-- PASO 3: PASARELAS DE PAGO DISPONIBLES (IZIPAY / CULQI) O CONFIRMACIÓN DE CORTESÍA -->
+                <!-- PASO 3: PASARELA DE PAGO O CONFIRMACIÓN DE CORTESÍA -->
                 @php
-                    $izipayActive = (bool) ($izipay->is_active ?? false);
                     $culqiActive = (bool) ($culqi->is_active ?? false);
-                    $defaultGateway = ($culqiActive && !$izipayActive) ? 'culqi' : 'izipay';
+                    $defaultGateway = $culqiActive ? 'culqi' : 'none';
                     $isCourtesyCart = ($grandTotal <= 0.00) || (!empty($cartItems) && collect($cartItems)->every(fn($item) => !empty($item['is_courtesy']) || (float)$item['price'] == 0));
                 @endphp
 
@@ -388,159 +380,110 @@
                     </div>
                 </div>
 
-                <!-- TARJETA REGULAR DE PASARELAS (IZIPAY / CULQI) -->
-                <div class="checkout-white-card" id="regularPaymentStepCard" style="margin-top: 1.5rem; display: {{ $isCourtesyCart ? 'none' : 'block' }};">
-                    <div class="card-step-header">
-                        <div class="step-num-badge">3</div>
-                        <div>
-                            <h2 class="card-step-title">Método de Pago Seguro</h2>
-                            <p class="card-step-subtitle">Selecciona tu pasarela preferida para pagar con Tarjetas, QR Yape / Plin o PagoEfectivo.</p>
-                        </div>
-                    </div>
-
-                    <!-- SELECTOR DE PESTAÑAS DE PASARELA EN EL CHECKOUT -->
-                    <div class="gateway-checkout-tabs">
-                        @if($izipayActive || (!$izipayActive && !$culqiActive))
-                            <button type="button" class="btn-checkout-gateway-tab {{ $defaultGateway === 'izipay' ? 'active' : '' }}" onclick="selectCheckoutGateway('izipay', this)">
-                                <span class="gtw-tab-ico">💳</span>
-                                <div>
-                                    <strong class="gtw-tab-title">Izipay Perú</strong>
-                                    <span class="gtw-tab-sub">Tarjetas, QR & Efectivo</span>
-                                </div>
-                            </button>
-                        @endif
-
-                        @if($culqiActive || (!$izipayActive && !$culqiActive))
-                            <button type="button" class="btn-checkout-gateway-tab {{ $defaultGateway === 'culqi' ? 'active' : '' }}" onclick="selectCheckoutGateway('culqi', this)">
-                                <span class="gtw-tab-ico" style="display: flex; align-items: center; justify-content: center;">
-                                    <img src="{{ asset('images/logo-yape.png') }}" alt="Yape" style="width: 28px; height: 28px; object-fit: contain; border-radius: 7px; box-shadow: 0 2px 6px rgba(116, 38, 140, 0.25);">
-                                </span>
-                                <div>
-                                    <strong class="gtw-tab-title">Culqi Perú</strong>
-                                    <span class="gtw-tab-sub">Pago con QR, Yape & Tarjetas</span>
-                                </div>
-                                <span class="gtw-tab-tag">📱 QR Yape/Plin</span>
-                            </button>
-                        @endif
-                    </div>
-
-                    <!-- Error Alert Box -->
-                    <div id="checkoutFormError" style="display: none; background: #FEF2F2; border: 1.5px solid #FCA5A5; color: #991B1B; padding: 0.85rem 1.15rem; border-radius: 12px; font-size: 0.875rem; font-weight: 600; margin-bottom: 1.25rem;"></div>
-
-                    <!-- CONTENIDO DE PASARELA: IZIPAY -->
-                    <div id="checkout-gateway-izipay" class="checkout-gateway-panel {{ $defaultGateway === 'izipay' ? 'active' : '' }}">
-                        <div class="payment-tabs-preview">
-                            <div class="pay-method-pill active">
-                                <span class="method-icon">💳</span> Tarjetas Crédito/Débito
-                            </div>
-                            <div class="pay-method-pill">
-                                <span class="method-icon">📱</span> Yape QR & Plin
-                            </div>
-                            <div class="pay-method-pill">
-                                <span class="method-icon">💵</span> PagoEfectivo
+                @if($culqiActive)
+                    <!-- TARJETA REGULAR DE PASARELA (CULQI ACTIVA) -->
+                    <div class="checkout-white-card" id="regularPaymentStepCard" style="margin-top: 1.5rem; display: {{ $isCourtesyCart ? 'none' : 'block' }};">
+                        <div class="card-step-header">
+                            <div class="step-num-badge">3</div>
+                            <div>
+                                <h2 class="card-step-title">Método de Pago Seguro</h2>
+                                <p class="card-step-subtitle">Paga de forma instantánea con Código QR (Yape, Plin), Tarjetas y PagoEfectivo.</p>
                             </div>
                         </div>
 
-                        <!-- Botón Inicial de Carga de Izipay -->
-                        <div id="initPaymentSection" style="text-align: center; padding: 1.5rem 0 0.5rem 0;">
-                            <button type="button" class="btn-pay-orange" id="btnInitIzipay" onclick="loadIzipayGateway()">
-                                <span>💳 Pagar <span id="btnPayAmountDisplay">S/ {{ number_format($grandTotal, 2) }}</span> con Izipay</span>
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                                    <polyline points="12 5 19 12 12 19"></polyline>
-                                </svg>
-                            </button>
-                            <p style="font-size: 0.825rem; color: #64748B; margin-top: 0.85rem;">
-                                🔒 Tus datos viajan cifrados bajo los estándares oficiales de seguridad de Izipay Perú.
-                            </p>
-                        </div>
+                        <!-- Error Alert Box -->
+                        <div id="checkoutFormError" style="display: none; background: #FEF2F2; border: 1.5px solid #FCA5A5; color: #991B1B; padding: 0.85rem 1.15rem; border-radius: 12px; font-size: 0.875rem; font-weight: 600; margin-bottom: 1.25rem;"></div>
 
-                        <!-- Loader Izipay -->
-                        <div id="izipayLoaderBox" style="display: none; text-align: center; padding: 2.5rem 1rem;">
-                            <div class="preloader-ring" style="width: 44px; height: 44px; margin: 0 auto 0.85rem auto; border-width: 3.5px; border-color: #FF5500; border-top-color: transparent;"></div>
-                            <p style="font-size: 0.95rem; color: #1E293B; font-weight: 700; margin: 0;">Conectando con la pasarela segura de Izipay...</p>
-                            <span style="font-size: 0.8rem; color: #64748B;">Generando sesión cifrada de pago</span>
-                        </div>
-
-                        <!-- Contenedor Oficial Krypton Form -->
-                        <div id="izipayEmbeddedContainer" style="display: none; margin-top: 1.5rem; min-height: 280px;">
-                            <div class="kr-embedded"></div>
-                        </div>
-                    </div>
-
-                    <!-- CONTENIDO DE PASARELA: CULQI -->
-                    <div id="checkout-gateway-culqi" class="checkout-gateway-panel {{ $defaultGateway === 'culqi' ? 'active' : '' }}">
-                        <!-- Botón Inicial de Carga de Culqi -->
-                        <div id="initCulqiPaymentSection" style="text-align: center; padding: 1.5rem 0 0.5rem 0;">
-                            <button type="button" class="btn-pay-orange" id="btnInitCulqi" onclick="loadCulqiGateway()" style="background: linear-gradient(135deg, #FF5500, #E64A00);">
-                                <span style="display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem;">
-                                    <img src="{{ asset('images/logo-yape.png') }}" alt="Yape" style="width: 22px; height: 22px; object-fit: contain; border-radius: 5px; vertical-align: middle;">
-                                    Generar Código QR <span id="btnPayAmountDisplayCulqi">S/ {{ number_format($grandTotal, 2) }}</span> con Culqi
-                                </span>
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                                    <polyline points="12 5 19 12 12 19"></polyline>
-                                </svg>
-                            </button>
-                            <p style="font-size: 0.825rem; color: #64748B; margin-top: 0.85rem;">
-                                🔒 Pagos instantáneos con <strong>Código QR (Yape, Plin), Tarjetas y PagoEfectivo</strong> respaldados por Culqi Perú.
-                            </p>
-                        </div>
-
-                        <!-- Loader Culqi -->
-                        <div id="culqiLoaderBox" style="display: none; text-align: center; padding: 2.5rem 1rem;">
-                            <div class="preloader-ring" style="width: 44px; height: 44px; margin: 0 auto 0.85rem auto; border-width: 3.5px; border-color: #FF5500; border-top-color: transparent;"></div>
-                            <p style="font-size: 0.95rem; color: #1E293B; font-weight: 700; margin: 0;">Generando código QR oficial en Culqi...</p>
-                            <span style="font-size: 0.8rem; color: #64748B;">Conectando con servidores de Culqi / Niubiz</span>
-                        </div>
-
-                        <!-- Contenedor Oficial QR Directo en Pantalla -->
-                        <div id="culqiQrDisplaySection" style="display: none; text-align: center; margin-top: 1rem; padding: 1.5rem 1.25rem; background: #FFFFFF; border: 2px solid #FED7AA; border-radius: 18px; box-shadow: 0 10px 25px -5px rgba(255,85,0,0.08);">
-                            <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: #FFF7ED; padding: 0.35rem 0.95rem; border-radius: 20px; color: #EA580C; font-weight: 800; font-size: 0.85rem; margin-bottom: 0.75rem;">
-                                <span>📱</span> Código QR Oficial Culqi (Yape / Plin / Billeteras)
-                            </div>
-                            <h3 style="font-size: 1.25rem; font-weight: 900; color: #0F172A; margin: 0 0 0.4rem 0;">Escanea el Código QR para Pagar</h3>
-                            <p style="font-size: 0.85rem; color: #64748B; margin: 0 0 1.25rem 0;">
-                                Abre tu app <strong>Yape</strong>, <strong>Plin</strong> o tu banca móvil y escanea el código a continuación:
-                            </p>
-
-                            <!-- QR Box -->
-                            <div style="display: inline-block; padding: 1rem; background: #FFFFFF; border-radius: 16px; border: 2px solid #FED7AA; box-shadow: 0 4px 15px rgba(0,0,0,0.06); margin-bottom: 0.85rem;">
-                                <img id="culqiQrImage" src="" alt="Código QR Culqi" style="width: 230px; height: 230px; display: block; border-radius: 8px; object-fit: contain; margin: 0 auto;">
-                                <div style="margin-top: 0.65rem; font-size: 1.2rem; font-weight: 900; color: #EA580C;" id="culqiQrAmountText">
-                                    S/ 0.00
-                                </div>
-                            </div>
-
-                            <!-- Código CIP / PagoEfectivo si existe -->
-                            <div id="culqiCipBox" style="display: none; background: #F8FAFC; border: 1px dashed #CBD5E1; padding: 0.75rem 1rem; border-radius: 12px; max-width: 360px; margin: 0 auto 1rem auto;">
-                                <span style="font-size: 0.775rem; color: #64748B; display: block;">Código de Pago CIP (PagoEfectivo / Agentes):</span>
-                                <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.25rem;">
-                                    <strong style="font-size: 1.2rem; color: #0F172A; letter-spacing: 1px;" id="culqiCipCode">---</strong>
-                                    <button type="button" class="btn btn-secondary btn-sm" onclick="copyCulqiCipCode()" style="padding: 0.25rem 0.65rem; font-size: 0.75rem; font-weight: 700;">📋 Copiar</button>
-                                </div>
-                            </div>
-
-                            <!-- Estado en tiempo real con animación de pulso -->
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 0.6rem; padding: 0.75rem; background: #F0FDF4; border-radius: 12px; border: 1px solid #BBF7D0; max-width: 440px; margin: 0 auto 1.25rem auto;">
-                                <span class="pulse-indicator" style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #16A34A; box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); animation: pulseGreen 1.5s infinite;"></span>
-                                <span style="font-size: 0.85rem; font-weight: 700; color: #166534;" id="culqiStatusMessage">Esperando tu pago... Se confirmará automáticamente</span>
-                            </div>
-
-                            <!-- Botones de Acción -->
-                            <div style="display: flex; flex-direction: column; gap: 0.6rem; max-width: 380px; margin: 0 auto;">
-                                <button type="button" class="btn btn-primary" onclick="verifyCulqiPaymentManual()" id="btnVerifyCulqiManual" style="padding: 0.75rem 1.25rem; font-weight: 800; background: linear-gradient(135deg, #FF5500, #E64A00); border-radius: 12px; width: 100%;">
-                                    ⚡ Ya realicé el pago / Verificar ahora
+                        <!-- CONTENIDO DE PASARELA: CULQI -->
+                        <div id="checkout-gateway-culqi" class="checkout-gateway-panel active" style="display: block;">
+                            <!-- Botón Inicial de Carga de Culqi -->
+                            <div id="initCulqiPaymentSection" style="text-align: center; padding: 1.5rem 0 0.5rem 0;">
+                                <button type="button" class="btn-pay-orange" id="btnInitCulqi" onclick="loadCulqiGateway()" style="background: linear-gradient(135deg, #FF5500, #E64A00); font-size: 1.05rem; padding: 1rem 2.2rem; box-shadow: 0 6px 20px rgba(255,85,0,0.35);">
+                                    <span style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                                        Realizar Pago <span id="btnPayAmountDisplayCulqi">S/ {{ number_format($grandTotal, 2) }}</span>
+                                    </span>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        <polyline points="12 5 19 12 12 19"></polyline>
+                                    </svg>
                                 </button>
-                                <button type="button" class="btn btn-outline" onclick="openCulqiCardModalDirectly()" style="padding: 0.65rem 1.25rem; font-weight: 700; color: #475569; border-color: #CBD5E1; border-radius: 12px; width: 100%;">
-                                    💳 Pagar con Tarjeta (Débito / Crédito)
-                                </button>
-                                <button type="button" onclick="cancelCulqiQrView()" style="font-size: 0.825rem; color: #94A3B8; text-decoration: underline; background: none; border: none; cursor: pointer; padding: 0.4rem;">
-                                    ← Volver o elegir otro medio de pago
-                                </button>
+                                <p style="font-size: 0.825rem; color: #64748B; margin-top: 0.85rem;">
+                                    🔒 Pagos instantáneos con <strong>Código QR (Yape, Plin), Tarjetas y PagoEfectivo</strong> respaldados por Culqi Perú.
+                                </p>
+                            </div>
+
+                            <!-- Loader Culqi -->
+                            <div id="culqiLoaderBox" style="display: none; text-align: center; padding: 2.5rem 1rem;">
+                                <div class="preloader-ring" style="width: 44px; height: 44px; margin: 0 auto 0.85rem auto; border-width: 3.5px; border-color: #FF5500; border-top-color: transparent;"></div>
+                                <p style="font-size: 0.95rem; color: #1E293B; font-weight: 700; margin: 0;">Generando código QR oficial en Culqi...</p>
+                                <span style="font-size: 0.8rem; color: #64748B;">Conectando con servidores de Culqi / Niubiz</span>
+                            </div>
+
+                            <!-- Contenedor Oficial QR Directo en Pantalla -->
+                            <div id="culqiQrDisplaySection" style="display: none; text-align: center; margin-top: 1rem; padding: 1.5rem 1.25rem; background: #FFFFFF; border: 2px solid #FED7AA; border-radius: 18px; box-shadow: 0 10px 25px -5px rgba(255,85,0,0.08);">
+                                <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: #FFF7ED; padding: 0.35rem 0.95rem; border-radius: 20px; color: #EA580C; font-weight: 800; font-size: 0.85rem; margin-bottom: 0.75rem;">
+                                    <span>📱</span> Código QR Oficial Culqi (Yape / Plin / Billeteras)
+                                </div>
+                                <h3 style="font-size: 1.25rem; font-weight: 900; color: #0F172A; margin: 0 0 0.4rem 0;">Escanea el Código QR para Pagar</h3>
+                                <p style="font-size: 0.85rem; color: #64748B; margin: 0 0 1.25rem 0;">
+                                    Abre tu app <strong>Yape</strong>, <strong>Plin</strong> o tu banca móvil y escanea el código a continuación:
+                                </p>
+
+                                <!-- QR Box -->
+                                <div style="display: inline-block; padding: 1rem; background: #FFFFFF; border-radius: 16px; border: 2px solid #FED7AA; box-shadow: 0 4px 15px rgba(0,0,0,0.06); margin-bottom: 0.85rem;">
+                                    <img id="culqiQrImage" src="" alt="Código QR Culqi" style="width: 230px; height: 230px; display: block; border-radius: 8px; object-fit: contain; margin: 0 auto;">
+                                    <div style="margin-top: 0.65rem; font-size: 1.2rem; font-weight: 900; color: #EA580C;" id="culqiQrAmountText">
+                                        S/ 0.00
+                                    </div>
+                                </div>
+
+                                <!-- Código CIP / PagoEfectivo si existe -->
+                                <div id="culqiCipBox" style="display: none; background: #F8FAFC; border: 1px dashed #CBD5E1; padding: 0.75rem 1rem; border-radius: 12px; max-width: 360px; margin: 0 auto 1rem auto;">
+                                    <span style="font-size: 0.775rem; color: #64748B; display: block;">Código de Pago CIP (PagoEfectivo / Agentes):</span>
+                                    <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.25rem;">
+                                        <strong style="font-size: 1.2rem; color: #0F172A; letter-spacing: 1px;" id="culqiCipCode">---</strong>
+                                        <button type="button" class="btn btn-secondary btn-sm" onclick="copyCulqiCipCode()" style="padding: 0.25rem 0.65rem; font-size: 0.75rem; font-weight: 700;">📋 Copiar</button>
+                                    </div>
+                                </div>
+
+                                <!-- Estado en tiempo real con animación de pulso -->
+                                <div style="display: flex; align-items: center; justify-content: center; gap: 0.6rem; padding: 0.75rem; background: #F0FDF4; border-radius: 12px; border: 1px solid #BBF7D0; max-width: 440px; margin: 0 auto 1.25rem auto;">
+                                    <span class="pulse-indicator" style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #16A34A; box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); animation: pulseGreen 1.5s infinite;"></span>
+                                    <span style="font-size: 0.85rem; font-weight: 700; color: #166534;" id="culqiStatusMessage">Esperando tu pago... Se confirmará automáticamente</span>
+                                </div>
+
+                                <!-- Botones de Acción -->
+                                <div style="display: flex; flex-direction: column; gap: 0.6rem; max-width: 380px; margin: 0 auto;">
+                                    <button type="button" class="btn btn-primary" onclick="verifyCulqiPaymentManual()" id="btnVerifyCulqiManual" style="padding: 0.75rem 1.25rem; font-weight: 800; background: linear-gradient(135deg, #FF5500, #E64A00); border-radius: 12px; width: 100%;">
+                                        ⚡ Ya realicé el pago / Verificar ahora
+                                    </button>
+                                    <button type="button" class="btn btn-outline" onclick="openCulqiCardModalDirectly()" style="padding: 0.65rem 1.25rem; font-weight: 700; color: #475569; border-color: #CBD5E1; border-radius: 12px; width: 100%;">
+                                        💳 Pagar con Tarjeta (Débito / Crédito)
+                                    </button>
+                                    <button type="button" onclick="cancelCulqiQrView()" style="font-size: 0.825rem; color: #94A3B8; text-decoration: underline; background: none; border: none; cursor: pointer; padding: 0.4rem;">
+                                        ← Volver o elegir otro medio de pago
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
+                @else
+                    <!-- AVISO CUANDO LA PASARELA ESTÁ DESHABILITADA -->
+                    <div class="checkout-white-card" id="noGatewayStepCard" style="margin-top: 1.5rem; display: {{ $isCourtesyCart ? 'none' : 'block' }}; border: 1.5px solid #FCD34D; background: #FFFBEB; border-radius: 18px;">
+                        <div style="text-align: center; padding: 2.75rem 1.5rem;">
+                            <div style="font-size: 2.75rem; margin-bottom: 0.75rem;">⚠️</div>
+                            <h3 style="font-size: 1.25rem; font-weight: 800; color: #92400E; margin-bottom: 0.5rem;">
+                                Por el momento no tenemos una pasarela de pagos activa
+                            </h3>
+                            <p style="font-size: 0.925rem; color: #B45309; max-width: 520px; margin: 0 auto 1.25rem auto; line-height: 1.55;">
+                                Las compras con pago en línea se encuentran temporalmente pausadas. Por favor, inténtalo más tarde o comunícate con la administración para adquirir tus entradas en boletería o punto de venta físico.
+                            </p>
+                            <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: #FEF3C7; padding: 0.55rem 1.2rem; border-radius: 9999px; font-size: 0.85rem; font-weight: 700; color: #78350F; border: 1px solid #FDE68A;">
+                                <span>🎟️</span> Venta disponible en boletería física y canales autorizados
+                            </div>
+                        </div>
+                    </div>
+                @endif
 
                 </div>
 
@@ -1511,11 +1454,20 @@
         }
 
         function proceedSelectedPayment() {
-            if (currentSelectedGateway === 'culqi') {
+            @if($culqiActive)
                 loadCulqiGateway();
-            } else {
-                loadIzipayGateway();
-            }
+            @else
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Pasarela No Disponible',
+                        text: 'Por el momento no tenemos una pasarela de pagos activa.',
+                        icon: 'warning',
+                        confirmButtonColor: '#FF5500'
+                    });
+                } else {
+                    alert('Por el momento no tenemos una pasarela de pagos activa.');
+                }
+            @endif
         }
 
         // =========================================================================
