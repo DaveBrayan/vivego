@@ -584,17 +584,31 @@
         }
 
         /* ESTILOS DE BUTACAS INTERACTIVAS EN MODAL POS */
+        .pos-seat-group {
+            cursor: pointer;
+        }
+        .pos-seat-group.occupied {
+            cursor: not-allowed !important;
+        }
+        .pos-seat-group text {
+            pointer-events: none;
+            user-select: none;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
         .pos-seat-rect {
             cursor: pointer;
+            fill: #10B981;
             transition: fill 0.15s ease, stroke 0.15s ease, filter 0.15s ease;
         }
 
+        .pos-seat-group:hover .pos-seat-rect,
         .pos-seat-rect:hover {
-            filter: drop-shadow(0 0 6px rgba(255, 85, 0, 0.9));
-            stroke: #FF5500 !important;
-            stroke-width: 2px !important;
+            filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.9));
+            stroke: #FFFFFF !important;
+            stroke-width: 1.8px !important;
         }
 
+        .pos-seat-group.selected .pos-seat-rect,
         .pos-seat-rect.selected {
             fill: #FF5500 !important;
             stroke: #FFFFFF !important;
@@ -602,6 +616,7 @@
             filter: drop-shadow(0 0 8px #FF5500) !important;
         }
 
+        .pos-seat-group.occupied .pos-seat-rect,
         .pos-seat-rect.occupied {
             fill: #EF4444 !important;
             stroke: #DC2626 !important;
@@ -609,6 +624,7 @@
             opacity: 0.85;
         }
 
+        .pos-seat-group.occupied:hover .pos-seat-rect,
         .pos-seat-rect.occupied:hover {
             filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.9));
             stroke: #991B1B !important;
@@ -1342,10 +1358,10 @@
                                 <svg id="posSeatMapSvg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible;" preserveAspectRatio="xMidYMid meet"></svg>
                             </div>
 
-                            <!-- Tooltip Flotante del Mapa POS -->
-                            <div id="posZoneTooltip" style="position: absolute; display: none; z-index: 50; pointer-events: none; background: #0F172A; border: 1.5px solid rgba(255, 85, 0, 0.6); border-radius: 8px; padding: 0.35rem 0.6rem; color: #FFFFFF; box-shadow: 0 10px 25px rgba(0,0,0,0.4); transform: translate(-50%, -120%); font-size: 0.72rem; white-space: nowrap;">
-                                <div id="posTooltipTitle" style="font-weight: 800; color: #FF8800;"></div>
-                                <div id="posTooltipStatus" style="font-size: 0.68rem; color: #10B981; font-weight: 700;"></div>
+                            <!-- Tooltip Flotante del Mapa POS desactivado por requerimiento -->
+                            <div id="posZoneTooltip" style="position: fixed; display: none !important; z-index: -1; pointer-events: none; opacity: 0; visibility: hidden;">
+                                <div id="posTooltipTitle" style="display: none;"></div>
+                                <div id="posTooltipStatus" style="display: none;"></div>
                             </div>
 
                             <!-- Chips de Butacas Seleccionadas -->
@@ -3178,63 +3194,61 @@
             svg.innerHTML = '';
             const NS = "http://www.w3.org/2000/svg";
 
-            // 1. Calcular caja envolvente (Bounding Box)
-            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-            let totalPointsCount = 0;
+            // Guardar coordenadas originales para consistencia e idempotencia
+            targetZone.seats.forEach(s => {
+                if (s._origX === undefined) s._origX = s.x;
+                if (s._origY === undefined) s._origY = s.y;
+            });
 
-            if (Array.isArray(targetZone.points) && targetZone.points.length >= 3) {
-                targetZone.points.forEach(p => {
-                    if (p.x < minX) minX = p.x;
-                    if (p.x > maxX) maxX = p.x;
-                    if (p.y < minY) minY = p.y;
-                    if (p.y > maxY) maxY = p.y;
-                    totalPointsCount++;
-                });
-            }
-
-            if (Array.isArray(targetZone.seats)) {
-                targetZone.seats.forEach(s => {
-                    if (s.x < minX) minX = s.x;
-                    if (s.x > maxX) maxX = s.x;
-                    if (s.y < minY) minY = s.y;
-                    if (s.y > maxY) maxY = s.y;
-                    totalPointsCount++;
-                });
-            }
-
-            if (totalPointsCount > 0) {
-                const boxWidth = Math.max(120, maxX - minX);
-                const boxHeight = Math.max(80, maxY - minY);
-                const padX = Math.max(14, Math.round(boxWidth * 0.04));
-                const padY = Math.max(14, Math.round(boxHeight * 0.05));
-                const vbX = Math.round(minX - padX);
-                const vbY = Math.round(minY - padY);
-                const vbW = Math.round(boxWidth + padX * 2);
-                const vbH = Math.round(boxHeight + padY * 2);
-                svg.setAttribute('viewBox', `${vbX} ${vbY} ${vbW} ${vbH}`);
-            } else {
-                svg.setAttribute('viewBox', '0 0 600 350');
-            }
-
-            // 2. Dibujar fondo de la zona si tiene polígono o rectángulo
-            const zoneColor = targetZone.color || '#FF5500';
+            // 1. Calcular caja envolvente de la zona (Bounding Box)
             const xs = (targetZone.points || []).map(p => p.x);
             const ys = (targetZone.points || []).map(p => p.y);
-            const zMinX = xs.length > 0 ? Math.min(...xs) : minX;
-            const zMaxX = xs.length > 0 ? Math.max(...xs) : maxX;
-            const zMinY = ys.length > 0 ? Math.min(...ys) : minY;
-            const zMaxY = ys.length > 0 ? Math.max(...ys) : maxY;
+            const seatXs = targetZone.seats.map(s => s._origX);
+            const seatYs = targetZone.seats.map(s => s._origY);
 
+            const zMinX = xs.length >= 3 ? Math.min(...xs) : Math.min(...seatXs);
+            const zMaxX = xs.length >= 3 ? Math.max(...xs) : Math.max(...seatXs);
+            const zMinY = ys.length >= 3 ? Math.min(...ys) : Math.min(...seatYs);
+            const zMaxY = ys.length >= 3 ? Math.max(...ys) : Math.max(...seatYs);
+            const zW = Math.max(20, zMaxX - zMinX);
+            const zH = Math.max(20, zMaxY - zMinY);
+
+            const sMinX = Math.min(...seatXs);
+            const sMaxX = Math.max(...seatXs);
+            const sMinY = Math.min(...seatYs);
+            const sMaxY = Math.max(...seatYs);
+            const sW = Math.max(1, sMaxX - sMinX);
+            const sH = Math.max(1, sMaxY - sMinY);
+
+            const sCols = parseInt(targetZone.seat_cols || targetZone.cols) || (Array.isArray(targetZone.seats) ? new Set(targetZone.seats.map(s => s.col)).size : 10);
+            const sRows = parseInt(targetZone.seat_rows || targetZone.rows) || (Array.isArray(targetZone.seats) ? new Set(targetZone.seats.map(s => s.row)).size : 5);
+
+            // Ajustar viewBox del SVG centrado en la zona con margen estético
+            const padX = Math.max(12, Math.round(zW * 0.035));
+            const padY = Math.max(12, Math.round(zH * 0.045));
+            svg.setAttribute('viewBox', `${Math.round(zMinX - padX)} ${Math.round(zMinY - padY)} ${Math.round(zW + padX * 2)} ${Math.round(zH + padY * 2)}`);
+
+            // Defs con sombra suave para las butacas
+            const defs = document.createElementNS(NS, 'defs');
+            defs.innerHTML = `
+                <filter id="posSeatShadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="1.2" stdDeviation="1.5" flood-color="#000000" flood-opacity="0.25" />
+                </filter>
+            `;
+            svg.appendChild(defs);
+
+            // 2. Dibujar superficie de fondo de la zona si tiene polígono o rectángulo
+            const zoneColor = targetZone.color || '#FF5500';
             const bgGroup = document.createElementNS(NS, 'g');
             let zoneSurface;
             if (Array.isArray(targetZone.points) && targetZone.points.length === 4) {
                 zoneSurface = document.createElementNS(NS, 'rect');
                 zoneSurface.setAttribute('x', zMinX);
                 zoneSurface.setAttribute('y', zMinY);
-                zoneSurface.setAttribute('width', zMaxX - zMinX);
-                zoneSurface.setAttribute('height', zMaxY - zMinY);
-                zoneSurface.setAttribute('rx', 10);
-                zoneSurface.setAttribute('ry', 10);
+                zoneSurface.setAttribute('width', zW);
+                zoneSurface.setAttribute('height', zH);
+                zoneSurface.setAttribute('rx', 8);
+                zoneSurface.setAttribute('ry', 8);
             } else if (Array.isArray(targetZone.points) && targetZone.points.length >= 3) {
                 zoneSurface = document.createElementNS(NS, 'polygon');
                 zoneSurface.setAttribute('points', targetZone.points.map(p => `${p.x},${p.y}`).join(' '));
@@ -3250,39 +3264,147 @@
             }
             svg.appendChild(bgGroup);
 
-            // 3. Dibujar cada butaca
-            const seatsGroup = document.createElementNS(NS, 'g');
-            const seatSide = 12;
-            const halfSide = seatSide / 2;
+            // 3. Márgenes y cálculo dinámico de dimensiones de butacas
+            let outerMarginX = Math.max(20, Math.min(30, Math.round(zW * 0.042)));
+            if (sCols >= 16) {
+                outerMarginX = Math.max(18, Math.min(26, Math.round(zW * 0.038)));
+            } else if (sCols >= 10) {
+                outerMarginX = Math.max(22, Math.min(32, Math.round(zW * 0.050)));
+            }
 
-            targetZone.seats.forEach(seat => {
-                const seatCode = formatShortSeatCodeJs(seat);
+            let outerMarginY = Math.max(18, Math.min(26, Math.round(zH * 0.070)));
+            if (sRows >= 10) {
+                outerMarginY = Math.max(16, Math.min(24, Math.round(zH * 0.060)));
+            }
+
+            const availInnerW = Math.max(20, zW - 2 * outerMarginX);
+            const availInnerH = Math.max(20, zH - 2 * outerMarginY);
+
+            let maxSideByCol = availInnerW;
+            if (sCols > 1) {
+                maxSideByCol = Math.floor((availInnerW - (sCols - 1) * 4.5) / sCols);
+            }
+            let maxSideByRow = availInnerH;
+            if (sRows > 1) {
+                maxSideByRow = Math.floor((availInnerH - (sRows - 1) * 5.0) / sRows);
+            }
+
+            const seatSide = Math.max(12, Math.min(40, Math.min(maxSideByCol, maxSideByRow)));
+            const halfSide = seatSide / 2;
+            const cornerRadius = Math.max(2.5, Math.min(6, Math.round(seatSide * 0.18)));
+            const strokeW = seatSide < 18 ? '1.0' : '1.3';
+
+            let targetMinX = zMinX + outerMarginX + halfSide;
+            let targetMaxX = zMaxX - outerMarginX - halfSide;
+            if (targetMaxX < targetMinX) {
+                const midX = (zMinX + zMaxX) / 2;
+                targetMinX = midX;
+                targetMaxX = midX;
+            }
+            const targetW = Math.max(1, targetMaxX - targetMinX);
+
+            let targetMinY = zMinY + outerMarginY + halfSide;
+            let targetMaxY = zMaxY - outerMarginY - halfSide;
+            if (targetMaxY < targetMinY) {
+                const midY = (zMinY + zMaxY) / 2;
+                targetMinY = midY;
+                targetMaxY = midY;
+            }
+            const targetH = Math.max(1, targetMaxY - targetMinY);
+
+            // Reubicar las butacas asegurando márgenes limpios y sin sobrepasar bordes
+            if (sW > 0) {
+                targetZone.seats.forEach(s => {
+                    const normX = (s._origX - sMinX) / sW;
+                    s.x = Math.round(targetMinX + normX * targetW);
+                });
+            } else {
+                targetZone.seats.forEach(s => {
+                    s.x = Math.round((targetMinX + targetMaxX) / 2);
+                });
+            }
+
+            if (sH > 0) {
+                targetZone.seats.forEach(s => {
+                    const normY = (s._origY - sMinY) / sH;
+                    s.y = Math.round(targetMinY + normY * targetH);
+                });
+            } else {
+                targetZone.seats.forEach(s => {
+                    s.y = Math.round((targetMinY + targetMaxY) / 2);
+                });
+            }
+
+            // 4. Dibujar cada butaca como grupo con su cuadro y su numeración visible
+            const seatsGroup = document.createElementNS(NS, 'g');
+
+            targetZone.seats.forEach((seat, sIdx) => {
+                const seatCode = formatShortSeatCodeJs(seat) || String(sIdx + 1);
                 const isOccupied = isPosSeatOccupied(targetZone.name, seatCode);
                 const isSelected = posSelectedSeats.includes(seatCode);
+
+                let dynamicFontSize = Math.max(6.5, Math.min(13, Math.round(seatSide * 0.44)));
+                let letterSpacing = '-0.2px';
+                if (seatCode.length >= 4) {
+                    dynamicFontSize = Math.max(6, Math.min(9.5, Math.round(seatSide * 0.31)));
+                    letterSpacing = '-0.5px';
+                } else if (seatCode.length === 3) {
+                    dynamicFontSize = Math.max(7.2, Math.min(11, Math.round(seatSide * 0.40)));
+                    letterSpacing = '-0.3px';
+                } else if (seatCode.length === 2) {
+                    dynamicFontSize = Math.max(8.2, Math.min(12.5, Math.round(seatSide * 0.46)));
+                    letterSpacing = '-0.2px';
+                } else {
+                    dynamicFontSize = Math.max(9, Math.min(14, Math.round(seatSide * 0.50)));
+                    letterSpacing = '0px';
+                }
+
+                const seatG = document.createElementNS(NS, 'g');
+                seatG.setAttribute('class', `pos-seat-group ${isOccupied ? 'occupied' : ''} ${isSelected ? 'selected' : ''}`);
+                seatG.setAttribute('data-seat-id', seatCode);
+                seatG.setAttribute('data-zone-name', targetZone.name);
+                seatG.style.cursor = isOccupied ? 'not-allowed' : 'pointer';
 
                 const rect = document.createElementNS(NS, 'rect');
                 rect.setAttribute('x', seat.x - halfSide);
                 rect.setAttribute('y', seat.y - halfSide);
                 rect.setAttribute('width', seatSide);
                 rect.setAttribute('height', seatSide);
-                rect.setAttribute('rx', 2.8);
-                rect.setAttribute('ry', 2.8);
+                rect.setAttribute('rx', cornerRadius);
+                rect.setAttribute('ry', cornerRadius);
                 rect.setAttribute('class', `pos-seat-rect ${isOccupied ? 'occupied' : ''} ${isSelected ? 'selected' : ''}`);
-                rect.setAttribute('fill', isOccupied ? '#EF4444' : (isSelected ? '#FF5500' : (zoneColor || '#10B981')));
+                rect.setAttribute('fill', isOccupied ? '#EF4444' : (isSelected ? '#FF5500' : '#10B981'));
                 rect.setAttribute('stroke', isOccupied ? '#DC2626' : (isSelected ? '#FFFFFF' : '#FFFFFF'));
-                rect.setAttribute('stroke-width', '1.2');
+                rect.setAttribute('stroke-width', strokeW);
+                rect.setAttribute('stroke-opacity', isOccupied ? '0.9' : '0.95');
+                rect.setAttribute('filter', 'url(#posSeatShadow)');
                 rect.setAttribute('data-seat-id', seatCode);
                 rect.setAttribute('data-zone-name', targetZone.name);
+                seatG.appendChild(rect);
 
-                rect.addEventListener('mouseenter', (e) => onPosSeatMouseEnter(e, seat, targetZone, isOccupied));
-                rect.addEventListener('mousemove', (e) => onPosSeatMouseMove(e));
-                rect.addEventListener('mouseleave', () => onPosSeatMouseLeave());
-                rect.addEventListener('click', (e) => {
+                if (seatSide >= 8) {
+                    const txt = document.createElementNS(NS, 'text');
+                    txt.setAttribute('x', seat.x);
+                    txt.setAttribute('y', seat.y);
+                    txt.setAttribute('text-anchor', 'middle');
+                    txt.setAttribute('dominant-baseline', 'central');
+                    txt.setAttribute('fill', '#FFFFFF');
+                    txt.setAttribute('font-size', dynamicFontSize);
+                    txt.setAttribute('letter-spacing', letterSpacing);
+                    txt.setAttribute('font-weight', '900');
+                    txt.setAttribute('font-family', "'Inter', system-ui, -apple-system, sans-serif");
+                    txt.setAttribute('pointer-events', 'none');
+                    txt.textContent = seatCode;
+                    seatG.appendChild(txt);
+                }
+
+                // Clic directo para seleccionar / deseleccionar butaca (sin tooltip flotante)
+                seatG.addEventListener('click', (e) => {
                     e.stopPropagation();
                     togglePosSeat(seatCode, targetZone.name, isOccupied);
                 });
 
-                seatsGroup.appendChild(rect);
+                seatsGroup.appendChild(seatG);
             });
 
             svg.appendChild(seatsGroup);
@@ -3291,49 +3413,11 @@
         }
 
         function onPosSeatMouseEnter(e, seat, zone, isOccupied) {
-            const tooltip = document.getElementById('posZoneTooltip');
-            const titleEl = document.getElementById('posTooltipTitle');
-            const statusEl = document.getElementById('posTooltipStatus');
-            if (!tooltip) return;
-
-            const seatCode = formatShortSeatCodeJs(seat);
-            const isSelected = posSelectedSeats.includes(seatCode);
-
-            if (titleEl) {
-                const rowStr = seat.row ? `Fila ${seat.row}` : '';
-                const numStr = (seat.number || seat.col) ? `Asiento ${seat.number || seat.col}` : '';
-                const fullLabel = [rowStr, numStr].filter(Boolean).join(' - ') || seatCode;
-                titleEl.textContent = `🪑 ${zone.name} (${fullLabel} · ${seatCode})`;
-            }
-
-            if (statusEl) {
-                if (isOccupied) {
-                    statusEl.textContent = '🚫 OCUPADA / VENDIDA';
-                    statusEl.style.color = '#EF4444';
-                } else if (isSelected) {
-                    statusEl.textContent = `🟠 SELECCIONADA (S/ ${selectedZonePrice.toFixed(2)}) · Clic para desmarcar`;
-                    statusEl.style.color = '#FF5500';
-                } else {
-                    statusEl.textContent = `🟢 DISPONIBLE (S/ ${selectedZonePrice.toFixed(2)}) · Clic para elegir`;
-                    statusEl.style.color = '#10B981';
-                }
-            }
-
-            tooltip.style.display = 'block';
-            onPosSeatMouseMove(e);
+            // Desactivado a petición del usuario (sin burbuja al hacer hover)
         }
 
         function onPosSeatMouseMove(e) {
-            const tooltip = document.getElementById('posZoneTooltip');
-            const container = document.getElementById('posSeatMapCanvasLayer');
-            if (!tooltip || !container) return;
-
-            const rect = container.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            tooltip.style.left = `${x}px`;
-            tooltip.style.top = `${y}px`;
+            // Desactivado a petición del usuario
         }
 
         function onPosSeatMouseLeave() {
@@ -3355,16 +3439,16 @@
             }
 
             const rect = document.querySelector(`.pos-seat-rect[data-seat-id="${seatCode}"]`);
-            const targetZone = getActivePosZone(zoneName);
-            const zoneColor = targetZone ? (targetZone.color || '#10B981') : '#10B981';
+            const group = document.querySelector(`.pos-seat-group[data-seat-id="${seatCode}"]`);
 
             if (posSelectedSeats.includes(seatCode)) {
                 posSelectedSeats = posSelectedSeats.filter(c => c !== seatCode);
                 if (rect) {
                     rect.classList.remove('selected');
-                    rect.setAttribute('fill', zoneColor);
+                    rect.setAttribute('fill', '#10B981');
                     rect.setAttribute('stroke', '#FFFFFF');
                 }
+                if (group) group.classList.remove('selected');
             } else {
                 posSelectedSeats.push(seatCode);
                 if (rect) {
@@ -3372,17 +3456,20 @@
                     rect.setAttribute('fill', '#FF5500');
                     rect.setAttribute('stroke', '#FFFFFF');
                 }
+                if (group) group.classList.add('selected');
             }
 
-            const newQty = Math.max(1, posSelectedSeats.length);
+            const newQty = posSelectedSeats.length;
             const qtyInput = document.getElementById('pos_quantity');
             if (qtyInput) {
-                qtyInput.value = newQty;
+                qtyInput.value = newQty > 0 ? newQty : 1;
             }
 
             document.querySelectorAll('.pos-quick-btn[id^="btnQuickQty"]').forEach(b => b.classList.remove('active'));
-            const quickBtn = document.getElementById(`btnQuickQty${newQty}`);
-            if (quickBtn) quickBtn.classList.add('active');
+            if (newQty > 0) {
+                const quickBtn = document.getElementById(`btnQuickQty${newQty}`);
+                if (quickBtn) quickBtn.classList.add('active');
+            }
 
             updatePosSelectedSeatsTags();
             calculatePosTotal();
@@ -3394,21 +3481,20 @@
 
         function clearPosSelectedSeats() {
             posSelectedSeats = [];
-            const targetZone = getActivePosZone();
-            const zoneColor = targetZone ? (targetZone.color || '#10B981') : '#10B981';
 
             document.querySelectorAll('.pos-seat-rect.selected').forEach(rect => {
                 rect.classList.remove('selected');
-                rect.setAttribute('fill', zoneColor);
+                rect.setAttribute('fill', '#10B981');
                 rect.setAttribute('stroke', '#FFFFFF');
+            });
+            document.querySelectorAll('.pos-seat-group.selected').forEach(group => {
+                group.classList.remove('selected');
             });
 
             const qtyInput = document.getElementById('pos_quantity');
             if (qtyInput) qtyInput.value = 1;
 
             document.querySelectorAll('.pos-quick-btn[id^="btnQuickQty"]').forEach(b => b.classList.remove('active'));
-            const btn1 = document.getElementById('btnQuickQty1');
-            if (btn1) btn1.classList.add('active');
 
             updatePosSelectedSeatsTags();
             calculatePosTotal();
@@ -3447,14 +3533,12 @@
             const hasSeats = renderPosSeatMap(name);
 
             if (hasSeats) {
-                // Auto-seleccionar primer asiento libre por defecto
-                const firstAvailRect = document.querySelector('.pos-seat-rect:not(.occupied)');
-                if (firstAvailRect) {
-                    const firstCode = firstAvailRect.getAttribute('data-seat-id');
-                    if (firstCode) {
-                        togglePosSeat(firstCode, name, false);
-                    }
-                }
+                // Por defecto ninguna butaca seleccionada
+                posSelectedSeats = [];
+                updatePosSelectedSeatsTags();
+                const qtyInput = document.getElementById('pos_quantity');
+                if (qtyInput) qtyInput.value = 1;
+                document.querySelectorAll('.pos-quick-btn[id^="btnQuickQty"]').forEach(b => b.classList.remove('active'));
             } else {
                 const qtyInput = document.getElementById('pos_quantity');
                 if (qtyInput) {
@@ -3665,6 +3749,7 @@
             if (modal) {
                 modal.classList.remove('active');
             }
+            onPosSeatMouseLeave();
             setPosNominationMode('general');
             window.posNominatedAttendees = [];
             closeSaleClientDropdown();
@@ -3974,7 +4059,7 @@
                         else break;
                     }
                 } else if (targetQty < posSelectedSeats.length) {
-                    while (posSelectedSeats.length > targetQty && posSelectedSeats.length > 1) {
+                    while (posSelectedSeats.length > targetQty && posSelectedSeats.length > 0) {
                         const lastCode = posSelectedSeats[posSelectedSeats.length - 1];
                         togglePosSeat(lastCode, selectedZoneName, false);
                     }
@@ -4007,7 +4092,7 @@
                         const c = nextRect.getAttribute('data-seat-id');
                         if (c) togglePosSeat(c, selectedZoneName, false);
                     }
-                } else if (step < 0 && posSelectedSeats.length > 1) {
+                } else if (step < 0 && posSelectedSeats.length > 0) {
                     const lastCode = posSelectedSeats[posSelectedSeats.length - 1];
                     togglePosSeat(lastCode, selectedZoneName, false);
                 }
@@ -4034,14 +4119,20 @@
             const totalDisplay = document.getElementById('posTotalAmountDisplay');
             const unitPriceDesc = document.getElementById('posUnitPriceDesc');
 
-            const quantity = parseInt(qtyInput?.value, 10) || 1;
+            const targetZone = getActivePosZone();
+            const hasSeats = targetZone && Array.isArray(targetZone.seats) && targetZone.seats.length > 0;
+            const quantity = (hasSeats && posSelectedSeats.length === 0) ? 0 : (hasSeats ? posSelectedSeats.length : (parseInt(qtyInput?.value, 10) || 1));
             currentTotalToPay = Math.round(selectedZonePrice * quantity * 100) / 100;
 
             if (totalDisplay) {
                 totalDisplay.textContent = `S/ ${currentTotalToPay.toFixed(2)}`;
             }
             if (unitPriceDesc) {
-                unitPriceDesc.textContent = `${quantity} entrada(s) x S/ ${selectedZonePrice.toFixed(2)}`;
+                if (hasSeats && quantity === 0) {
+                    unitPriceDesc.textContent = `0 butacas seleccionadas (S/ ${selectedZonePrice.toFixed(2)} c/u)`;
+                } else {
+                    unitPriceDesc.textContent = `${quantity} entrada(s) x S/ ${selectedZonePrice.toFixed(2)}`;
+                }
             }
 
             if (window.posNominationMode === 'nominated') {
