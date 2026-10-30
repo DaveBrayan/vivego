@@ -483,34 +483,68 @@
                     const sCols = parseInt(z.seat_cols || z.cols) || (Array.isArray(z.seats) ? new Set(z.seats.map(s => s.col)).size : 10);
                     const sRows = parseInt(z.seat_rows || z.rows) || (Array.isArray(z.seats) ? new Set(z.seats.map(s => s.row)).size : 5);
 
-                    // Reducir márgenes laterales para pegar las butacas más a los bordes de la zona
-                    let targetPadX = Math.max(12, Math.min(18, Math.round(zW * 0.025)));
+                    // Margen visual garantizado entre los bordes de la zona y los extremos de las butacas exteriores
+                    // (evita que la primera columna y la última queden pegadas a las líneas de borde)
+                    let outerMarginX = Math.max(22, Math.min(32, Math.round(zW * 0.045)));
                     if (sCols >= 16) {
-                        targetPadX = Math.max(10, Math.min(15, Math.round(zW * 0.02)));
+                        outerMarginX = Math.max(20, Math.min(28, Math.round(zW * 0.040)));
                     } else if (sCols >= 10) {
-                        targetPadX = Math.max(14, Math.min(20, Math.round(zW * 0.035)));
+                        outerMarginX = Math.max(24, Math.min(34, Math.round(zW * 0.055)));
                     } else {
-                        targetPadX = Math.max(16, Math.min(26, Math.round(zW * 0.05)));
+                        outerMarginX = Math.max(26, Math.min(40, Math.round(zW * 0.070)));
                     }
 
-                    let targetPadY = Math.max(16, Math.min(24, Math.round(zH * 0.065)));
+                    let outerMarginY = Math.max(18, Math.min(28, Math.round(zH * 0.075)));
                     if (sRows >= 10) {
-                        targetPadY = Math.max(14, Math.min(20, Math.round(zH * 0.05)));
+                        outerMarginY = Math.max(16, Math.min(24, Math.round(zH * 0.060)));
                     } else if (sRows >= 6) {
-                        targetPadY = Math.max(16, Math.min(22, Math.round(zH * 0.065)));
+                        outerMarginY = Math.max(18, Math.min(26, Math.round(zH * 0.070)));
                     } else {
-                        targetPadY = Math.max(18, Math.min(26, Math.round(zH * 0.08)));
+                        outerMarginY = Math.max(20, Math.min(32, Math.round(zH * 0.085)));
                     }
 
-                    const targetMinX = zMinX + targetPadX;
-                    const targetMaxX = zMaxX - targetPadX;
-                    const targetW = Math.max(10, targetMaxX - targetMinX);
+                    // Espacio interior disponible dentro de los márgenes garantizados
+                    const availInnerW = Math.max(20, zW - 2 * outerMarginX);
+                    const availInnerH = Math.max(20, zH - 2 * outerMarginY);
 
-                    const targetMinY = zMinY + targetPadY;
-                    const targetMaxY = zMaxY - targetPadY;
-                    const targetH = Math.max(10, targetMaxY - targetMinY);
+                    // Para N columnas, hay N asientos y (N - 1) separaciones libres de 4 a 5px
+                    let maxSideByCol = availInnerW;
+                    if (sCols > 1) {
+                        maxSideByCol = Math.floor((availInnerW - (sCols - 1) * 4.5) / sCols);
+                    }
+                    let maxSideByRow = availInnerH;
+                    if (sRows > 1) {
+                        maxSideByRow = Math.floor((availInnerH - (sRows - 1) * 5.0) / sRows);
+                    }
 
-                    // Extender las butacas uniformemente hacia los laterales en la vista previa
+                    // Tamaño ideal de la butaca para que luzca grande y notoria con separación limpia
+                    const seatSide = Math.max(12, Math.min(42, Math.min(maxSideByCol, maxSideByRow)));
+                    const halfSide = seatSide / 2;
+                    const cornerRadius = Math.max(3, Math.min(6, Math.round(seatSide * 0.18)));
+                    const strokeW = seatSide < 20 ? '1.0' : (seatSide < 28 ? '1.3' : '1.6');
+
+                    // Centros de la primera y última butaca:
+                    // Se suma/resta halfSide para que el borde exterior de la butaca quede EXACTAMENTE
+                    // a outerMarginX del borde de la zona, dejando un margen limpio y uniforme a los laterales
+                    let targetMinX = zMinX + outerMarginX + halfSide;
+                    let targetMaxX = zMaxX - outerMarginX - halfSide;
+                    if (targetMaxX < targetMinX) {
+                        const midX = (zMinX + zMaxX) / 2;
+                        targetMinX = midX;
+                        targetMaxX = midX;
+                    }
+                    const targetW = Math.max(1, targetMaxX - targetMinX);
+
+                    let targetMinY = zMinY + outerMarginY + halfSide;
+                    let targetMaxY = zMaxY - outerMarginY - halfSide;
+                    if (targetMaxY < targetMinY) {
+                        const midY = (zMinY + zMaxY) / 2;
+                        targetMinY = midY;
+                        targetMaxY = midY;
+                    }
+                    const targetH = Math.max(1, targetMaxY - targetMinY);
+
+                    // Reubicar las butacas respetando el margen lateral y vertical
                     if (sW > 0) {
                         z.seats.forEach(s => {
                             const normX = (s._origX - sMinX) / sW;
@@ -532,28 +566,6 @@
                             s.y = Math.round((targetMinY + targetMaxY) / 2);
                         });
                     }
-
-                    // Calcular tamaño dinámico de la butaca según separación (sin traslape horizontal o vertical)
-                    let minStep = 32;
-                    if (z.seats.length >= 2) {
-                        let dMin = Infinity;
-                        const sampleLimit = Math.min(z.seats.length, 120);
-                        for (let i = 0; i < sampleLimit; i++) {
-                            for (let j = i + 1; j < Math.min(sampleLimit, i + 35); j++) {
-                                const dist = Math.hypot(z.seats[i].x - z.seats[j].x, z.seats[i].y - z.seats[j].y);
-                                if (dist > 4 && dist < dMin) dMin = dist;
-                            }
-                        }
-                        if (dMin < Infinity) minStep = dMin;
-                    }
-
-                    // Hacer las butacas más grandes y notorias en la vista previa con separación limpia
-                    const maxAllowedSide = Math.max(12, Math.floor(minStep - 3.5));
-                    const idealSide = Math.round(minStep * 0.85);
-                    const seatSide = Math.max(12, Math.min(48, Math.min(idealSide, maxAllowedSide)));
-                    const halfSide = seatSide / 2;
-                    const cornerRadius = Math.max(3, Math.min(7, Math.round(seatSide * 0.18)));
-                    const strokeW = seatSide < 20 ? '1.1' : (seatSide < 28 ? '1.5' : '1.8');
 
                     z.seats.forEach((seat, sIdx) => {
                         const isOccupied = (seat.status === 'occupied' || seat.status === 'ocupado' || seat.status === 'vendido' || seat.is_occupied);
