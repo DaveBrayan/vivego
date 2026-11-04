@@ -30,6 +30,14 @@
         }
     }
 
+    @media (max-width: 1024px) {
+        .detail-order-seatmap {
+            order: 6 !important;
+            width: 100% !important;
+            margin: 1rem 0 !important;
+        }
+    }
+
     .public-seatmap-header-bar {
         padding: 0.95rem 1.25rem;
         background: #FFFFFF;

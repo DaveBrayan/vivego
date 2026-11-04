@@ -28,20 +28,6 @@
                     <h1 class="checkout-main-title">Finalizar Compra de Entradas</h1>
                     <p class="checkout-main-subtitle">Completa tus datos y selecciona tu método de pago preferido para emitir tus boletos oficiales.</p>
                 </div>
-
-                <!-- Badges de Confianza -->
-                <div class="trust-badges-group">
-                    @if(!empty($culqi?->is_active))
-                        <div class="culqi-verified-pill">
-                            <span class="culqi-logo-txt">culqi</span>
-                            <span class="verified-dot">● Oficial</span>
-                        </div>
-                    @endif
-
-                    <div class="ssl-pill">
-                        🛡️ PCI-DSS Nivel 1
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -484,8 +470,6 @@
                         </div>
                     </div>
                 @endif
-
-                </div>
 
             </div>
 

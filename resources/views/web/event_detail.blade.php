@@ -422,6 +422,24 @@
         <!-- ==========================================
              PLANTILLA 1: ESTÁNDAR (CLÁSICA VIVE GO)
              ========================================== -->
+        <style>
+            @media (max-width: 1024px) {
+                .detail-order-1 { order: 1 !important; }
+                .detail-order-2 { order: 2 !important; }
+                .detail-order-3 { order: 3 !important; }
+                .detail-order-4 { order: 4 !important; }
+                .detail-order-5 { order: 5 !important; }
+                .detail-order-seatmap { order: 6 !important; width: 100% !important; margin: 1rem 0 !important; }
+                .detail-order-6 { order: 7 !important; width: 100% !important; margin: 1.5rem 0 2.5rem !important; }
+                .detail-order-7 { order: 8 !important; }
+                .detail-order-8 { order: 9 !important; }
+                .detail-order-9 { order: 10 !important; }
+                .detail-order-10 { order: 11 !important; }
+                .detail-order-11 { order: 12 !important; width: 100% !important; }
+                .detail-order-12 { order: 13 !important; }
+                .detail-order-13 { order: 14 !important; width: 100% !important; }
+            }
+        </style>
         <div class="event-detail-wrapper container">
             <!-- Breadcrumbs Navigation -->
             <nav class="detail-breadcrumbs">
