@@ -241,14 +241,51 @@ class DeviceApiController extends Controller
             ], 422);
         }
 
-        // 6. ¡ACCESO CONCEDIDO! Marcar boleto como usado y registrar terminal que lo escaneó
+        // 6. ¡ACCESO CONCEDIDO! Marcar boleto como usado con bloqueo atómico en transacción
+        $wasAlreadyUsed = false;
         $scanTime = now();
-        $ticket->update([
-            'is_used' => true,
-            'checked_in_at' => $scanTime,
-            'scanned_by' => $device->name,
-            'checked_in_device' => $device->name,
-        ]);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($ticket, $device, $scanTime, &$wasAlreadyUsed) {
+            $freshTicket = EventTicket::where('id', $ticket->id)->lockForUpdate()->first();
+            if (!$freshTicket || $freshTicket->is_used) {
+                $wasAlreadyUsed = true;
+                if ($freshTicket) {
+                    $ticket->is_used = true;
+                    $ticket->checked_in_at = $freshTicket->checked_in_at;
+                    $ticket->scanned_by = $freshTicket->scanned_by;
+                }
+                return;
+            }
+
+            $freshTicket->update([
+                'is_used' => true,
+                'checked_in_at' => $scanTime,
+                'scanned_by' => $device->name,
+            ]);
+
+            $ticket->is_used = true;
+            $ticket->checked_in_at = $scanTime;
+            $ticket->scanned_by = $device->name;
+        });
+
+        if ($wasAlreadyUsed) {
+            $usedTime = $ticket->checked_in_at ? $ticket->checked_in_at->format('d/m/Y h:i:s A') : 'Hora desconocida';
+            $usedDoor = $ticket->scanned_by ?: 'Control de Puerta';
+
+            return response()->json([
+                'success' => false,
+                'status' => 'already_used',
+                'title' => '🚫 BOLETO YA UTILIZADO',
+                'message' => "Este boleto ya fue ingresado el {$usedTime} en {$usedDoor}.",
+                'ticket' => [
+                    'id' => $ticket->id,
+                    'ticket_code' => $ticket->ticket_code,
+                    'buyer_name' => $ticket->buyer_name,
+                    'zone_name' => $ticket->zone_name,
+                    'checked_in_at' => $usedTime,
+                    'scanned_by' => $usedDoor,
+                ],
+            ], 422);
+        }
 
         // Registrar métricas en el dispositivo móvil
         $device->increment('scans_count');
@@ -378,6 +415,7 @@ class DeviceApiController extends Controller
 
     /**
      * Resuelve un boleto a partir de cualquier código QR, hash, token o texto alfanumérico.
+     * Garantiza resolución determinística para prevenir reutilización no autorizada.
      */
     private function resolveTicketFromInput(string $rawInput, ?Event $event = null): ?EventTicket
     {
@@ -386,14 +424,28 @@ class DeviceApiController extends Controller
 
         $targetEventId = $event ? $event->id : null;
 
+        $receiptNo = null;
+        $extractedEventId = null;
+        $hasTickIdx = false;
+        $tickIdx = 1;
         $foundHash = null;
+        $buyerDni = null;
         $ticketCode = null;
 
         if (str_contains($raw, '|')) {
             $parts = explode('|', $raw);
             foreach ($parts as $p) {
                 $pTrim = trim($p);
-                if (str_starts_with($pTrim, 'TK-') || str_starts_with($pTrim, 'N°') || str_starts_with($pTrim, 'Nº')) {
+                if (str_starts_with($pTrim, 'REC-') || preg_match('/^REC\d+/i', $pTrim)) {
+                    $receiptNo = $pTrim;
+                } elseif (str_starts_with($pTrim, 'EVT-')) {
+                    $extractedEventId = (int) substr($pTrim, 4);
+                } elseif (str_starts_with($pTrim, 'DNI-')) {
+                    $buyerDni = substr($pTrim, 4);
+                } elseif (str_starts_with($pTrim, 'TICK-')) {
+                    $tickIdx = (int) preg_replace('/[^0-9]/', '', $pTrim) ?: 1;
+                    $hasTickIdx = true;
+                } elseif (str_starts_with($pTrim, 'TK-') || str_starts_with($pTrim, 'N°') || str_starts_with($pTrim, 'Nº')) {
                     $ticketCode = $pTrim;
                 } elseif (str_starts_with($pTrim, 'HASH-')) {
                     $foundHash = substr($pTrim, 5);
@@ -403,34 +455,114 @@ class DeviceApiController extends Controller
             }
         }
 
+        $effectiveEventId = $targetEventId ?: $extractedEventId;
+
         $ticketQuery = EventTicket::query();
-        if ($targetEventId) {
-            $ticketQuery->where('event_id', $targetEventId);
+        if ($effectiveEventId) {
+            $ticketQuery->where('event_id', $effectiveEventId);
         }
 
-        $ticket = (clone $ticketQuery)->where(function ($q) use ($raw, $foundHash, $ticketCode) {
-            $q->where('qr_payload', $raw)
-              ->orWhere('ticket_code', $raw)
-              ->orWhere('validation_hash', $raw);
+        // 2. Coincidencia directa o por Hash/Token exacto
+        if ($foundHash || $ticketCode || !str_contains($raw, '|')) {
+            $ticket = (clone $ticketQuery)->where(function ($q) use ($raw, $foundHash, $ticketCode) {
+                $q->where('qr_payload', $raw);
+                if ($foundHash) {
+                    $q->orWhere('validation_hash', $foundHash)
+                      ->orWhere('validation_hash', 'LIKE', "%{$foundHash}%");
+                }
+                if ($ticketCode) {
+                    $q->orWhere('ticket_code', $ticketCode);
+                }
+                if (!str_contains($raw, '|')) {
+                    $q->orWhere('ticket_code', $raw)
+                      ->orWhere('validation_hash', $raw);
+                }
+            })
+            ->orderByDesc('is_used')
+            ->orderBy('id', 'asc')
+            ->first();
 
-            if ($foundHash) {
-                $q->orWhere('validation_hash', $foundHash)
-                  ->orWhere('validation_hash', 'LIKE', "%{$foundHash}%");
-            }
-            if ($ticketCode) {
-                $q->orWhere('ticket_code', $ticketCode);
-            }
-        })->first();
+            if ($ticket) return $ticket;
+        }
 
-        if ($ticket) return $ticket;
-
-        // Caso VGENC:
+        // 3. Caso VGENC:
         if (str_starts_with($raw, 'VGENC:')) {
-            $matched = EventTicket::where('qr_payload', $raw);
-            if ($targetEventId) {
-                $matched->where('event_id', $targetEventId);
-            }
+            $token = substr($raw, 6);
+            $matched = (clone $ticketQuery)->where(function ($q) use ($token, $raw) {
+                $q->where('qr_payload', $raw)
+                  ->orWhere('qr_payload', 'LIKE', "%{$token}%")
+                  ->orWhere('validation_hash', $token);
+            })
+            ->orderByDesc('is_used')
+            ->orderBy('id', 'asc');
             return $matched->first();
+        }
+
+        // 4. Búsqueda por número de recibo / venta en TicketSale con resolución DETERMINÍSTICA
+        if ($receiptNo || str_starts_with($raw, 'REC-') || preg_match('/^REC\d+/i', $raw)) {
+            $searchReceipt = $receiptNo ?: $raw;
+            $numOnly = preg_replace('/[^0-9]/', '', $searchReceipt);
+
+            $saleQuery = TicketSale::query();
+            if ($effectiveEventId) {
+                $saleQuery->where('event_id', $effectiveEventId);
+            }
+
+            $sale = (clone $saleQuery)->where(function ($q) use ($searchReceipt, $numOnly) {
+                $q->where('receipt_number', $searchReceipt);
+                if (!empty($numOnly)) {
+                    $q->orWhere('receipt_number', 'REC-' . str_pad($numOnly, 6, '0', STR_PAD_LEFT))
+                      ->orWhere('receipt_number', 'LIKE', "%{$numOnly}%");
+                }
+            })->first();
+
+            if ($sale) {
+                $saleTickets = EventTicket::where('ticket_sale_id', $sale->id)
+                    ->orderBy('id', 'asc')
+                    ->get();
+
+                if ($saleTickets->isNotEmpty()) {
+                    if ($hasTickIdx) {
+                        $matchedByNum = $saleTickets->where('ticket_number', $tickIdx)->first();
+                        if ($matchedByNum) {
+                            return $matchedByNum;
+                        }
+                        $zeroIndex = $tickIdx - 1;
+                        if ($zeroIndex >= 0 && $zeroIndex < $saleTickets->count()) {
+                            return $saleTickets->values()->get($zeroIndex);
+                        }
+                    } else {
+                        if ($saleTickets->count() === 1) {
+                            return $saleTickets->first();
+                        }
+                        $unused = $saleTickets->firstWhere('is_used', false);
+                        return $unused ?: $saleTickets->first();
+                    }
+                }
+                return null;
+            }
+        }
+
+        // 5. Fallback por DNI
+        if ($buyerDni && strlen($buyerDni) >= 6) {
+            $saleQuery = TicketSale::where('buyer_dni', $buyerDni);
+            if ($effectiveEventId) {
+                $saleQuery->where('event_id', $effectiveEventId);
+            }
+            $sale = $saleQuery->first();
+            if ($sale) {
+                $saleTickets = EventTicket::where('ticket_sale_id', $sale->id)->orderBy('id', 'asc')->get();
+                if ($saleTickets->isNotEmpty()) {
+                    if ($saleTickets->count() === 1) {
+                        return $saleTickets->first();
+                    }
+                    if ($hasTickIdx && ($tickIdx - 1) < $saleTickets->count()) {
+                        return $saleTickets->values()->get($tickIdx - 1);
+                    }
+                    $unused = $saleTickets->firstWhere('is_used', false);
+                    return $unused ?: $saleTickets->first();
+                }
+            }
         }
 
         return null;
