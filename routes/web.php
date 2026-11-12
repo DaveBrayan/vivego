@@ -205,6 +205,7 @@ Route::middleware([\App\Http\Middleware\EnsureAdminAuthenticated::class])->group
 
     // Registro de Correos Electrónicos (Auditoría de Envíos y Diagnóstico de Fallas)
     Route::get('/admin/registro-correos', [EmailLogController::class, 'index'])->name('web.email_logs');
+    Route::post('/admin/registro-correos/prueba', [EmailLogController::class, 'sendTest'])->name('web.email_logs.test');
     Route::get('/admin/registro-correos/{id}', [EmailLogController::class, 'show'])->name('web.email_logs.show');
     Route::post('/admin/registro-correos/{id}/reenviar', [EmailLogController::class, 'resend'])->name('web.email_logs.resend');
     Route::delete('/admin/registro-correos/{id}', [EmailLogController::class, 'destroy'])->name('web.email_logs.destroy');

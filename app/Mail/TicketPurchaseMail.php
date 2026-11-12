@@ -21,6 +21,8 @@ class TicketPurchaseMail extends Mailable
     public ?string $tempPassword;
     public bool $isNewUser;
     public ?string $customPdfBase64;
+    public bool $includeAttachment;
+    public ?string $customSubject;
     public bool $attachmentGenerated = false;
     public ?string $attachmentFilename = null;
     public ?int $attachmentSizeBytes = null;
@@ -30,12 +32,20 @@ class TicketPurchaseMail extends Mailable
     /**
      * Create a new message instance.
      */
-    public function __construct(TicketSale $sale, ?string $tempPassword = null, bool $isNewUser = false, ?string $customPdfBase64 = null)
-    {
+    public function __construct(
+        TicketSale $sale,
+        ?string $tempPassword = null,
+        bool $isNewUser = false,
+        ?string $customPdfBase64 = null,
+        bool $includeAttachment = true,
+        ?string $customSubject = null
+    ) {
         $this->sale = $sale;
         $this->tempPassword = $tempPassword;
         $this->isNewUser = $isNewUser;
         $this->customPdfBase64 = $customPdfBase64;
+        $this->includeAttachment = $includeAttachment;
+        $this->customSubject = $customSubject;
     }
 
     /**
@@ -44,7 +54,7 @@ class TicketPurchaseMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '🎟️ Tus Entradas Oficiales y Recibo de Compra #' . $this->sale->receipt_number . ' - ViveGo',
+            subject: $this->customSubject ?: ('🎟️ Tus Entradas Oficiales y Recibo de Compra #' . $this->sale->receipt_number . ' - ViveGo'),
         );
     }
 
@@ -78,6 +88,12 @@ class TicketPurchaseMail extends Mailable
         $this->attachmentSizeBytes = null;
         $this->attachmentSource = null;
         $this->attachmentError = null;
+
+        if (!$this->includeAttachment) {
+            $this->attachmentFilename = null;
+            $this->attachmentSource = 'skipped_by_mode';
+            return $attachments;
+        }
 
         try {
             // Si el cliente envió el PDF compilado en alta resolución directamente desde el navegador

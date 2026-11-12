@@ -105,6 +105,36 @@ class EmailLogController extends Controller
     }
 
     /**
+     * Envía un correo de prueba (solo HTML o con entrada PDF adjunta de prueba)
+     */
+    public function sendTest(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => 'required|email|max:255',
+            'mode' => 'required|in:email_only,with_attachment',
+        ], [
+            'email.required' => 'Ingresa un correo electrónico de destino.',
+            'email.email' => 'Ingresa una dirección de correo electrónico válida.',
+            'mode.required' => 'Selecciona el tipo de prueba a enviar.',
+            'mode.in' => 'El modo de prueba seleccionado no es válido.',
+        ]);
+
+        $withAttachment = $validated['mode'] === 'with_attachment';
+        $result = EmailLogService::sendTestEmail($validated['email'], $withAttachment);
+
+        return response()->json([
+            'success' => (bool) ($result['success'] ?? false),
+            'message' => $result['message'] ?? '',
+            'mode' => $result['mode'] ?? $validated['mode'],
+            'log_id' => $result['log']?->id ?? null,
+            'attachment_sent' => $result['attachment_sent'] ?? null,
+            'attachment_name' => $result['attachment_name'] ?? null,
+            'attachment_size' => $result['attachment_size'] ?? null,
+            'attachment_error' => $result['attachment_error'] ?? null,
+        ], ($result['success'] ?? false) ? 200 : 500);
+    }
+
+    /**
      * Retorna los detalles técnicos y mensaje de error de un log vía JSON
      */
     public function show($id): JsonResponse
@@ -117,6 +147,8 @@ class EmailLogController extends Controller
             'success' => true,
             'log' => [
                 'id' => $log->id,
+                'mail_type' => $log->mail_type,
+                'can_resend' => (bool) $log->ticket_sale_id,
                 'recipient_name' => $log->recipient_name,
                 'recipient_email' => $log->recipient_email,
                 'subject' => $log->subject,

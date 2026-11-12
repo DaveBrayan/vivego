@@ -4,7 +4,11 @@ namespace App\Services;
 
 use App\Mail\TicketPurchaseMail;
 use App\Models\EmailLog;
+use App\Models\Event;
+use App\Models\EventTicket;
 use App\Models\TicketSale;
+use App\Models\TicketTemplate;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Mail\SentMessage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -320,6 +324,210 @@ class EmailLogService
                 'log' => $log,
                 'attachment_sent' => false,
                 'attachment_name' => $mailable->attachmentFilename,
+                'attachment_size' => 0,
+                'attachment_error' => $attError,
+            ];
+        }
+    }
+
+    /**
+     * Construye datos ficticios en memoria (sin grabar en ticket_sales ni event_tickets) para pruebas de envío.
+     */
+    private static function buildTestTicketSale(string $recipientEmail): TicketSale
+    {
+        $now = now();
+        $receiptNumber = 'PRUEBA-' . $now->format('His');
+        $hashCode = 'VGTEST' . strtoupper(substr(md5($recipientEmail . $now->timestamp), 0, 4));
+
+        $testTemplate = (new TicketTemplate())->forceFill([
+            'bg_color' => '#0D1527',
+        ]);
+
+        $testEvent = (new Event())->forceFill([
+            'id' => 0,
+            'title' => 'EVENTO DE PRUEBA - BOLETO DEMO VIVEGO',
+            'venue_name' => 'LOCAL DE PRUEBA VIVEGO',
+            'address' => 'Av. Demo 123 - Lima (Boleto de Prueba)',
+            'event_date' => $now->copy()->addDays(7)->format('Y-m-d'),
+            'event_time' => '21:00',
+        ]);
+        $testEvent->setRelation('template', $testTemplate);
+
+        $testTicket = (new EventTicket())->forceFill([
+            'event_id' => 0,
+            'ticket_sale_id' => 0,
+            'zone_name' => 'ZONA VIP PRUEBA',
+            'unit_price' => 50.00,
+            'ticket_number' => 1,
+            'ticket_code' => 'PRUEBA-00001',
+            'validation_hash' => $hashCode,
+            'buyer_name' => 'Usuario de Prueba ViveGo',
+            'buyer_dni' => '00000000',
+            'qr_payload' => "VIVEGO|{$receiptNumber}|PRUEBA-NO-VALIDO",
+        ]);
+
+        $testSale = (new TicketSale())->forceFill([
+            'id' => 0,
+            'event_id' => 0,
+            'receipt_number' => $receiptNumber,
+            'buyer_name' => 'Usuario de Prueba ViveGo',
+            'buyer_dni' => '00000000',
+            'buyer_phone' => '999999999',
+            'zone_name' => 'ZONA VIP PRUEBA',
+            'unit_price' => 50.00,
+            'quantity' => 1,
+            'original_subtotal' => 50.00,
+            'discount_amount' => 0.00,
+            'total_amount' => 50.00,
+            'payment_method' => 'Prueba SMTP',
+            'sale_type' => 'digital',
+            'seller_name' => 'Registro de Correos (Prueba)',
+            'is_upgrade' => false,
+            'tickets_data' => [
+                'customer_email' => $recipientEmail,
+                'buyer_email' => $recipientEmail,
+                'items' => [[
+                    'name' => 'ZONA VIP PRUEBA',
+                    'price' => 50,
+                    'regular_price' => 50,
+                    'quantity' => 1,
+                    'subtotal' => 50,
+                    'zone_name' => 'ZONA VIP PRUEBA',
+                    'is_presale' => false,
+                ]],
+            ],
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $testSale->setRelation('event', $testEvent);
+        $testSale->setRelation('eventTickets', new EloquentCollection([$testTicket]));
+
+        return $testSale;
+    }
+
+    /**
+     * Envía un correo de diagnóstico con datos de prueba (solo HTML o con entrada PDF de prueba) y lo registra en email_logs.
+     */
+    public static function sendTestEmail(string $recipientEmail, bool $withAttachment = true): array
+    {
+        $recipientEmail = trim($recipientEmail);
+        $testSale = self::buildTestTicketSale($recipientEmail);
+        $receiptNumber = $testSale->receipt_number;
+        $mailType = $withAttachment ? 'test_email_pdf' : 'test_email';
+        $testMode = $withAttachment ? 'email_with_pdf' : 'email_only';
+        $sourceLabel = $withAttachment ? 'Prueba con Entrada PDF' : 'Prueba Solo Correo';
+        $subject = $withAttachment
+            ? "🧪 [PRUEBA + PDF] Entrada Oficial de Prueba - ViveGo (#{$receiptNumber})"
+            : "🧪 [PRUEBA SOLO CORREO] Verificación SMTP ViveGo (#{$receiptNumber})";
+
+        $mailable = new TicketPurchaseMail($testSale, null, false, null, $withAttachment, $subject);
+
+        try {
+            $sentMessage = Mail::to($recipientEmail)->send($mailable);
+            $attMeta = $withAttachment
+                ? self::verifySentPdfAttachment($sentMessage, $mailable)
+                : [
+                    'attachment_sent' => null,
+                    'attachment_name' => null,
+                    'attachment_size' => 0,
+                    'attachment_source' => 'skipped_by_mode',
+                    'attachment_error' => null,
+                ];
+
+            $log = EmailLog::create([
+                'ticket_sale_id' => null,
+                'event_id' => null,
+                'recipient_name' => $testSale->buyer_name,
+                'recipient_email' => $recipientEmail,
+                'subject' => $subject,
+                'mail_type' => $mailType,
+                'status' => 'sent',
+                'error_message' => null,
+                'attachment_sent' => $attMeta['attachment_sent'],
+                'attachment_name' => $attMeta['attachment_name'],
+                'attachment_size' => $attMeta['attachment_size'],
+                'attachment_error' => $attMeta['attachment_error'],
+                'details' => [
+                    'is_test' => true,
+                    'test_mode' => $testMode,
+                    'event_title' => $testSale->event->title,
+                    'receipt_number' => $receiptNumber,
+                    'quantity' => 1,
+                    'source_label' => $sourceLabel,
+                    'seller_name' => 'Panel Admin (Prueba)',
+                    'sent_via' => config('mail.default', 'smtp'),
+                    'attachment_sent' => $attMeta['attachment_sent'],
+                    'attachment_name' => $attMeta['attachment_name'],
+                    'attachment_size' => $attMeta['attachment_size'],
+                    'attachment_source' => $attMeta['attachment_source'],
+                    'attachment_error' => $attMeta['attachment_error'],
+                ],
+                'attempts' => 1,
+                'sent_at' => now(),
+            ]);
+
+            if ($withAttachment) {
+                $msg = $attMeta['attachment_sent']
+                    ? "Correo de prueba y entrada PDF adjunta enviados y verificados para {$recipientEmail}."
+                    : "El correo de prueba salió por SMTP a {$recipientEmail}, pero no se pudo verificar el PDF adjunto.";
+            } else {
+                $msg = "Correo de prueba (solo correo, sin adjunto) enviado correctamente a {$recipientEmail}.";
+            }
+
+            return [
+                'success' => true,
+                'message' => $msg,
+                'mode' => $testMode,
+                'log' => $log,
+                'attachment_sent' => $attMeta['attachment_sent'],
+                'attachment_name' => $attMeta['attachment_name'],
+                'attachment_size' => $attMeta['attachment_size'],
+                'attachment_error' => $attMeta['attachment_error'],
+            ];
+        } catch (\Throwable $e) {
+            $errorMsg = $e->getMessage();
+            Log::error("Fallo al enviar correo de prueba ({$testMode}) a {$recipientEmail}: {$errorMsg}");
+            $attError = $withAttachment
+                ? ($mailable->attachmentError ?: 'El envío SMTP falló antes o durante la transmisión.')
+                : null;
+
+            $log = EmailLog::create([
+                'ticket_sale_id' => null,
+                'event_id' => null,
+                'recipient_name' => $testSale->buyer_name,
+                'recipient_email' => $recipientEmail,
+                'subject' => $subject,
+                'mail_type' => $mailType,
+                'status' => 'failed',
+                'error_message' => $errorMsg,
+                'attachment_sent' => $withAttachment ? false : null,
+                'attachment_name' => $withAttachment ? $mailable->attachmentFilename : null,
+                'attachment_size' => 0,
+                'attachment_error' => $attError,
+                'details' => [
+                    'is_test' => true,
+                    'test_mode' => $testMode,
+                    'event_title' => $testSale->event->title,
+                    'receipt_number' => $receiptNumber,
+                    'source_label' => $sourceLabel,
+                    'seller_name' => 'Panel Admin (Prueba)',
+                    'exception' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'attachment_sent' => $withAttachment ? false : null,
+                    'attachment_error' => $attError,
+                ],
+                'attempts' => 1,
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Error al enviar correo de prueba: ' . $errorMsg,
+                'mode' => $testMode,
+                'log' => $log,
+                'attachment_sent' => $withAttachment ? false : null,
+                'attachment_name' => $withAttachment ? $mailable->attachmentFilename : null,
                 'attachment_size' => 0,
                 'attachment_error' => $attError,
             ];

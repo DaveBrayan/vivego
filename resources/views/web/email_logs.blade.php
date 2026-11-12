@@ -136,7 +136,10 @@
                         <h1 class="settings-page-title" style="margin-top: 0.4rem;">Registro de Correos Electrónicos</h1>
                         <p class="settings-page-subtitle">Monitoreo en tiempo real de correos emitidos, entregados y fallidos de boletos oficiales y confirmaciones.</p>
                     </div>
-                    <div style="display: flex; gap: 0.75rem; align-items: center;">
+                    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                        <button type="button" onclick="openTestEmailModal()" style="display: inline-flex; align-items: center; gap: 0.45rem; background: linear-gradient(135deg, #FF5500, #E04B00); border: none; color: #FFFFFF; border-radius: 10px; padding: 0.75rem 1.25rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 14px rgba(255, 85, 0, 0.35);">
+                            <span>🧪</span> Probar Envío de Correo
+                        </button>
                         <a href="{{ route('web.email_logs') }}" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #FFFFFF; border-radius: 10px; padding: 0.75rem 1.25rem; font-weight: 700; text-decoration: none;">
                             <span>🔄</span> Actualizar
                         </a>
@@ -342,6 +345,10 @@
                                                     <span style="font-size: 0.7rem; font-weight: 800; color: #A855F7; background: rgba(168,85,247,0.15); border: 1px solid rgba(168,85,247,0.3); padding: 0.1rem 0.45rem; border-radius: 4px;">
                                                         🎁 CORTESÍA
                                                     </span>
+                                                @elseif(in_array($log->mail_type, ['test_email', 'test_email_pdf']))
+                                                    <span style="font-size: 0.7rem; font-weight: 800; color: #FBBF24; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.35); padding: 0.1rem 0.45rem; border-radius: 4px;">
+                                                        🧪 PRUEBA
+                                                    </span>
                                                 @else
                                                     <span style="font-size: 0.7rem; font-weight: 800; color: #FF5500; background: rgba(255,85,0,0.15); border: 1px solid rgba(255,85,0,0.3); padding: 0.1rem 0.45rem; border-radius: 4px;">
                                                         🌐 TIENDA WEB
@@ -401,9 +408,15 @@
                                                             </button>
                                                         @endif
                                                     @else
-                                                        <span style="display: inline-flex; align-items: center; gap: 0.3rem; color: #64748B; font-size: 0.72rem;">
-                                                            <span>📎</span> Adjunto sin verificar (registro previo)
-                                                        </span>
+                                                        @if($log->mail_type === 'test_email' || ($log->details['test_mode'] ?? '') === 'email_only')
+                                                            <span style="display: inline-flex; align-items: center; gap: 0.3rem; color: #94A3B8; font-size: 0.72rem; background: rgba(148, 163, 184, 0.1); border: 1px solid rgba(148, 163, 184, 0.25); padding: 0.16rem 0.5rem; border-radius: 6px;">
+                                                                <span>✉️</span> Solo correo de prueba (sin adjunto)
+                                                            </span>
+                                                        @else
+                                                            <span style="display: inline-flex; align-items: center; gap: 0.3rem; color: #64748B; font-size: 0.72rem;">
+                                                                <span>📎</span> Adjunto sin verificar (registro previo)
+                                                            </span>
+                                                        @endif
                                                     @endif
                                                 </div>
                                             @else
@@ -513,6 +526,59 @@
         </main>
     </div>
 
+    <!-- MODAL DE PRUEBA DE ENVÍO DE CORREO (SOLO CORREO / CON ENTRADA PDF DE PRUEBA) -->
+    <div id="testEmailModal" class="admin-modal-backdrop" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 1.5rem;">
+        <div class="admin-modal-content" style="background: #14141E; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 20px; max-width: 580px; width: 100%; padding: 2rem; box-shadow: 0 25px 60px rgba(0,0,0,0.7); color: #FFFFFF; font-family: 'Plus Jakarta Sans', sans-serif;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">
+                <div>
+                    <h3 style="font-size: 1.25rem; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 0.6rem;">
+                        <span>🧪</span> Probar Envío de Correo
+                    </h3>
+                    <p style="margin: 0.25rem 0 0 0; font-size: 0.8rem; color: #94A3B8;">Verifica el servidor SMTP con datos de prueba o junto a una entrada PDF oficial de demostración.</p>
+                </div>
+                <button type="button" onclick="closeTestEmailModal()" style="background: none; border: none; color: #94A3B8; font-size: 1.4rem; cursor: pointer;">✕</button>
+            </div>
+
+            <div style="margin-bottom: 1.15rem;">
+                <label for="testEmailRecipient" style="display: block; font-size: 0.8rem; font-weight: 800; color: #CBD5E1; margin-bottom: 0.45rem; text-transform: uppercase; letter-spacing: 0.4px;">
+                    Correo Electrónico de Destino
+                </label>
+                <input type="email" id="testEmailRecipient" placeholder="ejemplo@correo.com" style="width: 100%; background: #0B0B12; border: 1px solid rgba(255,255,255,0.16); color: #FFFFFF; padding: 0.78rem 1rem; border-radius: 12px; font-size: 0.95rem; font-family: monospace; outline: none;">
+            </div>
+
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 0.9rem 1rem; margin-bottom: 1.25rem; font-size: 0.8rem; color: #CBD5E1; line-height: 1.5;">
+                <strong style="color: #FBBF24; display: block; margin-bottom: 0.35rem;">📦 Datos ficticios que se usarán en la prueba (sin afectar ventas ni stock):</strong>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.35rem 0.75rem; font-size: 0.775rem; color: #94A3B8;">
+                    <div>• Titular: <strong style="color: #E2E8F0;">Usuario de Prueba ViveGo</strong></div>
+                    <div>• DNI: <strong style="color: #E2E8F0;">00000000</strong></div>
+                    <div>• Evento: <strong style="color: #E2E8F0;">EVENTO DE PRUEBA DEMO</strong></div>
+                    <div>• Recibo / Ticket: <strong style="color: #60A5FA;">PRUEBA-00001</strong></div>
+                    <div>• Zona: <strong style="color: #34D399;">ZONA VIP PRUEBA (S/ 50.00)</strong></div>
+                    <div>• QR PDF: <strong style="color: #F87171;">No válido para ingreso real</strong></div>
+                </div>
+            </div>
+
+            <div id="testEmailResultBox" style="display: none; margin-bottom: 1.15rem; padding: 0.85rem 1rem; border-radius: 12px; font-size: 0.84rem; line-height: 1.45;"></div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
+                <button type="button" id="btnTestEmailOnly" onclick="sendTestEmail('email_only')" style="background: rgba(59, 130, 246, 0.16); border: 1px solid rgba(59, 130, 246, 0.45); color: #93C5FD; padding: 0.85rem 1rem; border-radius: 12px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+                    <span>✉️ Enviar Solo Correo</span>
+                    <small style="font-weight: 600; font-size: 0.72rem; opacity: 0.85;">Sin archivo PDF adjunto</small>
+                </button>
+                <button type="button" id="btnTestEmailWithPdf" onclick="sendTestEmail('with_attachment')" style="background: linear-gradient(135deg, #FF5500, #E04B00); border: none; color: #FFFFFF; padding: 0.85rem 1rem; border-radius: 12px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; box-shadow: 0 4px 15px rgba(255,85,0,0.35);">
+                    <span>📎 Correo + Entrada PDF</span>
+                    <small style="font-weight: 600; font-size: 0.72rem; opacity: 0.9;">Con boleto de prueba adjunto</small>
+                </button>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end;">
+                <button type="button" onclick="closeTestEmailModal()" class="btn btn-secondary" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #FFFFFF; padding: 0.65rem 1.25rem; border-radius: 10px; font-weight: 700; cursor: pointer;">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL DE DETALLE DE ERROR & DIAGNÓSTICO TÉCNICO -->
     <div id="emailDetailModal" class="admin-modal-backdrop" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 1.5rem;">
         <div class="admin-modal-content" style="background: #14141E; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 20px; max-width: 650px; width: 100%; padding: 2rem; box-shadow: 0 25px 60px rgba(0,0,0,0.7); color: #FFFFFF; font-family: 'Plus Jakarta Sans', sans-serif;">
@@ -582,6 +648,112 @@
     <!-- SCRIPT DE INTERACCIÓN -->
     <script>
         let currentModalLogId = null;
+        let testEmailSentInModal = false;
+
+        function openTestEmailModal() {
+            testEmailSentInModal = false;
+            const modal = document.getElementById('testEmailModal');
+            const input = document.getElementById('testEmailRecipient');
+            const resultBox = document.getElementById('testEmailResultBox');
+            resultBox.style.display = 'none';
+            resultBox.innerHTML = '';
+            modal.style.display = 'flex';
+            setTimeout(() => input?.focus(), 60);
+        }
+
+        function closeTestEmailModal() {
+            document.getElementById('testEmailModal').style.display = 'none';
+            if (testEmailSentInModal) {
+                window.location.reload();
+            }
+        }
+
+        async function sendTestEmail(mode) {
+            const input = document.getElementById('testEmailRecipient');
+            const resultBox = document.getElementById('testEmailResultBox');
+            const btnOnly = document.getElementById('btnTestEmailOnly');
+            const btnPdf = document.getElementById('btnTestEmailWithPdf');
+            const email = (input?.value || '').trim();
+
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                resultBox.style.display = 'block';
+                resultBox.style.background = 'rgba(239, 68, 68, 0.14)';
+                resultBox.style.border = '1px solid rgba(239, 68, 68, 0.35)';
+                resultBox.style.color = '#FCA5A5';
+                resultBox.innerHTML = '⚠️ Ingresa una dirección de correo electrónico válida para realizar la prueba.';
+                input?.focus();
+                return;
+            }
+
+            btnOnly.disabled = true;
+            btnPdf.disabled = true;
+            btnOnly.style.opacity = '0.6';
+            btnPdf.style.opacity = '0.6';
+            resultBox.style.display = 'block';
+            resultBox.style.background = 'rgba(59, 130, 246, 0.12)';
+            resultBox.style.border = '1px solid rgba(59, 130, 246, 0.32)';
+            resultBox.style.color = '#93C5FD';
+            resultBox.innerHTML = mode === 'with_attachment'
+                ? '⏳ Compilando entrada PDF oficial de prueba y enviando por SMTP...'
+                : '⏳ Enviando correo de prueba (sin adjunto) por SMTP...';
+
+            try {
+                const res = await fetch('{{ route("web.email_logs.test") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ email, mode })
+                });
+
+                const data = await res.json();
+                if (data.log_id || res.ok) {
+                    testEmailSentInModal = true;
+                }
+
+                if (res.ok && data.success) {
+                    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+                    if (mode === 'with_attachment') {
+                        if (data.attachment_sent === true) {
+                            const kb = data.attachment_size ? ` (${Math.max(1, Math.round(data.attachment_size / 1024))} KB)` : '';
+                            resultBox.style.background = 'rgba(16, 185, 129, 0.14)';
+                            resultBox.style.border = '1px solid rgba(16, 185, 129, 0.35)';
+                            resultBox.style.color = '#6EE7B7';
+                            resultBox.innerHTML = `✅ <strong>¡Prueba Exitosa!</strong> Correo entregado y PDF verificado: <span style="font-family:monospace;">${esc(data.attachment_name || 'Entrada_Oficial.pdf')}</span>${kb} <span style="opacity:0.8;">(Log #${esc(data.log_id)})</span>`;
+                        } else {
+                            resultBox.style.background = 'rgba(245, 158, 11, 0.14)';
+                            resultBox.style.border = '1px solid rgba(245, 158, 11, 0.38)';
+                            resultBox.style.color = '#FDE68A';
+                            resultBox.innerHTML = `⚠️ El correo SMTP salió hacia <strong>${esc(email)}</strong>, pero NO se pudo verificar el PDF adjunto${data.attachment_error ? ': ' + esc(data.attachment_error) : '.'} <span style="opacity:0.8;">(Log #${esc(data.log_id)})</span>`;
+                        }
+                    } else {
+                        resultBox.style.background = 'rgba(16, 185, 129, 0.14)';
+                        resultBox.style.border = '1px solid rgba(16, 185, 129, 0.35)';
+                        resultBox.style.color = '#6EE7B7';
+                        resultBox.innerHTML = `✅ <strong>¡Solo Correo Enviado!</strong> Verificación SMTP completada sin adjunto para <strong>${esc(email)}</strong> <span style="opacity:0.8;">(Log #${esc(data.log_id)})</span>`;
+                    }
+                } else {
+                    const errMsg = data.message || (data.errors?.email?.[0]) || 'No se pudo completar el envío de prueba.';
+                    resultBox.style.background = 'rgba(239, 68, 68, 0.14)';
+                    resultBox.style.border = '1px solid rgba(239, 68, 68, 0.35)';
+                    resultBox.style.color = '#FCA5A5';
+                    resultBox.innerHTML = `❌ <strong>Error de Envío:</strong> ${String(errMsg).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}`;
+                }
+            } catch (err) {
+                console.error(err);
+                resultBox.style.background = 'rgba(239, 68, 68, 0.14)';
+                resultBox.style.border = '1px solid rgba(239, 68, 68, 0.35)';
+                resultBox.style.color = '#FCA5A5';
+                resultBox.innerHTML = '❌ Error de comunicación con el servidor al intentar enviar el correo de prueba.';
+            } finally {
+                btnOnly.disabled = false;
+                btnPdf.disabled = false;
+                btnOnly.style.opacity = '1';
+                btnPdf.style.opacity = '1';
+            }
+        }
 
         async function showErrorModal(logId) {
             currentModalLogId = logId;
@@ -621,6 +793,12 @@
                                 <span>⚠️</span> Adjunto PDF NO verificado / no adjuntado${attErr}
                             </div>
                         `;
+                    } else if (log.mail_type === 'test_email' || log.details?.test_mode === 'email_only') {
+                        attBanner = `
+                            <div style="margin-top: 0.5rem; background: rgba(148, 163, 184, 0.12); border: 1px solid rgba(148, 163, 184, 0.28); color: #CBD5E1; padding: 0.55rem 0.9rem; border-radius: 10px; font-weight: 600; font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <span>✉️</span> Correo de prueba enviado en modo "Solo Correo" (sin adjunto PDF solicitado).
+                            </div>
+                        `;
                     } else {
                         attBanner = `
                             <div style="margin-top: 0.5rem; background: rgba(148, 163, 184, 0.1); border: 1px solid rgba(148, 163, 184, 0.22); color: #94A3B8; padding: 0.55rem 0.9rem; border-radius: 10px; font-weight: 600; font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
@@ -652,10 +830,16 @@
                     document.getElementById('modalJsonDetails').textContent = JSON.stringify(log.details || {}, null, 2);
 
                     const btnResend = document.getElementById('btnModalResend');
-                    btnResend.onclick = () => {
-                        closeErrorModal();
-                        resendEmail(log.id, log.recipient_email);
-                    };
+                    if (log.can_resend) {
+                        btnResend.style.display = 'inline-flex';
+                        btnResend.onclick = () => {
+                            closeErrorModal();
+                            resendEmail(log.id, log.recipient_email);
+                        };
+                    } else {
+                        btnResend.style.display = 'none';
+                        btnResend.onclick = null;
+                    }
 
                     loading.style.display = 'none';
                     body.style.display = 'block';
