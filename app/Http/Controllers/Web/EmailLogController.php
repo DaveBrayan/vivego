@@ -110,6 +110,8 @@ class EmailLogController extends Controller
     public function show($id): JsonResponse
     {
         $log = EmailLog::with(['ticketSale', 'event'])->findOrFail($id);
+        $attSentRaw = $log->attachment_sent ?? ($log->details['attachment_sent'] ?? null);
+        $attSent = is_null($attSentRaw) ? null : (bool) $attSentRaw;
 
         return response()->json([
             'success' => true,
@@ -120,6 +122,10 @@ class EmailLogController extends Controller
                 'subject' => $log->subject,
                 'status' => $log->status,
                 'error_message' => $log->error_message,
+                'attachment_sent' => $attSent,
+                'attachment_name' => $log->attachment_name ?? ($log->details['attachment_name'] ?? null),
+                'attachment_size' => $log->attachment_size ?? ($log->details['attachment_size'] ?? null),
+                'attachment_error' => $log->attachment_error ?? ($log->details['attachment_error'] ?? null),
                 'details' => $log->details,
                 'attempts' => $log->attempts,
                 'sent_at' => $log->sent_at ? $log->sent_at->format('d/m/Y H:i:s') : null,

@@ -919,6 +919,10 @@ class BoxOfficeController extends Controller
             );
             $emailSent = $mailResult['success'];
             $emailError = !$emailSent ? ($mailResult['message'] ?? 'Error desconocido al entregar correo.') : null;
+            $attachmentSent = $mailResult['attachment_sent'] ?? false;
+            $attachmentName = $mailResult['attachment_name'] ?? null;
+            $attachmentSize = $mailResult['attachment_size'] ?? null;
+            $attachmentError = $mailResult['attachment_error'] ?? null;
         }
 
         // Cargar boletos físicos y relación de evento para el frontend
@@ -931,6 +935,10 @@ class BoxOfficeController extends Controller
             'sale_mode' => $saleMode,
             'email_sent' => $emailSent,
             'email_error' => $emailError ?? null,
+            'attachment_sent' => $attachmentSent ?? null,
+            'attachment_name' => $attachmentName ?? null,
+            'attachment_size' => $attachmentSize ?? null,
+            'attachment_error' => $attachmentError ?? null,
             'recipient' => $effectiveEmail,
             'metrics' => [
                 'total_revenue' => 'S/ ' . number_format($totalRevenue, 2),
@@ -1287,14 +1295,24 @@ class BoxOfficeController extends Controller
         if ($mailResult['success']) {
             return response()->json([
                 'success' => true,
-                'message' => "¡Boleto oficial enviado exitosamente a {$recipient}!",
+                'message' => $mailResult['attachment_sent']
+                    ? "¡Boleto oficial y PDF adjunto enviados exitosamente a {$recipient}!"
+                    : "Correo enviado a {$recipient}, pero sin PDF adjunto verificable.",
                 'email' => $recipient,
+                'attachment_sent' => $mailResult['attachment_sent'] ?? false,
+                'attachment_name' => $mailResult['attachment_name'] ?? null,
+                'attachment_size' => $mailResult['attachment_size'] ?? null,
+                'attachment_error' => $mailResult['attachment_error'] ?? null,
             ]);
         } else {
             return response()->json([
                 'success' => false,
                 'message' => $mailResult['message'],
                 'email' => $recipient,
+                'attachment_sent' => false,
+                'attachment_name' => $mailResult['attachment_name'] ?? null,
+                'attachment_size' => 0,
+                'attachment_error' => $mailResult['attachment_error'] ?? null,
             ], 500);
         }
     }

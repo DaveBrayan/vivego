@@ -85,6 +85,33 @@
             gap: 0.25rem;
             user-select: none;
         }
+        .badge-attachment-sent {
+            background: rgba(56, 189, 248, 0.15);
+            color: #38BDF8;
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.12rem 0.45rem;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            user-select: none;
+        }
+        .badge-attachment-failed {
+            background: rgba(245, 158, 11, 0.18);
+            color: #FBBF24;
+            border: 1px solid rgba(245, 158, 11, 0.45);
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 0.12rem 0.45rem;
+            border-radius: 6px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            user-select: none;
+        }
 
         #editSaleEmailModal {
             position: fixed !important;
@@ -1058,6 +1085,13 @@
                                         $hasEmailFailure = $latestLog && $latestLog->status === 'failed';
                                         $hasEmailSent = $latestLog && $latestLog->status === 'sent';
                                         $emailErrorMsg = $hasEmailFailure ? ($latestLog->error_message ?? 'Error de entrega al servidor de correo') : '';
+                                        $hasAttachmentVerified = $hasEmailSent && $latestLog && $latestLog->hasVerifiedAttachment();
+                                        $hasAttachmentFailed = $hasEmailSent && $latestLog && $latestLog->hasMissingAttachment();
+                                        $attName = $latestLog?->attachment_name ?? ($latestLog?->details['attachment_name'] ?? 'Entrada_Oficial.pdf');
+                                        $attSize = $latestLog?->attachment_size ?? ($latestLog?->details['attachment_size'] ?? null);
+                                        $attTitle = $hasAttachmentVerified
+                                            ? ('PDF oficial verificado: ' . $attName . ($attSize ? ' (' . number_format($attSize / 1024, 0) . ' KB)' : ''))
+                                            : ($latestLog?->attachment_error ?? ($latestLog?->details['attachment_error'] ?? 'El correo se envió sin archivo PDF adjunto'));
                                     @endphp
                                     <tr class="sale-row-item" 
                                         data-sale-id="{{ $sale->id }}"
@@ -1067,7 +1101,9 @@
                                         data-buyer-email="{{ $buyerEmail }}"
                                         data-email-failed="{{ $hasEmailFailure ? '1' : '0' }}"
                                         data-email-sent="{{ $hasEmailSent ? '1' : '0' }}"
-                                        data-email-error="{{ $emailErrorMsg }}">
+                                        data-email-error="{{ $emailErrorMsg }}"
+                                        data-attachment-sent="{{ $hasAttachmentVerified ? '1' : ($hasAttachmentFailed ? '0' : '') }}"
+                                        data-attachment-error="{{ $hasAttachmentFailed ? $attTitle : '' }}">
                                         <td>
                                             <div>
                                                 <span style="font-weight: 800; color: var(--color-primary-orange); font-family: monospace; font-size: 0.95rem; display: block;">
@@ -1108,6 +1144,15 @@
                                                             <span class="badge-email-sent" style="background: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.35); font-size: 0.72rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.2rem;">
                                                                 <span>✓</span> <span>Entregado</span>
                                                             </span>
+                                                            @if($hasAttachmentVerified)
+                                                                <span class="badge-attachment-sent" title="{{ $attTitle }}" style="background: rgba(56, 189, 248, 0.15); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.35); font-size: 0.72rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.2rem;">
+                                                                    <span>📎</span> <span>Adjunto entregado</span>
+                                                                </span>
+                                                            @elseif($hasAttachmentFailed)
+                                                                <span class="badge-attachment-failed" onclick="openEditEmailModal({{ $sale->id }})" title="{{ $attTitle }}" style="background: rgba(245, 158, 11, 0.18); color: #FBBF24; border: 1px solid rgba(245, 158, 11, 0.45); font-size: 0.72rem; font-weight: 800; padding: 0.1rem 0.4rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.2rem;">
+                                                                    <span>⚠️</span> <span>Sin adjunto</span>
+                                                                </span>
+                                                            @endif
                                                         @endif
                                                     </div>
                                                 </div>
@@ -2072,6 +2117,9 @@
                 const emailFailed = row.getAttribute('data-email-failed') === '1' || row.querySelector('.badge-email-failed') !== null;
                 const emailSent = row.getAttribute('data-email-sent') === '1';
                 const emailError = row.getAttribute('data-email-error') || '';
+                const attAttr = row.getAttribute('data-attachment-sent');
+                const attachmentSent = attAttr === '1' ? true : (attAttr === '0' ? false : null);
+                const attachmentError = row.getAttribute('data-attachment-error') || '';
 
                 if (!sale) {
                     sale = {
@@ -2084,6 +2132,8 @@
                         email_failed: emailFailed,
                         email_sent: emailSent,
                         email_error: emailError,
+                        attachment_sent: attachmentSent,
+                        attachment_error: attachmentError,
                         quantity: 1,
                         tickets_data: {
                             customer_email: buyerEmail,
@@ -5609,8 +5659,33 @@
             await executePosEmailSend(sale, newEmail);
         }
 
+        function buildAttachmentBadgeTitle(payload) {
+            if (!payload || payload.attachment_sent !== true) {
+                return payload && payload.attachment_error
+                    ? `Sin PDF adjunto: ${payload.attachment_error}`
+                    : 'Correo entregado sin verificación de PDF adjunto';
+            }
+            const namePart = payload.attachment_name ? `: ${payload.attachment_name}` : '';
+            const sizePart = (payload.attachment_size && Number(payload.attachment_size) > 0)
+                ? ` (${(Number(payload.attachment_size) / 1024).toFixed(1)} KB)`
+                : '';
+            return `PDF adjunto verificado${namePart}${sizePart}`;
+        }
+
+        function buildAttachmentBadgeMarkup(saleId, payload) {
+            if (!payload) return '';
+            const title = buildAttachmentBadgeTitle(payload);
+            if (payload.attachment_sent === true) {
+                return `<span class="badge-attachment-sent" title="${escapePosHtml(title)}" style="background: rgba(56, 189, 248, 0.15); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.35); font-size: 0.72rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.2rem;"><span>📎</span> <span>Adjunto entregado</span></span>`;
+            }
+            if (payload.attachment_sent === false) {
+                return `<span class="badge-attachment-failed" onclick="openEditEmailModal(${saleId})" title="${escapePosHtml(title)}" style="background: rgba(245, 158, 11, 0.18); color: #FBBF24; border: 1px solid rgba(245, 158, 11, 0.45); font-size: 0.72rem; font-weight: 800; padding: 0.1rem 0.4rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.2rem;"><span>⚠️</span> <span>Sin adjunto</span></span>`;
+            }
+            return '';
+        }
+
         // Helper reactivo para actualizar DOM y memoria tras cambiar correo
-        function updateSaleEmailInDomAndMemory(saleId, newEmail, isDelivered = false, errorMessage = '') {
+        function updateSaleEmailInDomAndMemory(saleId, newEmail, isDelivered = false, errorMessage = '', attachmentInfo = null) {
             const sale = getSaleObject(saleId);
             if (sale) {
                 sale.buyer_email = newEmail;
@@ -5622,31 +5697,64 @@
                     sale.email_sent = true;
                     sale.email_failed = false;
                     sale.email_error = null;
+                    if (attachmentInfo && typeof attachmentInfo.attachment_sent === 'boolean') {
+                        sale.attachment_sent = attachmentInfo.attachment_sent;
+                        sale.attachment_name = attachmentInfo.attachment_name || null;
+                        sale.attachment_size = attachmentInfo.attachment_size || null;
+                        sale.attachment_error = attachmentInfo.attachment_error || null;
+                    }
+                } else if (errorMessage) {
+                    sale.email_failed = true;
+                    sale.email_error = errorMessage;
+                    if (attachmentInfo && typeof attachmentInfo.attachment_sent === 'boolean') {
+                        sale.attachment_sent = attachmentInfo.attachment_sent;
+                        sale.attachment_error = attachmentInfo.attachment_error || null;
+                    }
                 }
             }
 
             const row = document.querySelector(`tr[data-sale-id="${saleId}"]`);
             if (row) {
                 row.setAttribute('data-buyer-email', newEmail);
+                const clientContainer = row.querySelector('td:nth-child(2) div[style*="flex-wrap"]');
+
                 if (isDelivered) {
                     row.setAttribute('data-email-failed', '0');
                     row.setAttribute('data-email-sent', '1');
                     row.setAttribute('data-email-error', '');
 
+                    const sentMarkup = `<span class="badge-email-sent" style="background: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.35); font-size: 0.72rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.2rem;"><span>✓</span> <span>Entregado</span></span>`;
                     const failedBadge = row.querySelector('.badge-email-failed');
                     if (failedBadge) {
-                        failedBadge.outerHTML = `<span class="badge-email-sent" style="background: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.35); font-size: 0.72rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.2rem;"><span>✓</span> <span>Entregado</span></span>`;
+                        failedBadge.outerHTML = sentMarkup;
+                    } else if (!row.querySelector('.badge-email-sent') && clientContainer) {
+                        clientContainer.insertAdjacentHTML('beforeend', sentMarkup);
+                    }
+
+                    row.querySelectorAll('.badge-attachment-sent, .badge-attachment-failed').forEach(el => el.remove());
+                    if (attachmentInfo && typeof attachmentInfo.attachment_sent === 'boolean') {
+                        row.setAttribute('data-attachment-sent', attachmentInfo.attachment_sent ? '1' : '0');
+                        row.setAttribute('data-attachment-error', attachmentInfo.attachment_sent ? '' : buildAttachmentBadgeTitle(attachmentInfo));
+                        const attMarkup = buildAttachmentBadgeMarkup(saleId, attachmentInfo);
+                        const sentBadge = row.querySelector('.badge-email-sent');
+                        if (sentBadge && attMarkup) {
+                            sentBadge.insertAdjacentHTML('afterend', attMarkup);
+                        } else if (clientContainer && attMarkup) {
+                            clientContainer.insertAdjacentHTML('beforeend', attMarkup);
+                        }
                     }
                 } else if (errorMessage) {
                     row.setAttribute('data-email-failed', '1');
                     row.setAttribute('data-email-sent', '0');
                     row.setAttribute('data-email-error', errorMessage);
+                    row.setAttribute('data-attachment-sent', '');
+                    row.setAttribute('data-attachment-error', '');
+                    row.querySelectorAll('.badge-attachment-sent, .badge-attachment-failed').forEach(el => el.remove());
 
                     let badge = row.querySelector('.badge-email-failed');
                     if (!badge) {
                         const sentBadge = row.querySelector('.badge-email-sent');
                         if (sentBadge) sentBadge.remove();
-                        const clientContainer = row.querySelector('td:nth-child(2) div[style*="flex-wrap"]');
                         if (clientContainer) {
                             clientContainer.insertAdjacentHTML('beforeend', `<span class="badge-email-failed" onclick="openEditEmailModal(${saleId})" title="Clic para corregir correo: ${escapePosHtml(errorMessage)}" style="background: rgba(239, 68, 68, 0.2); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.5); font-size: 0.72rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.2rem; transition: all 0.2s ease;"><span>⚠️</span> <span>Correo no entregado</span></span>`);
                         }
@@ -5659,7 +5767,7 @@
                 const emailSpan = row.querySelector('span[title*="@"]');
                 if (emailSpan) {
                     emailSpan.title = newEmail;
-                    emailSpan.innerHTML = `✉️ ${newEmail}`;
+                    emailSpan.innerHTML = `✉️ ${escapePosHtml(newEmail)}`;
                 }
             }
         }
@@ -5699,16 +5807,27 @@
 
                 const data = await res.json();
                 if (data.success) {
-                    updateSaleEmailInDomAndMemory(sale.id, buyerEmail, true);
+                    updateSaleEmailInDomAndMemory(sale.id, buyerEmail, true, '', data);
 
-                    Swal.fire({
-                        icon: 'success',
-                        title: '✉️ ¡Entrada Enviada con Éxito!',
-                        html: `Se ha entregado el boleto oficial en PDF adjunto a <strong>${escapePosHtml(buyerEmail)}</strong>.`,
-                        confirmButtonColor: '#10B981',
-                        background: '#14141E',
-                        color: '#FFFFFF'
-                    });
+                    if (data.attachment_sent === false) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: '✉️ Correo Enviado (Sin PDF Adjunto)',
+                            html: `El servidor SMTP entregó el mensaje a <strong>${escapePosHtml(buyerEmail)}</strong>, pero no se pudo verificar el PDF adjunto.${data.attachment_error ? `<br><small style="color:#FBBF24;">${escapePosHtml(data.attachment_error)}</small>` : ''}`,
+                            confirmButtonColor: '#F59E0B',
+                            background: '#14141E',
+                            color: '#FFFFFF'
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '✉️ ¡Entrada Enviada con Éxito!',
+                            html: `Se ha entregado el correo y verificado el PDF adjunto para <strong>${escapePosHtml(buyerEmail)}</strong>.`,
+                            confirmButtonColor: '#10B981',
+                            background: '#14141E',
+                            color: '#FFFFFF'
+                        });
+                    }
                 } else {
                     const errorMsg = data.message || 'Ocurrió un error al intentar enviar el correo.';
                     updateSaleEmailInDomAndMemory(sale.id, buyerEmail, false, errorMsg);
@@ -6215,6 +6334,8 @@
                         newRow.setAttribute('data-email-failed', isEmailFailed ? '1' : '0');
                         newRow.setAttribute('data-email-sent', data.email_sent ? '1' : '0');
                         newRow.setAttribute('data-email-error', data.email_error || '');
+                        newRow.setAttribute('data-attachment-sent', data.attachment_sent === true ? '1' : (data.attachment_sent === false ? '0' : ''));
+                        newRow.setAttribute('data-attachment-error', data.attachment_sent === false ? buildAttachmentBadgeTitle(data) : '');
 
                         let typeBadge = '';
                         if (isPhys) {
@@ -6278,6 +6399,7 @@
                             subInfo += `<span class="badge-email-failed" onclick="openEditEmailModal(${data.sale.id})" title="Clic para corregir correo: ${escapePosHtml(data.email_error || 'Error al entregar correo')}" style="background: rgba(239, 68, 68, 0.2); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.5); font-size: 0.72rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.2rem; transition: all 0.2s ease;"><span>⚠️</span> <span>Correo no entregado</span></span>`;
                         } else if (data.email_sent) {
                             subInfo += `<span class="badge-email-sent" style="background: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.35); font-size: 0.72rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.2rem;"><span>✓</span> <span>Entregado</span></span>`;
+                            subInfo += buildAttachmentBadgeMarkup(data.sale.id, data);
                         }
                         if (!subInfo) subInfo = '<span style="color: #64748B;">Taquilla Directa</span>';
 
@@ -6482,17 +6604,28 @@
                                 const { pdf } = await generatePosTicketPdfDoc(data.sale);
                                 const realPdfBase64 = pdf ? pdf.output('datauristring') : '';
                                 if (realPdfBase64) {
-                                    await fetch(`/admin/taquilla/venta/${data.sale.id}/enviar-correo`, {
+                                    const autoRes = await fetch(`/admin/taquilla/venta/${data.sale.id}/enviar-correo`, {
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/json',
-                                            'X-CSRF-TOKEN': csrfToken
+                                            'X-CSRF-TOKEN': csrfToken,
+                                            'Accept': 'application/json'
                                         },
                                         body: JSON.stringify({
                                             email: targetEmail,
                                             ticket_pdf_base64: realPdfBase64
                                         })
                                     });
+                                    try {
+                                        const autoData = await autoRes.json();
+                                        updateSaleEmailInDomAndMemory(
+                                            data.sale.id,
+                                            targetEmail,
+                                            !!autoData.success,
+                                            autoData.success ? '' : (autoData.message || ''),
+                                            autoData
+                                        );
+                                    } catch (parseErr) {}
                                     console.log('[POS] Boleto oficial idéntico a plancha enviado a:', targetEmail);
                                 }
                             } catch (autoEmailErr) {
@@ -6537,7 +6670,11 @@
                         const isDeliveryFailed = targetEmail && !data.email_sent;
                         if (targetEmail) {
                             if (data.email_sent) {
-                                emailSentMsg = `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #10B981; font-weight: 700; background: rgba(16,185,129,0.12); padding: 0.45rem 0.75rem; border-radius: 10px; border: 1px solid rgba(16,185,129,0.3);">✉️ Boleto oficial idéntico enviado a <strong>${escapePosHtml(targetEmail)}</strong></div>`;
+                                if (data.attachment_sent === false) {
+                                    emailSentMsg = `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #FBBF24; font-weight: 700; background: rgba(245,158,11,0.12); padding: 0.45rem 0.75rem; border-radius: 10px; border: 1px solid rgba(245,158,11,0.35);">✉️ Correo enviado a <strong>${escapePosHtml(targetEmail)}</strong>, pero sin PDF adjunto verificado.</div>`;
+                                } else {
+                                    emailSentMsg = `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #10B981; font-weight: 700; background: rgba(16,185,129,0.12); padding: 0.45rem 0.75rem; border-radius: 10px; border: 1px solid rgba(16,185,129,0.3);">✉️ Correo y PDF adjunto verificados para <strong>${escapePosHtml(targetEmail)}</strong></div>`;
+                                }
                             } else {
                                 const errDetail = data.email_error ? `<br><small style="font-weight: normal; opacity: 0.9; font-size: 0.78rem;">${escapePosHtml(data.email_error)}</small>` : '';
                                 emailSentMsg = `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #F87171; font-weight: 700; background: rgba(239,68,68,0.12); padding: 0.5rem 0.75rem; border-radius: 10px; border: 1px solid rgba(239,68,68,0.35); text-align: left;">
@@ -6728,6 +6865,8 @@
                         newRow.setAttribute('data-email-failed', isEmailFailed ? '1' : '0');
                         newRow.setAttribute('data-email-sent', data.email_sent ? '1' : '0');
                         newRow.setAttribute('data-email-error', data.email_error || '');
+                        newRow.setAttribute('data-attachment-sent', data.attachment_sent === true ? '1' : (data.attachment_sent === false ? '0' : ''));
+                        newRow.setAttribute('data-attachment-error', data.attachment_sent === false ? buildAttachmentBadgeTitle(data) : '');
                         
                         let typeBadge = '';
                         if (isPhys) {
@@ -6774,6 +6913,7 @@
                             subInfo += `<span class="badge-email-failed" onclick="openEditEmailModal(${data.sale.id})" title="Clic para corregir correo: ${escapePosHtml(data.email_error || 'Error al entregar correo')}" style="background: rgba(239, 68, 68, 0.2); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.5); font-size: 0.72rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.2rem; transition: all 0.2s ease;"><span>⚠️</span> <span>Correo no entregado</span></span>`;
                         } else if (data.email_sent) {
                             subInfo += `<span class="badge-email-sent" style="background: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.35); font-size: 0.72rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.2rem;"><span>✓</span> <span>Entregado</span></span>`;
+                            subInfo += buildAttachmentBadgeMarkup(data.sale.id, data);
                         }
                         if (!subInfo) subInfo = '<span style="color: #64748B;">Taquilla Directa</span>';
 
@@ -6945,17 +7085,28 @@
                                 const { pdf } = await generatePosTicketPdfDoc(data.sale);
                                 const realPdfBase64 = pdf ? pdf.output('datauristring') : '';
                                 if (realPdfBase64) {
-                                    await fetch(`/admin/taquilla/venta/${data.sale.id}/enviar-correo`, {
+                                    const autoCourtesyRes = await fetch(`/admin/taquilla/venta/${data.sale.id}/enviar-correo`, {
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/json',
-                                            'X-CSRF-TOKEN': csrfToken
+                                            'X-CSRF-TOKEN': csrfToken,
+                                            'Accept': 'application/json'
                                         },
                                         body: JSON.stringify({
                                             email: targetCourtesyEmail,
                                             ticket_pdf_base64: realPdfBase64
                                         })
                                     });
+                                    try {
+                                        const autoCourtesyData = await autoCourtesyRes.json();
+                                        updateSaleEmailInDomAndMemory(
+                                            data.sale.id,
+                                            targetCourtesyEmail,
+                                            !!autoCourtesyData.success,
+                                            autoCourtesyData.success ? '' : (autoCourtesyData.message || ''),
+                                            autoCourtesyData
+                                        );
+                                    } catch (parseErr) {}
                                     console.log('[POS] Pase oficial de cortesía idéntico a plancha enviado a:', targetCourtesyEmail);
                                 }
                             } catch (autoCourtesyEmailErr) {
@@ -6969,7 +7120,11 @@
                     const isCourtesyDeliveryFailed = targetCourtesyEmail && !data.email_sent;
                     if (targetCourtesyEmail) {
                         if (data.email_sent) {
-                            courtesyEmailSentMsg = `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #10B981; font-weight: 700; background: rgba(16,185,129,0.12); padding: 0.45rem 0.75rem; border-radius: 10px; border: 1px solid rgba(16,185,129,0.3);">✉️ Pase oficial idéntico enviado a <strong>${escapePosHtml(targetCourtesyEmail)}</strong></div>`;
+                            if (data.attachment_sent === false) {
+                                courtesyEmailSentMsg = `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #FBBF24; font-weight: 700; background: rgba(245,158,11,0.12); padding: 0.45rem 0.75rem; border-radius: 10px; border: 1px solid rgba(245,158,11,0.35);">✉️ Correo enviado a <strong>${escapePosHtml(targetCourtesyEmail)}</strong>, pero sin PDF adjunto verificado.</div>`;
+                            } else {
+                                courtesyEmailSentMsg = `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #10B981; font-weight: 700; background: rgba(16,185,129,0.12); padding: 0.45rem 0.75rem; border-radius: 10px; border: 1px solid rgba(16,185,129,0.3);">✉️ Correo y pase PDF adjunto verificados para <strong>${escapePosHtml(targetCourtesyEmail)}</strong></div>`;
+                            }
                         } else {
                             const errDetail = data.email_error ? `<br><small style="font-weight: normal; opacity: 0.9; font-size: 0.78rem;">${escapePosHtml(data.email_error)}</small>` : '';
                             courtesyEmailSentMsg = `<div style="margin-top: 0.6rem; font-size: 0.85rem; color: #F87171; font-weight: 700; background: rgba(239,68,68,0.12); padding: 0.5rem 0.75rem; border-radius: 10px; border: 1px solid rgba(239,68,68,0.35); text-align: left;">

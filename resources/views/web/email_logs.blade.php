@@ -367,6 +367,12 @@
 
                                         <!-- Detalle de Error / Motivo -->
                                         <td style="padding: 0.85rem 1rem; max-width: 280px;">
+                                            @php
+                                                $attName = $log->attachment_name ?? ($log->details['attachment_name'] ?? null);
+                                                $attSize = $log->attachment_size ?? ($log->details['attachment_size'] ?? null);
+                                                $attError = $log->attachment_error ?? ($log->details['attachment_error'] ?? null);
+                                                $attSizeKb = $attSize ? number_format($attSize / 1024, 0) . ' KB' : null;
+                                            @endphp
                                             @if(!$isSuccess && !empty($log->error_message))
                                                 <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; padding: 0.4rem 0.65rem;">
                                                     <span style="display: block; color: #FCA5A5; font-size: 0.78rem; font-weight: 600; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ $log->error_message }}">
@@ -377,9 +383,29 @@
                                                     </button>
                                                 </div>
                                             @elseif($isSuccess)
-                                                <span style="color: #94A3B8; font-size: 0.8rem; display: flex; align-items: center; gap: 0.3rem;">
-                                                    <span>✓</span> Entregado por SMTP
-                                                </span>
+                                                <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.3rem;">
+                                                    <span style="color: #94A3B8; font-size: 0.8rem; display: flex; align-items: center; gap: 0.3rem;">
+                                                        <span>✓</span> Entregado por SMTP
+                                                    </span>
+                                                    @if($log->hasVerifiedAttachment())
+                                                        <span title="{{ trim(($attName ?: 'Entrada_Oficial.pdf') . ($attSizeKb ? ' · ' . $attSizeKb : '')) }}" style="display: inline-flex; align-items: center; gap: 0.3rem; background: rgba(56, 189, 248, 0.14); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.32); padding: 0.16rem 0.5rem; border-radius: 6px; font-size: 0.72rem; font-weight: 700;">
+                                                            <span>📎</span> Adjunto PDF entregado @if($attSizeKb)<span style="opacity: 0.85;">({{ $attSizeKb }})</span>@endif
+                                                        </span>
+                                                    @elseif($log->hasMissingAttachment())
+                                                        <span title="{{ $attError ?: 'Correo enviado sin PDF adjunto' }}" style="display: inline-flex; align-items: center; gap: 0.3rem; background: rgba(245, 158, 11, 0.15); color: #FBBF24; border: 1px solid rgba(245, 158, 11, 0.38); padding: 0.16rem 0.5rem; border-radius: 6px; font-size: 0.72rem; font-weight: 800;">
+                                                            <span>⚠️</span> Sin adjunto PDF
+                                                        </span>
+                                                        @if(!empty($attError))
+                                                            <button type="button" onclick="showErrorModal({{ $log->id }})" style="background: none; border: none; color: #60A5FA; font-size: 0.72rem; font-weight: 700; cursor: pointer; padding: 0; text-decoration: underline;">
+                                                                Ver Motivo del Adjunto
+                                                            </button>
+                                                        @endif
+                                                    @else
+                                                        <span style="display: inline-flex; align-items: center; gap: 0.3rem; color: #64748B; font-size: 0.72rem;">
+                                                            <span>📎</span> Adjunto sin verificar (registro previo)
+                                                        </span>
+                                                    @endif
+                                                </div>
                                             @else
                                                 <span style="color: #64748B; font-size: 0.8rem;">Sin detalles</span>
                                             @endif
@@ -578,12 +604,38 @@
                     document.getElementById('modalEvent').textContent = log.event_title || 'N/A';
                     document.getElementById('modalReceipt').textContent = log.receipt_number ? `Recibo #${log.receipt_number}` : 'N/A';
 
+                    const escHtml = (str) => String(str ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+                    let attBanner = '';
+                    if (log.attachment_sent === true) {
+                        const attKb = log.attachment_size ? ` (${Math.max(1, Math.round(log.attachment_size / 1024))} KB)` : '';
+                        const attNameText = escHtml(log.attachment_name || 'Entrada_Oficial.pdf');
+                        attBanner = `
+                            <div style="margin-top: 0.5rem; background: rgba(56, 189, 248, 0.14); border: 1px solid rgba(56, 189, 248, 0.32); color: #38BDF8; padding: 0.6rem 0.9rem; border-radius: 10px; font-weight: 700; font-size: 0.82rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <span>📎</span> Adjunto PDF verificado y entregado: <span style="font-family: monospace;">${attNameText}</span>${attKb}
+                            </div>
+                        `;
+                    } else if (log.attachment_sent === false) {
+                        const attErr = log.attachment_error ? `: ${escHtml(log.attachment_error)}` : '';
+                        attBanner = `
+                            <div style="margin-top: 0.5rem; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.38); color: #FBBF24; padding: 0.6rem 0.9rem; border-radius: 10px; font-weight: 700; font-size: 0.82rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <span>⚠️</span> Adjunto PDF NO verificado / no adjuntado${attErr}
+                            </div>
+                        `;
+                    } else {
+                        attBanner = `
+                            <div style="margin-top: 0.5rem; background: rgba(148, 163, 184, 0.1); border: 1px solid rgba(148, 163, 184, 0.22); color: #94A3B8; padding: 0.55rem 0.9rem; border-radius: 10px; font-weight: 600; font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <span>📎</span> Estado del adjunto PDF no registrado en envíos previos a la auditoría de adjuntos.
+                            </div>
+                        `;
+                    }
+
                     const badge = document.getElementById('modalStatusBadge');
                     if (log.status === 'sent') {
                         badge.innerHTML = `
                             <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34D399; padding: 0.75rem 1rem; border-radius: 10px; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
-                                <span>✅</span> Correo entregado exitosamente el ${log.sent_at || log.created_at} (${log.attempts} intento/s)
+                                <span>✅</span> Correo entregado por SMTP el ${log.sent_at || log.created_at} (${log.attempts} intento/s)
                             </div>
+                            ${attBanner}
                         `;
                         document.getElementById('modalErrorContainer').style.display = 'none';
                     } else {
@@ -591,6 +643,7 @@
                             <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #F87171; padding: 0.75rem 1rem; border-radius: 10px; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
                                 <span>❌</span> Falló el envío del correo (${log.attempts} intento/s registrado/s)
                             </div>
+                            ${attBanner}
                         `;
                         document.getElementById('modalErrorContainer').style.display = 'block';
                         document.getElementById('modalErrorMessage').textContent = log.error_message || 'Error desconocido durante la conexión con el servidor SMTP.';

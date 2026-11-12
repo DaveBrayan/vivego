@@ -64,12 +64,64 @@
 </head>
 <body>
     @php
-        $resolveBase64 = function(?string $src) {
+        $dompdfCacheDir = storage_path('app/dompdf');
+        if (!@is_dir($dompdfCacheDir)) {
+            @mkdir($dompdfCacheDir, 0775, true);
+        }
+
+        $detectMimeAndExt = function (?string $bytes, ?string $pathOrUrl = null): array {
+            if (!empty($bytes)) {
+                $info = @getimagesizefromstring($bytes);
+                if (!empty($info['mime'])) {
+                    $ext = match ($info['mime']) {
+                        'image/png' => 'png',
+                        'image/gif' => 'gif',
+                        'image/webp' => 'webp',
+                        default => 'jpg',
+                    };
+                    return [$info['mime'], $ext];
+                }
+                if (str_starts_with($bytes, "\x89PNG\r\n\x1a\n")) return ['image/png', 'png'];
+                if (str_starts_with($bytes, "\xFF\xD8\xFF")) return ['image/jpeg', 'jpg'];
+                if (str_starts_with($bytes, 'GIF8')) return ['image/gif', 'gif'];
+                if (str_contains(substr($bytes, 0, 256), '<svg')) return ['image/svg+xml', 'svg'];
+            }
+            $lower = strtolower((string) ($pathOrUrl ?? ''));
+            if (str_ends_with($lower, '.png')) return ['image/png', 'png'];
+            if (str_ends_with($lower, '.gif')) return ['image/gif', 'gif'];
+            if (str_ends_with($lower, '.webp')) return ['image/webp', 'webp'];
+            if (str_ends_with($lower, '.svg')) return ['image/svg+xml', 'svg'];
+            return ['image/jpeg', 'jpg'];
+        };
+
+        $allowedRoots = array_values(array_filter([
+            @realpath(public_path()),
+            @realpath(base_path()),
+            @realpath(storage_path()),
+        ]));
+
+        $toDompdfLocalUri = function (string $realPath) use ($allowedRoots): ?string {
+            $normReal = str_replace('\\', '/', $realPath);
+            $cmpReal = DIRECTORY_SEPARATOR === '\\' ? strtolower($normReal) : $normReal;
+            foreach ($allowedRoots as $root) {
+                $normRoot = rtrim(str_replace('\\', '/', $root), '/') . '/';
+                $cmpRoot = DIRECTORY_SEPARATOR === '\\' ? strtolower($normRoot) : $normRoot;
+                if (str_starts_with($cmpReal, $cmpRoot)) {
+                    return 'file://' . $normReal;
+                }
+            }
+            return null;
+        };
+
+        $resolvedImageMemo = [];
+        $resolveBase64 = function(?string $src) use (&$resolvedImageMemo, $dompdfCacheDir, $detectMimeAndExt, $toDompdfLocalUri) {
             if (empty($src)) return '';
             if (str_starts_with($src, 'data:image')) return $src;
+            if (isset($resolvedImageMemo[$src])) return $resolvedImageMemo[$src];
 
-            // Limpiar protocolo y host para buscar archivo local
-            $clean = ltrim(preg_replace('#^https?://[^/]+/#i', '', $src), '/');
+            // Limpiar protocolo, host y query strings para buscar archivo local
+            $cleanPath = parse_url($src, PHP_URL_PATH) ?: $src;
+            $clean = ltrim(preg_replace('#^https?://[^/]+/#i', '', $cleanPath), '/');
 
             $candidates = [
                 public_path($clean),
@@ -77,34 +129,70 @@
                 storage_path('app/public/' . $clean),
                 storage_path('app/' . $clean),
                 public_path(str_replace('storage/', '', $clean)),
+                storage_path('app/public/' . ltrim(preg_replace('#^storage/#i', '', $clean), '/')),
                 public_path('images/' . basename($clean)),
                 base_path($clean),
             ];
 
             foreach ($candidates as $cand) {
-                if (file_exists($cand) && is_file($cand)) {
-                    $mime = mime_content_type($cand) ?: (str_ends_with(strtolower($cand), '.png') ? 'image/png' : 'image/jpeg');
-                    return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($cand));
-                }
-            }
-
-            // Fallback remoto
-            if (filter_var($src, FILTER_VALIDATE_URL)) {
-                if (function_exists('curl_init')) {
-                    $ch = curl_init($src);
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                    curl_setopt($ch, CURLOPT_TIMEOUT, 4);
-                    $content = curl_exec($ch);
-                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                    curl_close($ch);
-                    if ($httpCode === 200 && $content) {
-                        return 'data:image/jpeg;base64,' . base64_encode($content);
+                if (@is_file($cand) && @is_readable($cand) && @filesize($cand) > 0) {
+                    $real = @realpath($cand);
+                    if ($real && ($fileUri = $toDompdfLocalUri($real))) {
+                        return $resolvedImageMemo[$src] = $fileUri;
+                    }
+                    $raw = @file_get_contents($cand);
+                    if ($raw !== false && strlen($raw) > 0) {
+                        [$mime] = $detectMimeAndExt($raw, $cand);
+                        return $resolvedImageMemo[$src] = 'data:' . $mime . ';base64,' . base64_encode($raw);
                     }
                 }
             }
 
-            return '';
+            // Fallback remoto (cacheado en storage/app/dompdf para evitar descargar o duplicar base64)
+            if (filter_var($src, FILTER_VALIDATE_URL)) {
+                $content = null;
+                if (function_exists('curl_init')) {
+                    $ch = curl_init($src);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+                    curl_setopt($ch, CURLOPT_USERAGENT, 'ViveGoPDF/1.0');
+                    $res = curl_exec($ch);
+                    $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    curl_close($ch);
+                    if ($httpCode >= 200 && $httpCode < 300 && $res) {
+                        $content = $res;
+                    }
+                }
+                if (empty($content)) {
+                    $ctx = @stream_context_create([
+                        'http' => ['timeout' => 6, 'ignore_errors' => true],
+                        'ssl' => ['verify_peer' => false, 'verify_peer_name' => false],
+                    ]);
+                    $rawUrl = @file_get_contents($src, false, $ctx);
+                    if ($rawUrl !== false && strlen($rawUrl) > 0) {
+                        $content = $rawUrl;
+                    }
+                }
+                if (!empty($content)) {
+                    [$mime, $ext] = $detectMimeAndExt($content, $src);
+                    $isSvg = ($mime === 'image/svg+xml');
+                    if ($isSvg || @getimagesizefromstring($content) !== false) {
+                        $cacheFile = $dompdfCacheDir . '/remote_' . md5($src) . '.' . $ext;
+                        if (@is_dir($dompdfCacheDir) && @is_writable($dompdfCacheDir) && @file_put_contents($cacheFile, $content) !== false) {
+                            $realCache = @realpath($cacheFile);
+                            if ($realCache && ($fileUri = $toDompdfLocalUri($realCache))) {
+                                return $resolvedImageMemo[$src] = $fileUri;
+                            }
+                        }
+                        return $resolvedImageMemo[$src] = 'data:' . $mime . ';base64,' . base64_encode($content);
+                    }
+                }
+            }
+
+            return $resolvedImageMemo[$src] = '';
         };
 
         $event = $sale->event;
@@ -185,7 +273,7 @@
             }
 
             $ticketItem = $expandedItems[$i] ?? ($items[$i] ?? null);
-            $rawZone = $realTicket?->zone_name ?? ($ticketItem['zone'] ?? ($ticketItem['zone_name'] ?? ($ticketItem['name'] ?? $sale->zone_name)));
+            $rawZone = (string) ($realTicket?->zone_name ?? ($ticketItem['zone'] ?? ($ticketItem['zone_name'] ?? ($ticketItem['name'] ?? ($sale->zone_name ?? '')))));
             if (preg_match('/^(?:Mejora|Upgrade):\s*(?:.*?(?:➔|->)\s*)?(.+)/iu', $rawZone, $m)) {
                 $zoneName = trim($m[1]);
             } else {
@@ -303,12 +391,12 @@
 
                 <!-- ZONA -->
                 <div class="el" style="top: 207px; left: 361px; color: #00D2C4; font-size: 13px; font-weight: bold; z-index: 25;">
-                    Zona: {{ strtoupper($zoneName) }}
+                    Zona: {{ strtoupper((string) ($zoneName ?? '')) }}
                 </div>
 
                 <!-- PRECIO -->
                 <div class="el" style="top: 229px; left: 361px; color: #10B981; font-size: 13px; font-weight: bold; z-index: 25;">
-                    Precio: S/ {{ number_format($ticketPrice, 2) }}
+                    Precio: S/ {{ number_format((float) ($ticketPrice ?? 0), 2) }}
                 </div>
 
                 <!-- LOGO VIVEGO -->

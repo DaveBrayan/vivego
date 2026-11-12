@@ -20,6 +20,10 @@ class EmailLog extends Model
         'mail_type',
         'status',
         'error_message',
+        'attachment_sent',
+        'attachment_name',
+        'attachment_size',
+        'attachment_error',
         'details',
         'attempts',
         'sent_at',
@@ -29,6 +33,8 @@ class EmailLog extends Model
         'details' => 'array',
         'sent_at' => 'datetime',
         'attempts' => 'integer',
+        'attachment_sent' => 'boolean',
+        'attachment_size' => 'integer',
     ];
 
     public function ticketSale()
@@ -49,5 +55,17 @@ class EmailLog extends Model
     public function isFailed(): bool
     {
         return $this->status === 'failed';
+    }
+
+    public function hasVerifiedAttachment(): bool
+    {
+        $val = $this->attachment_sent ?? ($this->details['attachment_sent'] ?? null);
+        return $val === true || $val === 1 || $val === '1';
+    }
+
+    public function hasMissingAttachment(): bool
+    {
+        $val = $this->attachment_sent ?? ($this->details['attachment_sent'] ?? null);
+        return $val === false || $val === 0 || $val === '0';
     }
 }

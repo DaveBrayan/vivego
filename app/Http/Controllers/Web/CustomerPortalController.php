@@ -469,10 +469,18 @@ class CustomerPortalController extends Controller
 
         try {
             $sale->loadMissing(['eventTickets', 'event.template']);
+            $dompdfDir = storage_path('app/dompdf');
+            $dompdfFontCache = $dompdfDir . '/fonts';
+            if (!@is_dir($dompdfFontCache)) {
+                @mkdir($dompdfFontCache, 0775, true);
+            }
+
             $options = new \Dompdf\Options();
+            $options->set('tempDir', $dompdfDir);
+            $options->set('fontCache', $dompdfFontCache);
             $options->set('isHtml5ParserEnabled', true);
             $options->set('isRemoteEnabled', true);
-            $options->set('chroot', [public_path(), base_path()]);
+            $options->set('chroot', [public_path(), base_path(), storage_path()]);
 
             $dompdf = new \Dompdf\Dompdf($options);
             $html = view('pdf.ticket_voucher', ['sale' => $sale])->render();
@@ -523,7 +531,11 @@ class CustomerPortalController extends Controller
         if ($result['success']) {
             return response()->json([
                 'success' => true,
-                'message' => "¡Boleto oficial enviado exitosamente a {$recipient}!"
+                'message' => "¡Boleto oficial enviado exitosamente a {$recipient}!",
+                'attachment_sent' => $result['attachment_sent'] ?? false,
+                'attachment_name' => $result['attachment_name'] ?? null,
+                'attachment_size' => $result['attachment_size'] ?? null,
+                'attachment_error' => $result['attachment_error'] ?? null,
             ]);
         } else {
             return response()->json([

@@ -136,12 +136,15 @@ class EventDetailController extends Controller
                     // Calcular ventas registradas si existe la tabla (SOLO boletos con venta efectiva asociada)
                     $soldCount = 0;
                     try {
+                        $cleanBaseZone = strtoupper(trim(preg_replace('/\s*\([^)]+\)/', '', $zoneName)));
                         if (\Illuminate\Support\Facades\Schema::hasTable('event_tickets')) {
                             $soldQ = \Illuminate\Support\Facades\DB::table('event_tickets')
                                 ->where('event_id', $eventModel->id)
-                                ->where(function($q) use ($zoneName) {
+                                ->where(function($q) use ($zoneName, $cleanBaseZone) {
                                     $q->where('zone_name', $zoneName)
-                                      ->orWhere('zone_name', 'LIKE', $zoneName . ' (%');
+                                      ->orWhere('zone_name', 'LIKE', $zoneName . ' (%')
+                                      ->orWhere('zone_name', 'LIKE', $cleanBaseZone . ' (%')
+                                      ->orWhere('zone_name', $cleanBaseZone);
                                 })
                                 ->whereNotNull('ticket_sale_id')
                                 ->where('status', '!=', 'upgraded')
@@ -155,9 +158,10 @@ class EventDetailController extends Controller
                         if ($soldCount === 0 && \Illuminate\Support\Facades\Schema::hasTable('ticket_sales')) {
                             $soldCount = (int) \Illuminate\Support\Facades\DB::table('ticket_sales')
                                 ->where('event_id', $eventModel->id)
-                                ->where(function($q) use ($zoneName) {
+                                ->where(function($q) use ($zoneName, $cleanBaseZone) {
                                     $q->where('zone_name', $zoneName)
-                                      ->orWhere('ticket_type', $zoneName);
+                                      ->orWhere('ticket_type', $zoneName)
+                                      ->orWhere('zone_name', 'LIKE', $cleanBaseZone . '%');
                                 })
                                 ->where('status', '!=', 'upgraded')
                                 ->where('status', '!=', 'cancelled')
