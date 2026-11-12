@@ -595,9 +595,11 @@
 
             const szConfig = zoneSplitMap[zKey];
 
-            // DETERMINAR AFORO FÍSICO REAL (en planchas solo se imprimen entradas físicas)
+            // Regla de negocio: zonas con butacas numeradas NO permiten venta física ni planchas físicas
             let zCap = 0;
-            if (isSplitActive && szConfig && szConfig.physical !== undefined && szConfig.physical !== null && szConfig.physical !== '') {
+            if (isNumbered) {
+                zCap = 0;
+            } else if (isSplitActive && szConfig && szConfig.physical !== undefined && szConfig.physical !== null && szConfig.physical !== '') {
                 zCap = parseInt(szConfig.physical, 10) || 0;
             } else if (z.physical_capacity !== undefined && z.physical_capacity !== null && z.physical_capacity !== '') {
                 zCap = parseInt(z.physical_capacity, 10) || 0;
@@ -608,9 +610,9 @@
             }
             
             const existingList = existingByZone[zKey] || [];
-            const alreadyGenCount = zCap > 0 ? Math.min(existingList.length, zCap) : existingList.length;
+            const alreadyGenCount = zCap > 0 ? Math.min(existingList.length, zCap) : (isNumbered ? 0 : existingList.length);
 
-            if (zCap <= 0 && alreadyGenCount > 0 && !isSplitActive) {
+            if (!isNumbered && zCap <= 0 && alreadyGenCount > 0 && !isSplitActive) {
                 zCap = alreadyGenCount;
             }
 

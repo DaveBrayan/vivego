@@ -1352,7 +1352,8 @@
                             <div style="display: flex; flex-direction: column; gap: 0.45rem; max-height: 210px; overflow-y: auto; padding-right: 0.2rem;" id="zoneCardsContainer">
                                 @foreach($zonesWithStats as $index => $z)
                                     @php
-                                        $effectiveAvail = !empty($z['has_split']) ? ($z['physical_available'] ?? $z['available']) : $z['available'];
+                                        $isNumZoneSsr = !empty($z['is_numbered']) || (!empty($z['seats']) && is_array($z['seats']) && count($z['seats']) > 0) || (!empty($z['capacity_type']) && preg_match('/butaca|asiento|numerad/i', (string)$z['capacity_type']));
+                                        $effectiveAvail = $isNumZoneSsr ? 0 : (!empty($z['has_split']) ? ($z['physical_available'] ?? $z['available']) : $z['available']);
                                     @endphp
                                     <div class="zone-card-item {{ $index === 0 && $effectiveAvail > 0 ? 'active' : '' }} {{ $effectiveAvail <= 0 ? 'disabled' : '' }}"
                                          data-name="{{ $z['name'] }}"
@@ -1368,6 +1369,8 @@
                                                     <div style="margin-top: 0.1rem;">
                                                         @if($effectiveAvail > 0)
                                                             <span class="zone-stock-badge available" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">📦 {{ number_format($effectiveAvail) }} libres{{ !empty($z['has_split']) ? ' (Físico)' : '' }}</span>
+                                                        @elseif($isNumZoneSsr)
+                                                            <span class="zone-stock-badge sold-out" style="font-size: 0.65rem; padding: 0.1rem 0.35rem; color: #FCA5A5;">🪑 Sin Venta Física (Butacas Numeradas)</span>
                                                         @else
                                                             <span class="zone-stock-badge sold-out" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">🚫 AGOTADO</span>
                                                         @endif
@@ -3621,13 +3624,23 @@
             let anyAvailable = false;
 
             window.allZonesWithStats.forEach((z) => {
+                const isNumberedZone = Boolean(
+                    z.is_numbered ||
+                    (Array.isArray(z.seats) && z.seats.length > 0) ||
+                    (z.capacity_type && /butaca|asiento|numerad/i.test(String(z.capacity_type)))
+                );
                 let avail = 0;
                 let cap = 0;
                 let modeLabel = '';
 
                 if (isPhysical) {
-                    avail = parseInt(z.physical_available !== undefined ? z.physical_available : (z.has_split ? Math.max(0, (z.physical_capacity || 0) - (z.physical_sold || 0)) : z.available), 10);
-                    cap = parseInt(z.physical_capacity || z.capacity, 10);
+                    if (isNumberedZone) {
+                        avail = 0;
+                        cap = 0;
+                    } else {
+                        avail = parseInt(z.physical_available !== undefined ? z.physical_available : (z.has_split ? Math.max(0, (z.physical_capacity || 0) - (z.physical_sold || 0)) : z.available), 10);
+                        cap = parseInt(z.physical_capacity || z.capacity, 10);
+                    }
                     modeLabel = 'Física';
                 } else {
                     avail = parseInt(z.digital_available !== undefined ? z.digital_available : (z.has_split ? Math.max(0, (z.digital_capacity || 0) - (z.digital_sold || 0)) : z.available), 10);
@@ -3660,7 +3673,9 @@
 
                 const badgeHtml = (!isAgotado)
                     ? `<span class="zone-stock-badge available" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">📦 ${avail} disponibles (${modeLabel})</span>`
-                    : `<span class="zone-stock-badge sold-out" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">🚫 0 disponibles (${modeLabel})</span>`;
+                    : (isPhysical && isNumberedZone
+                        ? `<span class="zone-stock-badge sold-out" style="font-size: 0.65rem; padding: 0.1rem 0.35rem; color: #FCA5A5;">🪑 Sin Venta Física (Butacas Numeradas)</span>`
+                        : `<span class="zone-stock-badge sold-out" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">🚫 0 disponibles (${modeLabel})</span>`);
 
                 card.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
@@ -7018,16 +7033,27 @@
 
                                 const zoneModalCard = document.querySelector(`.zone-card-item[data-name="${z.name}"]:not(.courtesy-zone-card)`);
                                 if (zoneModalCard) {
-                                    zoneModalCard.setAttribute('data-available', z.available);
+                                    const isPhysMode = (window.currentPosSaleMode === 'fisica');
+                                    const isNumZone = Boolean(
+                                        z.is_numbered ||
+                                        (Array.isArray(z.seats) && z.seats.length > 0) ||
+                                        (z.capacity_type && /butaca|asiento|numerad/i.test(String(z.capacity_type)))
+                                    );
+                                    let effectiveModeAvail = isPhysMode
+                                        ? (isNumZone ? 0 : parseInt(z.physical_available !== undefined ? z.physical_available : z.available, 10))
+                                        : parseInt(z.digital_available !== undefined ? z.digital_available : z.available, 10);
+                                    if (isNaN(effectiveModeAvail) || effectiveModeAvail < 0) effectiveModeAvail = 0;
+
+                                    zoneModalCard.setAttribute('data-available', effectiveModeAvail);
                                     const modalBadge = zoneModalCard.querySelector('.zone-stock-badge');
                                     if (modalBadge) {
-                                        if (z.available > 0) {
+                                        if (effectiveModeAvail > 0) {
                                             modalBadge.className = 'zone-stock-badge available';
-                                            modalBadge.textContent = `📦 Stock: ${z.available} libres`;
+                                            modalBadge.textContent = `📦 ${effectiveModeAvail} disponibles (${isPhysMode ? 'Física' : 'Digital'})`;
                                             zoneModalCard.classList.remove('disabled');
                                         } else {
                                             modalBadge.className = 'zone-stock-badge sold-out';
-                                            modalBadge.textContent = '🚫 AGOTADO';
+                                            modalBadge.textContent = (isPhysMode && isNumZone) ? '🪑 Sin Venta Física (Butacas Numeradas)' : '🚫 AGOTADO';
                                             zoneModalCard.classList.add('disabled');
                                         }
                                     }

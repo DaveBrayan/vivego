@@ -258,8 +258,9 @@
             const tbody = document.getElementById('zonesTableBody');
             if (!tbody) return;
 
+            tbody.innerHTML = '';
+
             if (this.zones && this.zones.length > 0) {
-                tbody.innerHTML = '';
                 const todayStr = new Date().toISOString().split('T')[0];
                 const futureDate = new Date();
                 futureDate.setDate(futureDate.getDate() + 15);
@@ -276,23 +277,26 @@
                     if (this.isStageZone(z)) return;
 
                     const isPresaleActive = !this.isStageZone(z) && !!(z.presale_enabled === true || z.has_presale === true || z.presale_enabled === 'true' || z.has_presale === 'true');
+                    const hasSeatsAssigned = Array.isArray(z.seats) && z.seats.length > 0;
+                    const isNumberedCapType = hasSeatsAssigned || z.capacity_type === 'Butacas Numeradas' || /butaca|numerad/i.test(String(z.capacity_type || ''));
 
                     const row = document.createElement('tr');
                     row.className = 'zone-row';
                     row.innerHTML = `
                         <td>
-                            <select class="form-select-custom zone-capacity-type" style="font-size: 0.85rem; padding: 0.55rem;" onchange="if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function')SeatMapEditor.syncFromStandardTable();">
+                            <select class="form-select-custom zone-capacity-type" style="font-size: 0.85rem; padding: 0.55rem;" onchange="if(typeof syncCourtesyZonesTable==='function') syncCourtesyZonesTable(); if(typeof syncQuotaSplitTable==='function') syncQuotaSplitTable(); if(typeof SeatMapEditor!=='undefined'&&typeof SeatMapEditor.syncFromStandardTable==='function')SeatMapEditor.syncFromStandardTable();">
                                 @if(isset($capacityTypes) && count($capacityTypes) > 0)
                                     @foreach($capacityTypes as $ct)
-                                        <option value="{{ is_array($ct) ? $ct['name'] : $ct->name }}" ${z.capacity_type === '{{ is_array($ct) ? $ct['name'] : $ct->name }}' ? 'selected' : ''}>
+                                        <option value="{{ is_array($ct) ? $ct['name'] : $ct->name }}" ${!isNumberedCapType && z.capacity_type === '{{ is_array($ct) ? $ct['name'] : $ct->name }}' ? 'selected' : ''}>
                                             🏟️ {{ is_array($ct) ? $ct['name'] : $ct->name }}
                                         </option>
                                     @endforeach
                                 @else
-                                    <option value="Aforo VIP" ${z.capacity_type === 'Aforo VIP' ? 'selected' : ''}>🏟️ Aforo VIP</option>
-                                    <option value="Aforo Preferencial" ${z.capacity_type === 'Aforo Preferencial' ? 'selected' : ''}>🏟️ Aforo Preferencial</option>
-                                    <option value="Aforo General" ${(!z.capacity_type || z.capacity_type === 'Aforo General') ? 'selected' : ''}>🏟️ Aforo General</option>
+                                    <option value="Aforo VIP" ${!isNumberedCapType && z.capacity_type === 'Aforo VIP' ? 'selected' : ''}>🏟️ Aforo VIP</option>
+                                    <option value="Aforo Preferencial" ${!isNumberedCapType && z.capacity_type === 'Aforo Preferencial' ? 'selected' : ''}>🏟️ Aforo Preferencial</option>
+                                    <option value="Aforo General" ${!isNumberedCapType && (!z.capacity_type || z.capacity_type === 'Aforo General') ? 'selected' : ''}>🏟️ Aforo General</option>
                                 @endif
+                                <option value="Butacas Numeradas" ${isNumberedCapType ? 'selected' : ''}>🪑 Butacas Numeradas</option>
                             </select>
                         </td>
                         <td>
@@ -1806,6 +1810,8 @@
             z.rows = null;
             z.cols = null;
 
+            const capTypeEl = document.getElementById('inspectorZoneCapacityType');
+            if (capTypeEl) capTypeEl.value = 'General';
             const badgeEl = document.getElementById('inspectorSeatsBadge');
             if (badgeEl) badgeEl.textContent = '';
             const btnRemove = document.getElementById('btnRemoveSeats');
@@ -3674,10 +3680,20 @@
             window.userExplicitlySelectedStandardMode = false;
         }
 
+        if (typeof SeatMapEditor !== 'undefined' && SeatMapEditor._syncTimeout) {
+            clearTimeout(SeatMapEditor._syncTimeout);
+            SeatMapEditor._syncTimeout = null;
+        }
+
         const btnStandard = document.getElementById('btnStep2ModeStandard');
         const btnInteractive = document.getElementById('btnStep2ModeInteractive');
         const standardContainer = document.getElementById('step2StandardContainer');
         const interactiveContainer = document.getElementById('step2InteractiveContainer');
+        const unifiedQuotaSection = document.getElementById('unifiedQuotaDistributionSection');
+        const aforoTotalContainer = document.getElementById('aforoTotalEstimadoContainer');
+
+        if (unifiedQuotaSection) unifiedQuotaSection.style.display = 'block';
+        if (aforoTotalContainer) aforoTotalContainer.style.display = 'flex';
 
         if (mode === 'standard') {
             if (btnStandard) btnStandard.classList.add('active');
@@ -3685,7 +3701,9 @@
             if (standardContainer) standardContainer.style.display = 'block';
             if (interactiveContainer) interactiveContainer.style.display = 'none';
             SeatMapEditor.syncToStandardTable();
-            if (typeof syncCourtesyZonesTable === 'function') {
+            if (typeof syncQuotaSplitTable === 'function') {
+                syncQuotaSplitTable();
+            } else if (typeof syncCourtesyZonesTable === 'function') {
                 syncCourtesyZonesTable();
             }
             if (typeof recalculateTotalCapacity === 'function') {
@@ -3699,7 +3717,9 @@
             SeatMapEditor.syncFromStandardTable();
             SeatMapEditor.updateImageBadge();
             SeatMapEditor.render();
-            if (typeof syncCourtesyZonesTable === 'function') {
+            if (typeof syncQuotaSplitTable === 'function') {
+                syncQuotaSplitTable();
+            } else if (typeof syncCourtesyZonesTable === 'function') {
                 syncCourtesyZonesTable();
             }
             if (typeof recalculateTotalCapacity === 'function') {

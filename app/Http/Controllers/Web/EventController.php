@@ -308,6 +308,17 @@ class EventController extends Controller
             'sales_type' => 'nullable|string|in:fisica,virtual,ambos',
         ]);
 
+        $zonesData = is_array($validated['zones'] ?? null) ? $validated['zones'] : [];
+        $quotaSplitSettingsData = is_array($request->input('quota_split_settings')) ? $request->input('quota_split_settings') : [];
+        $salesTypeVal = $validated['sales_type'] ?? 'fisica';
+
+        if ($numberedError = $this->enforceNumberedSeatsNoPhysicalSale($zonesData, $quotaSplitSettingsData, $salesTypeVal)) {
+            return response()->json([
+                'success' => false,
+                'message' => $numberedError,
+            ], 422);
+        }
+
         $bannerImage = $this->saveBase64Image($validated['banner_image'] ?? null, 'events', 'event_banner');
         $referenceImage = $this->saveBase64Image($validated['reference_image'] ?? null, 'events', 'reference_image');
         $backgroundImage = $this->saveBase64Image($validated['background_image'] ?? null, 'events', 'bg_immersive');
@@ -336,11 +347,11 @@ class EventController extends Controller
             'description' => $validated['description'] ?? null,
             'tags' => $validated['tags'] ?? [],
             'template_id' => $validated['template_id'] ?? null,
-            'zones' => $validated['zones'] ?? [],
+            'zones' => $zonesData,
             'courtesy_settings' => $request->input('courtesy_settings') ?? [],
-            'quota_split_settings' => $request->input('quota_split_settings') ?? [],
+            'quota_split_settings' => $quotaSplitSettingsData,
             'status' => 'Publicado',
-            'sales_type' => $validated['sales_type'] ?? 'fisica',
+            'sales_type' => $salesTypeVal,
         ]);
 
         $customTicket = $request->input('custom_ticket');
@@ -580,6 +591,19 @@ class EventController extends Controller
             ], 422);
         }
 
+        $zonesData = $validated['zones'] ?? ($event ? ($event->zones ?? []) : []);
+        $zonesData = is_array($zonesData) ? $zonesData : [];
+        $quotaSplitSettingsData = $request->input('quota_split_settings') ?? ($event ? ($event->quota_split_settings ?? []) : []);
+        $quotaSplitSettingsData = is_array($quotaSplitSettingsData) ? $quotaSplitSettingsData : [];
+        $salesTypeVal = $validated['sales_type'] ?? ($event ? ($event->sales_type ?? 'fisica') : 'fisica');
+
+        if ($numberedError = $this->enforceNumberedSeatsNoPhysicalSale($zonesData, $quotaSplitSettingsData, $salesTypeVal)) {
+            return response()->json([
+                'success' => false,
+                'message' => $numberedError,
+            ], 422);
+        }
+
         if (!$event) {
             $bannerImage = $this->saveBase64Image($validated['banner_image'] ?? null, 'events', 'event_banner');
             $referenceImage = $this->saveBase64Image($validated['reference_image'] ?? null, 'events', 'reference_image');
@@ -607,11 +631,11 @@ class EventController extends Controller
                 'description' => $validated['description'] ?? null,
                 'tags' => $validated['tags'] ?? [],
                 'template_id' => $validated['template_id'] ?? null,
-                'zones' => $validated['zones'] ?? [],
+                'zones' => $zonesData,
                 'courtesy_settings' => $request->input('courtesy_settings') ?? [],
-                'quota_split_settings' => $request->input('quota_split_settings') ?? [],
+                'quota_split_settings' => $quotaSplitSettingsData,
                 'status' => $validated['status'] ?? 'Publicado',
-                'sales_type' => $validated['sales_type'] ?? 'fisica',
+                'sales_type' => $salesTypeVal,
             ]);
         } else {
             $bannerImage = $this->saveBase64Image($validated['banner_image'] ?? $event->banner_image, 'events', 'event_banner');
@@ -640,11 +664,11 @@ class EventController extends Controller
                 'description' => $validated['description'] ?? $event->description,
                 'tags' => $validated['tags'] ?? $event->tags,
                 'template_id' => $validated['template_id'] ?? $event->template_id,
-                'zones' => $validated['zones'] ?? $event->zones,
+                'zones' => $zonesData,
                 'courtesy_settings' => $request->input('courtesy_settings') ?? [],
-                'quota_split_settings' => $request->input('quota_split_settings') ?? ($event->quota_split_settings ?? []),
+                'quota_split_settings' => $quotaSplitSettingsData,
                 'status' => $validated['status'] ?? $event->status ?? 'Publicado',
-                'sales_type' => $validated['sales_type'] ?? $event->sales_type ?? 'fisica',
+                'sales_type' => $salesTypeVal,
             ]);
         }
 
@@ -1326,5 +1350,84 @@ class EventController extends Controller
         }
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Determina si una zona corresponde a un escenario o tarima no comercializable.
+     */
+    protected function isStageZone($zone): bool
+    {
+        if (!is_array($zone)) {
+            return false;
+        }
+
+        $name = strtoupper(trim((string) ($zone['name'] ?? '')));
+        $capType = (string) ($zone['capacity_type'] ?? '');
+        $type = (string) ($zone['type'] ?? '');
+
+        return in_array($name, ['ESCENARIO', 'TARIMA'])
+            || str_contains($name, 'ESCENARIO')
+            || str_contains($name, 'TARIMA')
+            || strcasecmp($capType, 'Escenario') === 0
+            || strcasecmp($type, 'stage') === 0
+            || !empty($zone['is_stage'])
+            || !empty($zone['is_area']);
+    }
+
+    /**
+     * Determina si una zona tiene butacas numeradas (no permite venta física).
+     */
+    protected function isNumberedSeatZone($zone): bool
+    {
+        if (!is_array($zone) || $this->isStageZone($zone)) {
+            return false;
+        }
+
+        $seats = isset($zone['seats']) && is_array($zone['seats']) ? $zone['seats'] : [];
+        $capType = (string) ($zone['capacity_type'] ?? '');
+
+        return count($seats) > 0 || (bool) preg_match('/butaca|asiento|numerad/i', $capType);
+    }
+
+    /**
+     * Garantiza que ninguna zona con butacas numeradas tenga venta o cupo físico.
+     */
+    protected function enforceNumberedSeatsNoPhysicalSale(array &$zones, array &$quotaSplitSettings, string $salesType): ?string
+    {
+        $numberedZoneNames = [];
+
+        foreach ($zones as &$z) {
+            if ($this->isNumberedSeatZone($z)) {
+                $zName = trim((string) ($z['name'] ?? $z['capacity_type'] ?? 'Zona'));
+                $numberedZoneNames[strtoupper($zName)] = $zName;
+                $zCap = (int) ($z['capacity'] ?? 0);
+                $z['physical_capacity'] = 0;
+                $z['virtual_capacity'] = $zCap;
+            }
+        }
+        unset($z);
+
+        if (empty($numberedZoneNames)) {
+            return null;
+        }
+
+        if ($salesType === 'fisica') {
+            $labels = implode(', ', array_values($numberedZoneNames));
+            return "Las zonas con Butacas Numeradas ({$labels}) no permiten Venta Física. Cambia la modalidad de venta a 'Venta Híbrida (Físico y Digital)' o '100% Digital'.";
+        }
+
+        if (!empty($quotaSplitSettings['zones']) && is_array($quotaSplitSettings['zones'])) {
+            foreach ($quotaSplitSettings['zones'] as &$sz) {
+                $szNameKey = strtoupper(trim((string) ($sz['name'] ?? $sz['zone_name'] ?? '')));
+                if (isset($numberedZoneNames[$szNameKey])) {
+                    $szCap = (int) ($sz['capacity'] ?? 0);
+                    $sz['physical'] = 0;
+                    $sz['virtual'] = $szCap;
+                }
+            }
+            unset($sz);
+        }
+
+        return null;
     }
 }

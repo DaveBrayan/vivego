@@ -716,6 +716,7 @@
                                                         🏟️ {{ is_array($ct) ? $ct['name'] : $ct->name }}
                                                     </option>
                                                 @endforeach
+                                                <option value="Butacas Numeradas">🪑 Butacas Numeradas</option>
                                             </select>
                                         </td>
                                         <td>
@@ -783,6 +784,7 @@
                                                         🏟️ {{ is_array($ct) ? $ct['name'] : $ct->name }}
                                                     </option>
                                                 @endforeach
+                                                <option value="Butacas Numeradas">🪑 Butacas Numeradas</option>
                                             </select>
                                         </td>
                                         <td>
@@ -890,6 +892,7 @@
                                     </button>
                                 </div>
                             </div>
+                            </div> <!-- Fin caja de Imagen de Referencia -->
                         </div> <!-- Fin #step2StandardContainer -->
 
                         <!-- SECCIÓN UNIFICADA: DISTRIBUCIÓN DE AFORO Y CORTESÍAS POR ZONA -->
@@ -1058,12 +1061,11 @@
                                     <span style="color: #94A3B8; font-size: 0.825rem;">
                                         🗺️ Zonas configuradas: <strong id="navInteractiveZoneCountBadge" style="color: #10B981; font-weight: 800;">0</strong>
                                     </span>
-                                    <button type="button" class="btn btn-primary btn-save-settings" style="padding: 0.85rem 2.2rem; font-size: 1rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(255, 85, 0, 0.4);" onclick="if(typeof SeatMapEditor !== 'undefined') { if(window.currentStep2ZoneMode === 'interactive' && typeof SeatMapEditor.syncToStandardTable === 'function') { SeatMapEditor.syncToStandardTable(); } else if(typeof SeatMapEditor.syncFromStandardTable === 'function') { SeatMapEditor.syncFromStandardTable(); } } goToStep(3);">
+                                    <button type="button" class="btn btn-primary btn-save-settings" style="padding: 0.85rem 2.2rem; font-size: 1rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(255, 85, 0, 0.4);" onclick="if(typeof SeatMapEditor !== 'undefined') { if(SeatMapEditor._syncTimeout) { clearTimeout(SeatMapEditor._syncTimeout); SeatMapEditor._syncTimeout = null; } if(window.currentStep2ZoneMode === 'interactive' && typeof SeatMapEditor.syncToStandardTable === 'function') { SeatMapEditor.syncToStandardTable(); } else if(typeof SeatMapEditor.syncFromStandardTable === 'function') { SeatMapEditor.syncFromStandardTable(); } } goToStep(3);">
                                         <span>Continuar a Plantilla Canva (Paso 3)</span> ➔
                                     </button>
                                 </div>
                             </div>
-                        </div>
                     </div>
                 </div>
 
@@ -3105,380 +3107,8 @@
             return document.querySelector('input[name="event_sales_type"]:checked')?.value || 'fisica';
         }
 
-        function applySalesTypeToQuotaInputs() {
-            const salesType = getEventSalesType();
-            const badgeEl = document.getElementById('salesModalityBadge');
-            const noticeEl = document.getElementById('salesTypeNoticeBox');
-            const thPhys = document.getElementById('thColPhys');
-            const thVirt = document.getElementById('thColVirt');
-            const thCortPhys = document.getElementById('thColCortPhys');
-            const thCortVirt = document.getElementById('thColCortVirt');
-
-            if (badgeEl) {
-                if (salesType === 'ambos') {
-                    badgeEl.style.background = 'rgba(168, 85, 247, 0.18)';
-                    badgeEl.style.border = '1px solid rgba(168, 85, 247, 0.4)';
-                    badgeEl.style.color = '#C084FC';
-                    badgeEl.innerHTML = '🎫🌐 Venta Híbrida (Físico y Digital Activos)';
-                } else if (salesType === 'fisica') {
-                    badgeEl.style.background = 'rgba(255, 85, 0, 0.18)';
-                    badgeEl.style.border = '1px solid rgba(255, 85, 0, 0.4)';
-                    badgeEl.style.color = '#FFAA80';
-                    badgeEl.innerHTML = '🎫 Solo Venta Física (Digital Bloqueado)';
-                } else {
-                    badgeEl.style.background = 'rgba(56, 189, 248, 0.18)';
-                    badgeEl.style.border = '1px solid rgba(56, 189, 248, 0.4)';
-                    badgeEl.style.color = '#38BDF8';
-                    badgeEl.innerHTML = '🌐 Solo Venta Digital (Físico Bloqueado)';
-                }
-            }
-
-            if (noticeEl) {
-                if (salesType === 'fisica') {
-                    noticeEl.innerHTML = '<span style="font-size: 1rem;">🔒</span><span>Modalidad <strong>Solo Venta Física</strong>: Venta y cortesía digital bloqueadas (0).</span>';
-                } else if (salesType === 'virtual') {
-                    noticeEl.innerHTML = '<span style="font-size: 1rem;">🔒</span><span>Modalidad <strong>Solo Venta Digital</strong>: Venta y cortesía física bloqueadas (0).</span>';
-                } else {
-                    noticeEl.innerHTML = '<span style="font-size: 1rem;">⚖️</span><span>Modalidad <strong>Venta Híbrida</strong>: Canales físicos y digitales activos para reparto libre.</span>';
-                }
-            }
-
-            const courtesyForUsersWrapper = document.getElementById('courtesyForUsersWrapper');
-            const courtesyUserMaxWrapper = document.getElementById('courtesyUserMaxWrapper');
-            if (courtesyForUsersWrapper) {
-                courtesyForUsersWrapper.style.display = (salesType === 'fisica') ? 'none' : 'inline-flex';
-            }
-            if (courtesyUserMaxWrapper) {
-                courtesyUserMaxWrapper.style.display = (salesType === 'fisica') ? 'none' : 'flex';
-            }
-
-            document.querySelectorAll('#quotaSplitZonesBody tr[data-zone-name]').forEach(row => {
-                const totalCap = parseInt(row.getAttribute('data-zone-total'), 10) || 0;
-                const physInput = row.querySelector('.quota-zone-phys-input');
-                const virtInput = row.querySelector('.quota-zone-virt-input');
-                const cortPhysInput = row.querySelector('.quota-zone-cort-phys-input');
-                const cortVirtInput = row.querySelector('.quota-zone-cort-virt-input');
-
-                if (salesType === 'fisica') {
-                    if (virtInput) {
-                        virtInput.value = 0;
-                        virtInput.disabled = true;
-                        virtInput.style.opacity = '0.35';
-                        virtInput.style.cursor = 'not-allowed';
-                        virtInput.title = 'Bloqueado por Modalidad Solo Venta Física';
-                    }
-                    if (cortVirtInput) {
-                        cortVirtInput.value = 0;
-                        cortVirtInput.disabled = true;
-                        cortVirtInput.style.opacity = '0.35';
-                        cortVirtInput.style.cursor = 'not-allowed';
-                        cortVirtInput.title = 'Bloqueado por Modalidad Solo Venta Física';
-                    }
-                    if (physInput) {
-                        physInput.value = totalCap;
-                        physInput.disabled = true;
-                        physInput.style.opacity = '1';
-                        physInput.style.cursor = 'default';
-                        physInput.title = '100% asignado a venta física';
-                    }
-                    if (cortPhysInput) {
-                        cortPhysInput.disabled = false;
-                        cortPhysInput.style.opacity = '1';
-                        cortPhysInput.style.cursor = 'auto';
-                        cortPhysInput.title = 'Cortesías físicas para taquilla o planchas';
-                    }
-                } else if (salesType === 'virtual') {
-                    if (physInput) {
-                        physInput.value = 0;
-                        physInput.disabled = true;
-                        physInput.style.opacity = '0.35';
-                        physInput.style.cursor = 'not-allowed';
-                        physInput.title = 'Bloqueado por Modalidad Solo Venta Digital';
-                    }
-                    if (cortPhysInput) {
-                        cortPhysInput.value = 0;
-                        cortPhysInput.disabled = true;
-                        cortPhysInput.style.opacity = '0.35';
-                        cortPhysInput.style.cursor = 'not-allowed';
-                        cortPhysInput.title = 'Bloqueado por Modalidad Solo Venta Digital';
-                    }
-                    if (virtInput) {
-                        virtInput.value = totalCap;
-                        virtInput.disabled = true;
-                        virtInput.style.opacity = '1';
-                        virtInput.style.cursor = 'default';
-                        virtInput.title = '100% asignado a venta digital';
-                    }
-                    if (cortVirtInput) {
-                        cortVirtInput.disabled = false;
-                        cortVirtInput.style.opacity = '1';
-                        cortVirtInput.style.cursor = 'auto';
-                        cortVirtInput.title = 'Cortesías digitales para web';
-                    }
-                } else {
-                    // Ambos (híbrido)
-                    if (physInput) {
-                        physInput.disabled = false;
-                        physInput.style.opacity = '1';
-                        physInput.style.cursor = 'auto';
-                        physInput.title = '';
-                    }
-                    if (virtInput) {
-                        virtInput.disabled = false;
-                        virtInput.style.opacity = '1';
-                        virtInput.style.cursor = 'auto';
-                        virtInput.title = '';
-                    }
-                    if (cortPhysInput) {
-                        cortPhysInput.disabled = false;
-                        cortPhysInput.style.opacity = '1';
-                        cortPhysInput.style.cursor = 'auto';
-                        cortPhysInput.title = '';
-                    }
-                    if (cortVirtInput) {
-                        cortVirtInput.disabled = false;
-                        cortVirtInput.style.opacity = '1';
-                        cortVirtInput.style.cursor = 'auto';
-                        cortVirtInput.title = '';
-                    }
-                }
-
-                updateQuotaRowState(row, totalCap);
-            });
-
-            recalculateTotalCapacity();
-        }
-
-        function syncQuotaSplitTable() {
-            const tbody = document.getElementById('quotaSplitZonesBody');
-            if (!tbody) return;
-
-            const salesType = getEventSalesType();
-
-            // Guardar valores actualmente escritos por el usuario
-            const currentInputs = {};
-            tbody.querySelectorAll('tr[data-zone-name]').forEach(row => {
-                const zName = row.getAttribute('data-zone-name');
-                if (zName) {
-                    currentInputs[zName] = {
-                        phys: row.querySelector('.quota-zone-phys-input')?.value ?? '',
-                        virt: row.querySelector('.quota-zone-virt-input')?.value ?? '',
-                        cortPhys: row.querySelector('.quota-zone-cort-phys-input')?.value ?? '',
-                        cortVirt: row.querySelector('.quota-zone-cort-virt-input')?.value ?? ''
-                    };
-                }
-            });
-
-            let zoneList = [];
-            const isStageZoneHelper = (name, capType, obj) => {
-                const zName = String(name || '').trim().toUpperCase();
-                const zCapType = String(capType || '').trim().toUpperCase();
-                return zName === 'ESCENARIO' || zName === 'TARIMA' || zName.includes('ESCENARIO') || zName.includes('TARIMA')
-                    || zCapType.includes('ESCENARIO')
-                    || (obj && (obj.type === 'stage' || obj.is_stage || obj.is_area));
-            };
-
-            const zoneRows = document.querySelectorAll('#zonesTableBody .zone-row');
-            if (zoneRows.length > 0) {
-                zoneRows.forEach((row, idx) => {
-                    const name = row.querySelector('.zone-name-input')?.value?.trim() || `Zona ${idx + 1}`;
-                    const capType = row.querySelector('.zone-capacity-type')?.value?.trim() || '';
-                    if (isStageZoneHelper(name, capType)) return;
-
-                    zoneList.push({
-                        name: name,
-                        capacity: parseInt(row.querySelector('.zone-capacity-input')?.value) || 0,
-                        price: parseFloat(row.querySelector('.zone-price-input')?.value) || 0
-                    });
-                });
-            } else if (typeof SeatMapEditor !== 'undefined' && Array.isArray(SeatMapEditor.zones) && SeatMapEditor.zones.length > 0) {
-                SeatMapEditor.zones.forEach((z, idx) => {
-                    if (typeof isStageZone === 'function' && isStageZone(z)) return;
-                    if (isStageZoneHelper(z.name, z.capacity_type, z)) return;
-
-                    zoneList.push({
-                        name: (z.name || '').trim() || `Zona ${idx + 1}`,
-                        capacity: parseInt(z.capacity) || 0,
-                        price: parseFloat(z.price) || 0
-                    });
-                });
-            }
-
-            tbody.innerHTML = '';
-
-            if (zoneList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #94A3B8; padding: 1.75rem;">Configura sectores en la tabla de zonas superior para distribuir sus aforos y cortesías.</td></tr>`;
-                recalculateTotalCapacity();
-                return;
-            }
-
-            zoneList.forEach((z, idx) => {
-                const zName = z.name;
-                const zCap = z.capacity;
-                const cleanUpper = zName.trim().toUpperCase();
-
-                let physVal = '';
-                let virtVal = '';
-                let cortPhysVal = '';
-                let cortVirtVal = '';
-
-                if (currentInputs[zName]) {
-                    physVal = currentInputs[zName].phys;
-                    virtVal = currentInputs[zName].virt;
-                    cortPhysVal = currentInputs[zName].cortPhys;
-                    cortVirtVal = currentInputs[zName].cortVirt;
-                } else {
-                    if (salesType === 'virtual') {
-                        physVal = 0;
-                        virtVal = zCap;
-                    } else if (salesType === 'fisica') {
-                        physVal = zCap;
-                        virtVal = 0;
-                    } else {
-                        physVal = zCap;
-                        virtVal = 0;
-                    }
-                    cortPhysVal = 0;
-                    cortVirtVal = 0;
-                }
-
-                const pNum = parseInt(physVal, 10) || 0;
-                const vNum = parseInt(virtVal, 10) || 0;
-                const cpNum = parseInt(cortPhysVal, 10) || 0;
-                const cvNum = parseInt(cortVirtVal, 10) || 0;
-                const isBalanced = (pNum + vNum) === zCap;
-                const totalSector = (pNum + vNum) + (cpNum + cvNum);
-
-                const badgeHtml = isBalanced
-                    ? `<span class="quota-balance-badge" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #34D399; font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 6px;">✓ Cuadrado (${pNum}+${vNum}=${zCap})</span>`
-                    : `<span class="quota-balance-badge" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #FCA5A5; font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 6px;">⚠️ Descuadrado (${pNum+vNum}≠${zCap})</span>`;
-
-                const tr = document.createElement('tr');
-                tr.setAttribute('data-zone-name', zName);
-                tr.setAttribute('data-zone-total', zCap);
-                tr.innerHTML = `
-                    <td>
-                        <strong style="color: #FFFFFF; font-size: 0.9rem; display: block;">${zName}</strong>
-                        <span style="font-size: 0.72rem; color: #94A3B8;">Ref: S/ ${z.price ? z.price.toFixed(2) : '0.00'}</span>
-                    </td>
-                    <td style="text-align: center;">
-                        <span class="dash-badge-custom badge-blue" style="font-size: 0.8rem; font-weight: 800;">${zCap.toLocaleString()}</span>
-                    </td>
-                    <td style="text-align: center;">
-                        <input type="number" 
-                               class="form-input-custom quota-zone-phys-input" 
-                               value="${physVal}" 
-                               min="0" 
-                               max="${zCap}" 
-                               style="font-size: 0.92rem; padding: 0.45rem 0.6rem; border: 1.5px solid rgba(255, 85, 0, 0.5); background: rgba(255, 85, 0, 0.08); font-weight: 800; color: #FF5500; text-align: center; width: 110px; border-radius: 8px; margin: 0 auto;" 
-                               oninput="handleQuotaPhysChange(this, ${zCap})">
-                    </td>
-                    <td style="text-align: center;">
-                        <input type="number" 
-                               class="form-input-custom quota-zone-virt-input" 
-                               value="${virtVal}" 
-                               min="0" 
-                               max="${zCap}" 
-                               style="font-size: 0.92rem; padding: 0.45rem 0.6rem; border: 1.5px solid rgba(56, 189, 248, 0.5); background: rgba(56, 189, 248, 0.08); font-weight: 800; color: #38BDF8; text-align: center; width: 110px; border-radius: 8px; margin: 0 auto;" 
-                               oninput="handleQuotaVirtChange(this, ${zCap})">
-                    </td>
-                    <td style="text-align: center;" class="quota-balance-cell">
-                        ${badgeHtml}
-                    </td>
-                    <td style="text-align: center;">
-                        <input type="number" 
-                               class="form-input-custom quota-zone-cort-phys-input" 
-                               value="${cortPhysVal}" 
-                               min="0" 
-                               max="99999" 
-                               placeholder="0" 
-                               style="font-size: 0.92rem; padding: 0.45rem 0.6rem; border: 1.5px solid rgba(16, 185, 129, 0.5); background: rgba(16, 185, 129, 0.08); font-weight: 800; color: #10B981; text-align: center; width: 100px; border-radius: 8px; margin: 0 auto;" 
-                               oninput="handleCourtesyChange(this)">
-                    </td>
-                    <td style="text-align: center;">
-                        <input type="number" 
-                               class="form-input-custom quota-zone-cort-virt-input" 
-                               value="${cortVirtVal}" 
-                               min="0" 
-                               max="99999" 
-                               placeholder="0" 
-                               style="font-size: 0.92rem; padding: 0.45rem 0.6rem; border: 1.5px solid rgba(168, 85, 247, 0.5); background: rgba(168, 85, 247, 0.08); font-weight: 800; color: #C084FC; text-align: center; width: 100px; border-radius: 8px; margin: 0 auto;" 
-                               oninput="handleCourtesyChange(this)">
-                    </td>
-                    <td style="text-align: center;" class="quota-row-total-cell">
-                        <strong style="color: #FFFFFF; font-size: 0.95rem; font-weight: 900;">${totalSector.toLocaleString()}</strong>
-                        <span style="display: block; font-size: 0.7rem; color: #94A3B8;">${pNum + vNum} vta + ${cpNum + cvNum} cort</span>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-
-            applySalesTypeToQuotaInputs();
-        }
-
-        function syncCourtesyZonesTable() {
-            syncQuotaSplitTable();
-        }
-
-        function handleQuotaPhysChange(input, totalCap) {
-            const val = parseInt(input.value, 10);
-            const row = input.closest('tr');
-            if (!row) return;
-            const virtInput = row.querySelector('.quota-zone-virt-input');
-            const salesType = getEventSalesType();
-            if (salesType === 'ambos' && !isNaN(val) && val >= 0) {
-                const remaining = Math.max(0, totalCap - val);
-                if (virtInput) virtInput.value = remaining;
-            }
-            updateQuotaRowState(row, totalCap);
-            recalculateTotalCapacity();
-        }
-
-        function handleQuotaVirtChange(input, totalCap) {
-            const val = parseInt(input.value, 10);
-            const row = input.closest('tr');
-            if (!row) return;
-            const physInput = row.querySelector('.quota-zone-phys-input');
-            const salesType = getEventSalesType();
-            if (salesType === 'ambos' && !isNaN(val) && val >= 0) {
-                const remaining = Math.max(0, totalCap - val);
-                if (physInput) physInput.value = remaining;
-            }
-            updateQuotaRowState(row, totalCap);
-            recalculateTotalCapacity();
-        }
-
-        function handleCourtesyChange(input) {
-            const row = input.closest('tr');
-            if (!row) return;
-            const totalCap = parseInt(row.getAttribute('data-zone-total'), 10) || 0;
-            updateQuotaRowState(row, totalCap);
-            recalculateTotalCapacity();
-        }
-
-        function updateQuotaRowState(row, totalCap) {
-            const p = parseInt(row.querySelector('.quota-zone-phys-input')?.value, 10) || 0;
-            const v = parseInt(row.querySelector('.quota-zone-virt-input')?.value, 10) || 0;
-            const cp = parseInt(row.querySelector('.quota-zone-cort-phys-input')?.value, 10) || 0;
-            const cv = parseInt(row.querySelector('.quota-zone-cort-virt-input')?.value, 10) || 0;
-
-            const cell = row.querySelector('.quota-balance-cell');
-            if (cell) {
-                const isBalanced = (p + v) === totalCap;
-                cell.innerHTML = isBalanced
-                    ? `<span class="quota-balance-badge" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #34D399; font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 6px;">✓ Cuadrado (${p}+${v}=${totalCap})</span>`
-                    : `<span class="quota-balance-badge" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #FCA5A5; font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 6px;">⚠️ Descuadrado (${p+v}≠${totalCap})</span>`;
-            }
-
-            const totalCell = row.querySelector('.quota-row-total-cell');
-            if (totalCell) {
-                const totalSector = (p + v) + (cp + cv);
-                totalCell.innerHTML = `
-                    <strong style="color: #FFFFFF; font-size: 0.95rem; font-weight: 900;">${totalSector.toLocaleString()}</strong>
-                    <span style="display: block; font-size: 0.7rem; color: #94A3B8;">${p + v} vta + ${cp + cv} cort</span>
-                `;
-            }
-        }
+        // Las funciones de reparto de aforo (applySalesTypeToQuotaInputs, syncQuotaSplitTable, etc.)
+        // se cargan desde partials/step2_quota_helpers.blade.php para ambos modos y formularios.
 
         function addDynamicZoneRow() {
             const tbody = document.getElementById('zonesTableBody');
@@ -3500,6 +3130,7 @@
                             <option value="Aforo Preferencial">🏟️ Aforo Preferencial</option>
                             <option value="Aforo General" selected>🏟️ Aforo General</option>
                         @endif
+                        <option value="Butacas Numeradas">🪑 Butacas Numeradas</option>
                     </select>
                 </td>
                 <td>
@@ -3932,36 +3563,22 @@
 
             const salesType = document.querySelector('input[name="event_sales_type"]:checked')?.value || 'fisica';
 
-            const quotaSplitZones = [];
-            let quotaSplitError = null;
-
-            document.querySelectorAll('#quotaSplitZonesBody tr[data-zone-name]').forEach(row => {
-                const zName = row.getAttribute('data-zone-name');
-                const zTotal = parseInt(row.getAttribute('data-zone-total'), 10) || 0;
-                const phys = parseInt(row.querySelector('.quota-zone-phys-input')?.value, 10) || 0;
-                const virt = parseInt(row.querySelector('.quota-zone-virt-input')?.value, 10) || 0;
-                const cortPhys = parseInt(row.querySelector('.quota-zone-cort-phys-input')?.value, 10) || 0;
-                const cortVirt = parseInt(row.querySelector('.quota-zone-cort-virt-input')?.value, 10) || 0;
-
-                if (salesType === 'ambos' && (phys + virt) !== zTotal) {
-                    quotaSplitError = `La zona "${zName}" no coincide: Física (${phys}) + Digital (${virt}) = ${phys + virt}, debe sumar exactamente el aforo de venta (${zTotal}).`;
+            if (typeof SeatMapEditor !== 'undefined' && SeatMapEditor._syncTimeout) {
+                clearTimeout(SeatMapEditor._syncTimeout);
+                SeatMapEditor._syncTimeout = null;
+                if (window.currentStep2ZoneMode === 'interactive' && typeof SeatMapEditor.syncToStandardTable === 'function') {
+                    SeatMapEditor.syncToStandardTable();
                 }
+            }
 
-                quotaSplitZones.push({
-                    name: zName,
-                    zone_name: zName,
-                    capacity: zTotal,
-                    physical: phys,
-                    virtual: virt,
-                    courtesy_physical: cortPhys,
-                    courtesy_virtual: cortVirt
-                });
-            });
+            const splitCheck = (typeof collectAndValidateQuotaSplitForSubmit === 'function')
+                ? collectAndValidateQuotaSplitForSubmit(salesType, zones)
+                : { quotaSplitZones: [], quotaSplitError: null, quotaErrorTitle: 'Aforo Descuadrado' };
 
-            if (quotaSplitError) {
+            if (splitCheck.quotaSplitError) {
                 Swal.fire({
-                    title: 'Aforo Descuadrado',
-                    text: quotaSplitError,
+                    title: splitCheck.quotaErrorTitle || 'Aforo Descuadrado',
+                    text: splitCheck.quotaSplitError,
                     icon: 'warning',
                     background: '#14141E',
                     color: '#FFFFFF'
@@ -3970,6 +3587,7 @@
                 return;
             }
 
+            const quotaSplitZones = splitCheck.quotaSplitZones;
             const hasAnyCourtesy = quotaSplitZones.some(z => (z.courtesy_physical > 0 || z.courtesy_virtual > 0));
             const courtesySettings = {
                 enabled: hasAnyCourtesy,
@@ -3995,12 +3613,17 @@
             };
 
             zones.forEach(z => {
-                const matchSplit = quotaSplitZones.find(s => s.name === z.name);
+                const zKey = String(z.name || '').trim().toUpperCase();
+                const matchSplit = quotaSplitZones.find(s => String(s.name || '').trim().toUpperCase() === zKey);
+                const isNum = typeof isZoneNumberedSeats === 'function' ? isZoneNumberedSeats(z) : false;
                 if (matchSplit) {
-                    z.physical_capacity = matchSplit.physical;
-                    z.virtual_capacity = matchSplit.virtual;
+                    z.physical_capacity = isNum ? 0 : matchSplit.physical;
+                    z.virtual_capacity = isNum ? (parseInt(z.capacity, 10) || matchSplit.virtual) : matchSplit.virtual;
                     z.courtesy_physical = matchSplit.courtesy_physical;
                     z.courtesy_virtual = matchSplit.courtesy_virtual;
+                } else if (isNum) {
+                    z.physical_capacity = 0;
+                    z.virtual_capacity = parseInt(z.capacity, 10) || 0;
                 }
             });
 
@@ -4089,5 +3712,6 @@
             }
         });
     </script>
+    @include('web.events.partials.step2_quota_helpers')
     @include('web.events.partials.step2_interactive_zone_js')
 @endpush

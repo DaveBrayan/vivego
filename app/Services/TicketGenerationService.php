@@ -105,8 +105,15 @@ class TicketGenerationService
                 $zonePrice = isset($zone['price']) ? (float)$zone['price'] : 0.00;
                 $targetTotalCap = isset($zone['capacity']) ? (int)$zone['capacity'] : 0;
 
+                $seats = isset($zone['seats']) && is_array($zone['seats']) ? $zone['seats'] : [];
+                $capTypeStr = (string) ($zone['capacity_type'] ?? '');
+                $isNumberedZone = !empty($seats) || (bool) preg_match('/butaca|asiento|numerad/i', $capTypeStr);
+
                 $szConfig = $zoneSplitMap[$cleanZoneUpper] ?? null;
-                if ($isSplitActive) {
+                if ($isNumberedZone) {
+                    // Las zonas con butacas numeradas no permiten venta ni talonario físico regular
+                    $targetPhysCap = 0;
+                } elseif ($isSplitActive) {
                     $targetPhysCap = (isset($szConfig['physical']) && is_numeric($szConfig['physical']))
                         ? (int)$szConfig['physical']
                         : (isset($zone['physical_capacity']) && is_numeric($zone['physical_capacity']) ? (int)$zone['physical_capacity'] : $targetTotalCap);
@@ -115,8 +122,6 @@ class TicketGenerationService
                 } else {
                     $targetPhysCap = $targetTotalCap;
                 }
-
-                $seats = isset($zone['seats']) && is_array($zone['seats']) ? $zone['seats'] : [];
 
                 if (!empty($seats)) {
                     // ZONA CON BUTACAS NUMERADAS

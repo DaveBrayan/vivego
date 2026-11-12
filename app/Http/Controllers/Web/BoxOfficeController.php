@@ -40,6 +40,21 @@ class BoxOfficeController extends Controller
     }
 
     /**
+     * Determina si una zona tiene butacas numeradas (no permite venta física).
+     */
+    protected function isNumberedSeatZone($zone): bool
+    {
+        if (!is_array($zone) || $this->isStageZone($zone)) {
+            return false;
+        }
+
+        $seats = isset($zone['seats']) && is_array($zone['seats']) ? $zone['seats'] : [];
+        $capType = (string) ($zone['capacity_type'] ?? '');
+
+        return count($seats) > 0 || (bool) preg_match('/butaca|asiento|numerad/i', $capType);
+    }
+
+    /**
      * Muestra la lista de eventos disponibles para Taquilla y Ventas.
      */
     public function index(): View
@@ -441,6 +456,15 @@ class BoxOfficeController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'La zona seleccionada no existe para este evento.',
+            ], 422);
+        }
+
+        $requestedSaleMode = $request->input('sale_mode', 'digital');
+        $isCourtesyReq = ($validated['payment_method'] === 'Cortesía' || $validated['payment_method'] === 'cortesia');
+        if (!$isCourtesyReq && $requestedSaleMode === 'fisica' && $this->isNumberedSeatZone($zones[$targetZoneIndex] ?? [])) {
+            return response()->json([
+                'success' => false,
+                'message' => "La zona '{$validated['zone_name']}' tiene Butacas Numeradas y no permite Venta Física. Utiliza Venta Digital / POS.",
             ], 422);
         }
 
@@ -1443,6 +1467,8 @@ class BoxOfficeController extends Controller
             $zTotalCap = (int) ($z['capacity'] ?? 0);
             $zPrice = (float) ($z['price'] ?? 0);
 
+            $isNumberedZone = $this->isNumberedSeatZone($z);
+
             $szConfig = $zoneSplitMap[$cleanZone] ?? null;
 
             // Capacidades configuradas: Física y Digital
@@ -1465,6 +1491,13 @@ class BoxOfficeController extends Controller
             } else {
                 $physCap = $zTotalCap;
                 $virtCap = 0;
+            }
+
+            if ($isNumberedZone) {
+                $physCap = 0;
+                if ($event->sales_type !== 'fisica') {
+                    $virtCap = $zTotalCap;
+                }
             }
 
             // Ventas registradas de la zona
@@ -1605,6 +1638,7 @@ class BoxOfficeController extends Controller
 
                 'capacity_type' => $z['capacity_type'] ?? null,
                 'seats' => $z['seats'] ?? [],
+                'is_numbered' => $isNumberedZone,
             ];
         }
 
